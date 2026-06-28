@@ -217,127 +217,139 @@ Used to fuse BM25 + dense + BFS candidate lists in parallel-ensemble retrieval.
 
 ## 5. Evaluation Setup
 
-**5 benchmark workloads, 11 datasets:**
-1. **LoCoMo** — long-conversation multi-session QA (episodic/temporal/open-domain).
-   Metrics: EM, Answer F1, Recall@K.
-2. **LongMemEval** (MemoryAgentBench) — multi-session long-memory + temporal
-   reasoning. Metrics: Substring EM, ROUGE-L F1, ROUGE-L Recall, GPT-5.4 LLM Judge Acc.
-3. **DB-Bench** (LifeLongAgentBench) — procedural execution across DB ops.
-   Metrics: EM, Task Success Rate.
-4. **LongBench** — controlled long-context difficulty. Metric: Accuracy over
-   Short/Medium/Long context buckets.
-5. Evidence-distance-gap bins (1–5 … 26–31 sessions) for RQ2/RQ4.
+### 5 benchmark workloads (11 datasets)
 
-**12 memory systems evaluated** (grouped by architectural family):
-- *Reference baselines:* Long Context, Embedding RAG.
-- *Sequential context:* MemAgent, Mem0, MEM1.
-- *Structural topological:* MemoChat, Zep, Mem0_g, Cognee, MemTree, LightMem.
-- *Multi-paradigm hybrid:* Letta (MemGPT), SimpleMem, MemOS, MemoryOS, A-MEM.
+| Workload | Tests | Metrics |
+|----------|-------|---------|
+| **LoCoMo** | Episodic / temporal / open-domain QA across multi-session dialogues | EM, Answer F1, Recall@K |
+| **LongMemEval** *(MemoryAgentBench)* | Multi-session long-memory + temporal reasoning | Substring EM, ROUGE-L F1/Recall, GPT-5.4 LLM Judge Acc |
+| **DB-Bench** *(LifeLongAgentBench)* | Procedural execution across DB operations | EM, Task Success Rate |
+| **LongBench** | Controlled long-context difficulty | Accuracy over Short / Medium / Long context buckets |
+| **Evidence-distance bins** | Retrieval as evidence gets temporally distant (1–5 … 26–31 sessions) | Recall@K for RQ2 / RQ4 |
 
-**LLM backbones (for ablation):** varied (Figure 9 uses GPT-5.4 family +
-variants) to test backbone robustness.
+### 12 memory systems evaluated (by architectural family)
 
-**Unified time-overhead traces** — every system is profiled under the same
-runner so latency numbers are comparable.
+| Family | Systems |
+|--------|---------|
+| **Reference baselines** | Long Context, Embedding RAG |
+| **Sequential context** | MemAgent, Mem0, MEM1 |
+| **Structural topological** | MemoChat, Zep, Mem0_g, Cognee, MemTree, LightMem |
+| **Multi-paradigm hybrid** | Letta (MemGPT), SimpleMem, MemOS, MemoryOS, A-MEM |
+
+- **LLM backbones (for ablation):** varied (Figure 9 uses GPT-5.4 family +
+  variants) to test backbone robustness.
+- **Unified time-overhead traces** — every system is profiled under the same
+  runner so latency numbers are comparable.
 
 ## 6. Results & Ablations
 
 ### Headline end-to-end (RQ1, Figure 7)
-- No single architecture dominates. Leaders shift per workload:
-  - **LongMemEval** (cross-session) → structure-aware wins: Zep 48.0 LLMJudge,
-    Cognee 35.3 ROUGE-L F1.
-  - **LoCoMo** (exact grounding) → hybrid filtering: MemOS 11.5 EM.
-  - **DB-Bench** (stateful execution) → trace-preserving: Long Context 48.2 EM,
-    MemoChat 55.4 TaskSuccess.
-- **MemoryOS and MemOS** are closest to the Pareto frontier *overall* —
-  robustness = preserving the right evidence at the right abstraction.
+
+**No single architecture dominates.** The leader shifts per workload:
+
+| Workload | Bottleneck | Leader | Score |
+|----------|------------|--------|------:|
+| LongMemEval (cross-session) | relation/time-aware retrieval | **Zep** | 48.0 LLMJudge |
+| LongMemEval (cross-session) | relation/time-aware retrieval | **Cognee** | 35.3 ROUGE-L F1 |
+| LoCoMo (exact grounding) | coarse-to-fine filtering | **MemOS** | 11.5 EM |
+| DB-Bench (stateful execution) | trace preservation | **Long Context** | 48.2 EM |
+| DB-Bench (stateful execution) | trace preservation | **MemoChat** | 55.4 TaskSuccess |
+
+> **MemoryOS and MemOS** are closest to the Pareto frontier *overall* —
+> robustness = preserving the right evidence at the right abstraction.
 
 ### Retrieval fidelity (RQ2, Figure 8)
-- SimpleMem wins Recall@1 (39.0) but **A-MEM & MemTree** dominate at
-  Recall@5/10 (69.5/85.9 and 59.7/80.5) and stay stable as evidence-distance
-  gap grows. Flat Embedding RAG collapses (37.1 → 7.4 F1 across bins).
-- Retrieval is an **evidence-completion problem**, not a top-1 ranking problem.
+
+| Metric | SimpleMem | A-MEM | MemTree | Embedding RAG |
+|--------|----------:|------:|--------:|--------------:|
+| Recall@1 | **39.0** 🥇 | — | — | — |
+| Recall@5 | — | **69.5** | 59.7 | — |
+| Recall@10 | — | **85.9** | 80.5 | — |
+| F1 across distance bins | — | stable | stable | **37.1 → 7.4** 💀 |
+
+> Retrieval is an **evidence-completion problem**, not a top-1 ranking problem.
 
 ### Update robustness (RQ3, Table 2)
-- **Graph-organized** strongest on direct fact revision: Zep leads
-  KnowledgeUpdate (44.4 Substr. EM, 36.8 ROUGE-L F1).
-- **Relational** strongest on temporally dispersed evidence: Cognee leads
-  Temporal Reasoning (18.7 / 35.8).
+
+| Slice | Winner | Scores |
+|-------|--------|--------|
+| KnowledgeUpdate (direct fact revision) | **Zep** (graph) | 44.4 Substr. EM, 36.8 ROUGE-L F1 |
+| TemporalReasoning (dispersed evidence) | **Cognee** (relational) | 18.7 / 35.8 |
+
 - **Backbone robustness (O5):** changing the LLM changes absolute quality more
   than *which memory pipeline* wins → update behavior is a pipeline-level
   property, set before generation. Stronger backbones refine, they don't fix
   bad grounding.
 
 ### Long-horizon stability (RQ4, Figure 10)
-- Long Context drops 42.6 → 19.0 accuracy (Short→Medium LongBench) under
-  distractors; SimpleMem stays flat (35.2 → 34.9). Bigger prompts alone don't
-  sustain quality.
-- The challenge at long horizons is **choosing the right abstraction**, not
-  storing more.
+
+| System | Short | Medium | Drop |
+|--------|------:|-------:|-----:|
+| Long Context | 42.6 | **19.0** | 💀 −23.6 |
+| SimpleMem | 35.2 | 34.9 | −0.3 ✅ |
+
+> Bigger prompts alone don't sustain quality. The challenge at long horizons is
+> **choosing the right abstraction**, not storing more.
 
 ### Cost (RQ5, Figure 11) — *the operational punchline*
-- **Efficiency frontier:** LightMem (48.3 @ 3.67s) > MemTree (63.5 @ 15.9s) >
-  A-MEM (57.7 @ 17.9s).
-- Rich structure is expensive: MemoryOS 82.0 @ 28.6s; Cognee 84 @ 116.5s; Zep
-  84 @ 155.1s. Heavy hybrids hit 374–552s on LongBench.
+
+| System | Utility | Latency/query | Verdict |
+|--------|--------:|--------------:|---------|
+| LightMem | 48.3 | 3.7 s | 🏆 efficiency king |
+| MemTree | 63.5 | 15.9 s | best balance |
+| A-MEM | 57.7 | 17.9 s | |
+| MemoryOS | 82.0 | 28.6 s | top utility @ fair cost |
+| Cognee | ~84 | 116.5 s | diminishing returns |
+| Zep | ~84 | 155.1 s | diminishing returns |
+| MemoChat | 28.0 | 15.4 s | weak |
+| Mem0 | 21.4 | 35.9 s | weak |
+
+> Heavy hybrids blow up to **374–552 s** on LongBench. **Localized maintenance
+> is the whole game for cost.**
 - **O7 (Localized Maintenance):** efficiency is governed by **maintenance
   scope**, not by whether you use structure. Localized update/search = cheap;
   global reorg = expensive.
 
 ### Module ablations (the really load-bearing experiments, §5)
 
-**M1 — Representation (Table 3):** LightMem User-Only-Raw (verbatim) beats
-Summary & Compressed on *all 4 metrics*. Deeper MemTree tree ≈ flat tree
-(modest gain). → **O8: raw content > abstraction for fidelity.**
-
-**M2 — Extraction (Table 4):**
-- MemoChat Heuristic-Topic > LLM-Topic (broader beats aggressive).
-- MemOS Fast-Memorize >> Fine-Memorize on LoCoMo (25.5 vs 2.5 EM) though worse
-  on LongMemEval.
-- LightMem Hybrid-Raw (user+assistant turns) ≥ User-Only-Raw.
-→ **O9 / Finding 7 (Late Filtering):** preserve context at write time; filter
-late, not early.
-
-**M3 — Retrieval (Table 5):**
-- A-MEM Hybrid-Balanced > Hybrid-Sparse-Leaning.
-- SimpleMem Planning-Only > No-Planning > Planning+Reflect (reflection adds no
-  gain, just overhead).
-→ **O10 / Finding 8:** explicit planning + balanced fusion. Extra reflection
-hurts.
-
-**M4 — Maintenance (Figure 12):**
-- MemoryOS Conservative-Merge (stricter topic-similarity threshold) > default
-  > Delayed-Flush (20.6/19.5, worse).
-- MemoChat forced single-topic summary < default multi-topic.
-→ **O11 / Finding 9 (Conservative Consolidation):** conservative merge wins;
-delayed flush fragments evidence; coarse summarization obscures sparse cues.
+| Module | Ablation | Result | Finding |
+|--------|----------|--------|---------|
+| **M1** Representation | LightMem *Raw* vs *Summary* vs *Compressed* | Raw wins **all 4 metrics** | **O8:** raw content > abstraction |
+| **M1** Representation | MemTree *Flat* vs *Deeper Tree* | Deeper ≈ flat (modest gain) | hierarchy improves access, can't restore removed content |
+| **M2** Extraction | MemoChat *Heuristic-Topic* vs *LLM-Topic* | Heuristic > LLM (broader beats aggressive) | **O9 / F7 (Late Filtering):** preserve context at write time |
+| **M2** Extraction | MemOS *Fast-Memorize* vs *Fine-Memorize* | Fast >> Fine on LoCoMo (25.5 vs 2.5 EM) | aggressive filtering kills downstream answerability |
+| **M2** Extraction | LightMem *Hybrid-Raw* vs *User-Only-Raw* | Hybrid ≥ User-Only | store both user + assistant turns |
+| **M3** Retrieval | A-MEM *Hybrid-Balanced* vs *Sparse-Leaning* | Balanced > Sparse | **O10 / F8:** explicit planning + balanced fusion |
+| **M3** Retrieval | SimpleMem *Planning* vs *None* vs *Planning+Reflect* | Planning > None > Planning+Reflect 💀 | reflection adds overhead, no gain |
+| **M4** Maintenance | MemoryOS *Conservative-Merge* vs *Default* vs *Delayed-Flush* | Conservative > Default > Delayed | **O11 / F9:** conservative consolidation wins |
+| **M4** Maintenance | MemoChat *single-topic* vs *multi-topic* | Multi > Single | coarse summarization obscures sparse cues |
 
 ## 7. Limitations
 
-- **It's a benchmark, not a new method.** No single novel memory architecture
-  is proposed — the contribution is the lens + evaluation. (This is fine for
-  the paper's goal, but means there's no "the algorithm" to copy.)
+- **It's a benchmark, not a new method.** No single novel memory architecture is
+  proposed — the contribution is the lens + evaluation. (Fine for the paper's
+  goal, but means there's no "the algorithm" to copy.)
 - **LLM-dependent metrics.** Several metrics (LLMJudge Accuracy, the
-  extraction/maintenance themselves) depend on the backbone LLM — results
-  could shift as base models change. The backbone-ablation mitigates but
-  doesn't eliminate this.
-- **System coverage is 2025-early-2026.** The 12 systems are a snapshot;
-  newer systems may not fit cleanly.
+  extraction/maintenance themselves) depend on the backbone LLM — results could
+  shift as base models change. The backbone-ablation mitigates but doesn't
+  eliminate this.
+- **System coverage is 2025-early-2026.** The 12 systems are a snapshot; newer
+  systems may not fit cleanly.
 - **No proposed new memory system** validated end-to-end. The "winning recipe"
   is implied by the ablations but not built and benchmarked as a unit — which
   is *exactly* the gap our re-implementation fills.
-- **Workloads skew toward QA/dialogue.** Embodied/tool-heavy agentic
-  workloads are less represented (DB-Bench is the closest).
+- **Workloads skew toward QA/dialogue.** Embodied/tool-heavy agentic workloads
+  are less represented (DB-Bench is the closest).
 
 ## 8. Open Questions / Ideas
 
 - **Build the implied winner.** The ablations point to a concrete recipe
   (composite representation + raw-preserving extraction + balanced hybrid
   retrieval + conservative multi-version maintenance). The paper never builds
-  it as one system — *we should*. That's what our `implementation/` does.
-- **Localized maintenance as a first-class principle.** O7 suggests
-  maintenance scope, not structure type, drives cost. Worth a dedicated
-  cost-control mechanism (bounded write propagation).
+  it as one system — *we did*. See `implementation/`.
+- **Localized maintenance as a first-class principle.** O7 suggests maintenance
+  scope, not structure type, drives cost. Worth a dedicated cost-control
+  mechanism (bounded write propagation).
 - **Reflection is overrated for retrieval.** M3's "Planning+Reflect < Planning"
   result is striking — challenges the recent trend of adding reflection
   everywhere.
