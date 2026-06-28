@@ -1,174 +1,81 @@
 # Writeup — Are We Ready For An Agent-Native Memory System?
 
-> My own explanation of the paper, as if teaching it to a peer who hasn't read
-> it. This is not a summary of the abstract — it's my synthesis after reading
-> and implementing.
+> Evo kako bih ovo objasnio prijatelju pre piva, ako me pita "šta si čitao?"
 
-## The one-paragraph version
+---
 
-Agent memory has grown from "RAG over a transcript" into a full data-management
-system, but everyone still benchmarks it as a black box using end-to-end F1.
-This paper says: stop. Decompose every agent-memory system into **four
-modules** — Representation & Storage (R), Extraction (S), Retrieval & Routing
-(Q), and Maintenance (U) — and benchmark each one independently across
-taxonomized design choices, on evidence-level metrics *and* operational cost.
-The result: **no single architecture wins everywhere; the right memory design
-is the one that matches the workload's bottleneck.** And the single biggest
-cost lever is the *scope* of maintenance, not the kind of structure you use.
+Jednostavna priča je otprilike ovaka.
 
-## The problem
+Agent memorija je izrasla iz "pretraži transkript pa vidi šta iskoči" u pravi mali bazični sistem — negde se stvari zapakuju, negde se traže, negde se menjaju, negde se brišu. To više nije samo neki RAG iznad istorije četa. To je infrastruktura.
 
-If you build an LLM agent that runs for more than one turn, you need somewhere
-to put state that doesn't fit in the context window. That "somewhere" is the
-agent's memory system. It has to:
+Problem je što je sva evaluacija ostala u prošlom veku. Ljudi mere krajnji F1 i kažu "Mem0 je 21, Zep je 84" — i stvar tu. Niko ti ne zna reći *zašto*. Je li to zato kako smeštaju memoriju? Kako je vade? Kako je održavaju? Ćorak posao.
 
-- **Store** heterogeneous stuff: dialogue turns, tool outputs, facts, events,
-  preferences, intermediate plans.
-- **Retrieve** the relevant bits when a new query arrives — and "relevant" is
-  fuzzy, semantic, and sometimes temporal ("what did I say *last week*?").
-- **Update** when facts change ("I moved to London" should invalidate "I live
-  in Paris").
-- **Maintain** bounded size — you can't keep everything forever.
+Ovaj rad kaže: stani. Rastavi svaki sistem memorije na četiri dela, pa meri svaki posebno.
 
-People have built ~12 serious systems for this (Mem0, MemGPT/Letta, Zep,
-MemOS, A-MEM, …). They're all different. The problem the paper attacks: *nobody
-can tell you which design choice in any of them actually matters*, because
-existing benchmarks only report end-to-end answer F1 and treat the memory as a
-black box. If Mem0 scores 21.4 and Zep scores 84 on utility, is that because of
-how they *store* memory, how they *retrieve* it, or how they *maintain* it?
-Nobody knew.
+## Četiri modula
 
-## The idea
+Svaki sistem memorije agenta na svetu je zapravo jedan te isti obrazac, samo različito popunjen:
 
-Stop treating memory as one thing. Formalize it as a tuple:
+- **R** — kako pamtiš i gde to stojiš (flat tekst? graf? kompozit?) i fizički gde (u kontekstu? u vektor bazi? u više engine-a odjednom?)
+- **S** — kako sirov dijalog postaje memorija (samo nalepiš redove? izvučeš činjenice? parsiraš u triplets?)
+- **Q** — kako nađeš što treba kad dođe upit (pažnja? vektorska pretraga? šetnja po grafu? LLM kao planer? hibrid?)
+- **U** — kako se to održava kroz vreme (append sa timestampovima? FIFO izbacivanje? LLM spaja slično? offline fine-tuning?)
 
-```
-M_sys = ⟨R, S, Q, U⟩
-```
+Autori ovo zapišu kao `M_sys = ⟨R, S, Q, U⟩` i onda — i tu je zapravo doprinos — krenu da benchmark-iraju svaki slot nezavisno, sa pravim evidence-level merama i sa cenom. Ne samo "da li je odgovor dobar", nego "da li si uopšte izvukao dokaz koji treba", i "koliko te to koštalo u sekundama po upitu".
 
-- **R** — Representation & Storage: *how* memory is encoded (flat text?
-  knowledge graph? composite object?) and *where* it physically lives
-  (in-context KV cache? vector DB? graph DB? multi-engine?).
-- **S** — Extraction: how raw dialogue turns become memory objects (just
-  concatenate them? extract free-form facts? parse into typed triplets?).
-- **Q** — Retrieval & Routing: how a query finds relevant memory (native
-  attention? dense KNN? graph hop? LLM-as-planner? hybrid multi-stage?).
-- **U** — Maintenance: how memory evolves over time (append-only with
-  timestamps? physical eviction by FIFO or score? LLM-driven consolidation?
-  offline fine-tuning?).
+I testiraju 12 ozbiljnih sistema na 5 različitih workload-a. Odjednom vidiš gde koji puca.
 
-Every existing system is an instance of this tuple. Now you can benchmark each
-slot independently, with **evidence-level metrics** (did you surface the *gold
-evidence*, not just produce a good answer?) and **operational cost** (how many
-seconds per query?), across **five workloads** that stress different
-bottlenecks.
+## Dve stvari koje su me stvarno iznenadile
 
-## How it works (the intuition)
+Prvo — i ovo je meni bio najveći "aha" trenutak — **pretraga memorije nije problem rangiranja, nego problem sastavljanja dokaza.**
 
-The deepest insight in the paper isn't "module X is best." It's two reframings:
+Eksperiment RQ2 je tu ključan. SimpleMem dobije Recall@1 (prvi pogodak) od 39 — fenomenalno u tom jednom pogledu, ume odmah da izvuče onaj jedan očigledno bitan red. Ali čim povećaš budžet na Recall@5 i Recall@10, ili čim se dokaz nalazi dalje u prošlosti, A-MEM i MemTree ga potpuno zgaze (69.5/85.9 i 59.7/80.5 naspram flat Embedding RAG koji pada sa 37.1 na 7.4 F1).
 
-**1. Retrieval is an evidence-completion problem, not a ranking problem.**
-The RQ2 experiment is the one I keep coming back to. SimpleMem wins Recall@1
-(39.0) — it's great at surfacing *one* obviously-relevant memory early. But
-A-MEM and MemTree crush it at Recall@5/10 (69.5/85.9 and 59.7/80.5) and stay
-flat as the evidence-distance gap grows, while flat Embedding RAG collapses
-(37.1 → 7.4 F1). The lesson: the hard case isn't finding the *first* relevant
-memory, it's gathering the *complete* scattered set of memories needed to
-answer — and that's where explicit structure (links, hierarchy) pays for
-itself. Flat similarity is a short-range weapon.
+Šta to znači? Teški slučaj nije naći *prvu* relevantnu stvar. Teško je skupiti *kompletan* rasuti skup memorija potrebnih da bi se odgovorilo — i tu se isplati eksplicitna struktura, linkovi, hijerarhija. Flat similarity je oružje kratkog dometa. To je nešto što nosiš sa sobom i kad zatvoriš papir.
 
-**2. Cost is governed by maintenance scope, not structure type.**
-This is O7, and it reframes the whole "graph vs vector" debate. People assume
-structured memory (graphs, hybrids) is expensive because it's structured. The
-data says no: it's expensive when each write **propagates globally**. LightMem
-and MemTree stay cheap because their writes are *localized* — a new fact touches
-only its local subtree. Cognee and Zep get expensive (116s, 155s) because every
-write triggers graph-wide consolidation. Structure is fine; **global
-recomputation is the enemy**. That's an actionable engineering principle, not
-just a benchmark result.
+Drugo — **cenu ne gura struktura, gura je obim održavanja.** Ovo je O7 i zapravo preokreće celu debatu "graf vs vektor". Ljudi misle da je strukturirana memorija (grafovi, hibridi) skupa zato što je strukturirana. Podaci kažu suprotno: skupa je kad svaki upis **propagira globalno**. LightMem i MemTree ostaju jeftini jer su im upisi lokalni — nova činjenica dirne samo svoje podstablo. Cognee i Zep postaju skupi (116s, 155s) jer svaki upis okine konsolidaciju celog grafa. Struktura je u redu. **Globalna prekalkulacija je neprijatelj.** To je konkretan inženjerski princip, ne samo broj na tabeli.
 
-## What I learned by implementing it
+## Šta sam naučio kada sam to sam iskodirao
 
-Building the four-module system from scratch (see `implementation/`) surfaced
-three things the paper *implies* but doesn't say outright:
+Kad kreneš da praviš ta četiri modula ispočetka (vidi `implementation/`), isplivaju tri stvari koje papir implikuje ali ne kaže glasno:
 
-1. **The four modules are more coupled than the taxonomy suggests.** You can't
-   really pick R, S, Q, U independently. For example, timestamp-based
-   multi-versioning (a U choice) only works if your R exposes per-entity
-   version chains — otherwise you can't bind a revised fact to the entity it
-   updates. And balanced hybrid retrieval (Q) only pays off if S preserved
-   enough raw text for BM25 to match on. The tuple is a *lens*, not an
-   orthogonality guarantee.
+**Moduli su jače spregnuti nego što taksonomija izgleda.** Ne možeš baš slobodno da biraš R, S, Q, U nezavisno. Na primer, timestamp multi-versioning (to je U izbor) radi samo ako ti R izlaže verzije po entitetu — inače ne možeš da vežeš ispravljenu činjenicu za entitet koji ažuriraš. Ili, balansirana hibridna pretraga (Q) se isplati samo ako ti je S sačuvao dovoljno sirovog teksta po kom BM25 može da traži. Tuple je *sočivo*, nije garancija ortogonalnosti.
 
-2. **"Late filtering" (Finding 7) is the most counterintuitive winner.** I
-   assumed aggressive fact extraction (the Mem0-style "distill to one clean
-   fact") would be the clean design. The ablation says the opposite:
-   `Fast-Memorize` destroys `Fine-Memorize` on LoCoMo (25.5 vs 2.5 EM), and
-   raw verbatim turns beat summaries on *all four metrics*. The reason:
-   aggressive extraction throws away the connective tissue that later makes
-   multi-hop reasoning possible. You don't know at write-time which detail will
-   matter in combination later. So preserve now, filter late. My implementation
-   stores raw turns verbatim for exactly this reason.
+**"Kasno filtriranje" (Finding 7) je kontraintuitivni pobednik.** Prirodno sam pomislio da agresivna ekstrakcija činjenica — Mem0 stil "iscedi u jednu čistu činjenicu" — mora da je pravi dizajn. Ablacija kaže suprotno. `Fast-Memorize` uništi `Fine-Memorize` na LoCoMo (25.5 vs 2.5 EM). Sirovi redovi pobeđuju sumarije na *sva četiri* metrika. Zašto? Zato što agresivna ekstrakcija baci ono vezivno tkivo koje kasnije čini multi-hop razmišljanje mogućim. Ti u trenutku upisa ne znaš koja će sitnica biti bitna u kombinaciji sa nečim kasnije. Pa — sačuvaj sada, filtriraj kasnije. Zato moja implementacija čuva sirove redove verbatim.
 
-3. **Reflection is overrated for retrieval.** M3's result — SimpleMem
-   `Planning+Reflect` scores *worse* than `Planning-Only` — is the one I'd want
-   to see replicated hard. The current agent-building zeitgeist adds a
-   reflection/rethink step everywhere. For memory retrieval at least, the data
-   says it adds overhead with no gain. Once the route is planned, extra
-   deliberation weakens the decision. I implemented planning (query expansion)
-   and deliberately *did not* add reflection.
+**Refleksija je overrated za pretragu.** M3 rezultat — SimpleMem `Planning+Reflect` radi *gori* od `Planning-Only` — je onaj koji bih najviše voleo da vidim replikovan čvrsto. Trenutni agent-building duh stavlja refleksiju/rethink svugde. Za memoriju barem, podaci kažu da dodaje trošak bez dobitka. Kad je ruta jednom planirana, dodatno razmišljanje oslabi odluku. Implementirao sam planning (query expansion) i namerno *nisam* dodao refleksiju.
 
-## What surprised me / was harder than expected
+## Šta je bilo teže nego što sam mislio
 
-- **Embeddings without a model.** The paper's systems all use real embedding
-  models. I had to implement a toy task with *no* model downloads, so I built a
-  deterministic char-n-gram hash embedding. It's meaningful enough for cosine
-  on a tiny dataset, but it makes the dense-retrieval leg much weaker than it
-  would be with a real encoder. This is the biggest gap between my
-  implementation and the paper's systems — and it's exactly the kind of thing
-  the paper's "backbone robustness" finding (O5) predicts: the *ordering* of
-  good vs bad memory designs is fairly stable across backbones, because
-   grounding happens before generation.
+Embedingi bez modela. Svi sistemi iz papira koriste prave embeding modele. Meni je trebalo da radi na mašini bez API ključeva i bez skidanja modela, pa sam ispekao deterministički char-n-gram hash embeding. Dovoljno smislen da cosine radi na malom datasetu, ali daleko slabije od pravog enkodera — i to je najveći jaz između moje implementacije i sistema iz papira. Papir to i predviđa (O5, backbone robustnost): redosled dobrih naspram loših dizajna je prilično stabilan kroz backbonove, jer se uzemljenje (grounding) dešava pre generacije.
 
-- **Conservative consolidation is fiddly.** "Merge two memories when they're
-  about the same thing" sounds simple. In practice the threshold is delicate:
-  too loose and you collapse distinct facts; too strict and you never merge and
-  the store grows unbounded. The paper's Finding 9 ("conservative merge wins,
-  delayed flush loses") is easy to state but the actual threshold (I used 0.85
-  text cosine + entity overlap) is a real engineering knob.
+Konzervativna konsolidacija je frčka. "Spoji dve memorije kad su o istoj stvari" zvuči prosto. U praksi je prag delikatan: previše labav — srušiš različite činjenice; previše strog — nikad ne spojiš pa memorija raste neograničeno. Finding 9 ("konzervativni merge pobeđuje, delayed flush gubi") je lak za reći, ali stvarni prag (ja sam uzeo 0.85 cosine + entitet preklapanje) je pravi inženjerski knob.
 
-- **Multi-versioning needs discipline.** Logical invalidation (never delete,
-  mark stale) is elegant but means every retrieval query must filter on
-  `valid=True` by default — and must *optionally* include invalid entries when
-  the query is explicitly temporal ("where did I *used to* live?"). That dual
-  mode is easy to get wrong.
+Multi-versioning traži disciplinu. Logička invalidacija (nikad ne briši, samo označi kao zastarelo) je elegantna, ali znači da svaki upit mora po defaultu da filtrira `valid=True` — a *opciono* da uključi invalidne kad je upit eksplicitno temporalan ("gde sam *ranije* živeo?"). Taj dupli mod je lako pogrešiti.
 
-## The cost/quality frontier (the most useful chart in the paper)
+## Graf cene naspram kvaliteta
 
-Worth memorizing — normalized utility vs avg operation latency/query:
+Ovo je jedan od korisnijih dijagrama u celom radu, vredi zapamtiti — normalized utility naspram prosečnog kašnjenja po upitu:
 
 ```
 utility
-100 │                           · Cognee (84@116s)
-    │                    · Zep (84@155s)
- 80 │             · MemoryOS (82@29s)
+100 │                           · Cognee (84 @ 116s)
+    │                    · Zep (84 @ 155s)
+ 80 │             · MemoryOS (82 @ 29s)
     │
- 60 │       · A-MEM (58@18s) · MemTree (64@16s)
+ 60 │       · A-MEM (58 @ 18s) · MemTree (64 @ 16s)
     │
- 40 │ · LightMem (48@4s)
+ 40 │ · LightMem (48 @ 4s)
     │
- 20 │       · MemoChat(28@15s) · Mem0 (21@36s)
-    └──────────────────────────────────────────► latency (log)
-       1s     10s       100s      1000s
+ 20 │       · MemoChat (28 @ 15s) · Mem0 (21 @ 36s)
+    └─────────────────────────────────────────────► latency (log)
+       1s      10s        100s       1000s
 ```
 
-The Pareto front: **LightMem → MemTree → A-MEM → MemoryOS**, then a sharp
-jump to Cognee/Zep for the last few utility points at 4-10× the cost. The
-lesson for a builder: pick your point on this curve by how latency-sensitive
-your workload is; the highest-utility systems are *not* always worth it.
+Pareto fronta ide: **LightMem → MemTree → A-MEM → MemoryOS**, pa onda oštar skok do Cognee/Zep za poslednjih par poena utility-ja po 4-10× većoj ceni. Poruka za graditelja: izaberi tačku na toj krivoj prema tome koliko ti je workload osetljiv na latenciju. Najveći utility nije uvek vredan toga.
 
-## References
-- Paper: https://arxiv.org/abs/2606.24775
-- Official code/benchmark: https://github.com/OpenDataBox/MemoryData
-- My implementation: `implementation/`
+## Reference
+- Papir: https://arxiv.org/abs/2606.24775
+- Zvanični kod/benchmark: https://github.com/OpenDataBox/MemoryData
+- Moja implementacija: `implementation/`
 - Breakdown: `breakdown.md`
