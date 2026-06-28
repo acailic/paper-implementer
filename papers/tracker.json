@@ -40,8 +40,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.24775",
       "rank": 1,
-      "status": "pending",
-      "folder": "papers/2026-are-we-ready-for-an-agent"
+      "status": "done",
+      "folder": "papers/2026-are-we-ready-for-an-agent",
+      "started_at": "2026-06-29",
+      "finished_at": "2026-06-29"
     },
     {
       "title": "Wan-Streamer v0.1: End-to-end Real-time Interactive Foundation Models",

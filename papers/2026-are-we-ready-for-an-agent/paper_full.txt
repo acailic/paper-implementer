@@ -1,0 +1,2549 @@
+
+===== PAGE 1 =====
+Are We Ready For An Agent-Native Memory System?
+WeiZhou XuanheZhou∗ ShaokunHan HongmingXu
+ShanghaiJiaoTong ShanghaiJiaoTong ShanghaiJiaoTong ShanghaiJiaoTong
+University University University University
+weizhoudb@sjtu.edu.cn zhouxuanhe@sjtu.edu.cn areedd0@sjtu.edu.cn muzhihai@sjtu.edu.cn
+GuoliangLi ZhiyuLi FeiyuXiong FanWu
+TsinghuaUniversity MemTensor(Shanghai) MemTensor(Shanghai) ShanghaiJiaoTong
+liguoliang@tsinghua.edu.cn TechnologyCo.,Ltd TechnologyCo.,Ltd University
+lizy@memtensor.cn xiongfy@memtensor.cn fwu@cs.sjtu.edu.cn
+Abstract Memory Memory Memory Memory
+Represent. & Storage Extraction Retrieval / Routing Maintenance
+Memoryforlargelanguagemodel(LLM)agentshasrapidlyevolved
+f m ro e m nt s s i y m st p e l m er t e h t a r t ie s v u a p l p -a o u r g ts m p e e n r t s e is d te m n e t c in h f a o n r i m sm at s io in n t s o to a r d ag at e a ,r m et a r n ie a v g a e l - , / O E b x s p e e rv ri a e t n io c n e (T M im e e m s o ta r m y S pe tr d e a L m og) query re R ce e n t × r c i y e re v × le a i v m l a S p n o c c r e o ta r n e c r e ( r m p e e t e r r i m i e o v o d e r ic y d ) Re (L fle L c M ti ) on Messa U L g L e s M er F c c u o o n r r e e c _ _ t m i m o e e n m m C o o r r a y y _ l _ l a re p p p l e a s n c e e d arch meigvricatte M R C e e m o c r o a e r l p l y romote
+update,consolidation,anddynamiclifecyclegovernancethrough- User insight write-back inform Agent (self-directed) Storage
+outagentexecution.Despitethisevolution,existingevaluations R / e A sp ct o io n n se LLM (A A c g t) ent plan P ( l L a L n M ne ) r a a r r c c h h iv iv a a l_ l_ m m e e m m o o r r y y _ _ s in e s a e rc rt h A S r to ch ra iv g a e l
+stillbenchmarkagentmemorymainlythroughend-to-endtasksuc-
+(a) Structural Topological (b) Structural Topological cessmetrics(e.g.,F1,BLEU),whiletreatingtheunderlyingsystem (Streaming Logs) (Hierarchical Tiers)
+a i o n s r c y a lu m m d o o in n d g o u l l o i e t p s h , e ic a ra n b t d l i a o c r n o k a b b l u o c s x o t . n s A t e s s s , s a a u r r e c n s h d u i e t l r t e , c d c t y r u i n r ti a a c l m a t l i r s c a y d k s e n te - o o m w ff - l s l e e a d v c e g r l e o c u s o s p n d m ce a e r t n m es s - , , LLM Agent User Me E s x E t s n ra a ti c t g y to e r User M Tr e a s je s c a t g o e r y / (Sc M h e e m E m x o a t r r - y a C c E o ti n n o c s n o t ) r d a e in r ed me s m tr o u r c y t u o r b e j d ects S R to o r u a te g r e persist Lon V g- e T D e c B r t m or M em
+Graph
+rem In ai t n h i i n s s p u a ffi p c e i r e , n w tl e y p e r x e p s l e o n re t d a . systematicexperimentalstudyof Cro R s e s r - a E n n k c e o r der En C t o it n y f D lic is t a R m es b o ig lu u t a io ti n on R / e A sp ct o io n n se LLM (A A c g t) ent memor c y o - n a t u e g x m t ented A C ss o e n m te b x l t er r r a e n s k u e lts d R H e y tr b ie ri v d al ind d e a x ta ed B S M D Q B L 2 5 /
+a an ge a n n t a m ly e ti m ca o l r f y ra f m ro e m w a or d k a t t h a a m td an ec a o g m em po e s n e t s p a e g r e s n p t ec m ti e v m e. o W ry e i p n r to op fo o u se r Tr G a r v a e p rs h al G K r T a n e p o m h w p ( l N e o d r e a g o l e 4j) (C M o a n i s n o te lid n a a t n io c n e , C F o o n rg tr e o t l t l i e n r g) consoli t d ri a g t g e e / r forget R S u K Q n V t L i m C ( c e S o a n c S t s a h o t t a l e i e d t a e ) te
+coremodules:memoryrepresentationandstorage,extraction,re- Multi-Engine Storage
+trievalandrouting,andmaintenance.Underthisframework,we (c) Structural Topological (d) Multi-Paradigm
+(Knowledge Graph) Hybrid Memory System
+evaluate12representativememorysystemsandtworeferencebase-
+Figure1:TypicalExecutionWorkflowsofAgentMemory.
+linesacrossfivebenchmarkworkloadsspanning11datasets.Our
+extensiveend-to-endevaluationshowsthatnosinglearchitecture
+dominatesacrossallscenarios;instead,effectivenessdependsheav-
+ilyonhowwellthememorystructurealignswiththeworkload (2)HierarchicalTieredMemorySystem(e.g.,MemGPT[25])or-
+bottleneck.Furthermore,throughfine-grainedablationstudies,we ganizesmemoryintomultiplelevelswithdifferentcapacitiesand
+quantifytheirindividualeffectsonrepresentationfidelity,retrieval accessproperties,separatingcorememoryfromarchivalstorage
+precision,updatecorrectness,andlong-horizonstability.Finally,we withexplicitmovement(e.g.,evictionandpromotion)acrosstiers;
+revealcost-performancetrade-offsunderrealisticworkloads,show-
+(3)KnowledgeGraphMemorySystem(e.g.,Mem0𝑔[5],Zep[26])
+inglocalizedmaintenanceismorecost-efficientthanglobalreorga- representsentities,relations,andtheirtemporalevolutioninstruc-
+nization.Basedonthesefindings,weidentifypromisingdirections turedforms(e.g.,temporalknowledgegraphs),oftenincorporating
+towardsbuildingtrulyagent-nativememorysystems.Thecodeis entitydisambiguationandconflictresolution;(4)CompositeHybrid
+publiclyavailableathttps://github.com/OpenDataBox/MemoryData. MemorySystem(e.g.,A-MEM[33])routesschema-awaremem-
+oryobjectsacrossmultiplestoragesubstrates,explicitlyseparating
+1 Introduction runtimestate(e.g.,KVcaches)fromlong-termstorage(e.g.,vec-
+tor,graph,keywordindexes),managedbydedicatedmaintenance
+TherapidevolutionofLargeLanguageModel(LLM)agentshas
+modules.However,thisrapidproliferationhasalsoledtoahighly
+sparked a large body of exciting research and industrial efforts
+fragmentedlandscapethatlackssystematicevaluationfromadata
+inbuildingagentmemory,i.e.,thedatamanagementsystemof
+managementperspective,raisinganaturalquestion:Areweready
+theLLMagentthatsupportslong-horizonstatefulexecutionand
+foranagent-nativememorysystem?
+personalizedinteraction[9,13,17,19,23,24,28].
+Inthispaper,werevisitthisquestionforagentmemory.Inpar-
+As shown in Figure 1, existing agent memory systems span
+ticular,wefocusonsystem-levelmemoryovertextual,structured,
+adiversesetofarchitecturaldesigns.(1)Stream-and-Reflection
+andevenparametricrepresentations[5,25,26,33],afundamen-
+MemorySystem(e.g.,MemoryBank[39])maintainsexperiencesas
+talinfrastructurecomponentformodernautonomousagents.We
+timestampedmemorystreamsandperiodicallysummarizesthem
+focusonmemory-centricsystems,ratherthantask-specificagent
+intohigher-levelreflectionsthatarewrittenbackintothestream;
+frameworkswherememoryisanauxiliarymodule[1,40].Itisthe
+∗XuanheZhouisthecorrespondingauthor. persistentdatamanagementsystemthatmaintainsinformation
+6202
+nuJ
+32
+]LC.sc[
+1v57742.6062:viXra
+===== PAGE 2 =====
+beyondasingleinferencestep(e.g.,historicalinteractions,environ- (3)Fine-GrainedTechnicalComponentEvaluation(Section5).
+mentalobservations,andintermediatetoolexecutions)decoupled Leveragingourfour-moduleframework,weconductcontrolled
+fromtheLLMs’parametricweightsandvolatilecontextwindows. andfine-grainedexperimentsonrepresentativestrategieswithin
+Agentframeworksrelyontheseexternalmemorysystems(e.g., eachtechniquecomponent.Bysystematicallygeneratingcontrolled
+Mem0[5],Letta[25],Zep[26],andA-MEM[33])toactivelywrite, variantsthatmodifyonemoduleatatime,wequantifytheirper-
+update,index,androuterelevantcontextbackintothereasoning formancetrade-offsandassesstheirindividualimpactsonrepre-
+loop.Thecapabilityofalong-horizonagentlargelydependsonthe sentationfidelity,routingprecision,andupdatecorrectness.
+reliabilityandefficiencyofthismemorylayer.Anagentadopting (4)InsightfulFindings.Basedonourexperimentalresultsand
+a poorly designed memory architecture can suffer from factual in-depthanalysis,wedistillasetofinsightfulfindingsregarding
+contradictions,catastrophicforgetting,orunacceptablelatencies thecost–performancetrade-offsofagentmemorysystems:
+duringcontinuousexecution[6,38]. ❶ Are Memory Systems Effective Across Different Agent
+Recentbenchmarks[20,22,29,31]haveevaluatedagentmemory RequestWorkloads?Nosinglememoryarchitecturedominates
+andshownthatexternalmemorycanimproveagentperformance allscenarios.Compositehybridsystemsleadonconversational
+ontasksrequiringfactualrecallandlong-contextunderstanding. QA,whilegraph-basedmethodsexcelinsingle-hopfactualrecall
+However,theseevaluationsarelargelyrootedinnaturallanguage butstrugglewithtemporalreasoning.Moreover,effectivememory
+processingandhavemultiplelimitationswhentreatingagentmem- systemsremainrobustacrossLLMbackbonevariantsbecausethey
+oryasadatamanagementsystem(seeSection2).First,theyfail externalizeevidencelocalizationbeforeanswergeneration.
+toevaluatemanyrepresentativememoryarchitectures(e.g.,sys- ❷HowAccuratelyDoMemorySystemsRetrieveStoredEvi-
+temssuchasMemoChat,MemTree,andLightMemhavenotbeen dence?Explicitqueryplanningandbalancedhybridsearchmaxi-
+includedinpriorevaluations)underunifiedworkloads,making mizecontextualrelevance.However,retrievalaccuracydegrades
+principledcross-systemcomparisonsdifficult.Effortsfromthedata- significantlyasthetemporaldistancebetweentheevidenceandthe
+base community [32] limit their scope to a few chatbot-centric queryincreases,exposinglimitationsofsimilarity-basedretrieval.
+datasets(e.g.,LoCoMoandLongMemEvalonly),neglectingcom- ❸AreMemorySystemsRobustUnderDynamicUpdates?
+plexagenticexecutionscenarios.Second,existingbenchmarkspre- Graph-based methods handle knowledge updates most reliably,
+dominantlyrelyonsingle-sided,end-to-endtasksuccessmetrics whereaspopularfact-extractionpluginsandappend-onlystores
+(e.g.,F1andBLEUscores)ratherthanacomprehensiveevaluation strugglewithtargetedoverwrites.Systemslackinglifecycleman-
+suite.Theyfailtoexplicitlyisolateandmeasuremulti-dimensional agementreturnstalefacts,leadingto“hallucinationsofthepast”.
+performance indicators such as evidence-level retrieval fidelity, ❹DoMemorySystemsRemainStableOverLongHorizons?
+dynamicupdaterobustnessunderconflictingknowledge,andlong- Manyappend-onlymemorystoressufferfromcatastrophicdegrada-
+horizonstability.Third,theyrarelymeasurekeyoperationalcosts tionasevidencebecomesmoredistant.Fortime-dependentqueries,
+fromasystemsperspective,suchasindexconstructiontimeand rawlong-contextretrievalstilloutperformsmostmemory-backed
+querylatency,whicharecriticalforproductiondeployments.Last, approaches,indicatingthatstandardsemanticconsolidationoften
+theytreatmemorysystemsasmonolithicblackboxesratherthan destroyscrucialchronologicalcues.
+decomposingthemintofundamentaldatamanagementmodules ❺WhatAretheOperationalCostsofAgentMemory?Highly
+forisolated,fine-grainedanalysis. structuredsystemsincurorders-of-magnitudehigherindexcon-
+Weovercometheselimitationsandconductcomprehensiveex- structiontimeandquerylatencythanlightweightstores,yetdo
+perimentsandanalysesfromadatamanagementperspective.The notconsistentlydeliverproportionalaccuracygains.
+contributionsareasfollows. ❻ When Do Individual Memory Components Go Wrong?
+(1)TechnologyDecompositionandTaxonomy(Section3).We Eachlayerofabstraction(e.g.,compression,summarization,and
+decomposeexistingagentmemorysystemsintofourcorecompo- factextraction)progressivelydiscardsinformation.Furthermore,
+nents:(i)memoryrepresentationandstorage,(ii)memoryextrac- fine-grainedLLM-basedextractioncanyieldmodestprecisiongains
+tion,(iii)memoryretrievalandrouting,and(iv)memorymain- butsubstantiallydegrademulti-hopreasoning.Finally,conserva-
+tenance.Foreachcomponent,wefurtherestablishastructured tivememoryconsolidationservesasthebestdefaultmaintenance
+taxonomy1bycategorizingexistingapproachesaccordingtotheir strategy,whereasdelayedflushingcreatesadeceptivetrade-off
+underlyingdesignprinciples,enablingprincipledcomparisons. betweensurface-levelcoverageandactualanswerability.
+(2)OverallEnd-to-EndPerformanceEvaluation(Section4).
+Weconductend-to-endevaluationsunderaunifiedandfairtestbed
+2 Preliminaries
+(e.g.,unifiedtime-overheadtraces)2acrossfivedistinctbenchmark
+workloadsencompassing11datasets.Ourstudyincludes12repre- Tosupportthediscussionintherestofthispaper,wefirstclarify
+sentativememorysystems,eachembodyingdifferentcombinations thescopeofagentmemoryfromadatamanagementperspective.
+ofrepresentation,storage,routing,andmaintenancestrategies.We Althoughrecentstudieshaveexaminedmemoryfromviewpoints
+evaluatetheirperformancefromfiveperspectives:taskeffective- suchascognitivetaxonomy,agentarchitecture,andgraph-based
+ness (RQ1), retrieval fidelity (RQ2), dynamic update robustness organization[6,10,30,32,34,36],theunderlyingconceptisstill
+(RQ3),long-horizonstability(RQ4),andoperationalcost(RQ5). oftentreatedprimarilyasanalgorithmiccomponentoftheLLMor
+agentpipeline[6,10,36].Incontrast,westudyagentmemoryas
+1https://github.com/OpenDataBox/awesome-agent-memory astandalonedatamanagementobjectandsysteminfrastructure,
+2https://github.com/OpenDataBox/MemoryData withexplicitattentiontohowitisrepresented,stored,retrieved,
+2
+===== PAGE 3 =====
+updated,andmaintainedunderrealagentworkloads.Underthis 1 Token-Level Sequence 2 Graph & Tree-Based Topology
+v M ie e w m , o w r e y in T t y ro p d e u s c . e F a o s r e a t n of L d L e M fin a it g i e o n n t s , b a e w lo i w d . evarietyofinforma- t t t t tt 3 2 3 2 11 : : : : :: " " " D C Ki h a m a il y r i l s i e e v v i e e s g n K e t i t m l a o r ' g s ia … p n e " . t . ." ..." ... PREFERS Veg Fo et o a d rian . (( . tt . ₁₁)) Kim's Memory
+tionisproducedandmayneedtobememorized,includingdia- Human-Readable Text KEEPS_PET Kim LIVES_IN Preference Life
+CChhaarrlliiee ((tt₂₂)) ((tt₁₁)) ((tt₃₃))
+l e c o a n g n c u e b e s e [ h 3 b i 6 s r t ] o o . a r F d y o l , l y l t o o o w o r l g in e a g x n e i e z c s e u t d a ti b o a l n l i o sh l n o e g g d s t , c w o d o g is n a ti i x l t l e i e v s d e [ f f 1 a r 0 a c , m t 3 s, 0 e a ] w . n o ( d 1 rk ) u s A s , e l m r on p em r g e o f t e h r r y e - (a tt ) 11 Explici tt t 22 D hh i s ∈∈ c . r . R e R . t e ᵀˣ T ᵈ e tt x TT t Tok … [0 e , . n 2 0 1 . , 4 … 6] , ((tt₂₂)) No ( d KK e iimm : E , n L . I t . V i . t E y S , _ E IN dg , PP e aa : rr R ii P ss e a ) la ri t s ion ((tt₃₃)) R V o eg o F e o t t o : a d r S ia u n mmary C K , h e L a e e r p li a s e ves: Ra L w i P v a e F r s a i s i c n ts
+temporal axis,short-termmemoryholdsthevolatilestateofan Latent State Vector
+(b) Implicit Continuous Vector Token (a) Temporal Knowledge Graph (b) Hierarchical Tree Structures
+ongoingsession,whilelong-termmemorypersistsacrosssessions.
+(2)Alongthefunctionalaxis,long-termmemoryisfurtherdivided
+...
+intoinformationsuchasconcretepastevents(episodicmemory), 3 He C te o r m og p e o n s e it o e us Type & Date "Kim is ..." [ 0.2 tt11 1,... , 0 tt2 . 2 46 ] ... Kim LIVE P S a _I r N is ...
+Representation
+abstractedfactualknowledge(semanticmemory)[10,32],reusable Memory Object Metadata Text Embedding Graph
+actionstrategies(proceduralmemory),anduserpreferences.
+Figure2:MemoryRepresentationMethods.
+AgentMemory. WedefinetheagentmemoryMasthepersistent
+datamanagementobject[25,32]thatmaintainsthiscumulative selectingprompts,tooldescriptions,andretrievedfacts)tomitigate
+statebeyondasingleinferencestepandmakesitaccessibletothe contextrot[2].Incontrast,anagentmemorysystem(1)isaper-
+agentduringfuturereasoningandaction[10,36]. sistentandupdatableinfrastructureformanagingagent-specific
+AgentMemorySystem. TooperationalizeagentmemoryM,a stateovertimeand(2)governsthefulllong-termmemorylifecycle,
+robustinfrastructureisrequired[10,25].AsshowninTable1,from includingmemoryrepresentation,storage,retrieval,andmainte-
+adatasystemsperspective[14,32],weformalizetheagentmemory nance,ratherthanmerelypackingthecurrentcontextwindow.
+systemasatupleoffourmodules:M𝑠𝑦𝑠 = ⟨R,S,Q,U⟩,where Distinction from Traditional Database Workloads. Agent
+eachmodulegovernsadistinctphaseofthememorylifecycle. memoryworkloadsdiffersubstantiallyfromconventionaldatabase
+•(1)MemoryRepresentationandStorageR:Amappingthatde- OLTP/OLAPworkloads[17,25].First,memoryaccessisoften
+finesthelogicalandphysicalmemoryformatwithadatamodel semantic ratherthanpurelypredicate-based[4,11].Queriesare
+oftwofacets:(a)logicalrepresentation,spanningsimpleprimi- commonlyexpressedthroughnaturallanguage,partialcontext,or
+tives(discretetokens,continuousvectors)tocomplextopologies latentintent,andthereforerelyonapproximatematching,query
+(knowledgegraphs,trees,andcomposites);and(b)physicalstorage, rewriting,orLLM-guidedretrievalratherthanonlyexactlogical
+utilizingtransientregisters,specializedsingle-enginedatabases,or predicatesoverrigidschemas.Second,memorycontentsevolve
+multi-enginebackendsforpersistenceandindexing.
+undercontinuousandpotentiallyconflictingobservations.Unlike
+•(2)MemoryExtractionS:Amechanismgoverninghowhetero- conventionaltransactionalsettings,whereupdatestypicallyover-
+geneousinputstreams(e.g.,multi-turndialogues,toollogs)are writetuplesunderapredefinedschemaandconsistencymodel,
+transformedintologicalmemoryprimitivesviapipelinessuchas agentmemorymustaccommodateuncertain,partial,andsome-
+rawsequenceconcatenation,schema-freesemanticextraction,or timescontradictoryinformationcollectedacrosstime,tools,and
+schema-constrainedstructuredextraction.
+environments[10,38].Third,agentmemoryworkloadsarehighly
+• (3)MemoryRetrievalandRoutingQ: A function that dynami-
+heterogeneousinbothaccesspatternandgranularity.Asinglework-
+callyidentifiesrelevantmemorysubsetsbasedonaquerycontext, loadmaycombinelong-contextsynthesis,episodicrecall,struc-
+utilizing specific routing algorithms to traverse indices. Mecha- turedfactlookup,temporalreasoning,andstreamingupdates.Asa
+nismsspannativeattention-basedretrieval,semantic𝐾-nearest result,practicalsystemsoftenrequirehybridexecutionstrategies
+neighborsearch,topologicalsubgraphtraversal,autonomousagen- thatcombinesemanticretrieval,structuredfiltering,andtopology-
+ticroutingviaLLMplanning,andmulti-stagehybridexecution. awaretraversalwithinonememoryarchitecture[25,32].These
+•(4)MemoryMaintenanceU:Policiesgoverningthedynamiclife- propertiesdistinguishagentmemoryfromtraditionaldatabases,
+motivatingdedicatedabstractionsandevaluationmethodologies.
+cycleofmemoryentries,decomposedintothreesub-operations:
+(a)ConflictResolutionandVersioning handlescontradictionsvia 3 MethodOverview
+multi-versioning,invalidation,orprecedencerules;(b)Capacity
+Managementenforcesboundedgrowththroughconstraint-based Inthissection,wecarefullyanalyzeexistingagentmemorysystems
+hardeviction(e.g.,FIFO,tokenlimits)orscore-basedpriorityevic- acrossthefourcomponentsinSection2andestablishaunified
+tion(e.g.,temporaldecay);and(c)SemanticConsolidationutilizes taxonomythatsummarizesrepresentativecomponentmethods.
+theLLMtomergeredundantassertionsintodensesummariesor
+3.1 MemoryRepresentationandStorage
+executeCRUDoperationsviatool-callinginterfaces.
+DistinctionfromRAGandContextEngineering. Retrieval- Thismoduleconsistsoftwocomponents:(1)logicalrepresentation,
+AugmentedGeneration(RAG)[8,13]typicallyoperatesasastate- whichdefinesthestructuralencodingandorganizationexposed
+less,read-onlyretrievalprimitive:givenaquery,itfetchesrelevant totheagentsystem,directlydictatingcapacity,accessibility,and
+passagesfromastaticcorpustoaugmentasinglegenerationstep. trade-offsinexpressiveness,retrievalgranularity,anddownstream
+Contextengineering[2]isthebroaderpracticeofcuratingthefi- reasoningcompatibility;and(2)physicalstorage,whichdesignates
+niteLLMcontextwindowateachinferenceturn(e.g.,dynamically thepersistenceandindexingstructures,suchasvolatilein-context
+registers,densevectorengines,ortopologicalgraphdatabases.
+3
+===== PAGE 4 =====
+Table1:TaxonomyandCharacteristicsofAgentMemorySystems.
+MemoryRepresentation&Storage MemoryRetrieval&
+Category Method MemoryExtraction MemoryMaintenance
+Representation Storage QueryRouting
+MemoChat[18]
+❶Token-LevelSequence
+❶TransientIn-ContextRegisters
+❸Schema-ConstrainedExtraction ❹AutonomousAgenticRouting ❸LLM-DrivenSemanticConsolidation
+(StructuredJSONMemos) (LLMTopicSegmentation) (LLMTopicSelection) (Turn-Triggered)
+Se
+C
+q
+o
+u
+n
+e
+t
+n
+e
+t
+x
+i
+t
+al Mem0[5] ❶
+(Di
+T
+s
+o
+c
+k
+re
+e
+t
+n
+e
+-
+F
+L
+a
+e
+c
+v
+t
+e
+s
+l
+)
+Sequence ❷
+(Ve
+S
+c
+p
+t
+e
+o
+c
+r
+i
+D
+al
+B
+iz
+)
+edSingle-Engine ❷Schema-FreeExtraction ❷Semantic-BasedRetrieval ❸
+(To
+L
+o
+L
+l
+M
+-C
+-
+a
+D
+ll
+r
+i
+i
+n
+v
+g
+e
+)
+nSemanticConsolidation
+MEM1[41] ❶Token-LevelSequence ❶TransientIn-ContextRegisters ❶RawSequenceConcatenation ❶NativeAttention-BasedRetrieval ❷Capacity-DrivenPhysicalEviction
+MemAgent[35] ❶Token-LevelSequence ❶TransientIn-ContextRegisters
+❶RawSequenceConcatenation
+❶NativeAttention-BasedRetrieval
+❷Capacity-DrivenPhysicalEviction
+(RecursiveSummaries) (RLOverwrite)
+MemTree[27]
+❷Graph&Tree-BasedTopology ❷SpecializedSingle-Engine ❷Schema-FreeExtraction ❷Semantic-BasedRetrieval ❸LLM-DrivenSemanticConsolidation
+(HierarchicalTree) (VectorDB) (Top-DownEmbedding) (CollapsedTree) (RecursiveAggregation)
+Structural Zep[26]
+❷Graph&Tree-BasedTopology ❷SpecializedSingle-Engine ❸Schema-ConstrainedExtraction ❺Multi-StageHybridExecution ❶Timestamp-BasedMulti-Versioning
+Topological (TemporalKG) (GraphDB) (Triplets) (Dense+BM25+BFS) (LogicalInvalidation)
+Mem0𝑔[5] ❷Graph&Tree-BasedTopology ❸HeterogeneousMulti-Engine ❸Schema-ConstrainedExtraction ❸TopologicalSubgraphTraversal ❶Timestamp-BasedMulti-Versioning
+(LabeledGraph) (Vector+GraphDB) (Entity-Relation)
+Cognee[21]
+❷Graph&Tree-BasedTopology ❸HeterogeneousMulti-Engine ❸Schema-ConstrainedExtraction ❸TopologicalSubgraphTraversal ❶Timestamp-BasedMulti-Versioning
+(Entity-RelationTriplets) (Graph+Vector+RelationalDB) (ECLPipelineviaPydantic) (Dense-SeededTripletExtraction) (Hash-BasedDeduplication)
+LightMem[7]
+❸HeterogeneousComposite ❷SpecializedSingle-Engine ❷Schema-FreeExtraction
+❷Semantic-BasedRetrieval
+❶Timestamp-BasedMulti-Versioning
+(TripartiteSchema) (RelationalDB) (Entropy-Gated) (Append-OnlyLogs)
+SimpleMem[16] ❸HeterogeneousComposite
+❸HeterogeneousMulti-Engine
+❸Schema-ConstrainedExtraction
+❹AutonomousAgenticRouting ❸LLM-DrivenSemanticConsolidation
+(VectorDB+BM25+SQL) (QueryExpansion) (On-the-FlySynthesis)
+Multi-Paradigm MemOS[15]
+❸HeterogeneousComposite ❸HeterogeneousMulti-Engine ❸Schema-ConstrainedExtraction ❺Multi-StageHybridExecution ❶Timestamp-BasedMulti-Versioning
+Hybrid (MemCube) (Vector+GraphDB) (SemanticParser) (Boolean+Semantic) (DifferentialWrites)
+MemoryOS[12]
+❸HeterogeneousComposite ❸HeterogeneousMulti-Engine
+❸Schema-ConstrainedExtraction
+❺Multi-StageHybridExecution ❷Capacity-DrivenPhysicalEviction
+(Segment-Page) (KeywordIndex+VectorDB) (HierarchicalRouting) (Heat-BasedEviction)
+A-MEM[33]
+❸HeterogeneousComposite ❸HeterogeneousMulti-Engine ❸Schema-ConstrainedExtraction
+❸TopologicalSubgraphTraversal
+❸LLM-DrivenSemanticConsolidation
+(AtomicNotes) (Vector+GraphDB) (JSONAttributes) (Mutation&Pruning)
+Letta[25]
+❸HeterogeneousComposite ❷SpecializedSingle-Engine
+❸Schema-ConstrainedExtraction
+❹AutonomousAgenticRouting ❷Capacity-DrivenPhysicalEviction
+(ContextTiers) (RelationalDB) (FunctionCalling) (QueueFlush)
+3.1.1 Logical Representation. As displayed in Figure 2, this 1 Transient In-Context Register 3 Heterogeneous Multi-Engine
+componentactsasabridgebetweenrawdataandtheexecution Text Embedding Graph
+e g n ra v p ir h o s n ,o m r e v n e t ct b o y rs o p r a g c a e n s i . z I i t n d g et m er e m m in o e ry sh in ow to e c ffi le c a i r en m tl o y d a e s ls y , st s e u m ch ca a n s Buffer No tt 11 Extern tt a 22 l St . o . r . e ttTT "Kim is ..." [ 0.2 tt11 1,... , 0 tt2 . 2 46 ] ... Kim LI P V a E r S is _IN
+search,combine,andusehistoricalcontextforcomplextasks.
+❶Token-LevelSequenceRepresentation.Thiscategorymod- 2 Specialized Single-Engine Memory Router
+els memory as flat, one-dimensional sequences lacking explicit
+structuralabstractions(e.g.,graphsorhierarchies).Memoryisrep-
+File Relational Vector Graph File / Relational / Vector / Graph DB
+resentedeitherasdiscrete,human-readablenaturallanguagetokens Object DB DB DB
+orasimplicit,continuouslatentvectortokens(e.g.,factembeddings, Single-Specialized Store Multi-Distributed Store
+hiddenstates,orKV-cachetensors).
+▶ExplicitDiscreteTextToken. This category models memory as Figure3:MemoryStorageMethods.
+human-readable strings or independent factual statements. For
+instance,Mem0isolatesmemoryintodiscretenaturallanguage
+factsextracteddirectlyfrominteractionhistory.Similarly,Mem- ▶TemporalKnowledgeGraphs.Thissub-categorymodelsmemory
+oChatstructuresmulti-turndialoguesintodiscreteJSONblocks
+usinggraphtopologiestomapentitiesandtheirinterconnections,
+(topics,summaries,rawturns)tomaintaintopicalcoherencewithin
+nativelysupportingtemporalreasoningandconflictdetection.For
+aplain-textparadigm.Whilethesesystemsexternalizetheirplain-
+example,Zeppartitionsmemoryintoformallydefined,temporally-
+textmemory,othersretainitwithintheactiveprocessingwindow:
+awareknowledgegraphs(e.g.,episode,entity,andcommunitysub-
+MemAgentrestrictsitsinternalbeliefstatetoastrictlyboundedtext graphs).Similarly,Mem0𝑔formalizesmemoryasadirectedlabeled
+sequence(e.g.,1024tokens),andMEM1encapsulatesinternal-state
+graph,whereverticesrepresententitiesandedgesencapsulatere-
+summarieswithinspecializedboundarytags(e.g.,<IS>).
+lationshiptriplets(e.g.,“LIVES_IN”).Toaidtemporalreasoning,
+▶ImplicitContinuousVectorToken.Departingfromreadabletext
+entitynodesareenrichedwithstructuralmetadatalikesemantic
+tokens,thissub-categoryencodesmemoryascontinuousvectors, types,denseembeddings,andcreationtimestamps.
+whichmaybematerializedeitherasexternalembeddingsattached ▶HierarchicalTreeStructures.Thissub-categoryorganizesknowl-
+tofactsandsummariesforsemanticretrieval,orasmodel-sidela- edgeintorecursive,hierarchicalstructures,preservinghighlygran-
+tentstatessuchascompressedinternalstatesandattentioncaches. ularobservationsatterminalleavesandbroadsemanticabstrac-
+Forexample,Mem0representsextractedfactsasdensesemantic tionsatancestornodes.Forexample,MemTreemodelsmemory
+embeddingsandMemoRAGutilizesspecificallyinitializedweight asadynamic,directedtreeschema.Eachnodeisstructuredasa
+matricestocompressrawinputsintohigh-dimensionalKey-Value tuplecontainingtextualcontent,adenseembedding,topological
+(KV)cachetensors.Althoughthesevector-tokenrepresentations pointers,andadepthscalar.Withinthistopology,deepleafnodes
+reduceexplicittokenizationburdensandintegratenaturallywithre- retainisolatedfacts(e.g.,aplayerscoring),whileancestornodes
+trievalorinferencepipelines,theysacrificestructuralinterpretabil- providehigh-levelconceptualsummaries(e.g.,thematchresult),
+ityandaredifficulttomanipulateviafine-grainedoperations,such withaspecializedrootnodeservingasthedefinitiveentrypoint.
+aspredicate-levelfilteringortargetedupdatestoencodedfacts. ❸HeterogeneousCompositeRepresentation.Thiscategory
+❷GraphandTree-BasedTopologicalRepresentation.This
+movespastsimpletokensequencesandstandardgraphsbypackag-
+categoryabstractsmemoryintostructuredgraphandtreetopolo- ingmemoryintocomplex,multi-partdatacontainers.Thesearchi-
+gieswithinterconnectednodesandedges,allowingconversational tecturesdirectlycombineunstructuredtextwithhighlystructured
+entities,high-levelconcepts,andtheirtemporalorsemanticrela- metadata(e.g.,timestamps,categoricallabels,vectorembeddings,
+tionshipstobeexplicitlymodeledandcomputationallytraversed. andnetworklinks)toformasinglefunctionalunit.Forexample,
+4
+===== PAGE 5 =====
+1 Raw Sequence Concatenation 2 Schema-Free Semantic Extraction 1 Native Attention-Based Retrieval 2 Semantic-Based Dense Retrieval
+- Kim: "I'm vegetarian." 1, 2, ...
+Kim "I'm vegetarian." - Bot: "Got it. I'll recommend tt11:: "Kim is vegetarian ..." 0.86 cc22
+"Got it. I'll recommend vegetarian restaurants." tt22:: "Charlie is Kim's pet ..." 0.83 cc11
+Bot vegetarian restaurants." ★Fact “Kim is vegetarian ...” tt33:: "Daily event log …" Attention Weight [0.21, …, 0.46] 0.78 cc33
+LLM
+Buffer tv_1T t2 t3 Embedding ★Vector [0.21, …, 0.46] 3 Topological Subgraph Traversal 4 Autonomous Agentic Routing
+Bounded Context Buffer No Rigid Predefined Schema ... Veg Fo et o a d rian ((tt₁₁)) { "tool": "search_memory", PREFERS "query": "Charlie lives",
+3 Schema-Constrained Structured Extraction Structural Predefined Schema KEEPS_PET Kim ... } "top_k": 5 LLM LIVES_IN CChhaarrlliiee { " " " e a su v ct e m o n r m t " _ : a t y " r K y p i " e m : " " " : T , " r v i i e s d it " s , everal LLM (Kim, LIVES_IN, Paris) ... PREFERS Veg Fo et o a d rian ((tt₂₂)) ... 1-hop su P b a g ri r s aph ((tt₃₃)) Memory Storage LLM
+v e " " g t s i e e m n ta e s r i s i t a t i a n v m i c ty a p " f " é : : s " " n 2 in o 0 r 2 P m 4 a - a r 0 i l s " 6 " - , 15", V (K e i g m e , t P a R ri E a F n E F R o S, od) Paris Kim ... KKiimm lives in PPaarriiss.. (a) Function Call Invocation (b) Generative Query Expansion
+} LIVES_IN 5 Multi-Stage Hybrid Execution
+Structured Record Extracted Topology Figure4:MemoryExtractionMethods.
+MemOSproposestheMemCube,aunifieddataobjectthatorga-
+nizesmemoryintothreedistinctpayloads(plain-text,activation,
+andparametricmemory)alongsidestructureddetails(e.g.,IDtags). (a) Sequential Hybrid Routing (b) Parallel Ensemble Retrieval
+3.1.2 PhysicalStorageandIndexing. AsshowninFigure3,this
+componentmanageshowdataisphysicallystoredandaccessed,
+relyingonsystemslikein-memorycaches,files,vectorengines,
+ordatabases.Itsetstheactualcapacitylimitsanddeterminesthe
+speed,throughput,andoverallscalabilityofmemoryoperations.
+❶TransientIn-ContextRegister.ToeliminatediskI/Oandex-
+ternaltraversallatency,thiscategoryretainsmemoryexclusively
+withintheactivehardwarestate(e.g.,dynamiccontextwindows
+orKVcaches).MemoChatavoidsdedicatedexternalmemoryen-
+ginesandkeepsstructuredJSON-stylememoswithintheLLMcon-
+textinputduringitsmemorization-retrieval-responseloop,while
+MemAgentdirectlystoressummarytokensasKey-Value(KV)cache
+tensorsviadensepositionalembeddings.
+❷SpecializedSingle-EngineStorage.Thiscategoryphysically
+warehousesformulatedunitswithinastandalone,homogeneous
+backend strictly tailored to the memory’s logical structure. De-
+pendingontheingestionparadigm,architecturesdeployspecific
+backendtopologies:(1)DenseVectorDatabasesareutilizedtoproject
+dataintocontinuoushigh-dimensionalspaces;Mem0andMemTree
+usecentralizedvectorstores,LettaleveragesPostgreSQLwiththe
+pgvectorextension;(2)GraphDatabasesaredeployedtoenforce
+topologicalconstraints;bothZepandMem0𝑔executepredefined
+Cypherqueriestophysicallypersistlogicalgraphcomponentsinto
+Neo4j;(3)RelationalSQLEnginesareusedtoserializestructural
+andtemporalschemas.LightMemincrementallyappendsfactual
+streamstopreserveglobalrelationalstates;(4)FileorObjectStores
+preserverawinteractionartifacts(e.g.,conversationhistoriesor
+tool-executionlogs)asfilesorobjectblobs.
+❸HeterogeneousMulti-EngineStorage.Thiscategorydynami-
+callyconstructsmultipleindextypologiesordistributesdataacross
+heterogeneousbackends(e.g.,pairingadensevectorstorewith
+atopologicalgraphdatabase).SimpleMemingestsmemoryinto
+LanceDBwithanIVF-PQmechanismthatconcurrentlymaintains
+denseembeddings,sparseBM25indices,andSQLpredicates.Mem-
+oryOSreliesonahybridindexfusingdensecosinesimilaritywith
+discreteJaccardsimilarity.Conversely,MemOSdelegatesserialized
+1 ,2
+,...
+★ ★ Top-k
+tt11 tt22
+tt33 ttTT
+Vector Index (HNSW / IVF)
+Tool Call ★ { ★ " " t q o u o e l r " y : " " : s " e C ar h c a h r _ li m e l e iv m e o s" r , y", Original Queries Retriever
+"top_k": 5 } QQ₁₁:: Charlie residence ... ★ QQ₂₂:: Charlie preferred ... QQ₃₃:: Is Charlie vegetarian? Expanded Search Queries
+★
+BM25
+★ ★ Top-k Full-Text File Object ★ Keyword Search
+t t
+F
+y im
+i
+p
+lt
+e e
+e r
+= >
+:
+P 2 r 0 e 2 f 4 e - r 0 e 1 n - c 0 e 1
+0
+0 0
+.
+. .
+8
+8 7
+6
+3 8 c
+c
+c c
+c
+c 1
+2
+3 1
+2
+3 Sem
+V
+S a e n
+e
+t a
+c
+ic
+t
+r
+o
+c S h e
+r
+arch
+Re
+V
+la
+e
+t
+c
+i
+t
+o
+o
+n
+r
+a
+D
+l
+B
+DB
+&
+F
+R
+us
+e
+i
+r
+o
+a
+n
+nk
+cc22
+Graph
+Deterministic Filter Semantic Ranking Traversal
+(Stage 1) (Stage 2) Topological Search Graph DB
+Figure5:MemoryRetrievalMethods.
+payloadstohighlyspecializedindependentbackends,fusingVector
+andGraphdatabasesviaastandardizedmemoryadapterinterface.
+3.2 MemoryExtraction
+Memoryextractionconcernshowrawinteractiontracesarecom-
+putationallyprocessed.Itcoversboththeextractionpipeline,how
+languagemodelsextract,summarize,orparseunstructuredtext
+intologicalstructures.AsshowninFigure4,itdefineshowthe
+agentmemorysystemtransformsheterogeneousinputstreams
+(e.g., multi-turn dialogues, and tool execution logs) into logical
+memoryprimitivespriortophysicalpersistence.
+❶RawSequenceConcatenation.Tominimizecomputational
+overhead,thiscategorybypassesexplicitextractionprompts,for-
+mulatingmemorydirectlyasrawtokenconcatenationsortransient
+statesummaries(e.g.,appendingrecentdialogueturnsdirectlyinto
+apromptbuffer).SystemssuchasMEM1andMemAgentretain
+their newly formulated structures exclusively within the active
+computationalstatewithoutsecondaryparsing.
+❷Schema-FreeSemanticExtraction.Thiscategorysystemati-
+callydistillsraw,unstructuredinputsintoindependent,high-value
+informationalunits,representingthemeitherasexplicitfree-form
+textsorascompressed,continuouslatentvectors.Byisolatingcore
+knowledgefrombroaderconversationalcontext,itensuresprecise
+andgranularretrieval.Forexample,Mem0activelyparsesinterac-
+tionstoextractandstorediscrete,standalonefactualstatements
+(e.g.,“Userisvegetariananddairy-free”).
+❸Schema-ConstrainedStructuredExtraction.Thiscategory
+promptstheLLMtoparserawinputsandsynchronouslypopulatea
+rigidlypredefinedstructuralschema,producingstrictlytypeddata
+ratherthanfree-formtext.Theconstrainedoutputtakestheform
+ofeithertopologicalentity-relationtripletsforgraphinsertionor
+multi-modalrelationalpayloadsforhybridstorage,dependingon
+thetargetbackend.ZepandMem0𝑔extracttypeddirectedrelational
+edges(e.g.,LIVES_IN,WORKS_AT)conformingtopredefinedgraph
+5
+===== PAGE 6 =====
+schemas,withZepadditionallyapplyingareflection-inspiredveri- 1 Timestamp-Based Multi-Versioning 2 Capacity-Driven Physical Eviction
+ficationsteptosuppresshallucinatedtriplets.MemoChatpopulates
+Append-Only Log
+predefinedstructuralfieldstoensuredatapredictabilitybyleverag- (Chronological precedence)
+C1 C2 C3 C4
+ingLLMstosegmentconversationsintostrictJSONschemas. INVALID c va 1 l : i d Ki _ m to l : i v 2 e 0 s 2 i 5 n - 0 P 6 a - r 3 is 0 . ✗✗Evicted (Oldest) FIFO (Capacity = 3)
+... ... ... (a) Constraint-Based Hard Eviction
+3.3 MemoryRetrievalandQueryRouting VALID c va 2 l : i d Ki _ m fr o li m ve : s 2 in 02 L 5 o - n 0 d 7- o 0 n 1 . Kim' M s f e a m vo o r r i y te I t a e lb m um La 1 st d A a c g c o ess S 0 c . o 82 re ✗✗ (Lo Ev w ic e t st)
+Kim's pizza toppings 30d ago 0.21
+Memoryretrievalandqueryroutingdeterminehowtheagentmem- VALID c3: Kim keeps a pet. Old meeting notes 180d ago 0.05
+valid_from: 2026-04-10
+orysystemdynamicallyidentifiesandextractsrelevanthistorical (b) Score-Based Priority Eviction
+contexttoinformtheoverarchingagent’scurrentreasoningstate. 3 LLM-Driven Semantic Consolidation
+AsshowninFigure5,thismoduleencompassesthecompletequery LLM / Tool Caller
+Updated Summary
+executionspectrum,definingtheoperationalalgorithms,predicate "Kim is vegetarian" Kim is vegetarian and Create CREATE(scene_summary)
+prefers, Italian cuisine
+evaluations,andagenticworkflowsutilizedtotraverseindices. "Kim prefers Italian food" (e.g., pasta, pizza). Read READ(user_preferences)
+❶NativeAttention-BasedRetrieval.Tobypassexternaldata- UpdateUPDATE(m_001, new_fact)
+baseI/O,thiscategoryusesthetransformer’snativecomputational LLM Gr M ou e p r f g a e ctsDe P -d ru up n l e icate A Ad u d g d m e e ta n il t s Delete DELETE(m_045, m066)
+graphasthesoleretrievalengine,relyingentirelyonself-attention
+(a) Inline Semantic Compaction (b) Tool-Driven CRUD Execution
+mechanismstoimplicitlyweightandrouteinformation(e.g.,scan-
+ningdialoguetokensdirectlywithintheKVcache).MEM1per- 4 Continuous Parametric Optimization
+Offline Training / Fine-tuning
+formsimplicitretrievalviaself-attentionoverthecurrentsequence,
+θₜₜ → θₜₜ₊₊₁₁
+utilizingatwo-dimensionalattentionmasktopreservecausalcon-
+Historical Retrieval User
+sistency.MemAgentimplementsroutingbyconcatenatingblocks Context Result Feedback Optimize with RLGF / LoRA
+directly into the prompt template, enabling standard attention-
+Figure6:MemoryMaintenanceMethods.
+baseddecodingwithoutexternalcross-encoderreranking.
+❷Semantic-BasedDenseRetrieval.Operatingovercontinuous ▶GenerativeQueryExpansion. Unlike rigid function calling,
+thisapproachusesnaturallanguagegenerationtosynthesizein-
+latentspaces,thiscategorymapsquerytensorsagainstuniform
+termediatecluesordecomposecomplexintentsbeforemapping
+vectorindicestoextractlocalizedspatialneighbors(e.g.,executinga
+standard𝐾-NearestNeighbors(KNN)search).Mem0calculatesvec- themtotheindex(e.g.,rewritingvaguepromptsintodescriptive
+searchstrings).SimpleMemusesanIntent-AwareRetrievalPlan-
+torembeddingsforincomingqueriestoexecuteadensesimilarity
+ningmodulewheretheLLMdissectsqueries,calculatesadaptive
+search,fetchingaconstrainedsubsetoffacts.LightMemutilizeseffi-
+searchdepths,andsynthesizesoptimizedqueryvariants.
+cientcosine-similaritydistancecalculationsoverdenseembeddings,
+❺Multi-StageHybridExecution.Toovercometherecalllimi-
+bypassingcomputationallyexpensiveiterativereranking.MemTree
+tationsofsingle-paradigmsearches,thiscategoryexecutesmulti-
+implementsacollapsed-treearchitecturethatmathematicallyflat-
+enginequerypipelinesorchestratingmulti-dimensionalcandidate
+tensitshierarchy,broadcastinginboundvectorstocomputeglobal
+generationfollowedbydownstreamrerankingframeworks.
+cosine-similaritydistributionsacrossallcandidates.
+❸TopologicalSubgraphTraversal.Departingfromcontinuous
+▶SequentialHybridRouting.Thissub-categorychainsretrieval
+vectorspaces,thiscategoryretrievesinformationbytraversing paradigmsintoastrictlyorderedpipeline,systematicallypruning
+explicitrelationshipedgestoextractsemanticclustersstructurally thesearchspacewithdeterministicpredicatesbeforeexecuting
+groundedinknowledgegraphs(e.g.,hoppingfromaUsernodetoa fine-grainedsemanticextraction(e.g.,applyingstrictSQLdatefil-
+linkedPreferencenode).Mem0𝑔deploysanentity-centricheuris- tersbeforecomputationallyexpensivevectorsearches).MemoryOS
+tictorecursivelytraverselocalsubgraphssynchronouslywithse- executesafederatedroutingstrategyfeaturingcoarse-grainedpred-
+mantictripletevaluations.A-MEMidentifiescandidateanchorsvia icateevaluationfollowedbyfine-grainedsemanticrankingstrictly
+dense𝐾-NearestNeighborselection,thenexecuteslocalizedgraph withinisolatedsegments.Italgebraicallyfusesrule-basedstructural
+traversaltoaccesstopologicallyadjacentmemorynodesexplicitly Booleanfilteringwithdensesemanticsimilarityrouting.
+linkedwithinthesameconceptualcluster.
+▶ParallelEnsembleRetrieval.Incontrasttosequentialfiltering,
+❹AutonomousAgenticRouting.Ratherthanexecutingdeter- thisapproachmaximizesinitialrecallbysimultaneouslydispatch-
+ministicdatabasescans,thiscategorydelegatesretrievaltotheLLM ingqueriestomultipledistinctindexingalgorithms,followedbya
+itself,therebyfunctioningasanactive,autonomousqueryplanner. late-stagefusionandrerankingphasetooptimizetheaggregated
+Itgeneratestool-callinvocationsordraftsimplicitsearchcriteria. pool(e.g.,concurrentlyfetchingcandidatesviaBM25anddense
+▶FunctionCallInvocation.Thissub-categorybridgestheLLM vectorsearch,thencross-encodingtheresults).Zepexecutessimul-
+withexternalstoragebygeneratingexplicitfunctioncallcommands taneouscosinesemanticscans,OkapiBM25full-textsearches,and
+todirectlyexecutepredefineddatabaseoperations(e.g.,outputting topologicalBFS,subsequentlyoptimizingprecisionviaRRF,MMR,
+a valid JSON payload to trigger an external database API). For andcomputationallyintensivecross-encodermodels.
+example,Lettaorchestratesself-directedmemoryretrievalwhere
+3.4 MemoryMaintenance
+theLLMevaluatesitsactivecontexttoexplicitlygeneratelocal-
+izedfunctioncalls(e.g.,emittinganarchival_storage.search() Memorymaintenanceconcernshowmemoryisupdated,main-
+commandtoextracttargetedhistoricallogs). tained,compressed,forgotten,andeventuallyremovedovertime.
+6
+===== PAGE 7 =====
+AsshowninFigure6,itcapturesthedynamicbehaviorofmemory triggersasemanticsummarizationpromptacrossallparentnodes
+afterithasbeencreated,includinghownewinformationisincor- todynamicallyfusehistoricalstateswithnovelpayloads.
+porated,howoutdatedorconflictingcontentisrevised,andhow ▶Tool-DrivenCRUDExecution.Incontrasttoautomatedfusion,
+thesystemcontrolsmemorygrowthunderlimitedresources. thissub-categoryoperationalizesmaintenancethroughdiscrete,
+❶Timestamp-BasedMulti-Versioning.Ratherthanexecuting programmedstate-mutationsguidedexplicitlybyLLM-driventool
+physicalrowdeletions,thiscategorypreserveshistoricalcontinuity interfacesthatissueexplicitCreate,Read,Update,orDelete(CRUD)
+byutilizingtimestampmetadataandappend-onlylogstologically commands.Mem0operationalizesitsdynamicmaintenancestrictly
+deprecateexpiredfacts.Operatingviaexplicitmetadatamutations, throughstructuredLLMtool-callinginterfacesencompassingdis-
+ZepandMem0𝑔 avoidphysicaldeletionbymarkingobsoleteor creteprogrammedstate-mutationssuchasUPDATE,andDELETE.
+conflictingrelationshipsaslogicallyinvalidusingvalidityflagsand ❹ContinuousParametricOptimization.Completelydecou-
+timestamps.Takinganappend-onlyapproach,LightMemincre- plingstateupdatesfromonlineinferencelatency,thiscategory
+mentallyinsertstimestampedfactualstreams,whileSimpleMemre- executesheavyneuraloptimizationsasasynchronousbackground
+solvescontradictionsthroughstrictchronologicalprecedenceusing processes,modifyingtheactualmodelparametersratherthanthe
+ISO-8601timestamps.Synthesizingthesetechniques,MemOSlever- externaldatabaseschema(e.g.,runningcontinuousfine-tuningon
+agesastructuredUpdateAPItoexecutedifferentialwrites,seam- overnightbatches).Forexample,MemoRAGleavesactiveinference
+lesslyupdatingprovenanceIDstogeneratemulti-versionchains. tokensstrictlystaticandread-only,optimizingextractionquality
+❷Capacity-DrivenPhysicalEviction.Incontrasttotimestamp- exclusivelyduringanofflinetrainingphaseviaaReinforcement
+basedmulti-versioning,thiscategorymanagesunboundedmemory LearningwithGenerationFeedback(RLGF)algorithmicframework.
+growthbyphysicallydroppingorunconditionallyoverwritingdata.
+Itexecutesthisphysicalpruningthrougheitherstrictdeterministic 4 End-to-EndAssessment
+constraintsordynamicallycalculatedevictionscores.
+Inthissection,weconductasystematicevaluationofagentmemory
+▶Constraint-BasedHardEviction.Thissub-categoryenforces
+systemsacrossfiveresearchquestions.Acrossfivedistinctbench-
+rigidexecutionboundsbyutilizingdeterministicrules—suchas
+markworkloadsand11datasets,weassess12representativemem-
+strictFIFOqueues,fixedsequenceboundaries,orhardtokenlim-
+orysystemsagainstbaselinestocharacterizetheirperformance.
+its—tounconditionallyevictolderstates.Executingstructuralover-
+Specifically,thefiveresearchquestionsareasfollows.
+writes,MemAgentimplementsaprogrammaticschedulingalgo-
+rithmthatunconditionallyreplacesoldermemorysequenceswith
+4.1 OverallEffectiveness(RQ1)
+newlysynthesizedsummaryblocksateveryfixedsegmentbound-
+ary. Enforcing hard capacity limits, MEM1 operates through a ExperimentalSetting.For“Dodifferentagentmemorysystems
+system-enforcedtruncationmechanismthatexecutesanautomated successfullyimproveend-to-endtaskperformanceacrossworkloads?”,
+FIFOpruningprotocoltoevictoldertagsonceactivecontextthresh- weevaluate12representativememorysystemsandtworeference
+oldsarebreached.Operatingviathresholdflushes,Lettastrictly baselines(LongContextandEmbeddingRAG)onthethreeend-to-
+handlesbuffercapacitiesviaanOS-inspiredqueuemanager;when endworkloadstoassesswhethermemoryimprovestasksuccess
+thetokencountbreachesaterminallimit,itforcesaflushsequence beyondtheunderlyingLLM.Specifically,weuse:(1)LoCoMo[20]:
+toevictoldermessagesintosecondaryrecallstorage. along-conversationQAbenchmarkthattestsepisodic,temporal,
+▶Score-BasedPriorityEviction.Ratherthanrelyingonstaticca- andopen-domainmemoryovermulti-turninteractions,andre-
+pacitylimits,thissub-categorydynamicallyforcesthephysical porttheunweightedmeanofcategory-levelExactMatch(EM)and
+obsolescenceofdatabycontinuouslycalculatingtemporaldecayor Answer F1 on the four-category queries; (2) LongMemEval [31]:
+access-frequencyscores.Quantifyingaccessfrequency,MemoryOS amulti-sessionlong-memorybenchmarkthatevaluateswhether
+measuressegmentvitalityviaascalarHeatscorethatbalances systemscanreconnectfactsacrosssessionsandreasonovertem-
+retrievalfrequencyagainstexponentialtemporaldecay,executing porallydistributedevidence,andreportSubstringEM,ROUGE-LF1,
+priorityevictionsthatphysicallytargetthelowest-heatsegments. ROUGE-LRecall,andGPT-5.4-basedLLMJudgeAccuracyfromMem-
+❸LLM-DrivenSemanticConsolidation.Operatingasacog- oryAgentBench[22];and(3)DB-Bench:evaluateswhethermemory
+nitivegovernor,thiscategoryleveragestheLLMtodynamically supports procedural execution across database operations from
+resolvelogicalconflictsandabstractredundantobservationsinto LifelongAgentBench[37],andreportExactMatch(EM)andTask
+densesummariespriortoqueryorpersistencephases. SuccessRate.
+▶InlineSemanticCompaction.Duringtheactivewritephase, O1-(Cross-WorkloadEffectiveness):Nosinglememorysys-
+temdominatesallworkloads,butmethodsthatpreservetask-
+thissub-categorydynamicallyevaluatesandconsolidatesnewly
+criticalevidencethroughstructure-guidedfilteringremain
+ingesteddataagainstexistingmemorynodes,systematicallymerg-
+ingredundantassertionspriortodatabasetransactioncommitment
+themostcompetitiveoverall.AsshowninFigure7,theleading
+(e.g.,compressingthreesimilardialogueturnsintoonedensesum- systemsshiftacrossworkloads:(1)Structure-awaresystemslead
+marynode).SimpleMemexecutesonlinesemanticsynthesison-
+LongMemEval,whereZepreaches48.0LLMJudgeAccuracyand
+the-fly,systematicallymergingstructurallysimilarassertionsinto
+Cogneeattains35.3ROUGE-LF1;(2)Hybridfilteringisstrongest
+singulardenseabstractionspriortodatabasetransactioncommit- on LoCoMo exactness, where MemOS reaches 11.5 Exact Match
+ment.MemTreeutilizesacoreschedulingoperationthatrecursively
+(EM);and(3)Trace-preservingmemoriesremainstrongestonDB-
+Bench, where Long Context achieves 48.20 EM and MemoChat
+reaches55.40TaskSuccessRate.However,amongmethodswithfull
+7
+===== PAGE 8 =====
+ReferenceBaselines SequentialContext StructuralTopological Multi-ParadigmHybrid
+35 30 25 20
+15 10 5
+0
+MEgnirtsbuS 27.7 29.7 28.3 40 20.7 19.7 20.7 30
+14.7 20 11.1 12.3 7.77.0 8.77.7 7.3 10
+0
+Long E C m on b t e e d x M . t R em AG Agen M M t e e m m 0 oCh C a o t Z g e n p ee Lo M c e a m l Tree L L i e g t S h ta t im Me p m leMe M m M em em O o S ryO A S -MEM
+(a)LongMemEval:SubstringEM
+1FL-EGUOR 50 35.335.0 33.7 40 29.0 28.6 30 21.9 22.8
+14.513.7 15.516.7 15.6 20 6.2 7.8 10
+0
+Long E C m on b t e e d x M . t R em AG Agen M M t e e m m 0 oCh C a o t Z g e n p ee Lo M c e a m l Tree L L i e g t S h ta t im Me p m leMe M m M em em O o S ryO A S -MEM
+(b)LongMemEval:ROUGE-LF1
+llaceRL-EGUOR 60 44.1 39.8 40.8 50 33.1 33.5 34.9 35.9 40 27.126.1 30
+20.219.3 18.820.1 17.6 20 10
+0
+Long E C m on b t e e d x M . t R em AG Agen M M t e e m m 0 oCh C a o t Z g e n p ee Lo M c e a m l Tree L L i e g t S h ta t im Me p m leMe M m M em em O o S ryO A S -MEM
+(c)LongMemEval:ROUGE-LRecall
+.ccAegduJMLL 48.0 40.7 39.3 33.3 33.0 34.7
+23.0 19.016.0 16.714.7 18.717.3
+3.7
+Long E C m on b t e e d x M . t R em AG Agen M M t e e m m 0 oCh C a o t Z g e n p ee Lo M c e a m l Tree L L i e g t S h ta t im Me p m leMe M m M em em O o S ryO A S -MEM
+(d)LongMemEval:LLMJudgeAcc.
+15
+10
+5
+0
+ME
+40
+9.7 9.8 9.4 8.6 9.3 11.5 10.1 30 20
+4.1 5.1 4.6 5.7 3.0 10
+0.0 0
+LongC E o m n b te e x d t . RAG M M e e m m 0 oCh C a o t g Z n e e p e Lo M c e a m l Tree L L e ig tt h S a t i M m e p m leMe M m e M m em OS oryO A S -MEM
+(e)LoCoMo:EM
+1FrewsnA
+70
+32.8 32.8 32.2 60 21.5 26.224.5 28.1 29.2 23.5 4 5 0 0
+13.012.8 14.7 30 20
+5.3 10
+0
+LongC E o m n b te e x d t . RAG M M e e m m 0 oCh C a o t g Z n e e p e Lo M c e a m l Tree L L e ig tt h S a t i M m e p m leMe M m e M m em OS oryO A S -MEM
+(f)LoCoMo:AnswerF1
+ME
+70
+61.6
+60 48.245.4 41.6 42.044.043.8 50 36.8 34.4 34.4 40
+27.6 28.0 30 22.8 20
+10
+0
+LongC E o m n b te e x d t . RAG M M e e m m 0 oCh C a o t g Z n e e p e Lo M c e a m l Tree L L e ig tt h S a t i M m e p m leMe M m e M m em OS oryO A S -MEM
+(g)DB-Bench:EM
+etaRsseccuSksaT
+61.6
+55.4 48.245.4 41.6 42.044.043.8
+22.9 27.625.8 25.828.1
+LongC E o m n b te e x d t . RAG M M e e m m 0 oCh C a o t g Z n e e p e Lo M c e a m l Tree L L e ig tt h S a t i M m e p m leMe M m e M m em OS oryO A S -MEM
+(h)DB-Bench:TaskSuccessRate
+Figure7:EffectivenessofMemorySystemsoverLoCoMo,MemoryAgentBench(LongMemEval),LifeLongAgentBench(DB-Bench).
+workloadcoverage,MemoryOSandMemOSremainclosesttothe 100
+frontieroverall,suggestingthatrobustnesscomesnotfromasingle 75 universalmemoryform,butfrompreservingtherightevidence
+50
+attherightlevelofabstractionbeforefinalmatching.Inparticu- lar,(1)Temporalorgraph-organizedmemoryismostusefulfor 25
+cross-sessionaggregationandevent-orderreasoning(e.g.,scattered 0
+personalfactsinLongMemEval);(2)Summary-firstorcoarse-to- Embedding RAGMem0 M Ze empTre L e igShi tm Mpel m eMeM m Mem emOoSryOA S-MEM
+fineroutingisusefulforexactgroundinginlongbutsemantically
+coherentdialogues(e.g.,recoveringaspecificdateorpersonaldetail
+inLoCoMo);and(3)Trace-preservingmemoryisnecessarywhen
+correctnessdependsonintermediatestatechangesandoperation
+order(e.g.,dependentUPDATEandINSERToperationsinDB-Bench).
+O2-(BeyondExactMatch):EMremainsinformativefortasks
+withcanonical,directlygroundedoutputs,butitbecomes
+insufficientwhencorrectnessdependsonparaphrasticsyn-
+thesisorexecutablesuccess.AsshowninFigure7,ExactMatch
+(EM)isstillameaningfulsignalonLoCoMo,wheremanyquestions
+targetshortgroundedfacts,asreflectedbyMemOSachievingthe
+bestExactMatch(EM).OnLongMemEval,however,thestronger
+systemsaremoreclearlyseparatedoncesemanticequivalenceis
+consideredthroughROUGE-LandLLMJudgeAccuracy,indicating
+thatcross-sessionreasoningoftenyieldscorrectanswersthatdo
+notshareasinglecanonicalsurfaceform.OnDB-Bench,thelimita-
+tionisevenclearer:LongContextachievesthebestExactMatch
+(EM),butMemoChatattainsasubstantiallyhigherTaskSuccess
+Rate,showingthatexactoutputmatchingdoesnotfullycapture
+whethermemorysupportssuccessfulexecution.Theseresultssug-
+gestthatExactMatch(EM)ismostappropriatewhenanswersare
+short,canonical,andlocallyverifiable(e.g.,avenuename,orob-
+jectattributeinLoCoMo),butshouldbecomplementedoncetasks
+requirecross-sessionsynthesis,orend-taskstatevalidation(e.g.,
+composingasemanticallycorrectanswerfrommultiplesessionsin
+LongMemEvalorreachingthecorrecttablestateinDB-Bench).
+Finding1. (Workload-AlignedMemory).RQ1suggeststhat
+strongagentmemoryisnotdefinedbyasingleuniversalrepre-
+sentation,butbyhowwellitsupportsthedominantworkload
+)%( 1@llaceR
+100
+75
+50
+39.0 24.8 27.623.6 31.3 25 15.2 12.3 13.3
+3.8 0
+Embedding RAGMem0 M Ze empTre L e igShi tm Mpel m eMeM m Mem emOoSryOA S-MEM
+)%( 5@llaceR
+100
+52.5 59.7 64.6 55.4 69.5 75
+46.9 50
+34.7 28.3 16.0 25
+0
+Embedding RAGMem0 M Ze empTre L e igShi tm Mpel m eMeM m Mem emOoSryOA S-MEM
+)%( 01@llaceR
+85.9
+80.5 66.2 56.4 75.170.6 61.3
+40.2 17.7
+100
+80
+60
+40
+20
+0
+1-5 6-10 11-15 16-20 21-25 26-31
+Evidence Distance Gap (Session Bins)
+)%(
+01@llaceR
+(a) Recall@k
+Embedding RAG Zep Local LightMem MemOS A-MEM
+Mem0 MemTree SimpleMem MemoryOS
+(b) Recall@k vs. Evidence Distance Gap
+Figure8:RetrievalResultsofMemorySystemsoverLoCoMo.
+bottleneck:(1)fordispersedcross-sessionreasoning,relation-and
+time-awareretrievalismosteffective,asinZepandCognee;(2)for
+longbutsemanticallycoherentdialogue,coarse-to-finefiltering
+improvesexactgrounding,asinMemOSandMemoryOS;and(3)
+forstatefulexecution,preservinginteractiontracesismorecritical
+thanexactlexicalmatchingalone,asinLongContext.
+4.2 MemoryRetrievalFidelity(RQ2)
+ExperimentalSetting.For“Howaccuratelycanamemorysys-
+temsurfacethestoredevidencerequiredbyaquery?”,weevaluate
+eightrepresentativememorysystemstoassessevidence-levelre-
+trievalfidelityindependentlyofdownstreamanswergeneration.
+Specifically,weuseLoCoMo[20],whichprovidessource-levelgold
+evidenceforquerieswithdiverseevidencedistances.Wereport:
+(1)Recall@K,whereahitrequiresthetop-𝑘 retrievedsource-id
+groupstocontaintheannotatedgoldevidence,and(2)Recall@10
+oversixevidencedistancegapbins(1–5to26–31),definedbythe
+8
+===== PAGE 9 =====
+Table2:RobustnessoverMemoryUpdateSettings.
+  
+LoCoMo LongMemEval
+Method Temporal KnowledgeUpdate TemporalReasoning    Exact Answer Substring ROUGE-L Substring ROUGE-L    Match F1 EM F1 EM F1
+  
+LongContext 8.1 26.9 20.0 18.0 12.0 24.0
+EmbeddingRAG 1.6 7.9 20.0 17.8 10.7 22.7   
+Me
+M
+m
+e
+o
+m
+C
+0
+hat 2
+3
+.
+.
+4
+2
+1
+6
+5
+.0
+.4
+1
+8
+5
+.9
+.6
+1
+1
+2
+7
+.
+.
+9
+1
+1
+1
+0
+0
+.
+.
+7
+7
+2
+2
+5
+2
+.
+.
+3
+4
+ ( P E
+     5 $ *  / L J K W 0 H P  0 H P 2 6  0 H P 7 U H H  $  0 ( 0
+  D   / R & R 0 R   $ Q V Z H U  ) 
+Cognee 4.0 28.1 37.8 34.0 18.7 35.8
+Zep 4.8 18.1 44.4 36.8 13.3 30.5
+MemTree 5.6 18.6 31.1 30.6 8.0 29.9
+Letta(MemGPT) 0.0 7.1 17.8 5.7 12.0 8.8
+LightMem 4.0 20.1 15.6 20.2 12.0 28.6
+SimpleMem 4.4 8.1 6.7 7.4 8.0 22.6
+MemOS 8.9 28.0 28.9 30.5 12.0 31.1
+MemoryOS 3.2 22.7 35.6 32.2 16.0 31.6
+A-MEM 4.8 17.7 26.7 22.8 8.0 22.5
+sessiondistancebetweenthequery’sfinalsessionandtheearliest
+supportingevidence,tomeasurelong-rangeretrievalaccuracy.
+O1-(StructuredEvidenceExpansion):Retrievalfidelityde-
+pendslessonsurfacingonerelevantmemoryearlythanon
+preservinganexplicitlyorganizedmemorystructurethatcan
+gathercompleteandtemporallydistantevidence.Asshownin
+Figure8,theresultsshowacleardifferencebetweenearly-hitpre-
+cisionandoverallevidencecompleteness:SimpleMemachievesthe
+highestRecall@1(39.0),butA-MEMandMemTreebecomeclearly
+strongeratlargerretrievalbudgets,reaching69.5/85.9and59.7/80.5
+onRecall@5/@10,respectively,whilealsoremainingmuchmore
+stableastheevidencedistancegapincreases;bycontrast,theflatEm-
+beddingRAGbaselinedropssharplyaftertheshortest-gapbin.This
+patternsuggeststhatstrongmemoryretrievalisnotmainlyatop-1
+rankingproblem,butanevidence-completionprobleminwhichthe
+requiredsupportmaybeold,scattered,orspreadacrossmultiple
+turns(e.g.,personaldetailsmentionedindifferentsessionsordated
+eventsreferencedmuchlater).Morespecifically,theresultspointto
+threedifferentretrievalbehaviors:(1)compression-orientedmem-
+oryiseffectiveforsurfacingonehighlyrelevantitemearly(e.g.,
+asinglesalientpersonaldetailorrecentconversationalfact);(2)
+linkedorhierarchicalmemoryorganizationismoreeffectivefor
+gatheringcomplementarysupportingevidenceacrosstheranked
+results(e.g.,combiningpetnamesordatedeventsmentionedin
+differentsessions);and(3)flatdenseretrievalremainscompetitive
+mainlywhentheneededevidenceisstillclosetothecurrentcontext
+(e.g.,recentconversationalfacts).Forqueriesthatrequirescattered
+ortemporallydistantsupport,themostcompetitivesystemsare
+therefore those that organize memory as a structured evidence
+spaceratherthanaflatsimilaritycache.
+Finding2. (Evidence-CentricMemoryOrganization).RQ2
+showsthatretrievalqualitydependsmoreonhowasystemorga-
+nizesevidenceforlaterreconstructionthanonhowwellitranks
+onerelevantmemoryfirst.Specifically,(1)earlylocalizationand
+evidenceassemblyshouldbetreatedasseparatedesigntargets;
+(2)explicitstructure,suchaslinksorhierarchy,ismostvaluable
+whensupportingevidenceisscatteredortemporallydistant,as
+inA-MEMandMemTree;and(3)flatsimilaritysearchismainly
+effectiveforshort-rangeaccess.
+4.3 MemoryEvolutionRobustness(RQ3)
+ExperimentalSetting.For“Canagentmemorysystemsreliably
+incorporaterevisedfacts,preservethecorrecttemporalstateafterup-
+dates,andremainrobustacrossanswerbackbones?”,weconducttwo
+  )  U H Z V Q $
+   
+                                                                                 
+               
+    
+  
+ ( P E
+     5 $ *  / L J K W 0 H P  0 H P 2 6  0 H P 7 U H H  $  0 ( 0
+  E   / R & R 0 R   5 H F D O O
+ O O D F H 5
+ 4 Z H Q    %  ' H H S 6 H H N  & K D W  * 3 7      P L Q L  * 3 7    
+                                                      
+                
+                
+Figure9:AblationofLLMBackbones.
+experiments:(1)UpdateRobustnessComparison,whichevaluates
+whethersystemscanabsorbfactrevisionsandanswertemporally
+groundedqueriesafterupdates;and(2)BackboneRobustnessAbla-
+tion,whichtestswhetherthisbehaviorremainsstablewhenonly
+theLLMbackbonechanges.In(1)UpdateRobustnessComparison,
+Table2compares11representativememorysystemsonKnowl-
+edgeUpdateandTemporalReasoningfromLongMemEval[31],and
+Temporal from LoCoMo [20]. The two LongMemEval [31] slices
+arereportedwithSubstringEM andROUGE-LF1,whiletheLo-
+CoMo[20]sliceisreportedwithExactMatch(EM)andAnswerF1;
+In(2)BackboneRobustnessAblation,Figure9evaluates6representa-
+tivememorysettingsunder4LLMbackbonesontheLoCoMo[20].
+O4-(TemporalStateExternalization):Nosinglememorysys-
+temdominatesallupdate-orientedslices,butmethodsthat
+preservetemporallyvalidevidencethroughstructuredor-
+ganizationremainthemostcompetitiveoverall.Asshownin
+Table2,theleadingsystemsshiftacrossslices:(1)Graph-orrelation-
+organizedmemoryisstrongestondirectfactrevision,whereZep
+leadsKnowledgeUpdatewith44.4SubstringEMand36.8ROUGE-L
+F1;(2)Relationallyorganizedretrievalisstrongestontemporally
+dispersedevidence,whereCogneeleadsTemporalReasoningwith
+18.7SubstringEM and35.8ROUGE-LF1;and(3)Hybridfiltered
+memoryisstrongestonexactlatest-stategrounding,whereMemOS
+attainsthehighestLoCoMoExactMatch(EM)at8.9whileCognee
+attainsthehighestAnswerF1at28.1.However,amongmethods
+withfullslicecoverage,Cognee,MemOS,andMemoryOSremain
+closesttothefrontieroverall,indicatingthatrobustnesscomes
+notfromasingleuniversalmemoryform,butfrompreservingthe
+righttemporalevidenceattherightstructurelevel.Inparticular,
+(1)temporalorgraph-organizedmemoryismostusefulforrevised
+personalfactsanddatedevents(e.g.,aggregatingscatteredupdates
+topreferences,purchases,orpastactivitiesinLongMemEval);(2)
+hybridorcoarse-to-finefilteringismostusefulwhencorrectness
+dependsonthecurrentlyvalidstate(e.g.,recoveringthelatestdate,
+attribute,oreventorderfromlongbutsemanticallycoherentdi-
+aloguesinLoCoMo);and(3)flatcontextaccumulationordense
+similarityaloneisweakestwhenstalementionsmustbeseparated
+fromupdatedones(e.g.,distinguishinganearlierpersonaldetail
+fromitslatercorrectionafterrepeatedmentionsovertime).
+O5-(BackboneRobustness):Backbonevariationchangesab-
+soluteanswerqualitymorethanitchangeswhichmemory
+pipelineremainseffective,indicatingthatstableupdatebe-
+haviorisdeterminedprimarilybeforefinalgeneration.As
+showninFigure9,AnswerF1generallyrisesunderstrongergener-
+ators,yettheoverallorderingchangesonlymodestly:(1)MemOS
+remainsthestrongestmemory-basedconfigurationat32.2,41.2,
+38.6,and41.2;and(2)theonlynotablereversalislocal,whereA-
+MEMovertakesMemTreeunderGPT-5.4-miniandGPT-5.4.This
+stabilityimpliesthatstrongerbackbonesmostlyimproveanswer
+realizationafterrelevantevidencehasalreadybeenlocalized,rather
+9
+===== PAGE 10 =====
+thancompensatingforweaktemporalgrounding.Forexample,for
+date-groundedlatest-statequeriesinthecurrentLoCoMotemporal 50
+40 outputs,MemOSremainscorrectacrossallfourbackbones,whereas
+30
+EmbeddingRAGremainsincorrect.Moreconcretely,methodswith
+20
+stronger external organization yield a more stable evidence set
+10
+fordifferentLLMs,whereasmethodsthatrelymoreheavilyon
+0
+LLM-sidesynthesisexhibitgreatercross-backbonemovement. Long Embed Mem Memo Zep Mem Letta Light Simple MemOS Memory A-MEM
+Ctx RAG Agent Chat Tree Mem Mem OS
+Finding3. (TemporalUpdateFidelity).RQ3suggeststhat
+reliablepost-updatebehaviorisapipeline-leveldesignproblem
+rather than a pure model-capacity problem. In particular, (1) revisabilityshouldbebuiltintothememoryrepresentationso
+laterfactscanbeboundtothesameentityoreventratherthan
+appendedasundifferentiatedtext,asinZepandCognee;(2)query-
+time selectivity should match the workload bottleneck, using
+filteredorhybridroutingwhenthetaskrequiresthecurrently
+validstate,asinMemOSandMemoryOS;and(3)LLMscaling
+ismostvaluableonlyaftergroundinghassucceeded,sostronger
+backbonesshouldrefineanswerexpressionratherthanserveasthe
+primarymechanismforresolvingstaleorconflictingmemories.
+4.4 LongHorizonMemoryStability(RQ4)
+Experimental Setting. For “How stable are agent memory sys-
+temsastheeffectivememoryhorizonincreases,eitherthroughlonger
+contextsormoredistantsupportingevidence?”,weevaluate12repre-
+sentativememorysystemsacross3benchmarkstoassessrobust-
+nesstoincreasingcontextlengthandtemporaldistance.Specifi-
+cally,weuse:(1)LongBench[3],whichevaluatescontrolledlong-
+contextdifficultyinquestionanswering,reportedwithAccuracy
+overShort,Medium,andLongcontext-lengthbucketstomeasure
+context-lengthrobustness;(2)LongMemEval[31],whichevaluates
+multi-sessionmemoryastheamountofpriorinteractiongrows,
+reportedwithROUGE-LF1overbinsofhistoricalsessioncountto
+measuremulti-sessionstability;and(3)LoCoMo[20],whichevalu-
+atesmemorydriftwhensupportingevidenceliesbackinthecon-
+versation,reportedwithAnswerF1overbinsofevidence-distance
+gapbetweenthefinalsessionandtheearliestsupporting-evidence.
+O6-(Long-HorizonEvidencePreservation):Memoryremains
+morestableatlongerhorizonswhenevidenceisorganized
+throughexplicitrelationallinksorhierarchicalconsolida-
+tion,ratherthanleftasflattextfordirectmatching.Asshown
+inFigure10,inLongBench,SimpleMemstaysnearlyunchangedfrom
+theShorttoMediumbuckets(35.2to34.9Accuracy),whereasLong
+Context drops from 42.6 to 19.0, indicating that larger prompts
+alonedonotsustainanswerqualityoncelonginputsaccumulate
+distractors.InLoCoMo,thecontrastissharper:EmbeddingRAG
+fallsfrom37.1to7.4AnswerF1astheevidencegapwidens,while
+graph-orconsolidated-memorysystemssuchasCognee,MemOS,
+andMemoryOSremainsubstantiallyhigheracrossthesamebins;
+LongMemEval showsthesameadvantageformethodsthatpre-
+servecross-sessionstructureoverlongerhistories.Itindicatesthat
+themaindifficultyatlongerhorizonsisnotmemoryvolume,but
+whethertherepresentationkeepsdistantfactsconnectedtothe
+abstractionsneededforanswering.Morespecifically,graph-ortem-
+porallyorganizedmemorypreservesentity–event–timerelations
+fordistantfacts(e.g.,recoveringarepeatedpersonaleventmany
+)%(
+ycaruccA
+Short Medium Long
+(a) LongBench: Context-Length Robustness
+35
+30 25 20
+15 10
+5
+0 38-43 44-46 47-49 50-54
+(n=9) (n=24) (n=30) (n=12)
+History Session Count Bin
+)%( 1F
+L-EGUOR
+60
+50 40
+30 20
+10
+0 1-5 6-10 11-15 16-20 21-25 26-31
+Evidence Distance Gap Bin
+(b) LongMemEval: Multi-Session Growth
+)%( 1F
+rewsnA
+LongCtx Mem0 Cognee MemTree LightMem MemOS A-MEM
+EmbedRAG MemoChat Zep Letta SimpleMem MemoryOS
+(c) LoCoMo: Temporal Distance Drift
+Figure 10: (a) Context-length robustness on LongBench;
+(b)Session-historygrowthonLongMemEval;(c)Temporal
+evidence-distancedriftonLoCoMo.
+sessionsearlier),whilehierarchicalorsummary-firstorganization
+preservessession-levelstructure(e.g.,firstlocatingtherelevantses-
+sionbeforeresolvingaspecificlocaldetail)sotheLLMcannarrow
+attentionbeforefinalgeneration.Purelong-contextpromptingand
+flatdensememoryprovideneitherformofsupport,andtherefore
+degrademoresharplyastheeffectivehorizongrows.
+Finding4. (Horizon-StructuredMemory).RQ4indicatesthat,
+astheeffectivememoryhorizongrows,themainchallengeshifts
+fromstoringmorehistorytochoosingtherightabstractionover
+it:(1)Multi-viewfilteringhelpswhenlonginputscontainmany
+distractors,asinSimpleMem;(2)Relation-awareindexinghelps
+whensupportingfactsareseparatedbymanyturnsorsessions,as
+inCogneeandZep;and(3)Coarse-to-finesummarizationhelps
+whenthesystemmustfirstidentifytherelevantsessionbefore
+resolvingalocaldetail,asinMemOSandMemoryOS.
+4.5 MemoryOperationCost(RQ5)
+ExperimentalSetting.For“Whatistheoperationalcostofeach
+memorysystemintermsofutility–latencytrade-offandcross-workload
+latencyfootprint?”,weevaluate8representativememorysystems
+using the unified time-overhead traces recorded by our runner.
+Wequantifytwoaspects:(1)Utility–latencytrade-off,measuredby
+Avg.OperationLatency/QueryandNormalizedUtility;and(2)Cross-
+workloadlatencyfootprint,measuredbyOutlier-FilteredAvg.Total
+Latency/Query.For(1),Avg.OperationLatency/Queryiscomputed
+asmemoryconstructiontimeplusquerytimeandinterpretedas
+amortizedper-querycostforsystemswithcumulativeorbursty
+writes,whileNormalizedUtilityisthemeanofsixmin–maxnor-
+malizedanswer-qualitymetricsfromthecurrentLoCoMo[20]and
+LongMemEval[31]runs.For(2),wereportOutlier-FilteredAvg.Total
+Latency/Queryonthreebenchmark.
+O7-(LocalizedMaintenance):Themostcost-efficientmem-
+orymechanismsarethosethatlocalizemaintenancetoa
+boundedsubsetofmemorystate,whereasmechanismsthat
+10
+===== PAGE 11 =====
+90
+80 70
+60 50
+40 30
+20
+100 Avg. operation late1n0c 1 y/query (s, log scale) 102
+)%( ytilitu
+dezilamroN
+RBeafseerleinnecse SeCqounetenxtital TSotproulcotguircaall MultHi-yPbarriaddigm
+LoCoMo
+LongMemEval
+Claotnesntcryu
+059
+cs%05 th
+%%
+iaorneLongBench
+Long Ctx Emb RAG Mem0 MemoChat ZepLocal MemTree LightMem MemoryOS A-MEM (a) Cost-Effectiveness Frontier
+kramhcneB
+0.58 0.76 17.0 2.30 84.3 0.38 1.45 2.38 0.76 103
+102 0.46 2.92 0.50 6.69 287.3 1.20 5.88 5.91 2.20
+101
+3.83 33.0 374.2 460.2 2867 116.7 17.3 490.0 552.1 100
+(b) Three-Benchmark Operation Latency
+)gol ,s( yreuq/ycnetal
+latot
+gva deretlif-reiltuO
+Table3:AblationofRepresentationandStorageMechanisms.
+Reference Baselines Sequential Context Structural Topological Multi-Paradigm Hybrid
+MethodVariant LoCoMo LongMemEval EM Ans.F1 Substr.EM ROUGE-LF1
+User-OnlyRaw 24.2 38.9 26.0 31.4
+LightMem User-OnlySummary 8.5 15.6 11.7 17.4
+User-OnlyCompressed 23.6 38.6 10.7 19.1
+MemTree Flat-biased 18.2 30.7 23.0 29.9 DeeperTree 18.7 31.2 23.3 30.9
+Figure11:OperationCostofMemorySystems. Mem0 D Gr e a fa p u h lt Store 3 3 . .0 2 6 6 . .2 5 9 8 . .3 3 1 1 6 5. . 9 5
+repeatedlyreorganizealargeglobalstatearetheleasteffi-
+cient.AsshowninFigure11,(1)Amongmemory-augmentedsys-
+Compressed,whichremovesfillerandredundanttokenswhilepre-
+tems,LightMemandMemTreeoccupythestrongestefficiencyfron- servingtheoriginalphrasingandfactualcontent;(2)MemTree[27]
+tier,withLightMemreaching48.3NormalizedUtilityat3.67sAvg.
+comparesashallowFlat-biasedSettingwithaDeeperTreeSettingto
+OperationLatency/QueryandMemTreereaching63.5at15.9s;both
+examinehowhierarchicaltextorganizationaffectsmemoryfidelity.
+areclearlymoreefficientthanMemoChat(28.0at15.4s),Mem0(21.4
+Weassessthetrade-offbetweenfine-grainedfactpreservationand
+at35.9s),andA-MEM(57.7at17.9s);(2)Higher-utilitystructured multi-stepreasoningusingLoCoMoforcompositionalreasoning
+systemsmovemarkedlytotheexpensiveside:MemoryOSreaches and LongMemEval for multi-session factual retrieval, reporting
+82.0NormalizedUtilityonlyat28.6s,whileCogneeandZepexceed
+exactness-andoverlap-basedmetrics(e.g.,EMandROUGE-LF1).
+84utilityonlyafter116.5sand155.1s;(3)Theworkload-specificla- O8-(ContentFidelity):Retainingtheoriginalconversational
+tencyviewsharpensthesameseparationonLongBench:LightMem
+contentismoreimportantthanincreasingabstractionor
+remainsat17.3sandMemTreeat116.7s,whereasMem0,Memo- hierarchyforsustainingbothfactualrecallandreasoning
+Chat,MemoryOS,andA-MEMriseto374.2,460.2,490.0,and552.1s, quality.Table3showsthatLightMem User-OnlyRaw achieves
+respectively.Itindicatesthatoperationalefficiencyisgovernedless the best result on all four metrics, while User-Only Compressed
+bywhetherasystemusesstructurethanbyhowwidelyeachwrite remainscloseonLoCoMo(Ans.F1:38.6vs.38.9;EM:23.6vs.24.2)
+propagatesthroughthatstructure.Specifically,(1)segmentedcom- butdropssharplyonLongMemEval(SubstringEM:10.7vs.26.0),
+pressionandboundedhybridretrievalkeepLightMemclosetothe User-OnlySummaryissubstantiallyweakeronbothbenchmarks,
+low-costregime;(2)path-localtreeaggregationallowsMemTreeto andthedeeperMemTreesettingprovidesonlymodestgainsover
+preservesubstantiallymoreutilitywithoutglobalrefresh;and(3)
+theflatsetting.Itindicatesthatthemainperformanceboundaryis
+graph-wideconsolidation,multi-storesynchronization,orrepeated
+theamountofrecoverableevidencetherepresentationpreserves,
+whole-memoryrewritingyieldstrongerorganizationbutimpose
+rather than whether it applies stronger abstraction or a deeper
+theheaviestoperationalcostasmemorygrows.
+structure. In particular, (1) Raw text is most effective when the
+Finding5. (OperationalScalingRule).RQ5showsthateffi- taskrequiresrecoveringexactsession-leveldetails(e.g.,recallinga
+ciencyisgovernedbymaintenancescoperatherthanstructure titlesuchas“Nu,pogodi!”);(2)Lightcompressioncanstillsupport
+alone.(1)Localizedupdateandsearchyieldthestrongestcost– compositionalreasoningwhenthemainmeaningispreserved,but
+utilitybalance,asinLightMemandMemTree;(2)Richerorgani- becomes unreliable for exact detail matching (e.g., relating two
+zationhelpsonlywhenitsupkeepavoidsbroadrecomputation; earlier events while missing the precise date or name); and (3)
+otherwiseoverheadoffsetsitsgains,asinCogneeandMemoryOS; Deeperhierarchycanimproveorganization,butcannotrestore
+(3)Underlong-contextworkloads,whole-memorycoordination informationremovedduringrepresentation(e.g.,aparentnode
+becomesthedominantcostdriver. helpsnavigaterelatedsessions,butnotrecoveromitteddetails).
+Finding 6. (Representation Granularity). M1 shows that
+5 Fine-GrainedComponentComparison
+preservingusableevidencemattersmorethanmakingmemory
+To understand the root causes behind end-to-end performance
+morecompactormorestructured.(1)High-retentionformsbest
+supportexactdetailrecovery,asinLightMemUser-OnlyRaw;
+differences,wedecomposeagentmemorysystemsintofourfunda-
+mentalmodules.Bysystematicallygeneratingcontrolledvariants
+(2)Lightcompressioncanpreservereasoning,butweakensexact
+thatmodifyonemoduleatatime,weevaluatethecontributionof
+matching,asinLightMemUser-OnlyCompressed;(3)Hierarchy
+mainlyimprovesaccess,butcannotrestoreremovedcontent,as
+eachmoduletooverallsystemperformance.
+reflectedbytheMemTree(DeeperTree)variant.
+5.1 MemoryRepresentationandStorage(M1)
+5.2 MemoryExtraction(M2)
+ExperimentalSetting.For“Howdomemoryabstractionleveland
+structuralorganizationaffectfactualfidelityanddownstreamrea- ExperimentalSetting.For“Howdowrite-timeextractionchoices
+soning effectiveness?”, we evaluate three representation-focused affectfactualfidelityanddownstreamreasoningeffectiveness?”,we
+variants:(1)LightMem[7]comparesUser-OnlyRaw,whichstores compare extraction-related variants in three groups: (1) Memo-
+verbatimuserutterances,User-OnlySummary,whichrewriteseach Chat[18],whichcontrastsHeuristicTopicandLLMTopicsegmen-
+sessionintoanLLM-generatedabstractivesummary,andUser-Only tation;(2)MemOS [15],whichcontrastsFastMemorizeandFine
+11
+===== PAGE 12 =====
+Table4:AblationofMemoryExtractionStrategies. Table5:AblationofRetrievalandRoutingMechanisms.
+MethodVariant LoCoMo LongMemEval
+MethodVariant LoCoMo LongMemEval
+Ans.F1 Recall Substr.EM ROUGE-LF1
+EM Ans.F1 Substr.EM ROUGE-LF1 A-MEM Hybrid-Balanced 24.6 49.9 27.5 25.9
+MemoChat HeuristicTopic 23.0 33.5 10.7 18.6 HybridSparse-Leaning 23.0 44.3 24.3 22.8
+LLMTopic 22.5 34.4 7.3 15.9 NoPlanning 18.7 86.4 17.0 22.9
+SimpleMem PlanningOnly 20.7 90.6 21.7 27.9
+MemOS FastMemorize 25.5 40.8 20.7 26.1 Planning+Reflect 20.0 88.6 21.3 26.1
+FineMemorize 2.5 5.0 22.3 30.2
+LightMem User-OnlyRaw 24.2 38.9 26.0 31.4 HybridRaw 25.5 39.7 25.3 31.4
+  
+     
+Memorizeonthesametree_textbackend;and(3)LightMem[7],   
+whichcontrastsUser-OnlyRawandHybridRawbyextractingraw   
+ 
+memoryfromuserturnsonlyorfrombothuserandassistantturns.
+W de e lit e y v a a n lu d a L te oC L o o M ng o M fo e r m d E o v w a n l s f t o re r a m m u m lt u i- l s t e i- s s s t i e o p n re fa a c so tu n a in l g r , e r tr e i p e o v r a t l in fi g -  / R Q J  &    R   '  Q  H  W H  I D  [  X  W  O W   0 H P R   '  U \  H  2  I D  6  X O W      &  0  R  H  Q  P  V  R     U  0  \ 2  H U  6  J H   0 H   '  P  H  R  O   U    \  )  2  O X  6  V K   0 H P    R  '  &  H  K  I D  D  X  W  O W   0 H P R   7  &  R  K  S  D  L F  W   
+exactness-andoverlap-basedmeasures(e.g.,EMandROUGE-LF1).   D   / R & R 0 R   $ Q V Z H U  ) 
+O9-(Coverage-PreservingExtraction):Coverage-preserving
+write-timeextractionprovidesthemoststablebalancebe-
+tweenfactualretrievalanddownstreamreasoning.Asshown
+inTable4,MemoChatHeuristicTopicimprovesLongMemEvalover
+LLMTopic(10.7vs.7.3Substr.EM;18.6vs.15.9ROUGE-LF1)while
+keepingLoCoMonearlyunchanged(23.0/33.5vs.22.5/34.4EM/Ans.
+F1),MemOSFastMemorizefarexceedsFineMemorizeonLoCoMo
+(25.5vs.2.5EM;40.8vs.5.0Ans.F1)despitelowerLongMemEval
+scores (20.7 vs. 22.3 Substr. EM; 26.1 vs. 30.2 ROUGE-L F1), and
+LightMemHybridRawslightlyimprovesLoCoMooverUser-Only
+Raw(25.5vs.24.2EM;39.7vs.38.9Ans.F1)withnearlyunchanged
+LongMemEvalresults(25.3vs.26.0Substr.EM;both31.4ROUGE-L
+F1).Theseresultssuggestthatbroader,lessselectiveextraction
+betterpreservesthecontextneededfordownstreamanswerability,
+evenwhenmoreselectiveextractionyieldsmodestgainsonlexical
+factualretrieval.Inparticular,(1)conservativetopicgroupingis
+lesslikelytosplitasustainedthreadorisolateabriefaside(e.g.,a
+one-offhobbymention);(2)lightermemorizationismorelikelyto
+retaindetailsthatlaterneedtobecombinedforreasoning;and(3)
+includingbothuserandassistantturnscanpreserveclarifyingcues
+thatuser-onlyextractionmaymiss(e.g.,adateorrefinedphrasing).
+Finding7. (LateFilteringPrinciple).M2suggeststhatmem-
+oryextractionshouldpreservecontextatwritetimeratherthan
+aggressivelyfilterdetails:(1)Coarsersegmentationhelpsthread-
+spanningquestionsbykeepingrelatedcuestogether;(2)Limited
+rewritingsupportscompositionalreasoningbyretainingdetails
+thatmatteronlywhencombinedlater;(3)Storingbothuserand
+assistantturnshelpsclarification-heavydialoguesbypreserving
+refinedformulationsforlateraccess.
+5.3 MemoryRetrievalandRouting(M3)
+ExperimentalSetting.For“Howdoretrievalfusionandreasoning-
+mediatedroutingaffectretrievalrelevanceandprovenance-sensitive
+precision?”,wecomparevariantsintwogroups:(1)A-MEMunder
+Hybrid-Balanced,whichusesamoderatedense–sparsefusion,ver-
+susHybridSparse-Leaning,whichincreasesthesparsecontribution;
+and(2)SimpleMemunderNoPlanning,whichretrievesdirectly,
+versusPlanningOnly,whichaddsanexplicitplanningstep,and
+  )  U H Z V Q $
+  
+                                   
+  
+  
+ 
+ / R Q J  &    R   '  Q  H  W H  I D  [  X  W  O W   0 H P R   '  U \  H  2  I D  6  X O W      &  0  R  H  Q  P  V  R     U  0  \ 2  H U  6  J H   0 H   '  P  H  R  O   U    \  )  2  O X  6  V K   0 H P    R  '  &  H  K  I D  D  X  W  O W   0 H P R   7  &  R  K  S  D  L F  W   
+  E   / R & R 0 R   6 X E V W U L Q J  ( 0
+ 0 (  J Q L U W V E X 6
+ / R Q J  & R Q W H [ W  0 H P R U \ 2 6  0 H P R & K D W
+                             
+Figure12:AblationofMaintenanceStrategies.
+Planning+Reflect,whichfurtherintroducesalightweightreflection
+stage.WeevaluateonLongMemEvaltomeasurescattered-history
+retrievalrelevance,andonLoCoMotoassessprovenance-sensitive
+memoryaccessandsupporting-memoryidentification,reporting
+overlap-basedmeasures(e.g.,Substr.EM,ROUGE-LF1).
+O10-(PlanningandFusion):Explicitplanningandbalanced
+retrievalfusionprovidethestrongestimprovementinre-
+trievaleffectiveness.AsshowninTable5,A-MEMachievesits
+bestperformancewithHybrid-Balanced,reaching24.6Ans.F1and
+27.5Substr.EM,comparedwith23.0and24.3underHybridSparse-
+Leaning,whileSimpleMemachievesitsbestperformancewithPlan-
+ningOnly,reaching20.7Ans.F1,90.6StrictRec.,21.7Substr.EM,and
+27.9ROUGE-LF1,abovebothNoPlanningandPlanning+Reflect.
+Theseresultsindicatethatstrongerretrievalandroutingperfor-
+mancecomesfromaddingusefulstructure,ratherthanfromsimply
+increasingsparsematchingorextrareasoningsteps.Inparticular,
+(1) moderate fusion appears more effective than sparse-leaning
+fusionforpreservingbothanswerqualityandrelevance(e.g.,se-
+manticallyrelatedbutlexicallyvariedfacts);(2)explicitplanning
+consistentlyimprovesoverdirectretrieval(e.g.,multi-constraint
+memoryqueries);and(3)addingreflectionontopofplanningdoes
+not yield further gains, suggesting that extra deliberation may
+weakenratherthanimproveroutingdecisions.
+Finding8. (RetrievalStrategyGuidance).M3indicatesthat
+retrievalqualityimprovesmostfromtargetedstructurerather
+thanaddedcomplexity:(1)moderatehybridfusionispreferable
+whenevidenceissemanticallyrelatedbutlexicallydiverse;(2)
+lightweightplanningiseffectiveforconstrainedmemorylookup;
+and(3)oncearouteisalreadyspecified,extrareflectionbrings
+limitedbenefitandmainlyaddsoverhead.
+5.4 MemoryMaintenance(M4)
+ExperimentalSetting.For“Howdoconsolidationaggressiveness,
+flush timing, and summary granularity affect update correctness
+andlong-horizonmemoryconsistency?”,wecomparemaintenance-
+relevantvariantsintwogroups:(1)MemoChatunderdefaultmulti-
+topicconsolidationversusTopic1,whichforceseachwindowintoa
+12
+===== PAGE 13 =====
+single-topicsummary;and(2)MemoryOSunderdefaultimmediate
+consolidationversusDelayed-Flush,whichenlargestheshort-term
+bufferbeforebackendwrites,andConservative-Merge,whichraises
+thetopic-similaritythresholdforstricterassimilation.Weevaluate
+onLoCoMotoassesswhetherthesemaintenancechoicespreserve
+updatedfactsandcoherentmemoryuseoverextendedcontexts.
+O11-(ConservativeConsolidation):Conservativeconsolida-
+tionismoreeffectivethandelayedflushingoroverlycoarse
+summarizationformaintaininganswer-relevantmemory.
+As shown in Figure 12, the stricter-merge variant, MemoryOS
+(Conservative-Merge),improvesoverdefaultMemoryOSfrom23.2
+to 23.5 in Ans. F1 and from 22.4 to 22.8 in Substr. EM, whereas
+delayingflusheslowersthesamesystemto20.6/19.5,andforcing
+single-topicsummariesinMemoChatalsounderperformsitsdefault
+settingat16.2/16.8versus16.6/18.4;LongContextremainshighest
+onSubstr.EMat23.7.Itindicatesthatmaintenanceismosteffective
+whenitselectivelyconsolidatesevidencewithouteitherleavingit
+unresolvedorcompressingittooaggressively,whilerawcontext
+stillbetterpreservesexactphrasing.Inparticular,(1)conservative
+mergingcanretainrelateddetailsforlaterrecomposition(e.g.,dis-
+persedhobbymentions);(2)delayedflushingleavesmoreevidence
+unresolvedbeforeretrieval(e.g.,activitysplitacrossturns).
+Finding9. (MaintenanceDesignPrinciple).M4suggeststhat
+memorymaintenanceworksbestunderabalancedupdateregime:
+(1)conservativeintegrationpreservescross-turnlinkagesforlong-
+horizonreasoning; (2)delayedflushingleavesrecentevidence
+fragmentedatquerytime;and(3)overlycoarsesummarization
+obscuressparsebutusefulcues.
+6 Conclusion
+Wepresentacomprehensivereviewofexistingagentmemorysys-
+temsfromadatamanagementperspective.Weconductthorough
+end-to-endperformanceevaluationoftypicalagentmemorysys-
+temsandexploretheirsuitableapplicationscenarios.Additionally,
+wedelveintotheimpactoftheindividualbuildingblocksbycon-
+structingmultiplememorymodulevariants,therebyidentifyingthe
+mosteffectivemethodsforrepresentation,extraction,routing,and
+maintenance,aswellasthemostinfluentialfactorsgoverningoper-
+ationalcostsandlong-horizonstability.Finally,wesummarizethe
+findingsandpresentguidanceforusersinselectingsuitablemem-
+oryarchitectures,alongsideoutliningpromisingresearchdirections.
+Wewillalsoreleasethetestbedandevaluationframework.
+13
+===== PAGE 14 =====
+References
+Reasoning.CoRRabs/2505.24478(2025).
+[1] ClaudeCode.(Anthropic). https://www.claude.com/product/claude-code [22] MemoryAgentBenchTeam.2026. EvaluatingMemoryinLLMAgentsviaIn-
+[2] AnthropicEngineering.2025.EffectivecontextengineeringforAIagents.https://
+crementalMulti-TurnInteractions.InFourteenthInternationalConferenceon
+www.anthropic.com/engineering/effective-context-engineering-for-ai-agents.
+LearningRepresentations(ICLR).
+[3] YushiBai,XinLv,JiajieZhang,HongchangLyu,JiankaiTang,ZhidianHuang, [23] Microsoft.2025.IntroducingCopilotMemory:AMoreProductiveandPerson-
+ZhengxiaoDu,XiaoLiu,AohanZeng,LeiHou,YuxiaoDong,JieTang,and alizedAI.https://techcommunity.microsoft.com/blog/microsoft365copilotblog/
+JuanziLi.2024.LongBench:ABilingual,MultitaskBenchmarkforLongContext introducing-copilot-memory.
+Understanding.InACL(1).AssociationforComputationalLinguistics,3119– [24] OpenAI.2026. ContextEngineeringforPersonalization–StateManagement
+withLong-TermMemoryNotesusingOpenAIAgentsSDK.https://developers.
+3137.
+openai.com/cookbook/examples/agents_sdk/context_personalization/.
+[4] LianaCaminaletal.2025.FilteredVectorSearch:State-of-the-artandResearch
+Opportunities.InProceedingsoftheVLDBEndowment,Vol.18.5488–5491. [25]
+J
+C
+o
+h
+se
+a
+p
+rl
+h
+es
+E.
+P
+G
+ac
+o
+k
+n
+e
+z
+r
+a
+,
+le
+V
+z
+i
+.
+v
+2
+ia
+02
+n
+3
+F
+.
+a
+M
+n
+e
+g
+m
+,S
+G
+h
+P
+i
+T
+sh
+:
+i
+T
+r
+o
+G
+w
+.
+a
+P
+rd
+a
+s
+ti
+L
+l,
+L
+K
+M
+e
+s
+vi
+a
+n
+sO
+Li
+p
+n
+e
+,
+r
+S
+a
+a
+ti
+r
+n
+a
+g
+h
+S
+W
+ys
+o
+te
+o
+m
+de
+s
+r
+.
+s
+a
+,
+r
+a
+X
+n
+i
+d
+v
+[5] PrateekChhikara,DevKhant,SaketAryan,TaranjeetSingh,andDeshrajYadav. preprintarXiv:2310.08560(2023).
+2025. Mem0:BuildingProduction-ReadyAIAgentswithScalableLong-Term
+Memory.arXivpreprintarXiv:2504.19413(2025). [26]
+A
+Pre
+T
+s
+e
+t
+m
+on
+po
+R
+r
+a
+a
+s
+l
+m
+K
+u
+n
+s
+o
+se
+w
+n
+l
+,
+e
+P
+d
+a
+g
+v
+e
+e
+G
+lP
+ra
+a
+p
+li
+h
+yc
+A
+hu
+rc
+k
+h
+,
+i
+T
+te
+ra
+ct
+v
+u
+is
+re
+B
+f
+e
+o
+a
+r
+u
+A
+va
+g
+i
+e
+s,
+n
+a
+t
+n
+M
+d
+e
+J
+m
+es
+o
+se
+ry
+R
+.
+y
+a
+a
+r
+n
+X
+.
+i
+2
+v
+0
+p
+2
+r
+5
+e
+.
+p
+Z
+ri
+e
+n
+p
+t
+:
+[6] P
+ti
+e
+o
+n
+n
+g
+,
+f
+a
+e
+n
+i
+d
+D
+E
+u
+m
+.2
+e
+0
+r
+2
+g
+6
+in
+.
+g
+M
+F
+e
+r
+m
+on
+o
+t
+r
+i
+y
+er
+f
+s
+o
+.
+r
+a
+A
+rX
+u
+i
+t
+v
+on
+p
+o
+re
+m
+p
+o
+ri
+u
+n
+s
+t
+L
+a
+L
+rX
+M
+iv
+A
+:2
+g
+6
+e
+0
+n
+3.
+t
+0
+s
+7
+:
+6
+M
+70
+ec
+(
+h
+20
+a
+2
+n
+6
+is
+)
+m
+.
+s,Evalua- arXiv:2501.13956(2025).
+[27] AlirezaRezazadeh,ZichaoLi,WeiWei,andYujiaBao.2025. FromIsolated
+[7] JizhanFang,XinleDeng,HaomingXu,ZiyanJiang,YuqiTang,ZiwenXu,Shumin
+ConversationstoHierarchicalSchemas:DynamicTreeMemoryRepresentation
+Deng,YunzhiYao,MengruWang,ShuofeiQiao,HuajunChen,andNingyuZhang. forLLMs.InTheThirteenthInternationalConferenceonLearningRepresentations,
+2 C 0 o 2 R 5 R . a L b i s g / h 2 t 5 M 10 e . m 18 : 8 L 66 ig ( h 2 t 0 w 25 e ) ig . h ar t X a i n v d :2 E 51 ffi 0 c .1 i 8 e 8 n 6 t 6 M d e o m i:1 o 0 r . y 4 - 8 A 55 u 0 g / m A e R n X t I e V d .2 G 5 e 1 n 0. e 1 r 8 a 8 t 6 io 6 n. ICLR2025,Singapore,April24-28,2025.OpenReview.net. https://openreview.net/
+forum?id=moXtEmCleY
+[8] Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi,
+[28] HarmanpreetSingh,NikhilVerma,YixiaoWang,ManasaBharadwaj,Homa
+Yi Dai, Jiawei Sun, Qianyu Guo, Meng Wang, and Haofen Wang. 2023.
+Retrieval-AugmentedGenerationforLargeLanguageModels:ASurvey.CoRR
+A
+Fa
+g
+s
+e
+h
+n
+a
+t
+n
+s:
+di
+A
+,K
+C
+e
+a
+v
+s
+i
+e
+n
+S
+F
+t
+e
+u
+r
+d
+re
+y
+ir
+o
+a
+n
+,a
+T
+n
+a
+d
+ilo
+C
+r
+h
+e
+u
+d
+l
+T
+L
+r
+e
+a
+e
+v
+.
+e
+2
+l
+0
+P
+24
+la
+.
+n
+P
+n
+e
+i
+r
+n
+s
+g
+o
+.
+n
+I
+a
+n
+lL
+P
+a
+ro
+r
+c
+g
+e
+e
+e
+L
+di
+a
+n
+n
+g
+g
+s
+u
+o
+a
+f
+g
+t
+e
+h
+M
+e2
+o
+0
+d
+2
+e
+4
+l
+abs/2312.10997(2023). ConferenceonEmpiricalMethodsinNaturalLanguageProcessing:IndustryTrack.
+[9] Google.2025.Memory–AgentDevelopmentKit(ADK).https://google.github.
+AssociationforComputationalLinguistics,Miami,Florida,US,486–514.doi:10.
+io/adk-docs/sessions/memory/.
+18653/v1/2024.emnlp-industry.37
+[10] YifanHu,SiyinLiu,YifeiYue,GuoqiangZhang,BenyouLiu,FengbinZhu,
+JingkuanLin,etal.2025. MemoryintheAgeofAIAgents. arXivpreprint [29] HaoranTan,ZeyuZhang,ChenMa,XuChen,QuanyuDai,andZhenhuaDong.
+arXiv:2512.13564(2025). 2
+L
+0
+L
+2
+M
+5.
+-b
+M
+as
+e
+e
+m
+d
+B
+A
+e
+g
+n
+e
+c
+n
+h
+t
+:
+s
+T
+.I
+o
+n
+w
+A
+ar
+C
+d
+L
+s
+(
+M
+Fi
+o
+n
+r
+d
+e
+in
+C
+g
+o
+s)
+m
+(
+p
+F
+r
+in
+e
+d
+h
+i
+e
+n
+n
+g
+s
+s
+iv
+o
+e
+fA
+Ev
+C
+a
+L
+l
+)
+u
+.
+a
+A
+ti
+s
+o
+s
+n
+oc
+o
+i
+n
+ati
+t
+o
+h
+n
+e
+f
+M
+or
+em
+Co
+o
+m
+ry
+p
+o
+u
+f
+-
+[11] GuozhangKang,ZhenyingGe,JieHu,XinyuanZhang,LiWang,andJianfeng
+tationalLinguistics,19336–19352.
+Zhan.2025.BigVectorBench:HeterogeneousDataEmbeddingandCompound
+Q En u d e o r w ie m s e a n re t1 E 8 s , se 6 n ( t 2 i 0 a 2 l 5 in ), E 15 v 3 a 6 lu – a 1 t 5 i 4 n 9 g . VectorDatabases.ProceedingsoftheVLDB [30] Z se h n i t w at e i i o T n a . n a g rX e i t v a p l. re 2 p 0 r 2 i 6 n . t L ar L X M iv A :2 g 60 e 3 n . t 03 M 59 em (2 o 0 r 2 y 6 : ). ASurveyfromaUnifiedRepre-
+[31] DiWu,HongweiWang,WenhaoYu,YuweiZhang,andKai-WeiChang.2024.
+[12] JiazhengKang,MingmingJi,ZheZhao,andTingBai.2025.MemoryOSofAI
+Agent.InEMNLP.AssociationforComputationalLinguistics,25961–25970. L
+ar
+o
+X
+n
+i
+g
+v
+M
+p
+e
+r
+m
+ep
+E
+ri
+v
+n
+a
+t
+l:
+a
+B
+rX
+en
+iv
+c
+:
+h
+2
+m
+41
+a
+0
+r
+.
+k
+10
+in
+8
+g
+13
+C
+(
+h
+2
+a
+0
+t
+2
+A
+4)
+s
+.
+sistantsonLong-TermInteractiveMemory.
+[13] ArijitKhan,YuyuLuo,WenjieZhang,MingjieZhou,andXiaofangZhou.2025.
+[32] YanchenWu,TenghuiLin,YingliZhou,FangyuanZhang,QintianGuo,Xun
+Retrieval-augmentedGeneration(RAG):WhatisThereforDataManagement
+Researchers?ACMSIGMODRecord54,4(2025). Zhou,SiboWang,XilinLiu,YuchiMa,andYixiangFang.2026. Memoryin
+theLLMEra:ModularArchitecturesandStrategiesinaUnifiedFramework.
+[14] G Pr u o o c l . i V an L g D L B i, E X nd u o a w nh .1 e 7 Z , h 1 o 2 u ( , 2 a 0 n 2 d 4) X ,4 in 2 y 13 a – ng 42 Z 1 h 6 a . o.2024.LLMforDataManagement. [33] P W ro u c j e ia e n d g in X gs u o e f t t a h l. e 2 V 0 L 25 D . B A E -M nd E o M w : m A e g n e t n ( t 2 i 0 c 2 M 6) e . moryforLLMAgents.arXivpreprint
+[15] ZhiyuLi,ShichaoSong,ChenyangXi,HanyuWang,ChenTang,SiminNiu,Ding arXiv:2502.12110(2025).
+Chen,JiaweiYang,ChunyuLi,QingchenYu,JihaoZhao,YezhaohuiWang,Peng
+[34] ChaoYang,ChuanZhou,YanghuaXiao,ShuaiDong,LiangZhuang,etal.2026.
+Liu,ZehaoLin,PengyuanWang,JiahaoHuo,TianyiChen,KaiChen,KehangLi, Graph-basedAgentMemory:Taxonomy,Techniques,andApplications.arXiv
+ZhenTao,JunpengRen,HuayiLai,HaoWu,BoTang,ZhenrenWang,Zhaoxin preprintarXiv:2602.05665(2026).
+Fan,NingyuZhang,LinfengZhang,JunchiYan,MingchuanYang,TongXu,Wei
+[35] HongliYu,TinghongChen,JiangtaoFeng,JiangjieChen,WeinanDai,QiyingYu,
+Xu,HuajunChen,HaofengWang,HongkangYang,WentaoZhang,Zhi-QinJohn
+Ya-QinZhang,Wei-YingMa,JingjingLiu,MingxuanWang,andHaoZhou.2025.
+Xu,SihengChen,andFeiyuXiong.2025.MemOS:AMemoryOSforAISystem.
+CoRRabs/2507.03724(2025).arXiv:2507.03724doi:10.48550/ARXIV.2507.03724
+A
+M
+g
+e
+e
+m
+n
+A
+t.
+g
+C
+e
+o
+n
+R
+t:
+R
+R
+a
+e
+b
+s
+s
+h
+/
+a
+2
+p
+5
+i
+0
+n
+7
+g
+.0
+L
+2
+o
+2
+n
+59
+g-
+(
+C
+20
+o
+2
+n
+5
+t
+)
+e
+.
+xtLLMwithMulti-ConvRL-basedMemory
+[16] JiaqiLiu,YaofengSu,PengXia,SiweiHan,ZeyuZheng,CihangXie,Mingyu
+[36] ZeyuZhang,XiaoheBo,ChenMa,RuiLi,XuChen,QuanyuDai,JiemingZhu,
+Ding,andHuaxiuYao.2026.SimpleMem:EfficientLifelongMemoryforLLM
+Agents.CoRRabs/2601.02553(2026). Z
+La
+h
+r
+e
+g
+n
+e
+h
+L
+u
+a
+a
+n
+D
+g
+o
+u
+n
+ag
+g
+e
+,a
+M
+nd
+od
+Ji
+e
+-
+l
+R
+b
+o
+a
+n
+s
+g
+ed
+W
+A
+e
+g
+n
+e
+.
+n
+2
+t
+0
+s
+2
+.
+5
+A
+.
+C
+A
+M
+Su
+T
+r
+r
+v
+a
+e
+n
+y
+sa
+o
+c
+n
+ti
+t
+o
+h
+n
+e
+s
+M
+on
+e
+I
+m
+n
+o
+fo
+r
+r
+y
+m
+M
+at
+e
+i
+c
+o
+h
+n
+a
+S
+n
+y
+is
+st
+m
+em
+o
+s
+f
+[17] ShuLiu,SoujanyaPonnapalli,ShreyaShankar,SepantaZeighami,AlanZhu,
+(2025).
+ShubhamAgarwal,RuiqiChen,SamionSuwito,ShuoYuan,IonStoica,Matei
+[37] JunhaoZheng,XidiCai,QiukeLi,DuzhenZhang,Zhong-ZhiLi,YingyingZhang,
+Zaharia,AlvinCheung,NatachaCrooks,JosephE.Gonzalez,andAdityaG.
+LeSong,andQianliMa.2025.LifelongAgentBench:EvaluatingLLMAgentsas
+P
+to
+ar
+b
+a
+e
+m
+A
+e
+g
+s
+e
+w
+n
+a
+t-
+r
+F
+a
+i
+n
+r
+.
+st
+2
+.
+0
+I
+2
+n
+6
+P
+.
+r
+S
+o
+u
+ce
+p
+e
+p
+d
+o
+in
+rt
+g
+i
+s
+n
+o
+g
+f
+O
+th
+u
+e
+r
+1
+A
+6t
+I
+h
+O
+A
+v
+n
+e
+n
+r
+u
+lo
+a
+r
+l
+d
+C
+s:
+on
+R
+f
+e
+e
+d
+re
+e
+n
+si
+c
+g
+e
+n
+o
+i
+n
+ng
+In
+D
+no
+a
+v
+ta
+at
+S
+iv
+y
+e
+st
+D
+e
+a
+m
+ta
+s LifelongLearners.CoRRabs/2505.11942(2025).
+SystemsResearch(CIDR). [38] JunhaoZheng,ChengmingShi,XidiCai,QiukeLi,DuzhenZhang,Chenxing
+Li,DongYu,andQianliMa.2025.LifelongLearningofLargeLanguageModel
+[18] JunruLu,SiyuAn,MingbaoLin,GabrielePergola,YulanHe,DiYin,XingSun, basedAgents:ARoadmap.IEEETransactionsonPatternAnalysisandMachine
+a
+si
+n
+s
+d
+ten
+Y
+t
+un
+L
+s
+o
+h
+n
+e
+g
+n
+-R
+g
+a
+W
+ng
+u
+e
+.
+O
+20
+p
+2
+e
+3
+n
+.
+-D
+M
+o
+e
+m
+m
+a
+o
+in
+Ch
+C
+a
+o
+t
+n
+:
+v
+T
+e
+u
+r
+n
+sa
+in
+ti
+g
+on
+L
+.
+L
+C
+M
+o
+s
+RR
+to
+a
+U
+bs
+s
+/
+e
+23
+M
+0
+e
+8
+m
+.08
+o
+2
+s
+3
+f
+9
+or
+(2
+C
+02
+o
+3
+n
+)
+-
+.
+Intelligence(2025).
+[39] WanjunZhong,LianghongGuo,QiqiGao,HeYe,andYanlinWang.2024.Mem-
+arXiv:2308.08239doi:10.48550/ARXIV.2308.08239 oryBank:EnhancingLargeLanguageModelswithLong-TermMemory.InAAAI.
+[19] YuyuLuo,GuoliangLi,JuFan,andNanTang.2026.DataAgents:Levels,Stateof
+theArt,andOpenProblems.arXivpreprintarXiv:2602.04261(2026). SIGMOD AAAIPress,19724–19731.
+[40] WeiZhou,XuanheZhou,QikangHe,GuoliangLi,BingshengHe,QuanqingXu,
+2026Tutorial.
+andFanWu.2026.AutomatingDatabase-NativeFunctionCodeSynthesiswith
+[20] AdyashaMaharana,Dong-HoLee,SergeyTurishcheva,KezhenNham,Golnaz LLMs.Proc.ACMManag.Data3,4(2026),141:1–141:26.
+Jandaghi,JayPujara,andXiangRen.2024.EvaluatingVeryLong-TermConver-
+sationalMemoryofLLMAgents.InProceedingsofthe62ndAnnualMeetingof [41] ZijianZhou,AoQu,ZhaoxuanWu,SunghwanKim,AlokPrakash,DanielaRus,
+theAssociationforComputationalLinguistics(ACL). J
+t
+i
+o
+n
+S
+h
+y
+u
+n
+a
+e
+Z
+r
+h
+gi
+a
+z
+o
+e
+,B
+M
+r
+e
+y
+m
+an
+or
+K
+y
+ia
+a
+n
+nd
+Hs
+R
+i
+e
+a
+a
+n
+s
+g
+o
+L
+n
+o
+in
+w
+g
+,a
+fo
+n
+r
+d
+E
+P
+ffi
+au
+c
+l
+ie
+P
+n
+u
+t
+L
+L
+i
+o
+a
+n
+n
+g
+g
+-
+.
+H
+20
+o
+2
+r
+5
+iz
+.
+o
+M
+n
+E
+A
+M
+g
+1
+e
+:
+n
+L
+ts
+e
+.
+a
+C
+rn
+o
+i
+R
+n
+R
+g
+[21] VasilijeMarkovic,LazarObradovic,LászlóHajdu,andJovanPavlovic.2025.
+abs/2506.15841(2025).
+OptimizingtheInterfaceBetweenKnowledgeGraphsandLLMsforComplex
+14

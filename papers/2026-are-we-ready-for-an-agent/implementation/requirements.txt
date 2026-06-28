@@ -1,0 +1,3 @@
+# Minimal deps for the toy agent-memory implementation.
+# Runs with Python 3.9+ and ONLY the packages below (numpy + stdlib).
+numpy>=1.21

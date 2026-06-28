@@ -1,5 +1,8 @@
 # Python
 __pycache__/
+
+# Implementation runtime artifacts (regenerated each run)
+papers/**/implementation/metrics.json
 *.py[cod]
 *$py.class
 *.so
