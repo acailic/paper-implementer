@@ -681,14 +681,21 @@ class AgentMemorySystem:
         if "breed" in q:
             # find the object that names the breed. Prefer pet-context objects
             # (mention a pet name + "is a ...") over generic "is a wonderful".
+            # Also respect which pet the query asks about (cat vs dog).
             _vague = {
                 "lovely", "friendly", "calm", "wonderful", "great", "perfect",
                 "nice", "demanding", "rewarding", "noble", "fantastic",
-                "british", "italian", "delicious", "happy",
+                "italian", "delicious", "happy", "congratulations",
             }
             pet_ctx = re.compile(r"\b(Rex|Luna|dog|cat|retriever|shorthair)\b", re.I)
-            # first pass: pet-context objects with a real breed phrase
+            wants_cat = "cat" in q
+            wants_dog = "dog" in q
+            # first pass: pet-context objects matching the queried pet
             for mo in evidence:
+                if wants_cat and not re.search(r"\b(cat|Luna|shorthair)\b", mo.text, re.I):
+                    continue
+                if wants_dog and not re.search(r"\b(dog|Rex|retriever)\b", mo.text, re.I):
+                    continue
                 if not pet_ctx.search(mo.text):
                     continue
                 m = re.search(
@@ -697,9 +704,12 @@ class AgentMemorySystem:
                 )
                 if m and m.group(1).lower() not in _vague:
                     return m.group(1).lower()
-            # second pass: any object with a known-breed keyword
+            # second pass: any object with a known-breed keyword for that pet
             for mo in evidence:
-                m = re.search(r"\b(golden\s+retriever|british\s+shorthair)\b", mo.text, re.I)
+                if wants_cat:
+                    m = re.search(r"\b(british\s+shorthair|siamese|persian|maine\s+coon|ragdoll)\b", mo.text, re.I)
+                else:
+                    m = re.search(r"\b(golden\s+retriever|labrador|poodle|husky|beagle|corgi|german\s+shepherd)\b", mo.text, re.I)
                 if m:
                     return m.group(1).lower()
         if "name" in q and ("cat" in q or "dog" in q):

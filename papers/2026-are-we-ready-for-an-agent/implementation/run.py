@@ -58,13 +58,20 @@ def substring_em(pred: str, gold: str) -> float:
 # --------------------------------------------------------------------------- #
 
 
-def ascii_curve(series: List[float], title: str, width: int = 50, height: int = 12) -> str:
+def ascii_curve(series: List[float], title: str, width: int = 50, height: int = 12, ymax: float = 0) -> str:
     """Render a tiny ASCII line chart for a 1-D series."""
     if not series:
         return f"{title}: (no data)"
-    lo, hi = min(series), max(series)
+    lo = min(series)
+    hi = max(series)
+    if ymax > 0 and hi < ymax:
+        hi = ymax
     if hi - lo < 1e-9:
-        hi = lo + 1.0
+        # When all values are identical (e.g. all EM=1.0), extend range so
+        # the chart renders a flat line rather than exploding to lo+1.0.
+        margin = 0.05 * max(abs(lo), 0.1)
+        lo -= margin
+        hi = lo + 2 * margin
     cols = max(width, len(series))
     # map each point to a column
     grid = [[" "] * cols for _ in range(height)]
@@ -233,12 +240,12 @@ def main() -> int:
 
     # ---- ASCII quality curve -------------------------------------------- #
     print(banner("Cumulative answer-quality (substring EM) curve over the query stream", "-"))
-    print(ascii_curve(cum_em, "cumulative mean EM"))
+    print(ascii_curve(cum_em, "cumulative mean EM", ymax=1.0))
     print("\nEach '*' is one query (left->right = query order). Up = better.")
 
     # also: per-query EM as a bar-ish chart
     print(banner("Per-query substring EM (1.0 = hit, 0.0 = miss)", "-"))
-    print(ascii_curve(em_scores, "per-query EM"))
+    print(ascii_curve(em_scores, "per-query EM", ymax=1.0))
 
     # ---- invalidation demo (Module U) ----------------------------------- #
     print(banner("Module U — multi-versioning / logical invalidation demo", "-"))
