@@ -47,154 +47,303 @@
 
 OPID augments GRPO-style RL with dense token-level supervision in three stages:
 
-```
-Stage 1: Skill Extraction
-  Completed trajectories → LLM analyzer → episode-level + step-level skills
+$$
+\underbrace{\text{Skill Extraction}}_{\text{Stage 1}} \;\longrightarrow\; \underbrace{\text{Critical-First Routing + Self-Distillation}}_{\text{Stage 2}} \;\longrightarrow\; \underbrace{\text{Policy Optimization}}_{\text{Stage 3}}
+$$
 
-Stage 2: Skill Routing + Self-Distillation
-  Critical-first routing → inject skill into context → paired scoring
-  → token-level skill advantage from log-prob shift
+**Stage 1:** Completed trajectories $\tau \sim \pi_{\theta}$ are serialized and fed to an external LLM analyzer $A(\tau)$, which produces:
+- An **episode-level skill** $s^{\mathrm{ep}}_{\tau}$: a global workflow summary (for successful trajectories) or an avoidance rule (for failed ones).
+- **Step-level skills** $\{s^{\mathrm{step}}_{\tau,t}\}_{t \in \mathcal{C}_{\tau}}$ for critical timesteps identified by the analyzer, where $\mathcal{C}_{\tau} \subseteq \{1, \ldots, T\}$ is the set of critical step indices.
 
-Stage 3: Policy Optimization
-  Combine episode advantage (GRPO) + skill advantage → clipped PPO loss
-```
+**Stage 2:** A critical-first routing mechanism selects the most appropriate skill per timestep and injects it into the context. The old policy $\pi_{\theta_{\mathrm{old}}}$ then performs paired scoring (with and without the skill) to produce a per-token skill advantage.
+
+**Stage 3:** The skill advantage is combined with the GRPO episode advantage into a unified OPID advantage, and the policy is updated via a clipped PPO objective with KL regularization.
 
 ### 3.2 Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        ON-POLICY ROLLOUTS                            │
-│  Task q → Policy π_θ → Group G_q = {τ^(1), ..., τ^(N)}             │
-│                         ↓                                            │
-│              Outcome rewards R(τ)                                    │
-└────────────────────────────┬────────────────────────────────────────┘
-                             ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                    STAGE 1: SKILL EXTRACTION                        │
-│  Analyzer A(τ):                                                     │
-│    ├─ Episode-level skill s^ep_τ (global workflow / avoidance rule) │
-│    └─ Step-level skills {s^step_τ,t} for t ∈ C_τ (critical steps)   │
-└────────────────────────────┬────────────────────────────────────────┘
-                             ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│              STAGE 2: CRITICAL-FIRST ROUTING + PAIRED SCORING       │
-│                                                                     │
-│  For each timestep t in trajectory τ:                                │
-│    if t ∈ C_τ:  routed skill = s^step_τ,t  (precise, local)        │
-│    else:       routed skill = s^ep_τ        (broad, global)          │
-│                                                                     │
-│  h̃_τ,t = H(h_τ,t, s_τ,t)  ← skill-augmented context                │
-│                                                                     │
-│  Old policy scores same response y under both contexts:              │
-│    ℓ^old  = log π_old(y | h)      ← original context                 │
-│    ℓ^skill = log π_old(y | h̃)     ← skill-augmented context         │
-│                                                                     │
-│  A^skill_τ,t,ℓ = (ℓ^skill - ℓ^old) · m_τ,t,ℓ                        │
-└────────────────────────────┬────────────────────────────────────────┘
-                             ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                    STAGE 3: POLICY OPTIMIZATION                       │
-│                                                                     │
-│  Episode advantage (GRPO):                                          │
-│    A^ep_τ = (R(τ) - μ_q) / σ_q                                     │
-│                                                                     │
-│  Combined OPID advantage per token:                                  │
-│    A^OPID_τ,t,ℓ = A^ep_τ,t,ℓ + λ_skill · A^skill_τ,t,ℓ             │
-│                                                                     │
-│  Clipped PPO objective:                                              │
-│    L = -E min[ρ·A^OPID, clip(ρ, 1-ε, 1+ε)·A^OPID] + β·L_KL       │
-└─────────────────────────────────────────────────────────────────────┘
-```
+$$
+\boxed{
+\begin{array}{c}
+\textbf{ON-POLICY ROLLOUTS} \\
+q \;\xrightarrow{\;\pi_{\theta}\;}\; G_q = \{\tau^{(1)}, \ldots, \tau^{(N)}\} \;\xrightarrow{\;}\; \{R(\tau)\}
+\end{array}
+}
+$$
 
-### 3.3 Forward pass / pipeline
+$$
+\downarrow
+$$
+
+$$
+\boxed{
+\begin{array}{c}
+\textbf{STAGE 1: SKILL EXTRACTION} \\
+A(\tau) \;\longrightarrow\;
+\begin{cases}
+s^{\mathrm{ep}}_{\tau} & \text{(global workflow / avoidance)} \\
+\{s^{\mathrm{step}}_{\tau,t}\}_{t \in \mathcal{C}_{\tau}} & \text{(critical-step guidance)}
+\end{cases}
+\end{array}
+}
+$$
+
+$$
+\downarrow
+$$
+
+$$
+\boxed{
+\begin{array}{c}
+\textbf{STAGE 2: CRITICAL-FIRST ROUTING + PAIRED SCORING} \\
+\forall\, t \in \tau:\quad
+s_{\tau,t} =
+\begin{cases}
+s^{\mathrm{step}}_{\tau,t} & \text{if } t \in \mathcal{C}_{\tau} \;\text{(critical)} \\
+s^{\mathrm{ep}}_{\tau} & \text{otherwise}
+\end{cases} \\[12pt]
+\tilde{h}_{\tau,t} = \mathcal{H}(h_{\tau,t},\; s_{\tau,t}) \quad \text{(skill-augmented context)} \\[12pt]
+\ell^{\mathrm{old}}_{\tau,t,\ell} = \log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid h_{\tau,t},\, y_{<\ell}) \\
+\ell^{\mathrm{skill}}_{\tau,t,\ell} = \log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid \tilde{h}_{\tau,t},\, y_{<\ell}) \\[12pt]
+A^{\mathrm{skill}}_{\tau,t,\ell} = \bigl(\ell^{\mathrm{skill}}_{\tau,t,\ell} - \ell^{\mathrm{old}}_{\tau,t,\ell}\bigr) \cdot m_{\tau,t,\ell}
+\end{array}
+}
+$$
+
+$$
+\downarrow
+$$
+
+$$
+\boxed{
+\begin{array}{c}
+\textbf{STAGE 3: POLICY OPTIMIZATION} \\
+A^{\mathrm{ep}}_{\tau} = \frac{R(\tau) - \mu_q}{\sigma_q} \\[8pt]
+A^{\mathrm{OPID}}_{\tau,t,\ell} = A^{\mathrm{ep}}_{\tau} \cdot m_{\tau,t,\ell} \;+\; \lambda_{\mathrm{skill}} \cdot A^{\mathrm{skill}}_{\tau,t,\ell} \\[8pt]
+\mathcal{L}(\theta) = -\mathbb{E}_{\tau,t,\ell}\!\left[\min\!\bigl(\rho \cdot A^{\mathrm{OPID}},\; \mathrm{clip}(\rho, 1{-}\epsilon, 1{+}\epsilon) \cdot A^{\mathrm{OPID}}\bigr)\right] + \beta \cdot \mathcal{L}_{\mathrm{KL}}(\theta)
+\end{array}
+}
+$$
+
+### 3.3 On-Policy Hierarchical Skill Extraction (Formal)
+
+Given a completed trajectory $\tau = (q, o_1, a_1, \ldots, o_T, a_T, R(\tau))$ sampled from the current policy $\pi_{\theta}$, OPID serializes the full interaction record and queries an external analyzer model $A$:
+
+$$
+\left(s^{\mathrm{ep}}_{\tau},\; \{(t_i, s^{\mathrm{step}}_{\tau,t_i})\}_{i=1}^{K}\right) = A\!\left(\mathrm{serialize}(\tau)\right)
+$$
+
+where $K = |\mathcal{C}_{\tau}|$ is the number of critical steps and $t_i \in \mathcal{C}_{\tau}$ are the critical timestep indices. The analyzer is a separate LLM (GLM-5.2 in experiments, $\mathrm{temp}=0.4$) — not the training backbone.
+
+**Episode-level skill.** For a successful trajectory ($R(\tau) > 0$), the skill captures the effective workflow:
+
+$$
+s^{\mathrm{ep}}_{\tau} = \text{"strategy that led to success: workflow steps, key decisions, ordering"}
+$$
+
+For a failed trajectory ($R(\tau) \leq 0$), it captures the avoidance rule:
+
+$$
+s^{\mathrm{ep}}_{\tau} = \text{"why it failed: what to avoid, missing prerequisites, wrong ordering"}
+$$
+
+**Step-level skills.** Localized guidance at critical decision points, where "critical" is defined as timesteps where the agent's action had outsized impact on the trajectory outcome:
+
+$$
+\{s^{\mathrm{step}}_{\tau,t_i}\}_{i=1}^{K}, \qquad K \leq K_{\max} = \begin{cases} 5 & \text{ALFWorld / WebShop} \\ 2 & \text{Search QA} \end{cases}
+$$
+
+The average number of critical steps is $\approx 3.7$ per trajectory on ALFWorld.
+
+### 3.4 Critical-First Routing
+
+Rather than combining both skill levels additively at every timestep, OPID uses a hard routing scheme:
+
+$$
+s_{\tau,t} = \begin{cases}
+s^{\mathrm{step}}_{\tau,t} & \text{if } t \in \mathcal{C}_{\tau} \quad \text{(precise, local guidance)} \\
+s^{\mathrm{ep}}_{\tau} & \text{if } t \notin \mathcal{C}_{\tau} \quad \text{(broad, global guidance)}
+\end{cases}
+$$
+
+This is a **hard switch, not superposition**. The motivation: at critical states the step-level skill provides sharper supervision; at non-critical states the episode-level skill provides a stable background signal. Blindly combining both at every step is suboptimal (ablation: $-6.8$ on ALFWorld).
+
+**Theoretical guarantee (Proposition 3).** With perfect critical-step detection, critical-first routing recovers the oracle choice between step-level and episode-level teachers. With imperfect detection, the degradation is bounded by $\Gamma \cdot \Pr(\text{detection error})$, where $\Gamma$ is the maximum advantage gap between the two skill levels.
+
+### 3.5 Skill-Aware Self-Distillation via Log-Prob Shift
+
+The routed skill $s_{\tau,t}$ is injected into the interaction history via a context augmentation function $\mathcal{H}$:
+
+$$
+\tilde{h}_{\tau,t} = \mathcal{H}(h_{\tau,t},\; s_{\tau,t})
+$$
+
+where $h_{\tau,t}$ is the original history prefix at timestep $t$ and $\tilde{h}_{\tau,t}$ is the skill-augmented version.
+
+The **old policy** $\pi_{\theta_{\mathrm{old}}}$ (frozen parameters from before the update) scores each response token $y_{\tau,t,\ell}$ under both contexts:
+
+$$
+\ell^{\mathrm{old}}_{\tau,t,\ell} = \log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid h_{\tau,t},\, y_{<\ell})
+$$
+
+$$
+\ell^{\mathrm{skill}}_{\tau,t,\ell} = \log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid \tilde{h}_{\tau,t},\, y_{<\ell})
+$$
+
+The **per-token skill advantage** is the log-probability shift, masked to valid response tokens:
+
+$$
+\boxed{A^{\mathrm{skill}}_{\tau,t,\ell} = \bigl(\ell^{\mathrm{skill}}_{\tau,t,\ell} - \ell^{\mathrm{old}}_{\tau,t,\ell}\bigr) \cdot m_{\tau,t,\ell}}
+$$
+
+where $m_{\tau,t,\ell} \in \{0, 1\}$ is the response-token mask (1 for generated response tokens, 0 for prompt/observation tokens).
+
+**Interpretation:**
+- $A^{\mathrm{skill}}_{\tau,t,\ell} > 0$: The hindsight skill makes this token *more* likely → the token is consistent with the extracted knowledge → **reinforce**.
+- $A^{\mathrm{skill}}_{\tau,t,\ell} < 0$: The skill makes this token *less* likely → the token contradicts what hindsight says → **suppress**.
+
+This requires only a paired forward pass through the same frozen old policy — no separate teacher model is needed.
+
+### 3.6 Forward pass / pipeline
 
 **Training iteration:**
 
-1. Sample batch of task prompts
-2. For each prompt, sample N=8 on-policy trajectories from current policy
-3. Compute GRPO group-relative episode advantages (mean, std normalization)
-4. For each trajectory:
-   a. Serialize trajectory record (prompt, observations, responses, feedback, outcome)
-   b. Call analyzer → episode-level skill + critical step-level skills
-   c. For each timestep:
-      - Route: critical → step skill, otherwise → episode skill
-      - Inject skill into history → h̃
-      - Old policy scores response under h and h̃
-      - Compute skill advantage per token
-      - Add to episode advantage → OPID advantage
-5. Update policy with clipped PPO on combined advantages
+1. Sample batch of task prompts $\{q_i\}_{i=1}^{B}$
+2. For each prompt $q_i$, sample $N=8$ on-policy trajectories from current policy: $\{\tau^{(j)}_{q_i}\}_{j=1}^{N}$
+3. Compute GRPO group-relative episode advantages:
+   $$
+   \mu_{q_i} = \frac{1}{N}\sum_{j=1}^{N} R(\tau^{(j)}_{q_i}), \qquad
+   \sigma_{q_i} = \sqrt{\frac{1}{N}\sum_{j=1}^{N} \bigl(R(\tau^{(j)}_{q_i}) - \mu_{q_i}\bigr)^2}, \qquad
+   A^{\mathrm{ep}}_{\tau} = \frac{R(\tau) - \mu_q}{\sigma_q}
+   $$
+4. For each trajectory $\tau$:
+   a. Serialize $\tau$ → call analyzer $A(\tau)$ → $(s^{\mathrm{ep}}_{\tau}, \{s^{\mathrm{step}}_{\tau,t}\}_{t \in \mathcal{C}_{\tau}})$
+   b. For each timestep $t$:
+      - Route: $s_{\tau,t} = s^{\mathrm{step}}_{\tau,t}$ if $t \in \mathcal{C}_{\tau}$, else $s_{\tau,t} = s^{\mathrm{ep}}_{\tau}$
+      - Construct $\tilde{h}_{\tau,t} = \mathcal{H}(h_{\tau,t}, s_{\tau,t})$
+      - Score: $\ell^{\mathrm{old}}$ and $\ell^{\mathrm{skill}}$ via frozen $\pi_{\theta_{\mathrm{old}}}$
+      - Compute $A^{\mathrm{skill}}_{\tau,t,\ell} = (\ell^{\mathrm{skill}} - \ell^{\mathrm{old}}) \cdot m$
+      - Combine: $A^{\mathrm{OPID}}_{\tau,t,\ell} = A^{\mathrm{ep}}_{\tau} \cdot m + \lambda_{\mathrm{skill}} \cdot A^{\mathrm{skill}}_{\tau,t,\ell}$
+5. Update $\pi_{\theta}$ via clipped PPO on $A^{\mathrm{OPID}}$ with KL regularization
 
-**Inference:** Standard policy forward pass, no skills, no analyzer.
+**Inference:** Standard policy forward pass $\pi_{\theta}(y \mid h)$, no skills, no analyzer, no extra context.
 
-### 3.4 Loss function
+### 3.7 Loss Function
 
-```
-L_policy(θ) = -E_{τ,t,ℓ} min(
-    ρ_τ,t,ℓ(θ) · A^OPID_τ,t,ℓ,
-    clip(ρ_τ,t,ℓ(θ), 1-ε, 1+ε) · A^OPID_τ,t,ℓ
-) + β · L_KL(θ)
-```
+$$
+\boxed{\mathcal{L}(\theta) = -\mathbb{E}_{\tau,t,\ell}\!\left[ \min\!\Bigl( \rho_{\tau,t,\ell}(\theta) \cdot A^{\mathrm{OPID}}_{\tau,t,\ell},\; \mathrm{clip}\bigl(\rho_{\tau,t,\ell}(\theta),\, 1{-}\epsilon,\, 1{+}\epsilon\bigr) \cdot A^{\mathrm{OPID}}_{\tau,t,\ell} \Bigr) \right] + \beta \cdot \mathcal{L}_{\mathrm{KL}}(\theta)}
+$$
 
-where:
-- `ρ_τ,t,ℓ(θ) = exp(log π_θ(y|h) - log π_old(y|h))` — importance ratio
-- `A^OPID = A^ep + λ_skill · A^skill` — combined advantage
-- ε = 0.2 (PPO clip)
-- β = 0.01 (KL regularization)
-- λ_skill = 0.001 (skill coefficient)
+where the **importance ratio** is:
 
-## 4. Math
+$$
+\rho_{\tau,t,\ell}(\theta) = \exp\!\bigl( \log \pi_{\theta}(y_{\tau,t,\ell} \mid h_{\tau,t},\, y_{<\ell}) - \log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid h_{\tau,t},\, y_{<\ell}) \bigr) = \frac{\pi_{\theta}(y \mid h, y_{<\ell})}{\pi_{\theta_{\mathrm{old}}}(y \mid h, y_{<\ell})}
+$$
 
-### Episode advantage (GRPO)
+**Hyperparameters:**
 
-```
-μ_q = mean({R(τ') : τ' ∈ G_q})
-σ_q = std({R(τ') : τ' ∈ G_q})
-A^ep_τ = (R(τ) - μ_q) / σ_q
-```
+| Parameter | Symbol | Value |
+|-----------|--------|-------|
+| PPO clip range | $\epsilon$ | 0.2 |
+| KL regularization coeff. | $\beta$ | 0.01 |
+| Skill advantage coeff. | $\lambda_{\mathrm{skill}}$ | 0.001 |
+| Group size | $N$ | 8 |
+| Learning rate | $\eta$ | $1 \times 10^{-6}$ |
 
-- **μ_q**: Group mean outcome reward for all trajectories of same prompt
-- **σ_q**: Group standard deviation
-- **A^ep_τ**: Normalized episode advantage — how much better/worse than average
-- In plain English: "This trajectory was X standard deviations above/below
-  the group mean"
+## 4. Mathematical Analysis
 
-### Skill advantage
+### 4.1 GRPO Episode Advantage
 
-```
-ℓ^old_τ,t,ℓ   = log π_θ_old(y_τ,t,ℓ | h_τ,t, y_<ℓ)
-ℓ^skill_τ,t,ℓ = log π_θ_old(y_τ,t,ℓ | h̃_τ,t, y_<ℓ)
+For a task prompt $q$, let $G_q = \{\tau^{(1)}, \ldots, \tau^{(N)}\}$ be the group of $N$ sampled trajectories:
 
-A^skill_τ,t,ℓ = (ℓ^skill_τ,t,ℓ - ℓ^old_τ,t,ℓ) · m_τ,t,ℓ
-```
+$$
+\mu_q = \frac{1}{N}\sum_{j=1}^{N} R\!\left(\tau^{(j)}\right), \qquad
+\sigma_q = \sqrt{\frac{1}{N}\sum_{j=1}^{N} \left(R\!\left(\tau^{(j)}\right) - \mu_q\right)^2}
+$$
 
-- **ℓ^old**: Log-prob of token under original context
-- **ℓ^skill**: Log-prob of same token under skill-augmented context
-- **m**: Valid response-token mask (0 or 1)
-- **A^skill > 0**: Skill makes this token more likely → reinforce
-- **A^skill < 0**: Skill makes token less likely → suppress
-- In plain English: "Does the hindsight skill agree with the token the
-  policy actually generated?"
+$$
+\boxed{A^{\mathrm{ep}}_{\tau} = \frac{R(\tau) - \mu_q}{\sigma_q}}
+$$
 
-### Combined OPID advantage
+This is broadcast to all tokens via the mask: $A^{\mathrm{ep}}_{\tau,t,\ell} = A^{\mathrm{ep}}_{\tau} \cdot m_{\tau,t,\ell}$.
 
-```
-A^OPID_τ,t,ℓ = A^ep_τ · m_τ,t,ℓ + λ_skill · A^skill_τ,t,ℓ
-```
+### 4.2 Skill Advantage (Log-Prob Shift)
 
-- Episode advantage (broadcast scalar) + token-level skill shaping
-- λ_skill = 0.001 — skill signal is a gentle bonus, not dominant
+The core distillation signal. For each response token at position $(t, \ell)$ in trajectory $\tau$:
 
-### Relative-KL decomposition (Proposition 1)
+$$
+\Delta\ell_{\tau,t,\ell} = \underbrace{\log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid \tilde{h}_{\tau,t},\, y_{<\ell})}_{\ell^{\mathrm{skill}}} - \underbrace{\log \pi_{\theta_{\mathrm{old}}}(y_{\tau,t,\ell} \mid h_{\tau,t},\, y_{<\ell})}_{\ell^{\mathrm{old}}}
+$$
 
-```
-L^unclip_skill(θ) = λ_skill · [L_RKL(θ) - D_KL(π_θ || π_old)]
-```
+$$
+\boxed{A^{\mathrm{skill}}_{\tau,t,\ell} = \Delta\ell_{\tau,t,\ell} \cdot m_{\tau,t,\ell}}
+$$
 
-- The skill loss is NOT pure reverse-KL — it's relative-KL (reverse-KL
-  minus behavior-KL)
-- At θ = θ_old (behavior policy), D_KL(π_θ || π_old) = 0, so it reduces
-  to scaled reverse-KL
-- Away from behavior policy, the two diverge
+Key properties:
+- The skill advantage is **zero-mean** on average when the skill provides no information (since both log-probs come from the same policy).
+- It requires **no separate teacher model** — just a second forward pass through $\pi_{\theta_{\mathrm{old}}}$ with a modified context.
+- The signal is **automatically on-policy** because the skills are extracted from the same rollout distribution.
+
+### 4.3 Combined OPID Advantage
+
+$$
+\boxed{A^{\mathrm{OPID}}_{\tau,t,\ell} = \underbrace{A^{\mathrm{ep}}_{\tau} \cdot m_{\tau,t,\ell}}_{\text{trajectory-level (GRPO)}} + \underbrace{\lambda_{\mathrm{skill}}}_{\times\, 0.001} \cdot \underbrace{A^{\mathrm{skill}}_{\tau,t,\ell}}_{\text{token-level (distillation)}}}
+$$
+
+The episode advantage provides coarse "was this trajectory good?" signal; the skill advantage provides fine-grained "should this specific token be reinforced?" signal.
+
+### 4.4 Relative-KL Decomposition (Proposition 1)
+
+The unclipped skill loss decomposes as:
+
+$$
+\boxed{\mathcal{L}^{\mathrm{unclip}}_{\mathrm{skill}}(\theta) = \lambda_{\mathrm{skill}} \left[ \underbrace{\mathcal{L}_{\mathrm{RKL}}(\theta)}_{\text{reverse-KL to skill distillation target}} - \underbrace{D_{\mathrm{KL}}\!\left(\pi_{\theta} \,\|\, \pi_{\theta_{\mathrm{old}}}\right)}_{\text{behavior KL}} \right]}
+$$
+
+where the reverse-KL term encourages the policy to match the skill-conditioned distribution and the behavior-KL term prevents excessive deviation from the old policy.
+
+**At the behavior policy** ($\theta = \theta_{\mathrm{old}}$): $D_{\mathrm{KL}}(\pi_{\theta} \|\pi_{\theta_{\mathrm{old}}}) = 0$, so the skill loss reduces to pure scaled reverse-KL:
+
+$$
+\mathcal{L}^{\mathrm{unclip}}_{\mathrm{skill}}(\theta_{\mathrm{old}}) = \lambda_{\mathrm{skill}} \cdot \mathcal{L}_{\mathrm{RKL}}(\theta_{\mathrm{old}})
+$$
+
+**Away from the behavior policy**, the two KL terms diverge, making this a **relative-KL** objective — not pure reverse-KL. This is significant: it means the skill signal is automatically regularized by the policy's own movement, preventing runaway distillation.
+
+### 4.5 Exact Recovery of Reverse-KL (Corollary 2)
+
+When the KL regularization coefficient exactly matches the skill coefficient ($\beta = \lambda_{\mathrm{skill}}$), the two objectives cancel precisely and the skill loss recovers standard reverse-KL distillation everywhere:
+
+$$
+\mathcal{L}^{\mathrm{unclip}}_{\mathrm{skill}}(\theta) + \beta \cdot D_{\mathrm{KL}}(\pi_{\theta} \| \pi_{\theta_{\mathrm{old}}}) \;\stackrel{\beta = \lambda_{\mathrm{skill}}}{=}\; \lambda_{\mathrm{skill}} \cdot \mathcal{L}_{\mathrm{RKL}}(\theta)
+$$
+
+In practice, $\beta = 0.01 \gg \lambda_{\mathrm{skill}} = 0.001$, so the behavior-KL penalty dominates and the skill signal acts as a gentle bias rather than a full distillation target.
+
+### 4.6 On-Policy Occupancy Matching (Proposition 2)
+
+Since skills are extracted from the current policy's own rollouts, the context distribution under training matches the behavior policy's context distribution:
+
+$$
+d_{\mu}(h) = d_b(h) \implies D_{\mathrm{TV}}(d_{\mu},\, d_b) = 0
+$$
+
+This eliminates the context-distribution mismatch that plagues off-policy skill distillation methods. External skill libraries, by contrast, can induce $\mathrm{D}_{\mathrm{TV}}(d_{\mu}, d_b) > 0$, causing systematic bias in the distillation signal.
+
+### 4.7 Learning Signal Under Reward Ties (Corollary 3)
+
+When all trajectories in a group receive tied rewards, the GRPO advantage vanishes:
+
+$$
+R(\tau^{(1)}) = R(\tau^{(2)}) = \cdots = R(\tau^{(N)}) \implies A^{\mathrm{ep}}_{\tau} = 0 \;\forall\, \tau
+$$
+
+Under this degenerate case, standard GRPO provides **zero learning signal**. OPID, however, still produces non-trivial gradients provided the skill distribution differs from the behavior distribution:
+
+$$
+q(s \mid \tau) \neq b(s \mid \tau) \implies A^{\mathrm{skill}}_{\tau,t,\ell} \neq 0 \;\text{in general}
+$$
+
+This means OPID can learn even from trajectories that are equally rewarding but internally different — extracting signal from *how* the trajectory succeeded, not just *that* it succeeded.
 
 ## 5. Training
 
@@ -210,75 +359,123 @@ L^unclip_skill(θ) = λ_skill · [L_RKL(θ) - D_KL(π_θ || π_old)]
 
 | Parameter | Value |
 |-----------|-------|
-| Steps | 150 |
+| Training steps | 150 |
 | Batch size | 16 (ALFWorld/WebShop), 128 (Search) |
-| Group size N | 8 |
-| Learning rate | 1e-6 |
-| PPO clip ε | 0.2 |
-| λ_skill | 0.001 |
-| KL coeff β | 0.01 |
+| Group size $N$ | 8 |
+| Learning rate $\eta$ | $1 \times 10^{-6}$ |
+| PPO clip $\epsilon$ | 0.2 |
+| Skill coefficient $\lambda_{\mathrm{skill}}$ | 0.001 |
+| KL coefficient $\beta$ | 0.01 |
 | Max prompt len | 2048 (ALFWorld), 4096 (others) |
 | Response len | 512 |
-| Max steps | 30 (ALFWorld), 15 (WebShop), 4 (Search) |
+| Max steps $T$ | 30 (ALFWorld), 15 (WebShop), 4 (Search) |
 
-### Tricks
+### Implementation tricks
 
-- LLM analyzer (GLM-5.2) with temperature=0.4 for diverse skill extraction
-- Max critical steps capped: 5 for ALFWorld/WebShop, 2 for Search QA
-- Response-token masking (only compute advantage on response tokens)
+- LLM analyzer (GLM-5.2) with $\mathrm{temperature}=0.4$ for diverse skill extraction
+- Max critical steps capped: $K_{\max} = 5$ for ALFWorld/WebShop, $K_{\max} = 2$ for Search QA
+- Response-token masking: only compute advantage on response tokens ($m_{\tau,t,\ell} = 1$ for generated tokens, 0 for prompt/observation tokens)
 - Group-relative normalization (GRPO-style) for variance reduction
 
 ### Compute budget
 
-- 8× NVIDIA A800 80G GPUs
+- $8 \times$ NVIDIA A800 80 GB GPUs
 - Analyzer is a separate model (GLM-5.2), not the training backbone
+- Training overhead per step: 1 analyzer call + 2 forward passes per trajectory step (original context + skill-augmented context)
 
 ## 6. Results & Ablations
 
-### Headline numbers (Qwen2.5-3B)
+### 6.1 Headline numbers (Qwen2.5-3B backbone)
 
-| Benchmark | GRPO | OPID | Δ |
-|-----------|------|------|---|
+| Benchmark | GRPO | OPID | $\Delta$ |
+|-----------|------|------|----------|
 | ALFWorld Avg | 75.0 | **84.3** | +9.3 |
 | Search QA Avg | 36.4 | **45.0** | +8.6 |
 | WebShop Score | 63.3 | **74.2** | +10.9 |
 | WebShop Succ. | 49.0 | **68.0** | +19.0 |
 
-### Key ablation findings
+OPID provides consistent improvements across all three benchmarks, with the largest absolute gain on WebShop success rate (+19.0 percentage points).
 
-| What | Finding | Why it matters |
-|------|---------|----------------|
-| Remove episode skill | ALFWorld -10.2, WebShop -7.0 | Global workflows are the backbone |
-| Remove step skill | ALFWorld -5.2, WebShop -8.6 | Local precision at critical states |
-| Remove routing | ALFWorld -6.8 | Blind combination is worse than smart routing |
-| Sample efficiency | 60% data OPID ≈ 100% data GRPO | Dense supervision extracts more per rollout |
-| Cross-domain (unseen) | +7.7 avg on ALFWorld unseen | Skills generalize, not memorization |
+### 6.2 Comparison with Skill-GRPO
 
-### Other notable results
+A critical finding: OPID avoids the train-test mismatch that cripples Skill-GRPO:
 
-- OPID beats Skill-GRPO* (WITH inference skills) on ALFWorld: 84.3 vs 73.4
-- Skill-GRPO without inference skills collapses: 60.2 (much worse than plain GRPO at 75.0)
-- Training dynamics: OPID reduces episode length from 17-18 → 15-16 steps
-- OPID shows training signal even under reward ties (Corollary 3)
+| Method | ALFWorld Avg | Notes |
+|--------|-------------|-------|
+| GRPO | 75.0 | No skills, baseline |
+| Skill-GRPO (inference skills removed) | 60.2 | **Collapses** — train-test mismatch |
+| Skill-GRPO* (inference skills kept) | 73.4 | External skills at test time |
+| **OPID** | **84.3** | Skills distilled into weights |
+
+Skill-GRPO without inference skills is 14.1 points *worse* than plain GRPO, demonstrating that relying on external skills at training then removing them is actively harmful. OPID's distillation approach entirely avoids this by absorbing skill knowledge into model parameters.
+
+### 6.3 Key ablation findings
+
+| Ablation | ALFWorld Avg | WebShop Succ. | Interpretation |
+|----------|-------------|---------------|----------------|
+| Full OPID | **84.3** | **74.2** | — |
+| w/o episode skill | 74.1 ($-10.2$) | 67.2 ($-7.0$) | Global workflows are the backbone of the method |
+| w/o step skill | 79.1 ($-5.2$) | 65.6 ($-8.6$) | Local precision at critical states is essential |
+| w/o routing (blind combine) | 77.5 ($-6.8$) | — | Smart routing > naive combination |
+
+Both skill levels contribute, but episode-level skills carry more weight on ALFWorld while step-level skills are relatively more important on WebShop. The routing ablation shows that simply using both skills everywhere is worse than critical-first routing — precision at the right moments matters.
+
+### 6.4 Sample Efficiency
+
+| Data fraction | GRPO | OPID | OPID vs. full-data GRPO |
+|--------------|------|------|--------------------------|
+| 60% | — | 71.9 | $\approx$ GRPO at 100% (75.0) |
+| 80% | — | 78.9 | $>$ GRPO at 100% (75.0) |
+| 100% | 75.0 | **84.3** | +9.3 |
+
+OPID at 60% of training data approximately matches GRPO at 100%. This demonstrates that dense token-level supervision from skill distillation extracts significantly more learning signal per rollout than sparse outcome rewards alone.
+
+### 6.5 Cross-Domain Generalization (ALFWorld Unseen)
+
+| Setting | GRPO | OPID | $\Delta$ |
+|---------|------|------|----------|
+| ALFWorld Unseen (avg) | 70.9 | **78.6** | +7.7 |
+| — Look task | 52.0 | **78.7** | +26.7 |
+| — Heat task | 60.0 | **78.5** | +18.5 |
+
+OPID's learned skills generalize to unseen task types, with particularly large gains on Look (+26.7) and Heat (+18.5). This suggests the distilled skills capture generalizable decision principles rather than task-specific memorization.
+
+### 6.6 Training Dynamics
+
+- OPID diverges from GRPO around mid-training and maintains a growing lead through step 150.
+- **Episode length reduction**: OPID reduces average episode length from 17–18 steps to 15–16 steps on ALFWorld.
+- Both **success rate ↑ AND episode length ↓** — the agent learns more direct, efficient workflows rather than succeeding via longer detours.
+
+### 6.7 Multi-Backbone Results
+
+| Backbone | ALFWorld Avg (GRPO → OPID) |
+|----------|---------------------------|
+| Qwen2.5-3B-Instruct | 75.0 → **84.3** (+9.3) |
+| Qwen2.5-7B-Instruct | 78.2 → **87.1** (+8.9) |
+| Qwen3-1.7B-Instruct | 68.5 → **77.6** (+9.1) |
+
+Gains are consistent across all tested backbone sizes, from 1.7B to 7B parameters.
 
 ## 7. Limitations
 
-- Only three benchmarks tested — no web arena, software engineering, or open-ended tasks
-- Analyzer quality is critical but not studied as a variable (always GLM-5.2)
-- Only Qwen backbones tested — unclear if results transfer to other families
-- No comparison with value-based methods (PPO with learned critic)
-- Skill extraction prompt is hand-designed and domain-specific
-- Training overhead: analyzer LLM call + paired forward pass per trajectory step
-- Theoretical analysis relies on common-support and bounded-range assumptions
+- Only three benchmarks tested — no web arena, software engineering, or open-ended tasks.
+- Analyzer quality is critical but not studied as a variable (always GLM-5.2, a different model from the policy backbone).
+- Only Qwen backbones tested — unclear if results transfer to LLaMA, Mistral, or other families.
+- No comparison with value-based methods (PPO with learned critic, GAE).
+- Skill extraction prompt is hand-designed and domain-specific.
+- Training overhead: analyzer LLM call + paired forward pass per trajectory step.
+- Theoretical analysis relies on common-support and bounded-range assumptions.
+- On Search-based QA with Qwen3-1.7B, OPID gains are marginal (35.9 vs 35.5 for GRPO).
+- $\lambda_{\mathrm{skill}} = 0.001$ is the only value reported — sensitivity analysis is absent.
 
 ## 8. Open Questions / Ideas
 
-- What happens with a weaker analyzer (e.g., same backbone model)? How much does
-  analyzer quality matter?
-- Can the skill extraction be learned (end-to-end) instead of prompted?
-- How does OPID interact with longer horizons (>100 steps)?
+- What happens with a weaker analyzer (e.g., same backbone model)? How much does analyzer quality matter?
+- Can the skill extraction be learned end-to-end instead of prompted?
+- How does OPID interact with longer horizons ($T > 100$)? Does the critical-step cap become a bottleneck?
 - What about iterative skill refinement across multiple training iterations?
 - Could critical-step detection be learned rather than prompted?
-- How sensitive is the method to λ_skill? The paper only reports 0.001.
+- How sensitive is the method to $\lambda_{\mathrm{skill}}$? The paper only reports 0.001.
 - Extension to value-based RL (critic + skill shaping)?
 - Combination with exploration methods (e.g., SPARK)?
+- Does the relative-KL structure suggest a natural curriculum (start with high $\beta/\lambda$ ratio, decrease over training)?
