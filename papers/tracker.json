@@ -84,8 +84,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.27377",
       "rank": 1,
-      "status": "pending",
-      "folder": "papers/2026-danceopd-on-policy-generative-field-distillation"
+      "status": "done",
+      "folder": "papers/2026-danceopd-on-policy-generative-field-distillation",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "Wan-Streamer v0.1: End-to-end Real-time Interactive Foundation Models",
@@ -136,9 +137,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.25041",
       "rank": 2,
-      "status": "reading",
+      "status": "done",
       "folder": "papers/2026-wan-streamer-v01-end-to-end",
-      "started_at": "2026-06-29"
+      "started_at": "2026-06-29",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "In-Context World Modeling for Robotic Control",
@@ -174,8 +176,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26025",
       "rank": 2,
-      "status": "pending",
-      "folder": "papers/2026-in-context-world-modeling-for-robotic"
+      "status": "done",
+      "folder": "papers/2026-in-context-world-modeling-for-robotic",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "OPID: On-Policy Skill Distillation for Agentic Reinforcement Learning",
@@ -214,8 +217,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26790",
       "rank": 3,
-      "status": "pending",
-      "folder": "papers/2026-opid-on-policy-skill-distillation-for"
+      "status": "done",
+      "folder": "papers/2026-opid-on-policy-skill-distillation-for",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "DomainShuttle: Freeform Open Domain Subject-driven Text-to-video Generation",
@@ -253,8 +257,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26058",
       "rank": 4,
-      "status": "pending",
-      "folder": "papers/2026-domainshuttle-freeform-open-domain-subject-driven"
+      "status": "done",
+      "folder": "papers/2026-domainshuttle-freeform-open-domain-subject-driven",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "Qwen-Image-Agent: Bridging the Context Gap in Real-World Image Generation",
@@ -305,8 +310,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26907",
       "rank": 4,
-      "status": "pending",
-      "folder": "papers/2026-qwen-image-agent-bridging-the-context"
+      "status": "done",
+      "folder": "papers/2026-qwen-image-agent-bridging-the-context",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "The Verification Horizon: No Silver Bullet for Coding Agent Rewards",
@@ -345,8 +351,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26300",
       "rank": 5,
-      "status": "pending",
-      "folder": "papers/2026-the-verification-horizon-no-silver-bullet"
+      "status": "done",
+      "folder": "papers/2026-the-verification-horizon-no-silver-bullet",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation",
@@ -393,8 +400,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.28128",
       "rank": 6,
-      "status": "pending",
-      "folder": "papers/2026-physisforcing-physics-reinforced-world-simulator-for"
+      "status": "done",
+      "folder": "papers/2026-physisforcing-physics-reinforced-world-simulator-for",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "ShutterMuse: Capture-Time Photography Guidance with MLLMs",
@@ -428,8 +436,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.25763",
       "rank": 7,
-      "status": "pending",
-      "folder": "papers/2026-shuttermuse-capture-time-photography-guidance-with"
+      "status": "done",
+      "folder": "papers/2026-shuttermuse-capture-time-photography-guidance-with",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "ViQ: Text-Aligned Visual Quantized Representations at Any Resolution",
@@ -466,8 +475,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.27313",
       "rank": 7,
-      "status": "pending",
-      "folder": "papers/2026-viq-text-aligned-visual-quantized-representations"
+      "status": "done",
+      "folder": "papers/2026-viq-text-aligned-visual-quantized-representations",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "Translation as a Bridging Action: Transferring Manipulation Skills from Humans to Robots",
@@ -503,8 +513,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.28133",
       "rank": 8,
-      "status": "pending",
-      "folder": "papers/2026-translation-as-a-bridging-action-transferring"
+      "status": "done",
+      "folder": "papers/2026-translation-as-a-bridging-action-transferring",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "JetSpec: Breaking the Scaling Ceiling of Speculative Decoding with Parallel Tree Drafting",
@@ -549,8 +560,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.18394",
       "rank": 9,
-      "status": "pending",
-      "folder": "papers/2026-jetspec-breaking-the-scaling-ceiling-of"
+      "status": "done",
+      "folder": "papers/2026-jetspec-breaking-the-scaling-ceiling-of",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "Improved Large Language Diffusion Models",
@@ -590,8 +602,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.25331",
       "rank": 10,
-      "status": "pending",
-      "folder": "papers/2026-improved-large-language-diffusion-models"
+      "status": "done",
+      "folder": "papers/2026-improved-large-language-diffusion-models",
+      "finished_at": "2026-06-30"
     },
     {
       "title": "GUI vs. CLI: Execution Bottlenecks in Screen-Only and Skill-Mediated Computer-Use Agents",
@@ -616,8 +629,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.24551",
       "rank": 10,
-      "status": "pending",
-      "folder": "papers/2026-gui-vs-cli-execution-bottlenecks-in"
+      "status": "done",
+      "folder": "papers/2026-gui-vs-cli-execution-bottlenecks-in",
+      "finished_at": "2026-06-30"
     }
   ],
   "updated_at": "2026-06-29T20:29:37.223259+00:00"

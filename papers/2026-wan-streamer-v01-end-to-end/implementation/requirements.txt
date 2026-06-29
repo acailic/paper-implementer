@@ -1,1 +1,2 @@
-numpy>=1.21
+torch>=2.0
+numpy
