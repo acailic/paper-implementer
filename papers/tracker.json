@@ -36,7 +36,7 @@
         "long-horizon stability",
         "cost-performance trade-offs"
       ],
-      "popularity": 104,
+      "popularity": 105,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.24775",
       "rank": 1,
@@ -90,12 +90,13 @@
         "real-time streaming",
         "low-latency"
       ],
-      "popularity": 93,
+      "popularity": 95,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.25041",
       "rank": 2,
-      "status": "pending",
-      "folder": "papers/2026-wan-streamer-v01-end-to-end"
+      "status": "reading",
+      "folder": "papers/2026-wan-streamer-v01-end-to-end",
+      "started_at": "2026-06-29"
     },
     {
       "title": "DanceOPD: On-Policy Generative Field Distillation",
@@ -132,7 +133,7 @@
         "student model",
         "expert capabilities"
       ],
-      "popularity": 69,
+      "popularity": 71,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.27377",
       "rank": 3,
@@ -208,7 +209,7 @@
         "simulation",
         "real-world robot platforms"
       ],
-      "popularity": 49,
+      "popularity": 50,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26025",
       "rank": 5,
@@ -248,7 +249,7 @@
         "policy optimization",
         "outcome-based reinforcement learning"
       ],
-      "popularity": 45,
+      "popularity": 46,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26790",
       "rank": 6,
@@ -283,7 +284,7 @@
         "photographer-side composition",
         "subject-side pose recommendation"
       ],
-      "popularity": 44,
+      "popularity": 45,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.25763",
       "rank": 7,
@@ -335,12 +336,52 @@
         "search",
         "memory"
       ],
-      "popularity": 41,
+      "popularity": 42,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.26907",
       "rank": 8,
       "status": "pending",
       "folder": "papers/2026-qwen-image-agent-bridging-the-context"
+    },
+    {
+      "title": "The Verification Horizon: No Silver Bullet for Coding Agent Rewards",
+      "authors": [
+        "Binghai Wang",
+        "Chenlong Zhang",
+        "Dayiheng Liu",
+        "Jiajun Zhang",
+        "Jiawei Chen",
+        "Mouxiang Chen",
+        "Rongyao Fang",
+        "Siyuan Zhang",
+        "Xuwu Wang",
+        "Yuheng Jing",
+        "Zeyao Ma",
+        "Zeyu Cui"
+      ],
+      "year": "2026",
+      "arxiv_id": "2606.26300",
+      "arxiv_url": "https://arxiv.org/abs/2606.26300",
+      "pdf_url": "https://arxiv.org/pdf/2606.26300.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "A classical intuition holds that verifying a solution is easier than producing one. For today's coding agents, this intuition is being inverted: as foundation models develop stronger reasoning capabilities and engineering harnesses grow more sophisticated, generating complex candidate solutions is no longer difficult -- reliably verifying them has become the harder problem. Every verifier we can build is only a proxy for human intent, never the intent itself. This makes verification subject to a twofold difficulty: first, intent is underspecified by nature, making it inherently hard to faithfully check whether it has been fulfilled; second, during model training, optimization widens the gap between proxy and intent -- manifesting as reward hacking or signal saturation. To address this, we characterize the quality of verification signals along three dimensions -- scalability, faithfulness, and robustness -- and argue that achieving all three simultaneously is the central challenge. We further study four reward constructions: a test verifier for general coding tasks, a rubric verifier for frontend tasks, the user as verifier for real-world agent tasks, and an automated agent verifier for long-horizon tasks. Across different task types and policy capability levels, we conduct in-depth analysis and experiments on the core challenges of reward design and how to more effectively leverage reward signals. Experiments show that targeted verification design can effectively suppress reward hacking, improve task completion quality, and achieve significant gains across multiple internal and public benchmarks. These experiences collectively point to a core observation: no fixed reward function can remain effective as policy capability continues to grow; and verification must co-evolve with the generator.",
+      "ai_keywords": [
+        "reward hacking",
+        "signal saturation",
+        "verification signals",
+        "reward design",
+        "policy capability",
+        "generative capabilities",
+        "proxy signals",
+        "human intent"
+      ],
+      "popularity": 41,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2606.26300",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-the-verification-horizon-no-silver-bullet"
     },
     {
       "title": "Improved Large Language Diffusion Models",
@@ -379,50 +420,10 @@
       "popularity": 41,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2606.25331",
-      "rank": 9,
-      "status": "pending",
-      "folder": "papers/2026-improved-large-language-diffusion-models"
-    },
-    {
-      "title": "The Verification Horizon: No Silver Bullet for Coding Agent Rewards",
-      "authors": [
-        "Binghai Wang",
-        "Chenlong Zhang",
-        "Dayiheng Liu",
-        "Jiajun Zhang",
-        "Jiawei Chen",
-        "Mouxiang Chen",
-        "Rongyao Fang",
-        "Siyuan Zhang",
-        "Xuwu Wang",
-        "Yuheng Jing",
-        "Zeyao Ma",
-        "Zeyu Cui"
-      ],
-      "year": "2026",
-      "arxiv_id": "2606.26300",
-      "arxiv_url": "https://arxiv.org/abs/2606.26300",
-      "pdf_url": "https://arxiv.org/pdf/2606.26300.pdf",
-      "code_url": "",
-      "project_page": "",
-      "abstract": "A classical intuition holds that verifying a solution is easier than producing one. For today's coding agents, this intuition is being inverted: as foundation models develop stronger reasoning capabilities and engineering harnesses grow more sophisticated, generating complex candidate solutions is no longer difficult -- reliably verifying them has become the harder problem. Every verifier we can build is only a proxy for human intent, never the intent itself. This makes verification subject to a twofold difficulty: first, intent is underspecified by nature, making it inherently hard to faithfully check whether it has been fulfilled; second, during model training, optimization widens the gap between proxy and intent -- manifesting as reward hacking or signal saturation. To address this, we characterize the quality of verification signals along three dimensions -- scalability, faithfulness, and robustness -- and argue that achieving all three simultaneously is the central challenge. We further study four reward constructions: a test verifier for general coding tasks, a rubric verifier for frontend tasks, the user as verifier for real-world agent tasks, and an automated agent verifier for long-horizon tasks. Across different task types and policy capability levels, we conduct in-depth analysis and experiments on the core challenges of reward design and how to more effectively leverage reward signals. Experiments show that targeted verification design can effectively suppress reward hacking, improve task completion quality, and achieve significant gains across multiple internal and public benchmarks. These experiences collectively point to a core observation: no fixed reward function can remain effective as policy capability continues to grow; and verification must co-evolve with the generator.",
-      "ai_keywords": [
-        "reward hacking",
-        "signal saturation",
-        "verification signals",
-        "reward design",
-        "policy capability",
-        "generative capabilities",
-        "proxy signals",
-        "human intent"
-      ],
-      "popularity": 40,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2606.26300",
       "rank": 10,
       "status": "pending",
-      "folder": "papers/2026-the-verification-horizon-no-silver-bullet"
+      "folder": "papers/2026-improved-large-language-diffusion-models"
     }
   ],
-  "updated_at": "2026-06-28T20:13:44.512314+00:00"
+  "updated_at": "2026-06-29T01:19:30.370837+00:00"
 }
