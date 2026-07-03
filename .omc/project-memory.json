@@ -65,6 +65,12 @@
   },
   "hotPaths": [
     {
+      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/breakdown.md",
+      "accessCount": 27,
+      "lastAccessed": 1783121903881,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
       "accessCount": 11,
       "lastAccessed": 1783120002226,
@@ -78,8 +84,8 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 9,
-      "lastAccessed": 1783120873409,
+      "accessCount": 10,
+      "lastAccessed": 1783121292997,
       "type": "file"
     },
     {
@@ -158,6 +164,12 @@
       "path": "papers/2026-translation-as-a-bridging-action-transferring/paper_layout.txt",
       "accessCount": 2,
       "lastAccessed": 1783120233433,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/paper_layout.txt",
+      "accessCount": 2,
+      "lastAccessed": 1783121458720,
       "type": "file"
     },
     {

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd papers/2026-viq-text-aligned-visual-quantized-representations && rtk grep -n -iE \\\"MMStar|InternViT|UniTok|QLIP|OryxViT|AIMv2|SigLIP2|Discrete|AnyRes|OCR|TextVQA|InfoVQA|ChartQA|AI2D|Do...",
+  "error": "Exit code 1\n/bin/bash: line 1: cd: papers/2026-viq-text-aligned-visual-quantized-representations: No such file or directory",
+  "timestamp": "2026-07-03T23:28:58.053Z",
+  "retry_count": 1
+}

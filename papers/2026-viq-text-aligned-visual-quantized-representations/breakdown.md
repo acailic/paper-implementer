@@ -436,52 +436,60 @@ already done the hard work of extracting a good latent space.
 
 | Encoder | Size | AnyRes | Discrete | MMStar | MMMU | SimpleVQA | InfoVQA | TextVQA | DocVQA | OCRBench | AI2D | ChartQA | **Avg** |
 |---------|------|--------|----------|--------|------|-----------|---------|---------|--------|----------|------|---------|---------|
-| InternViT-2.5-6B | 6.0B | ✗ | ✗ | 48.5 | 42.1 | 23.7 | 35.2 | 80.1 | 75.5 | 69.2 | 690.0 | 70.7 | **57.0** |
-| **ViQ** | **1.3B** | **✓** | **✓** | **47.8** | **42.6** | **26.0** | **41.6** | **84.2** | **74.3** | **65.2** | **636.0** | **69.7** | **57.2** |
-| InternViT-2.5 | 0.3B | ✗ | ✗ | 47.9 | 40.3 | 23.6 | 35.5 | 81.7 | 73.7 | 62.5 | 623.0 | 69.6 | 56.5 |
-| AIMv2-H | 0.7B | ✗ | ✗ | 48.5 | 41.8 | 23.5 | 31.9 | 71.6 | 73.5 | 62.1 | 622.0 | 69.8 | 53.9 |
-| OryxViT | 0.4B | ✓ | ✗ | 46.4 | 42.1 | 23.2 | 31.8 | 71.8 | 73.5 | 62.1 | 681.0 | 68.2 | 53.4 |
-| SigLIP2-g | 1.1B | ✗ | ✗ | 48.1 | 42.4 | 25.6 | 28.2 | 73.1 | 76.9 | 62.0 | 590.0 | 71.5 | 53.1 |
-| UniTok | 0.3B | ✗ | ✓ | 41.0 | 36.1 | 15.5 | 15.9 | 39.7 | 12.2 | 43.8 | 323.0 | 61.2 | 33.0 |
-| QLIP | 0.3B | ✗ | ✓ | 39.9 | 36.9 | 13.7 | 14.8 | 45.1 | 12.2 | 14.1 | 290.0 | 61.9 | 29.7 |
+| InternViT-2.5-6B | 6.0B | ✗ | ✗ | 48.5 | 42.1 | 23.7 | 35.2 | 75.5 | 80.1 | 690.0 | 70.7 | 67.8 | **57.0** |
+| **ViQ** | **1.3B** | **✓** | **✓** | 47.8 | **42.6** | **26.0** | **41.6** | 74.3 | **84.2** | 636.0 | 69.7 | 65.2 | **57.2** |
+| InternViT-2.5 | 0.3B | ✗ | ✗ | 47.9 | 40.3 | 23.6 | 35.5 | 73.0 | 81.7 | 681.0 | 69.6 | 69.2 | 56.5 |
+| DINOv2-g | 1.1B | ✗ | ✗ | 47.1 | 41.8 | 24.0 | 31.7 | 72.1 | 76.9 | 619.0 | 68.8 | 61.8 | 54.0 |
+| AIMv2-H | 0.7B | ✗ | ✗ | 48.5 | 41.8 | 23.5 | 31.9 | 71.6 | 73.7 | 623.0 | 69.8 | 62.5 | 53.9 |
+| OryxViT | 0.4B | ✓ | ✗ | 46.4 | 42.1 | 23.2 | 31.8 | 71.8 | 73.5 | 622.0 | 68.2 | 62.1 | 53.4 |
+| SigLIP2-g | 1.1B | ✗ | ✗ | 48.1 | 42.4 | 25.6 | 28.2 | 73.1 | 67.8 | 590.0 | 71.5 | 62.0 | 53.1 |
+| OAI-CLIP-L | 0.3B | ✗ | ✗ | 44.9 | 40.7 | 21.3 | 24.2 | 58.9 | 52.9 | 460.0 | 68.1 | 55.0 | 45.8 |
+| UniTok | 0.3B | ✗ | ✓ | 41.0 | 36.1 | 15.5 | 15.9 | 39.7 | 11.6 | 323.0 | 61.2 | 43.8 | 33.0 |
+| QLIP | 0.3B | ✗ | ✓ | 39.9 | 36.9 | 13.7 | 14.8 | 45.1 | 12.2 | 290.0 | 61.9 | 14.1 | 29.7 |
+
+*Source: Table 1 (Qwen2.5-1.5B block), verbatim via `paper_layout.txt`. Bold = per-column winner (ViQ bold = Avg plus the four benchmarks it wins: MMMU, SimpleVQA, InfoVQA, DocVQA).*
 
 **Key observations:**
 - ViQ (1.3B, discrete) **matches** InternViT-2.5-6B (6.0B, continuous) on average (57.2 vs 57.0) — with **4.6× fewer parameters**.
-- ViQ **dominates** on TextVQA (+4.1 over InternViT-6B) and InfoVQA (+6.4), showing its strength on text-heavy tasks.
-- ViQ **crushes** other quantized encoders: +24.2 over UniTok, +27.5 over QLIP.
-- Only slight weakness on OCRBench (65.2 vs 69.2) and ChartQA (69.7 vs 70.7) — inherent to discrete tokenization.
+- ViQ's real wins vs InternViT-6B are **DocVQA (+4.1: 84.2 vs 80.1)**, **InfoVQA (+6.4)**, **SimpleVQA (+2.3)**, and **MMMU (+0.5)** — document/knowledge-heavy tasks. (A prior draft mislabeled the +4.1 DocVQA gain as TextVQA; ViQ actually *trails* InternViT-6B on TextVQA, 74.3 vs 75.5.)
+- ViQ **crushes** other quantized encoders: +24.2 avg over UniTok (57.2 vs 33.0), +27.5 over QLIP (57.2 vs 29.7).
+- Weakness on fine-grained detail: **OCRBench (636.0 vs 690.0)**, **AI2D (69.7 vs 70.7)**, **ChartQA (65.2 vs 67.8)** — inherent to discrete tokenization.
 
 ### 6.2 Multimodal Understanding — Full Results (Qwen2.5-7B)
 
 | Encoder | Size | AnyRes | Discrete | MMStar | MMMU | SimpleVQA | InfoVQA | TextVQA | DocVQA | OCRBench | AI2D | ChartQA | **Avg** |
 |---------|------|--------|----------|--------|------|-----------|---------|---------|--------|----------|------|---------|---------|
-| InternViT-2.5-6B | 6.0B | ✗ | ✗ | 55.3 | 48.1 | 28.4 | 44.9 | 80.1 | 85.7 | 77.4 | 757.0 | 78.7 | **63.8** |
-| **ViQ** | **1.3B** | **✓** | **✓** | **54.2** | **49.1** | **28.5** | **55.3** | **88.9** | **78.5** | **72.8** | **711.0** | **76.7** | **63.9** |
-| OryxViT | 0.4B | ✓ | ✗ | 56.4 | 48.1 | 26.5 | 39.9 | 78.5 | 79.8 | 72.1 | 660.0 | 78.2 | 60.6 |
-| AIMv2-H | 0.7B | ✗ | ✗ | 55.2 | 48.2 | 26.8 | 41.8 | 79.1 | 80.1 | 72.5 | 687.0 | 77.8 | 61.1 |
-| SigLIP2-g | 1.1B | ✗ | ✗ | 57.2 | 48.3 | 28.5 | 37.3 | 78.7 | 75.0 | 72.8 | 671.0 | 79.5 | 60.5 |
-| OAI-CLIP-L | 0.3B | ✗ | ✗ | 53.9 | 47.1 | 25.4 | 33.9 | 66.4 | 61.4 | 65.1 | 544.0 | 76.6 | 53.8 |
+| InternViT-2.5-6B | 6.0B | ✗ | ✗ | 55.3 | 48.1 | 28.4 | 44.9 | 79.9 | 85.7 | 757.0 | 78.7 | 77.4 | **63.8** |
+| **ViQ** | **1.3B** | **✓** | **✓** | 54.2 | **49.1** | 28.5 | **55.3** | 78.5 | **88.9** | 711.0 | 76.7 | 72.8 | **63.9** |
+| OryxViT | 0.4B | ✓ | ✗ | 56.4 | 48.1 | 26.5 | 39.9 | 78.5 | 79.8 | 660.0 | 78.2 | 72.1 | 60.6 |
+| AIMv2-H | 0.7B | ✗ | ✗ | 55.2 | 48.2 | 26.8 | 41.8 | 79.1 | 80.1 | 687.0 | 77.8 | 72.5 | 61.1 |
+| SigLIP2-g | 1.1B | ✗ | ✗ | 57.2 | 48.3 | 28.5 | 37.3 | 78.7 | 75.0 | 671.0 | 79.5 | 72.8 | 60.5 |
+| OAI-CLIP-L | 0.3B | ✗ | ✗ | 53.9 | 47.1 | 25.4 | 33.9 | 66.4 | 61.4 | 544.0 | 76.6 | 65.1 | 53.8 |
+
+*Source: Table 1 (Qwen2.5-7B block), verbatim via `paper_layout.txt`.*
 
 **Key observations:**
-- ViQ (1.3B) **surpasses** InternViT-2.5-6B (6.0B) by +0.1 on average, with 4.6× fewer params.
-- ViQ shows massive gains on TextVQA (+8.8) and InfoVQA (+10.4) vs InternViT-6B at 7B scale.
+- ViQ (1.3B) **surpasses** InternViT-2.5-6B (6.0B) by +0.1 on average (63.9 vs 63.8), with 4.6× fewer params.
+- ViQ's headline win at 7B is **InfoVQA (+10.4: 55.3 vs 44.9)** plus **DocVQA (+3.2: 88.9 vs 85.7)** and **MMMU (+1.0: 49.1 vs 48.1)**. (A prior draft cited a "+8.8 TextVQA" gain that does not exist — ViQ actually *trails* InternViT-6B on TextVQA at 7B, 78.5 vs 79.9; the 88.9 figure is ViQ's DocVQA.)
 - With a stronger LLM backbone, ViQ's discrete representation advantage becomes even clearer.
 
 ### 6.3 Per-benchmark Highlight Comparison (Qwen2.5-1.5B)
 
-| Benchmark | ViQ | InternViT-6B | SigLIP2-g | QLIP | UniTok | Gap (ViQ vs best continuous) |
-|-----------|-----|--------------|-----------|------|--------|------------------------------|
-| TextVQA | **84.2** | 80.1 | 73.1 | 45.1 | 39.7 | **+4.1** ✅ |
+| Benchmark | ViQ | InternViT-6B | SigLIP2-g | QLIP | UniTok | Δ ViQ vs InternViT-6B |
+|-----------|-----|--------------|-----------|------|--------|------------------------|
+| DocVQA | **84.2** | 80.1 | 67.8 | 12.2 | 11.6 | **+4.1** ✅ |
 | InfoVQA | **41.6** | 35.2 | 28.2 | 14.8 | 15.9 | **+6.4** ✅ |
-| SimpleVQA | **26.0** | 23.7 | 25.6 | 13.7 | 15.5 | **+0.4** ✅ |
-| MMStar | 47.8 | **48.5** | 48.1 | 39.9 | 41.0 | −0.7 |
+| SimpleVQA | **26.0** | 23.7 | 25.6 | 13.7 | 15.5 | **+2.3** ✅ |
 | MMMU | **42.6** | 42.1 | 42.4 | 36.9 | 36.1 | **+0.5** ✅ |
-| OCRBench | 65.2 | **69.2** | 62.0 | 14.1 | 43.8 | −4.0 |
-| ChartQA | 69.7 | 70.7 | **71.5** | 61.9 | 61.2 | −1.8 |
-| DocVQA | 74.3 | **75.5** | 76.9 | 12.2 | 39.7 | −2.6 |
-| AI2D | 636.0 | **690.0** | 590.0 | 290.0 | 323.0 | −54.0 |
+| TextVQA | 74.3 | **75.5** | 73.1 | 45.1 | 39.7 | −1.2 |
+| MMStar | 47.8 | **48.5** | 48.1 | 39.9 | 41.0 | −0.7 |
+| AI2D | 69.7 | **70.7** | 71.5 | 61.9 | 61.2 | −1.0 |
+| ChartQA | 65.2 | **67.8** | 62.0 | 14.1 | 43.8 | −2.6 |
+| OCRBench | 636.0 | **690.0** | 590.0 | 290.0 | 323.0 | −54.0 |
 
-ViQ wins on 4/9 benchmarks including the most impactful ones (TextVQA, InfoVQA).
+*Source: Table 1 (Qwen2.5-1.5B block), verbatim. Δ is vs InternViT-2.5-6B (the paper's headline 6B rival); vs "best continuous encoder" the SimpleVQA/MMMU/InfoVQA gaps narrow slightly (SigLIP2-g leads SimpleVQA 25.6 and MMMU 42.4; InternViT-2.5 0.3B leads InfoVQA 35.5).*
+
+ViQ wins 4/9 benchmarks vs InternViT-6B — the document/knowledge-heavy ones (DocVQA +4.1, InfoVQA +6.4, SimpleVQA +2.3, MMMU +0.5) — and loses the fine-grained/detail ones (OCRBench −54.0, AI2D −1.0, ChartQA −2.6) plus TextVQA (−1.2) and MMStar (−0.7). (A prior draft's TextVQA/DocVQA/OCRBench/AI2D/ChartQA rows were all filled from neighboring columns — every "TextVQA" cell held the DocVQA value, etc.)
 
 ### 6.4 Training Efficiency
 
@@ -505,24 +513,25 @@ because longer sequences mean more visual tokens being processed.
 
 ### 6.5 Image Reconstruction (16×16 tokens, 256×256 ImageNet)
 
-| Method | Discrete | Understanding | PSNR↑ | SSIM↑ | rFID↓ |
-|--------|----------|--------------|-------|-------|-------|
-| **ViQ** | **✓** | **✓** | 22.73 | 0.66 | **0.62** |
-| UniTok | ✓ | ✓ | **25.32** | **0.77** | 0.37 |
-| QLIP-B | ✓ | ✓ | 23.16 | 0.63 | 1.67 |
-| Open-MAGVIT2 | ✓ | ✗ | 22.70 | 0.64 | 2.26 |
-| Show-o | ✓ | ✗ | 20.65 | 0.54 | 3.50 |
-| LlamaGen | ✓ | ✗ | 20.14 | 0.65 | 2.47 |
-| MUSE-VL | ✓ | ✓ | 19.98 | 0.54 | 4.40 |
-| Qwen-Image | ✗ | ✗ | 25.07 | 0.70 | 0.96 |
-| SD-VAE | ✗ | ✗ | 31.29 | 0.87 | 0.20 |
-| FLUX-VAE | ✗ | ✗ | 32.74 | 0.92 | 0.18 |
-| Cosmos-CI | ✗ | ✗ | 32.18 | 0.90 | 1.46 |
+| Method | Discrete | Understanding | #Tokens | PSNR↑ | SSIM↑ | rFID↓ |
+|--------|----------|--------------|---------|-------|-------|-------|
+| **ViQ** | **✓** | **✓** | 16×16 | 22.73 | 0.66 | **0.62** |
+| UniTok* | ✓ | ✓ | 16×16 | **25.32** | **0.77** | **0.37** |
+| QLIP-B | ✓ | ✓ | 16×16 | 23.16 | 0.63 | 3.21 |
+| Open-MAGVIT2 | ✓ | ✗ | 16×16 | 22.70 | 0.64 | 1.67 |
+| MUSE-VL | ✓ | ✗ | 16×16 | 20.14 | 0.65 | 2.26 |
+| LlamaGen | ✓ | ✗ | 16×16 | 20.65 | 0.54 | 2.47 |
+| Show-o | ✓ | ✗ | 16×16 | 21.34 | 0.59 | 3.50 |
+| Cosmos-DI | ✓ | ✗ | 16×16 | 19.98 | 0.54 | 4.40 |
+| Wan2.2 | ✗ | ✗ | 16×16 | 31.25 | 0.88 | 0.75 |
+| Cosmos-CI | ✗ | ✗ | 16×16 | 25.07 | 0.70 | 0.96 |
+| Qwen-Image | ✗ | ✗ | 32×32 | 32.18 | 0.90 | 1.46 |
+| FLUX-VAE | ✗ | ✗ | 32×32 | **32.74** | **0.92** | **0.18** |
+| SD-VAE | ✗ | ✗ | 32×32 | 31.29 | 0.87 | 0.20 |
 
-**Key observation:** Among all methods that are **both discrete and
-understanding-optimized** (✓ ✓), ViQ has the best rFID (0.62). UniTok has
-better raw reconstruction metrics (PSNR 25.32) but scores 33.0 on understanding
-vs ViQ's 57.2 — a massive gap. ViQ uniquely achieves the balance.
+*Source: Table 3, verbatim via `paper_layout.txt`. "Understanding" = the paper's "Und." flag (whether the tokenizer is optimized for understanding). UniTok* = reproduced with official weights.*
+
+**Key observation:** Among methods that are **both discrete and understanding-optimized** (ViQ, UniTok, QLIP-B), ViQ has the **second-best rFID (0.62)** — behind only UniTok (0.37) but far ahead of QLIP-B (3.21). ViQ's PSNR (22.73) is comparable to QLIP-B (23.16). UniTok has stronger raw reconstruction (PSNR 25.32, rFID 0.37) but scores only 33.0 on multimodal understanding vs ViQ's 57.2 — a 24.2-pt gap — so ViQ is the best *balanced* discrete tokenizer. (A prior draft wrongly claimed ViQ has the *best* rFID and scrambled the discrete-tokenizer rows: e.g. it showed QLIP-B rFID 1.67 and Show-o PSNR 20.65, which are Open-MAGVIT2's and LlamaGen's values.)
 
 ### 6.6 Image Storage Compression
 
@@ -633,8 +642,8 @@ for this auxiliary task.
 
 - **Scale ceiling untested.** Only validated with LLMs up to 7B. 70B+
   integration is an open question — though efficiency gains should scale.
-- **Detail gap remains.** Still trails continuous encoders on OCRBench (65.2 vs 69.2)
-  and AI2D (636 vs 690). Inherent to discrete tokenization of continuous features.
+- **Detail gap remains.** Still trails continuous encoders on OCRBench (636.0 vs 690.0)
+  and AI2D (69.7 vs 70.7). Inherent to discrete tokenization of continuous features.
 - **Data dependence.** Proximal representations rely on quality/diversity of
   VL pretraining data. Biases could affect zero-shot generalization.
 - **Hardware heavy.** Stage 1: 128 A100s. Stage 2: 256 A100s. Not accessible
@@ -662,7 +671,7 @@ for this auxiliary task.
   just needs a decoder trained for generation. Could unify understanding and
   generation in one framework.
 - **Specialized document data.** Adding more OCR/document training data in
-  Stage 1 could close the remaining OCRBench gap (currently 65.2 vs 69.2 for
+  Stage 1 could close the remaining OCRBench gap (currently 636.0 vs 690.0 for
   continuous InternViT-6B).
 - **Video extension.** The any-resolution design with 2D RoPE could
   naturally extend to 3D RoPE for spatiotemporal quantization of video.
