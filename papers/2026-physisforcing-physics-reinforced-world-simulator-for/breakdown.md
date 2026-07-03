@@ -207,60 +207,67 @@ where $\mathcal{L}_{\text{FM}}$ is the standard flow matching (rectified) loss, 
 
 R-Bench evaluates across task-oriented dimensions (Manipulation, Spatial, Multi-entity, Long-horizon, Reasoning) and embodiment-specific dimensions (Single arm, Dual arm, Quadruped, Humanoid).
 
+> **Source:** all R-Bench numbers below are transcribed verbatim from the paper's Table 1 (paper_layout.txt, `pdftotext -layout`). Per-column 1st/2nd/3rd rankings shown in the original are omitted here for readability.
+
 #### Open-Source Models
 
 | Model | Avg | Manip. | Spatial | Multi-ent. | Long-horiz. | Reasoning | S-arm | D-arm | Quad | Humanoid |
 |-------|----:|-------:|--------:|-----------:|------------:|----------:|------:|------:|-----:|--------:|
-| HunyuanVideo 1.5 | 46.0 | 43.7 | 39.9 | 38.1 | 38.0 | 36.1 | 34.4 | 33.9 | 30.3 | 25.6 |
-| LongCat-Video | 44.2 | 37.2 | 34.4 | 28.4 | 33.1 | 20.3 | 30.2 | 20.6 | 17.7 | 11.6 |
-| Wan2.1-14B | 31.6 | 31.0 | 26.8 | 30.4 | 31.3 | 27.6 | 17.6 | 25.8 | 18.0 | 11.2 |
-| LTX-2 | 31.2 | 22.0 | 28.2 | 23.3 | 14.2 | 20.3 | 21.0 | 17.3 | 10.8 | 9.8 |
-| Wan2.2-TI2V-5B | 43.8 | 38.4 | 33.5 | 38.6 | 31.8 | 25.4 | 28.0 | 16.9 | 14.7 | 21.2 |
-| SkyReels | 36.4 | 18.6 | 20.5 | 16.4 | 23.4 | 23.4 | 24.1 | 17.0 | 3.5 | 7.9 |
-| LTX-Video | 51.3 | 58.6 | 46.4 | 45.3 | 43.6 | 50.7 | 44.0 | 44.0 | 45.4 | 33.8 |
-| FramePack | 52.6 | 57.6 | 49.7 | 42.4 | 44.8 | 47.7 | 45.6 | 46.4 | 48.0 | 38.5 |
-| HunyuanVideo | 63.4 | 68.1 | 59.5 | 62.2 | 59.0 | 58.6 | 52.6 | 62.6 | 62.5 | 46.5 |
-| CogVideoX_5B | 59.5 | 62.1 | 59.9 | 55.5 | 60.7 | 50.9 | 46.4 | 54.8 | 52.4 | 49.6 |
+| HunyuanVideo 1.5 | 46.0 | 44.2 | 31.6 | 31.2 | 43.8 | 36.4 | 51.3 | 52.6 | 63.4 | 59.5 |
+| LongCat-Video | 43.7 | 37.2 | 31.0 | 22.0 | 38.4 | 18.6 | 58.6 | 57.6 | 68.1 | 62.1 |
+| Wan2.1-14B | 39.9 | 34.4 | 26.8 | 28.2 | 33.5 | 20.5 | 46.4 | 49.7 | 59.5 | 59.9 |
+| LTX-2 | 38.1 | 28.4 | 30.4 | 23.3 | 38.6 | 16.4 | 45.3 | 42.4 | 62.2 | 55.5 |
+| Wan2.2-TI2V-5B | 38.0 | 33.1 | 31.3 | 14.2 | 31.8 | 23.4 | 43.6 | 44.8 | 59.0 | 60.7 |
+| SkyReels | 36.1 | 20.3 | 27.6 | 20.3 | 25.4 | 23.4 | 50.7 | 47.7 | 58.6 | 50.9 |
+| LTX-Video | 34.4 | 30.2 | 17.6 | 21.0 | 28.0 | 24.1 | 44.0 | 45.6 | 52.6 | 46.4 |
+| FramePack | 33.9 | 20.6 | 25.8 | 17.3 | 16.9 | 17.0 | 44.0 | 46.4 | 62.6 | 54.8 |
+| HunyuanVideo | 30.3 | 17.7 | 18.0 | 10.8 | 14.7 | 3.5 | 45.4 | 48.0 | 62.5 | 52.4 |
+| CogVideoX_5B | 25.6 | 11.6 | 11.2 | 9.8 | 21.2 | 7.9 | 33.8 | 38.5 | 46.5 | 49.6 |
 
 #### Commercial Models
 
 | Model | Avg | Manip. | Spatial | Multi-ent. | Long-horiz. | Reasoning | S-arm | D-arm | Quad | Humanoid |
 |-------|----:|-------:|--------:|-----------:|------------:|----------:|------:|------:|-----:|--------:|
-| Wan2.6 | **60.7** | 59.9 | 58.4 | 57.0 | 56.5 | 56.3 | 55.1 | 53.4 | 36.2 | 26.6 |
-| Veo 3.1 | 54.6 | 54.1 | 57.7 | 52.7 | 56.0 | 52.1 | 54.2 | 52.9 | 20.8 | 15.1 |
-| Seedance 1.5 Pro | 65.6 | 47.4 | 49.5 | 57.6 | 63.7 | 50.8 | 42.5 | 59.8 | 26.8 | 22.3 |
-| Wan2.5 | 47.9 | 53.4 | 48.4 | 40.2 | 38.6 | 43.0 | 44.8 | 36.4 | 18.6 | 11.1 |
-| Hailuo v2 | 51.4 | 59.2 | 57.0 | 49.6 | 54.5 | 53.0 | 45.4 | 53.0 | 25.5 | 16.6 |
-| Veo 3 | 53.1 | 46.7 | 47.0 | 43.7 | 47.4 | 50.4 | 44.2 | 35.8 | 11.5 | 13.9 |
-| Seedance 1.0 | 66.6 | 67.0 | 64.8 | 68.0 | 59.4 | 63.4 | 62.2 | 57.0 | 47.6 | 31.4 |
-| Kling 2.6 Pro | 68.1 | 66.6 | 64.1 | 63.4 | 61.1 | 61.0 | 64.1 | 60.5 | 51.3 | 32.4 |
-| Sora v2 Pro | 72.3 | 74.3 | 68.0 | 72.6 | 64.0 | 68.9 | 69.8 | 63.7 | 66.4 | 54.4 |
-| Sora v1 | 66.7 | 70.4 | 69.2 | 65.4 | 63.5 | 63.7 | 68.6 | 61.3 | 56.1 | 41.9 |
+| Wan2.6 | **60.7** | 54.6 | 65.6 | 47.9 | 51.4 | 53.1 | 66.6 | 68.1 | 72.3 | 66.7 |
+| Veo 3.1 | 59.9 | 54.1 | 47.4 | 53.4 | 59.2 | 46.7 | 67.0 | 66.6 | 74.3 | 70.4 |
+| Seedance 1.5 Pro | 58.4 | 57.7 | 49.5 | 48.4 | 57.0 | 47.0 | 64.8 | 64.1 | 68.0 | 69.2 |
+| Wan2.5 | 57.0 | 52.7 | 57.6 | 40.2 | 49.6 | 43.7 | 68.0 | 63.4 | 72.6 | 65.4 |
+| Hailuo v2 | 56.5 | 56.0 | 63.7 | 38.6 | 54.5 | 47.4 | 59.4 | 61.1 | 64.0 | 63.5 |
+| Veo 3 | 56.3 | 52.1 | 50.8 | 43.0 | 53.0 | 50.4 | 63.4 | 61.0 | 68.9 | 63.7 |
+| Seedance 1.0 | 55.1 | 54.2 | 42.5 | 44.8 | 45.4 | 44.2 | 62.2 | 64.1 | 69.8 | 68.6 |
+| Kling 2.6 Pro | 53.4 | 52.9 | 59.8 | 36.4 | 53.0 | 35.8 | 57.0 | 60.5 | 63.7 | 61.3 |
+| Sora v2 Pro | 36.2 | 20.8 | 26.8 | 18.6 | 25.5 | 11.5 | 47.6 | 51.3 | 66.4 | 56.1 |
+| Sora v1 | 26.6 | 15.1 | 22.3 | 11.1 | 16.6 | 13.9 | 31.4 | 32.4 | 54.4 | 41.9 |
 
 #### Robotics-Specific Models
 
 | Model | Avg | Manip. | Spatial | Multi-ent. | Long-horiz. | Reasoning | S-arm | D-arm | Quad | Humanoid |
 |-------|----:|-------:|--------:|-----------:|------------:|----------:|------:|------:|-----:|--------:|
-| Cosmos3-Super | 58.1 | 52.9 | 46.4 | 42.0 | 40.5 | 20.6 | 12.3 | — | — | — |
-| Abot-PhysWorld | 64.2 | 54.8 | 33.8 | 37.2 | 34.8 | 10.6 | 4.0 | — | — | — |
-| Cosmos 2.5 | 44.4 | 43.4 | 20.1 | 29.7 | 21.4 | 5.0 | 1.8 | — | — | — |
-| DreamGen(gr1) | 59.1 | 52.3 | 49.6 | 33.4 | 31.6 | 5.4 | 6.2 | — | — | — |
-| DreamGen(droid) | 39.5 | 45.4 | 39.9 | 21.5 | 33.9 | 5.0 | 0.0 | — | — | — |
-| Vidar | 61.5 | 66.2 | 54.4 | 56.4 | 49.9 | 38.2 | 26.8 | — | — | — |
-| UnifoLM-WMA-0 | 62.3 | 66.8 | 56.0 | 53.2 | 47.6 | 41.0 | 19.4 | — | — | — |
+| Cosmos3-Super | 58.1 | 48.7 | 64.2 | 44.4 | 59.1 | 39.5 | 61.5 | 62.3 | 73.9 | 69.1 |
+| Abot-PhysWorld | 52.9 | 48.6 | 54.8 | 43.4 | 52.3 | 45.4 | 66.2 | 66.8 | 53.1 | 45.5 |
+| Cosmos 2.5 | 46.4 | 35.8 | 33.8 | 20.1 | 49.6 | 39.9 | 54.4 | 56.0 | 65.8 | 62.6 |
+| DreamGen(gr1) | 42.0 | 31.2 | 37.2 | 29.7 | 33.4 | 21.5 | 56.4 | 53.2 | 57.9 | 57.5 |
+| DreamGen(droid) | 40.5 | 35.8 | 34.8 | 21.4 | 31.6 | 33.9 | 49.9 | 47.6 | 54.2 | 55.6 |
+| Vidar | 20.6 | 7.3 | 10.6 | 5.0 | 5.4 | 5.0 | 38.2 | 41.0 | 37.4 | 35.7 |
+| UnifoLM-WMA-0 | 12.3 | 3.6 | 4.0 | 1.8 | 6.2 | 0.0 | 26.8 | 19.4 | 29.3 | 20.0 |
 
 #### Finetuned Methods (PhysisForcing)
 
 | Model | Avg | Δ vs base | Δ vs ft | Manip. | Spatial | Multi-ent. | Long-horiz. | Reasoning | S-arm | D-arm | Quad | Humanoid |
 |-------|----:|----------:|--------:|-------:|--------:|-----------:|------------:|----------:|------:|------:|-----:|--------:|
-| Wan2.2-I2V-A14B (base) | 50.7 | — | — | 38.1 | 44.8 | 33.1 | 39.6 | 43.4 | 31.3 | 41.5 | 42.6 | 45.4 |
-| Wan2.2-I2V-A14B (ft) | 57.9 | +7.2 | — | 52.3 | 56.4 | 47.5 | 55.0 | 57.8 | 58.9 | 62.8 | 65.4 | 67.0 |
-| **PF-Wan** | **62.0** | **+11.3** | **+4.1** | **56.4** | **57.6** | **49.1** | **46.6** | **49.2** | **51.3** | **58.4** | **57.6** | **59.3** |
-| Cosmos3-Nano (base) | 58.4 | — | — | 48.5 | 54.6 | 44.8 | 52.7 | 57.4 | 47.8 | 52.4 | 39.4 | 48.5 |
-| Cosmos3-Nano (ft) | 61.5 | +3.1 | — | 53.0 | 57.4 | 60.8 | 64.2 | 68.7 | 59.1 | 66.5 | 69.3 | — |
-| **PF-Cosmos** | **63.8** | **+5.4** | **+2.3** | **57.6** | **58.2** | **63.5** | **69.6** | **61.1** | **67.1** | **70.0** | **73.1** | **70.6** |
+| Wan2.2-TI2V-5B (base) | 38.0 | — | — | 33.1 | 31.3 | 14.2 | 31.8 | 23.4 | 43.6 | 44.8 | 59.0 | 60.7 |
+| Wan2.2-TI2V-5B (ft) | 44.8 | +6.8 | — | 39.6 | 41.5 | 24.9 | 42.4 | 28.8 | 49.2 | 52.7 | 61.4 | 62.6 |
+| + PhysisForcing (5B) | 47.5 | +9.5 | +2.7 | 43.4 | 42.6 | 29.6 | 47.5 | 31.2 | 51.6 | 57.4 | 59.7 | 64.2 |
+| Wan2.2-I2V-A14B (base) | 50.7 | — | — | 38.1 | 45.4 | 37.3 | 50.1 | 33.0 | 60.8 | 58.2 | 69.0 | 64.8 |
+| Wan2.2-I2V-A14B (ft) | 57.9 | +7.2 | — | 52.3 | 62.8 | 45.2 | 54.5 | 47.8 | 64.2 | 63.5 | 65.6 | 65.3 |
+| **PF-Wan** | **62.0** | **+11.3** | **+4.1** | 56.4 | 65.4 | 49.1 | 58.4 | 52.4 | 68.7 | 69.6 | 69.2 | 68.5 |
+| Cosmos3-Nano (base) | 58.4 | — | — | 55.0 | 67.0 | 46.6 | 57.6 | 39.4 | 59.1 | 61.1 | 73.1 | 66.6 |
+| Cosmos3-Nano (ft) | 61.5 | +3.1 | — | 57.8 | 67.4 | 49.2 | 59.3 | 48.5 | 66.5 | 67.1 | 70.6 | 67.1 |
+| **PF-Cosmos** | **63.8** | **+5.4** | **+2.3** | 58.9 | 69.7 | 51.3 | 60.8 | 53.0 | 69.3 | 70.0 | 72.2 | 69.0 |
 
-**Key takeaway:** PF-Cosmos achieves the best overall R-Bench score (63.8), surpassing all baselines including commercial Wan2.6 (60.7) and Sora v2 Pro (72.3 on task dims but lower on embodiment). PF-Wan is second best overall (62.0). Both show consistent per-dimension improvements over vanilla finetuning.
+> PF-Wan's +11.3 absolute Avg gain = +22.3% relative over base; PF-Cosmos's +5.4 = +9.2% relative. Vs vanilla finetuning the relative gains are +7.1% (PF-Wan) and +3.7% (PF-Cosmos) — matching the abstract. PF-Cosmos (63.8) is the best overall score in the entire table; PF-Wan (62.0) is second, ahead of the strongest commercial model Wan2.6 (60.7).
+
+**Key takeaway:** PF-Cosmos achieves the best overall R-Bench score (63.8, +9.2% over base), surpassing every baseline including the strongest commercial models Wan2.6 (60.7), Veo 3.1 (59.9), and Seedance 1.5 Pro (58.4). PF-Wan is second best overall (62.0, +22.3% over base). Note that on this robotics-oriented benchmark the two Sora variants score surprisingly low overall (Sora v2 Pro 36.2, Sora v1 26.6) — their strength is confined to the Quadruped/Humanoid embodiment columns. Both PF variants show consistent per-dimension improvements over vanilla finetuning.
 
 ### 4.3 Generation Results — PAI-Bench (Robot Domain)
 
@@ -268,14 +275,19 @@ PAI-Bench-G evaluates quality and domain-specific physics in robot manipulation 
 
 | Model | Quality | Domain | Avg |
 |-------|--------:|-------:|----:|
-| Wan2.2-I2V-A14B (ft) | 75.38 | 76.52 | 76.05 |
-| **PF-Wan** | **76.79** | **77.40** | **77.15** |
-| Cosmos3-Nano (ft) | 84.42 | 85.17 | 84.91 |
-| **PF-Cosmos** | **85.20** | **88.20** | **85.2** |
-| Wan2.5 (commercial) | — | — | 81.0 |
-| Abot-PhysWorld | — | — | 84.9 |
+| Wan2.5 (commercial) | 75.48 | 86.44 | 80.96 |
+| GigaWorld-0 | 75.91 | 85.83 | 80.87 |
+| Veo 3.1 | 77.40 | 83.50 | 80.45 |
+| WoW-Wan 14B | 76.05 | 83.01 | 79.53 |
+| Sora v2 Pro | 76.79 | 76.26 | 76.52 |
+| Abot-PhysWorld | 76.76 | 93.06 | 84.91 |
+| Wan2.2-I2V-A14B (base) | 76.15 | 81.70 | 78.93 |
+| Wan2.2-I2V-A14B (ft) | 75.38 | 84.42 | 79.90 |
+| **PF-Wan** | 76.26 | **88.20** | **81.73** |
+| Cosmos3-Nano (ft) | 76.52 | 91.54 | 84.03 |
+| **PF-Cosmos** | **77.08** | **93.26** | **85.17** |
 
-**Key takeaway:** PF-Cosmos attains the best overall average (85.2), beating the strongest commercial model Wan2.5 (81.0) and the robotics-specific baseline Abot-PhysWorld (84.9). The domain score improvement is particularly strong for Cosmos (85.17 → 88.20, +3.0).
+**Key takeaway:** PF-Cosmos attains the best overall average (85.17), beating the strongest commercial model Wan2.5 (80.96) and the robotics-specific baseline Abot-PhysWorld (84.91). The Domain Score (physical-semantic plausibility) is where physics alignment helps most: PF-Wan lifts Domain 84.42 → 88.20 (+3.78) and PF-Cosmos 91.54 → 93.26 (+1.72), while Quality stays competitive — confirming the gains are physical fidelity, not visual polish.
 
 ### 4.4 Generation Results — EZS-Bench (Zero-Shot OOD)
 
@@ -297,13 +309,13 @@ Under the WorldArena action-planner protocol, the world model is paired with a s
 
 | Model | Task 1 | Task 2 | Avg |
 |-------|-------:|-------:|----:|
-| Genie Envisioner | 10.0 | 1.0 | 5.5 |
-| TesserAct | 8.0 | 2.0 | 5.0 |
-| RoboMaster | 20.0 | 19.0 | 19.5 |
-| Vidar | 15.0 | 14.0 | 14.5 |
-| WoW (best baseline) | 18.0 | 10.5 | 20.5 |
+| Genie Envisioner | 10.0 | 20.0 | 15.0 |
+| TesserAct | 1.0 | 35.0 | 18.0 |
+| RoboMaster | 8.0 | 20.0 | 14.0 |
+| Vidar | 2.0 | 19.0 | 10.5 |
+| WoW (best baseline) | 20.0 | 21.0 | 20.5 |
 | Wan2.2-TI2V-5B (base) | 12.0 | 20.0 | 16.0 |
-| **+ PhysisForcing** | **20.0** | **26.0** | **24.0** |
+| **+ PhysisForcing** | **22.0** | **26.0** | **24.0** |
 
 **Key takeaway:** PhysisForcing lifts closed-loop success from 16.0% to 24.0% (+8.0 absolute), surpassing all world-model planners including the strongest baseline WoW (20.5%).
 
@@ -316,9 +328,9 @@ PhysisForcing-trained Wan2.2-TI2V-5B is plugged into Fast-WAM as a drop-in repla
 | place_empty_cup | 41.5 | 63.0 | **+21.5** |
 | press_stapler | 49.0 | 60.0 | **+11.0** |
 | grab_roller | 58.5 | 63.0 | +4.5 |
-| shake_bottle | 71.5 | 68.5 | −3.0 |
-| adjust_bottle | 69.5 | 69.5 | 0.0 |
-| stack_bowls_two | 94.5 | 88.0 | −6.5 |
+| shake_bottle | 97.5 | 94.5 | −3.0 |
+| adjust_bottle | 93.0 | 93.0 | 0.0 |
+| stack_bowls_two | 69.5 | 63.0 | −6.5 |
 | **Average** | **68.2** | **72.8** | **+4.6** |
 
 **Key takeaway:** Largest gains on contact-rich tasks where physics violations matter most (place_empty_cup +21.5, press_stapler +11.0). Some regression on non-contact tasks (shake_bottle −3.0, stack_bowls_two −6.5) — suggesting the physics alignment introduces a slight bias that trades off on tasks already near ceiling.
@@ -335,9 +347,9 @@ PhysisForcing-trained Wan2.2-TI2V-5B is plugged into Fast-WAM as a drop-in repla
 | + $\mathcal{L}_{\text{sem}}$ only | 58.4 | 36.5 | 46.2 | +1.4 |
 | + PhysisForcing (both) | **58.2** | **38.9** | **47.5** | **+2.7** |
 | **Wan2.2-I2V-A14B** | | | | |
-| — (ft baseline) | 52.5 | 55.2 | 57.9 | — |
-| + $\mathcal{L}_{\text{pix}}$ only | 64.7 | 52.5 | 60.7 | +2.8 |
-| + $\mathcal{L}_{\text{sem}}$ only | 67.5 | 55.2 | 60.0 | +2.1 |
+| — (ft baseline) | 64.7 | 52.5 | 57.9 | — |
+| + $\mathcal{L}_{\text{pix}}$ only | 67.5 | 55.2 | 60.7 | +2.8 |
+| + $\mathcal{L}_{\text{sem}}$ only | 66.8 | 54.6 | 60.0 | +2.1 |
 | + PhysisForcing (both) | **69.0** | **56.3** | **62.0** | **+4.1** |
 
 **Findings:**
