@@ -400,32 +400,31 @@ This connection motivates using diffusion LLMs for evaluation: minimizing the di
 
 | Model | Tokens | Type | MMLU | BBH | ARC-C | HellaSwag | GSM8K | MATH | HumanEval | MBPP | **Avg** |
 |-------|--------|------|------|-----|-------|-----------|-------|------|-----------|------|---------|
-| **iLLaDA 8B** | **12T** | **Diff** | **69.5** | **71.9** | **74.8** | 71.3 | **81.9** | 38.4 | 50.0 | 57.8 | **63.9** |
-| LLaDA 8B | 2.3T | Diff | 57.9 | 39.6 | 49.7 | 60.8 | 63.9 | 31.4 | 35.4 | 40.0 | 51.1 |
-| Dream 7B | 18T+0.6T | Diff | 59.8 | 45.9 | 70.5 | 65.9 | 70.3 | 41.1 | **57.9** | 56.7 | 61.4 |
-| Qwen2.5 7B | 18T | AR | 73.3 | 78.9 | 77.2 | **76.6** | 79.0 | **51.5** | 56.2 | **63.6** | 63.3 |
+| **iLLaDA 8B** | **12T** | **Diff** | **74.8** | **71.3** | **60.8** | 76.6 | **81.9** | 38.4 | 50.0 | 57.8 | **63.9** |
+| LLaDA 8B | 2.3T | Diff | 65.9 | 49.7 | 45.9 | 70.5 | 70.3 | 31.4 | 35.4 | 40.0 | 51.1 |
+| Dream 7B | 18T+0.6T | Diff | 69.5 | 57.9 | 59.8 | 73.3 | 77.2 | 39.6 | **57.9** | 56.2 | 61.4 |
+| Qwen2.5 7B | 18T | AR | 71.9 | 63.9 | 51.5 | **79.0** | 78.9 | **41.1** | 56.7 | **63.6** | 63.3 |
 
-**Key takeaways:**
-- **iLLaDA vs LLaDA: +12.8 avg** — massive improvement from scaling pre-training 5.2× (2.3T → 12T). Largest gains on BBH (+32.3), ARC-C (+25.1), GSM8K (+18.0).
-- **iLLaDA vs Qwen2.5 7B: +0.6 avg** — iLLaDA slightly wins on average, beating Qwen2.5 on MMLU (+69.5 vs 73.3 wait — Qwen wins MMLU). Actually, iLLaDA wins on BBH (71.9 vs 78.9 — no, Qwen wins). Let me correct: iLLaDA wins on MMLU (69.5 vs 73.3 — Qwen wins). Correcting: **iLLaDA is competitive but Qwen2.5 wins most individual benchmarks.** iLLaDA's avg advantage comes from balanced performance; Qwen2.5 wins MMLU, BBH, ARC-C, HellaSwag, MATH, MBPP individually.
-- **Dream 7B comparison:** Dream has the benefit of 18T AR pre-training tokens (from Qwen2.5) plus 0.6T diffusion fine-tuning. Despite this, iLLaDA (from scratch) wins on average and on most general/math benchmarks. Dream retains an edge on HumanEval (57.9 vs 50.0).
+**Key takeaways (cells verbatim from paper Table 2; bold = per-column winner):**
+- **iLLaDA vs LLaDA: +12.8 avg** — large improvement from scaling pre-training 5.2× (2.3T → 12T). Per-benchmark gains: MBPP +17.8, BBH +21.6, HumanEval +14.6, ARC-C +14.9, GSM8K +11.6, MMLU +8.9, MATH +7.0, HellaSwag +6.1.
+- **iLLaDA vs Qwen2.5 7B: +0.6 avg** — iLLaDA edges Qwen2.5 on average and is the per-column winner on **MMLU (74.8)**, **BBH (71.3)**, **ARC-C (60.8)**, and **GSM8K (81.9)**; Qwen2.5 wins HellaSwag (79.0), MATH (41.1), MBPP (63.6). This matches the paper's claim that iLLaDA-Base "obtains the best results on MMLU, BBH, ARC-Challenge, and GSM8K." (The BBH +21.6 and ARC-C +14.9 gains also match the paper abstract.)
+- **Dream 7B comparison:** Dream benefits from 18T AR pre-training tokens (Qwen2.5) plus 0.6T diffusion fine-tuning. Despite this, iLLaDA (trained from scratch) wins on average (63.9 vs 61.4) and on most general/math benchmarks; Dream's only per-column edge is HumanEval (57.9 vs 50.0).
 
 ### 6.2 Instruct Model Comparison
 
 | Model | Type | MMLU | MMLU-Pro | MMLU-Redux | GSM8K | MATH | HumanEval | MBPP | **Avg** |
 |-------|------|------|----------|------------|-------|------|-----------|------|---------|
-| **iLLaDA 8B** | **Diff** | 67.0 | 43.3 | **76.6** | **89.0** | 56.7 | 65.9 | 58.0 | **67.1** |
-| LLaDA 8B | Diff | 56.3 | 37.0 | 68.9 | 77.5 | 42.2 | 49.4 | 41.0 | 54.5 |
-| Dream 7B | Diff | 75.7 | — | 75.5 | — | — | 55.5 | 58.8 | 60.2* |
-| Qwen2.5 7B | AR | **81.0** | 39.2 | 91.6 | 88.0 | **79.2** | **84.8** | **79.2** | **77.1** |
+| **iLLaDA 8B** | **Diff** | 71.6 | 52.3 | **76.4** | 89.0 | 56.7 | 65.9 | 58.0 | 67.1 |
+| LLaDA 8B | Diff | 65.5 | 37.0 | 68.9 | 77.5 | 42.2 | 49.4 | 41.0 | 54.5 |
+| Dream 7B | Diff | 67.0 | 43.3 | 76.3 | 81.0 | 39.2 | 55.5 | 58.8 | 60.2 |
+| Qwen2.5 7B | AR | **76.6** | **56.3** | 75.7 | **91.6** | **75.5** | **84.8** | **79.2** | **77.1** |
 
-*Dream 7B instruct avg computed over available benchmarks only.
+*All four models report the full 7-benchmark instruct suite in paper Table 3 — Dream's MMLU-Pro (43.3), GSM8K (81.0), and MATH (39.2) are present in the source, not missing.
 
-**Key takeaways:**
-- **iLLaDA vs LLaDA: +12.6 avg** — consistent improvement from scaling, especially on GSM8K (+11.5), MATH (+14.5), HumanEval (+16.5).
-- **iLLaDA vs Qwen2.5 7B: -10.0 avg** — significant gap in instruct setting. Qwen2.5 dominates on code (84.8 vs 65.9 HumanEval, 79.2 vs 58.0 MBPP) and math (79.2 vs 56.7 MATH).
-- **Notable win:** iLLaDA-Instruct beats Qwen2.5 7B-Instruct on GSM8K (89.0 vs 88.0), demonstrating that diffusion models can match or exceed AR models on specific reasoning tasks.
-- **MMLU-Pro/MMLU-Redux:** iLLaDA achieves 43.3 on MMLU-Pro (higher than Qwen2.5's 39.2) but falls behind on MMLU-Redux (76.6 vs 91.6).
+**Key takeaways (cells verbatim from paper Table 3; bold = per-column winner):**
+- **iLLaDA vs LLaDA: +12.6 avg** — consistent improvement from scaling, especially on MMLU-Pro (+15.3), HumanEval (+16.5), MBPP (+17.0), MATH (+14.5), GSM8K (+11.5).
+- **iLLaDA vs Qwen2.5 7B: -10.0 avg** — large gap in the instruct setting. Qwen2.5 dominates code (HumanEval 84.8 vs 65.9, MBPP 79.2 vs 58.0) and math (MATH 75.5 vs 56.7, GSM8K 91.6 vs 89.0, MMLU-Pro 56.3 vs 52.3) and wins 7 of 8 columns.
+- **iLLaDA's only per-column win is MMLU-Redux (76.4)**, edging Dream (76.3) and Qwen2.5 (75.7) by 0.1–0.7pp — this is the paper's "competitive results on MMLU-Redux" claim. (A prior draft incorrectly asserted iLLaDA beat Qwen on GSM8K 89.0 vs 88.0 — Qwen's GSM8K is 91.6, so iLLaDA loses — and that iLLaDA's MMLU-Pro 43.3 beat Qwen's 39.2; 43.3 is Dream's value, and iLLaDA's MMLU-Pro is 52.3 < Qwen's 56.3.)
 
 ### 6.3 Results Summary Diagram
 
@@ -441,15 +440,15 @@ bar-chart
 
 | Scoring Rule | PIQA | ARC-C | HellaSwag | Avg Δ |
 |-------------|------|-------|-----------|-------|
-| Likelihood (baseline) | 77.2 | 74.3 | 60.2 | — |
-| **Confidence-based** | **78.5** | **74.8** | **76.6** | **+1.4** |
+| Likelihood (baseline) | 77.2 | 60.2 | 74.3 | — |
+| **Confidence-based** | **78.5** | **60.8** | **76.6** | **+1.4** |
 | Δ (Confidence − Likelihood) | +1.3 | +0.6 | +2.3 | — |
 
 Confidence-based scoring consistently improves over likelihood-based scoring across all three benchmarks. The improvement is especially large on HellaSwag (+2.3), which tests commonsense reasoning and benefits from the greedy confidence ordering.
 
 ### 6.5 SFT Epoch Ablation
 
-Performance of iLLaDA-8B-Instruct evaluated at different SFT epochs:
+Performance of iLLaDA-8B-Instruct evaluated at different SFT epochs (values read from paper **Figure 1**, not a table — they are approximate bar-height readings; the paper reports only the qualitative "performance generally improves as SFT epochs increases" trend, with no exact per-epoch numbers in text):
 
 | Epochs | GSM8K | MATH | MMLU-Pro | Avg |
 |--------|-------|------|----------|-----|
@@ -469,17 +468,19 @@ The absence of saturation at 12 epochs suggests that further gains are possible 
 
 | Benchmark | Base Δ | Instruct Δ | Category |
 |-----------|--------|------------|----------|
-| MMLU | +11.6 | +10.7 | General |
-| BBH | +32.3 | — | Reasoning |
-| ARC-Challenge | +25.1 | — | Reasoning |
-| HellaSwag | +10.5 | — | Commonsense |
-| GSM8K | +18.0 | +11.5 | Math |
+| MMLU | +8.9 | +6.1 | General |
+| MMLU-Pro | — | +15.3 | General (instruct-only) |
+| MMLU-Redux | — | +7.5 | General (instruct-only) |
+| BBH | +21.6 | — | Reasoning |
+| ARC-Challenge | +14.9 | — | Reasoning |
+| HellaSwag | +6.1 | — | Commonsense |
+| GSM8K | +11.6 | +11.5 | Math |
 | MATH | +7.0 | +14.5 | Math |
 | HumanEval | +14.6 | +16.5 | Code |
 | MBPP | +17.8 | +17.0 | Code |
 | **Average** | **+12.8** | **+12.6** | — |
 
-The largest absolute gains are on reasoning benchmarks (BBH: +32.3, ARC-C: +25.1), suggesting that bidirectional attention with sufficient scale is particularly beneficial for multi-step reasoning.
+The largest absolute gains are on code (MBPP +17.8 base / +17.0 instruct) and reasoning (BBH +21.6, HumanEval +14.6, ARC-C +14.9), suggesting that bidirectional attention with sufficient scale is particularly beneficial for multi-step reasoning and structured generation.
 
 ---
 
@@ -526,7 +527,7 @@ This is the main weakness of the paper. The following were **not** ablated:
 
 6. **Ad-hoc LR schedule.** The switch from constant to cosine was reactive (based on observing a loss plateau), not planned from the start. It's unclear whether cosine decay from the beginning would have been equivalent or better.
 
-7. **HumanEval weakness.** iLLaDA falls behind both Dream 7B (50.0 vs 57.9) and Qwen2.5 7B (50.0 vs 56.2) on HumanEval, suggesting that diffusion generation may have inherent weaknesses for structured code generation despite its advantages on mathematical reasoning.
+7. **HumanEval weakness.** iLLaDA falls behind both Dream 7B (50.0 vs 57.9) and Qwen2.5 7B (50.0 vs 56.7) on HumanEval, suggesting that diffusion generation may have inherent weaknesses for structured code generation despite its advantages on mathematical reasoning.
 
 ---
 
