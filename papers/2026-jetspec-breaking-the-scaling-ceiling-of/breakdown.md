@@ -510,7 +510,7 @@ ultra-low-cost regime where the draft overhead is negligible.
 | Draft surrogate $\sum \log r_i$ | $-3.76$ nats | $-3.88$ nats |
 | Target conditional $\sum \log p(y_i \mid x, \pi_{<v_i})$ | $-63.32$ nats | $-3.54$ nats |
 | Surrogate–target gap | $+59.56$ nats | $-0.34$ nats |
-| Tokens accepted by verification | 4 | 6 |
+| Mean accepted length (γ=0, 50 prompts) | 4.84 | 9.46 |
 
 **Notation:**
 - Draft surrogate: $\sum_i \log r_i$ — the score used to rank the branch in the tree
@@ -559,35 +559,39 @@ larger magnitude.
 JetSpec ≈ DFlash at budget 16 (short linear draft covers high-probability continuations).
 At budget 32, JetSpec starts to pull ahead while DFlash saturates or degrades.
 
-| Qwen3-8B, temp=0 | Budget | EAGLE-3 | DFlash | JetSpec |
-|------------------|--------|--------:|-------:|--------:|
-| MATH-500 | 16 | 3.78× | 6.01× | **6.00×** |
-| MATH-500 | 32 | 4.03× | 5.27× | **6.14×** |
-| MT-Bench | 16 | 1.82× | 4.03× | **4.96×** |
-| MT-Bench | 32 | 1.96× | 3.61× | **5.03×** |
+Speedup (τ) at temp=0, Qwen3-8B:
+
+| Benchmark | Budget | EAGLE-3 | DFlash | JetSpec |
+|-----------|--------|--------:|-------:|--------:|
+| MATH-500 | 16 | 2.10× (τ 3.61) | **6.12×** (τ 7.83) | 6.06× (τ 7.75) |
+| MATH-500 | 32 | 2.23× (τ 3.87) | 5.39× (τ 6.89) | **6.35×** (τ 8.23) |
+| MT-Bench | 16 | 1.91× (τ 3.40) | **2.72×** (τ 4.03) | 2.68× (τ 3.98) |
+| MT-Bench | 32 | 2.04× (τ 3.62) | 2.48× (τ 3.61) | **2.67×** (τ 4.09) |
 
 ### High-Budget Regime (Table 2, budget 64–256) — the main story
 
-| Qwen3-8B, temp=0, budget=256 | $\tau$ | Speedup |
-|-------------------------------|------:|--------:|
-| EAGLE-3 (depth 8) | 4.04 | 2.35× |
-| DDTree | 8.78 | 8.78× |
-| **JetSpec** | **9.82** | **9.64×** |
+MATH-500 headline (temp=0), EAGLE-3 at its budget-64/depth-8 ceiling vs DDTree/JetSpec at budget 256:
 
-Full results across benchmarks (budget 256, temp=0):
+| Method | $\tau$ | Speedup |
+|-------------------------------|------:|--------:|
+| EAGLE-3 (depth 8, budget 64) | 4.13 | 2.36× |
+| DDTree | 9.81 | 8.78× |
+| **JetSpec** | **10.76** | **9.64×** |
+
+Full speedup across benchmarks (temp=0; EAGLE-3 at budget 64, DDTree/JetSpec at budget 256):
 
 | Benchmark | EAGLE-3 | DDTree | JetSpec |
 |-----------|--------:|-------:|--------:|
 | GSM8K | 2.53× | 7.04× | **7.82×** |
-| MATH-500 | 4.31× | 8.78× | **9.64×** |
-| AIME25 | 2.36× | 9.81× | **10.76×** |
-| HumanEval | 2.35× | 9.24× | **9.95×** |
-| MBPP | 2.22× | 6.96× | 7.00× |
-| LCB | 2.09× | 6.75× | **7.12×** |
-| MT-Bench | 2.19× | 6.09× | **7.67×** |
+| MATH-500 | 2.36× | 8.78× | **9.64×** |
+| AIME25 | 2.35× | 8.33× | **8.78×** |
+| HumanEval | 2.49× | 6.31× | **7.12×** |
+| MBPP | 2.22× | 6.09× | **6.73×** |
+| LCB | 2.09× | 6.75× | **7.67×** |
+| MT-Bench | 2.19× | 4.26× | **4.58×** |
 
-Temperature=1 results show JetSpec remains effective under non-greedy decoding, achieving
-8.29× on MATH-500 and 5.22× on MT-Bench at budget 256.
+Temperature=1 results (budget 256) show JetSpec remains effective under non-greedy decoding,
+achieving 7.83× on MATH-500 and 4.06× on MT-Bench.
 
 ### MoE Generalization (Table 5, Qwen3-30B-A3B)
 
@@ -599,33 +603,41 @@ Temperature=1 results show JetSpec remains effective under non-greedy decoding, 
 
 ### vLLM Serving (Table 11, single H100, MATH-500)
 
-| Batch Size | Budget 128 | Budget 256 |
-|------------|-----------:|-----------:|
-| 1 | 6.75× | 7.58× |
-| 4 | 3.49× | 3.26× |
-| 8 | 3.26× | 2.80× |
-| 16 | 3.10× | 2.85× |
+End-to-end serving speedup over AR (single H100, MATH-500, temp=0); AR baseline in TPS:
+
+| Batch | AR (TPS) | Budget 16 | Budget 32 | Budget 64 | Budget 128 |
+|-------|---------:|---------:|---------:|---------:|----------:|
+| 1  | 127.8 | 1.75× | 2.44× | 3.50× | 4.33× |
+| 2  | 163.3 | 1.63× | 2.21× | 3.16× | 3.81× |
+| 4  | 203.8 | 2.13× | 2.62× | 3.26× | 3.64× |
+| 8  | 246.2 | 2.76× | 3.41× | 3.49× | 3.26× |
+| 16 | 287.3 | 3.10× | 3.81× | 3.47× | 2.80× |
+
+> The body text additionally reports an extended budget-256 configuration beyond Table 11: budget
+> 256 drops to 4.51× at batch size 16 and 2.85× at batch size 32 (Table 11 itself caps at budget 128
+> and batch 16).
 
 > Large budgets shine at small batch sizes; diminish at large batch sizes due to increased
 > verification cost and compute pressure.
 
 ### Ablation: Causal vs. Diffusion Head (Table 7, MATH-500)
 
-| Head | $\gamma=0$ | $\gamma=7$ | $\gamma=15$ |
-|------|-----:|----:|-----:|
-| Causal | **8.29×** / $\tau$=9.81 | 8.50× / $\tau$=9.99 | 8.41× / $\tau$=9.96 |
-| Diffusion | 5.46× / $\tau$=6.45 | 8.16× / $\tau$=8.36 | 6.17× / $\tau$=7.19 |
+| Head | $\gamma=0$ | $\gamma=3$ | $\gamma=7$ | $\gamma=15$ |
+|------|-----:|----:|----:|-----:|
+| Causal | 8.29× / $\tau$=9.81 | **8.50×** / $\tau$=10.00 | 8.40× / $\tau$=9.99 | 8.41× / $\tau$=9.96 |
+| Diffusion | 5.46× / $\tau$=6.45 | 8.16× / $\tau$=9.65 | **8.36×** / $\tau$=9.72 | 6.17× / $\tau$=7.19 |
 
-> Causal head is flat across $\gamma$ — structural robustness. Diffusion peaks at $\gamma=7$ and
-> collapses elsewhere, requiring careful tuning.
+> Causal head is flat across $\gamma$ (8.29–8.50×) — structural robustness. Diffusion peaks at
+> $\gamma=7$ (8.36×) and collapses at $\gamma=0$ (5.46×) and $\gamma=15$ (6.17×), requiring careful
+> tuning.
 
 ### Ablation: Loss Objective (Table 4)
 
 | Objective | MATH-500 Speedup | $\tau$ |
 |-----------|-----------------|---:|
-| SFT | 7.09 | 9.98 |
-| Forward KL | **7.09** | **10.01** |
-| Reverse KL | 3.78 | 6.59 |
+| SFT | 8.42 | 9.98 |
+| Forward KL | **8.46** | **10.01** |
+| Reverse KL | 5.25 | 6.59 |
 
 > Reverse KL causes 36–46% relative drop. Mode-seeking concentrates probability on high-confidence
 > teacher modes, killing tree diversity.

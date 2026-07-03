@@ -65,6 +65,12 @@
   },
   "hotPaths": [
     {
+      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/breakdown.md",
+      "accessCount": 8,
+      "lastAccessed": 1783118574894,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
       "accessCount": 5,
       "lastAccessed": 1783117893190,
@@ -77,6 +83,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper_layout.txt",
+      "accessCount": 4,
+      "lastAccessed": 1783118410114,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
       "accessCount": 3,
       "lastAccessed": 1783118125289,
@@ -84,8 +96,8 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 2,
-      "lastAccessed": 1783117943696,
+      "accessCount": 3,
+      "lastAccessed": 1783118163488,
       "type": "file"
     },
     {
@@ -122,6 +134,12 @@
       "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783117572936,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783118238471,
       "type": "file"
     }
   ],
