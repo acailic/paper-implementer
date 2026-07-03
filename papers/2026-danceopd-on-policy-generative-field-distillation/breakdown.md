@@ -337,10 +337,10 @@ Where $N=16$ rollout steps, $C_{\text{roll}}$ = one no-gradient rollout step cos
 
 | Metric | T2I Source | Edit Source | DanceOPD (Ours) |
 |--------|-----------|-------------|-----------------|
-| GEditBench-EN Avg | 4.283 | 5.026 | **5.681** |
+| GEditBench-EN Avg | — (T2I-only) | 4.930 | **5.347** |
 | GenEval Overall | 0.832 | 0.711 | **0.849** |
 
-- GEditBench vs. best OPD baseline: **+8.1%**
+- GEditBench vs. best OPD baseline (DiffusionOPD 4.947): **+8.1%**
 - GEditBench vs. edit source: **+8.5%**
 - GenEval vs. T2I source: **+2.0%**
 - vs. DiffusionOPD: bg-chg **+21.9%**, style-chg **+21.3%**, color-alt **+5.5%**
@@ -349,12 +349,14 @@ Where $N=16$ rollout steps, $C_{\text{roll}}$ = one no-gradient rollout step cos
 
 | Metric | Local Edit Source | Global Edit Source | DanceOPD (Ours) |
 |--------|-----------------|-------------------|-----------------|
-| GEditBench-EN Avg | 5.086 | 4.128 | **5.751** |
-| GenEval Overall | 0.822 | 0.798 | **0.848** |
+| GEditBench-EN Avg | 5.095 | 3.750 | **5.498** |
+| GenEval Overall | 0.793 | 0.808 | **0.848** |
 
-- GEditBench vs. best composition baseline: **+16.1%**
+- GEditBench vs. best composition baseline (Off-Policy Distill. 4.736): **+16.1%**
 - GEditBench vs. local edit source: **+7.9%**
 - vs. best baseline per category: bg-chg **+33.5%**, style-chg **+12.9%**, color-alt **+11.6%**
+
+> **Sourcing note:** The Table 2 headline DanceOPD averages (Block A **5.347**, Block B **5.498**) are distinct from the **5.751** that recurs as the *ablation default* throughout §6.2. The 5.751 default is the Local-Edit-init, low-$t$, $K{=}1$, 2k-step diagnostic run (Tables 7–8); Table 2 reports a different main-config checkpoint, so the two must not be conflated.
 
 #### C. Realism-Field Absorption
 
@@ -367,12 +369,12 @@ Closes **85.3%** of the student-to-teacher reward gap while preserving T2I capab
 
 #### D. CFG Absorption
 
-| Setting | GEditBench Avg |
-|---------|---------------|
-| Eval-only CFG (β=7) | 5.628 |
-| Train-only absorption (α=7) | 5.422 |
-| **Best composition (α=2, β=2)** | **5.751** |
-| Over-guided (α=7, β=7, αβ=49) | 4.765 |
+| Setting (Train α, Eval β) | Eff. αβ | GEditBench Avg |
+|---------|---------|---------------|
+| **Best composition (α=3.5, β=2.0)** | 7.0 | **5.833** |
+| Eval-only CFG (α=1.0, β=7.0) | 7.0 | 5.751 |
+| Train-only absorption (α=3.5, β=1.0) | 3.5 | 5.422 |
+| Over-guided (α=7.0, β=7.0) | 49.0 | 4.015 |
 
 Best measured composition: **+7.6%** over train-only absorption, **+1.4%** over eval-only CFG. Over-guided drops by **31.2%**.
 
@@ -385,7 +387,7 @@ Best measured composition: **+7.6%** over train-only absorption, **+1.4%** over 
 | Hard routing | MSE | **5.751** |
 | Soft all-teacher mixing | MSE | 4.994 |
 | Hard routing | KL-$\bar{\sigma}^2$ | **5.501** |
-| Soft all-teacher mixing | KL-$\bar{\sigma}^2$ | 4.975 |
+| Soft all-teacher mixing | KL-$\bar{\sigma}^2$ | 4.976 |
 
 Hard routing improves over soft mixing by **15.2%** (MSE) and **10.6%** (KL).
 
@@ -394,22 +396,22 @@ Hard routing improves over soft mixing by **15.2%** (MSE) and **10.6%** (KL).
 | Query Position | GEditBench Avg |
 |---------------|---------------|
 | **Low-$t$ (Beta(5,2))** | **5.751** |
-| Median-$t$ (Beta(5,5)) | 4.437 |
-| High-$t$ (Beta(2,5)) | 4.645 |
+| Median-$t$ (Beta(5,5)) | 4.649 |
+| High-$t$ (Beta(2,5)) | 4.813 |
 
 Low-$t$ improves over median-$t$ by **23.7%** and over high-$t$ by **19.5%**.
 
 #### Number of Trajectory Queries ($K$)
 
-| $K$ | GEditBench Avg |
+| $K$ (weighted dense) | GEditBench Avg |
 |-----|---------------|
 | **1** | **5.751** |
-| 2 | 4.833 |
-| 4 | 4.976 |
-| 8 | 4.645 |
-| 16 | 5.025 |
+| 2 | 4.931 |
+| 4 | 5.330 |
+| 8 | 5.218 |
+| 16 | 5.127 |
 
-Single query outperforms all dense variants. The strongest weighted dense variant ($K=16$) still falls **12.2%** below $K=1$.
+Single query outperforms all weighted dense variants, by **16.6% / 7.9% / 10.2% / 12.2%** at $K=2/4/8/16$. The strongest weighted dense variant ($K=4$, 5.330) still falls **7.9%** below $K=1$.
 
 #### Objective Design
 
@@ -417,9 +419,9 @@ Single query outperforms all dense variants. The strongest weighted dense varian
 |-----------|---------------|
 | **Plain MSE** | **5.751** |
 | Timestep-weighted MSE | 5.592 |
-| DMD-EMA hybrid | 5.568 |
-| Consistency matching | 5.501 |
-| KL-$\bar{\sigma}^2$ | 5.485 |
+| DMD-EMA hybrid | 5.597 |
+| Consistency matching | 5.523 |
+| KL-$\bar{\sigma}^2$ | 5.501 |
 
 Plain MSE improves over the best alternative by **2.8%**.
 
@@ -429,8 +431,8 @@ Plain MSE improves over the best alternative by **2.8%**.
 |------|---------------|
 | **Local edit** | **5.751** |
 | Merged | 4.193 |
-| Global edit | 2.703 |
-| T2I | 1.886 |
+| Global edit | 2.702 |
+| T2I | 1.889 |
 
 Local edit init beats merged by **37.2%** and T2I init by **204.4%**. **Start from the strongest relevant capability checkpoint.**
 
