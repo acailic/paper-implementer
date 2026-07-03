@@ -304,20 +304,20 @@ Plus: **Mean** (average across three), **Time** (seconds), **# Tokens**.
 | Method | IoU% ↑ | BDE ↓ | R% ↑ | RSR% ↑ | KSR% ↑ | MLLM-Score ↑ |
 |--------|------:|------:|-----:|-------:|-------:|-------------:|
 | **Open-source General MLLMs** |
-| InternVL3.5-8B | 42.86 | 0.127 | 8.61 | 0.00 | 0.00 | 0.15 |
-| Kimi-K2.6 | 65.44 | 0.087 | 37.92 | 0.00 | 48.28 | 0.47 |
-| Qwen3-VL-8B-Instruct | 55.18 | 0.105 | 18.40 | 0.00 | 90.90 | 0.25 |
-| Qwen3-VL-32B-Instruct | 63.80 | 0.101 | 35.91 | 13.79 | 36.36 | 0.47 |
-| Qwen3-VL-235B-A22B-Instruct | 61.84 | 0.093 | 33.53 | 20.69 | 98.18 | 0.48 |
-| Qwen3.5-9B | 61.94 | 0.094 | 30.86 | 3.45 | 94.55 | 0.45 |
-| Qwen3.6-27B | 53.93 | 0.090 | 33.23 | 48.28 | 83.64 | 0.47 |
+| InternVL3.5-8B | 42.86 | 0.127 | 8.61 | 0.00 | 20.00 | 0.15 |
+| Kimi-K2.6 | 65.44 | 0.087 | 37.92 | 0.00 | 90.90 | 0.47 |
+| Qwen3-VL-8B-Instruct | 55.18 | 0.105 | 18.40 | 0.00 | 36.36 | 0.25 |
+| Qwen3-VL-32B-Instruct | 63.80 | 0.101 | 35.91 | 13.79 | 98.18 | 0.47 |
+| Qwen3-VL-235B-A22B-Instruct | 61.84 | 0.093 | 33.53 | 20.69 | 94.55 | 0.48 |
+| Qwen3.5-9B | 61.94 | 0.094 | 30.86 | 3.45 | 83.64 | 0.45 |
+| Qwen3.6-27B | 53.93 | 0.090 | 33.23 | 48.28 | 72.72 | 0.47 |
 | **Proprietary General MLLMs** |
-| Gemini-3.0-Flash | 64.10 | 0.079 | 38.58 | 55.17 | 82.76 | 0.50 |
-| Gemini-3.0-Pro | 63.62 | 0.070 | 47.48 | 87.27 | 89.09 | 0.54 |
+| Gemini-3.0-Flash | 64.10 | 0.079 | 38.58 | 55.17 | 87.27 | 0.50 |
+| Gemini-3.0-Pro | 63.62 | 0.070 | 47.48 | 82.76 | 89.09 | 0.54 |
 | Gemini-3.1-Pro | 65.63 | 0.068 | 51.34 | 79.31 | 89.09 | 0.56 |
 | Gemini-3.5-Flash | 66.95 | 0.076 | 41.54 | 48.28 | 67.27 | 0.50 |
 | GPT-5.4 | 64.72 | 0.093 | 40.06 | 10.34 | 85.45 | 0.49 |
-| GPT-5.5 | 65.44 | 0.091 | 41.84 | 48.28 | 81.82 | 0.48 |
+| GPT-5.5 | 65.44 | 0.091 | 41.84 | 10.34 | 81.82 | 0.48 |
 | **Specialized Aesthetic Cropping** |
 | CACNet | 68.29 | 0.080 | 54.08 | 0.00 | 0.00 | 0.52 |
 | UNIC | 62.46 | 0.081 | 31.12 | 0.00 | 0.00 | 0.29 |
@@ -327,16 +327,18 @@ Plus: **Mean** (average across three), **Time** (seconds), **# Tokens**.
 
 **Key observations:**
 - **Specialized croppers** (InstructCrop, Venus): good IoU but literally **0%** RSR and near-0% KSR — they always crop, never keep/reject.
-- **General MLLMs**: decent decision-making (Gemini-3.0-Pro RSR=87.27%) but poor crop localization (IoU ≤ 67%).
+- **General MLLMs**: decent decision-making (Gemini-3.0-Pro RSR=82.76%) but poor crop localization (IoU ≤ 67%).
 - **ShutterMuse is the only model good at both** — best IoU (74.30%) AND competitive RSR (82.76%) / KSR (74.55%).
+
+> **Sourcing (Tables 1–3).** All cells transcribed verbatim from the pdftotext `-layout` extract (`paper_layout.txt`, Table 1 lines 539–558, Table 2 lines 597–599, Table 3 lines 680–684). Plain `pdftotext` collapses each block's six metric columns into separate column-runs that lose row alignment (the RSR run bleeds into the KSR run), so the `-layout` grid is authoritative. Specialized-cropping block, ShutterMuse row, all Means, Time, and #Tokens columns reconcile with the plain extract unchanged.
 
 ### 7.2 Subject-Side Results (Table 2 — Full)
 
 | Method | Plausibility ↑ | Interaction ↑ | Aesthetics ↑ | Mean ↑ | Time ↓ (s) | # Tokens ↓ |
 |--------|---------------:|-------------:|-----------:|-------:|----------:|----------:|
-| Nano-Banana-Pro | **0.63** | **0.59** | **0.58** | **0.39** | 55.16 | 1370 |
-| GPT-Image-2 | 0.35 | 0.29 | 0.27 | 0.35 | 102.61 | 1427 |
-| **ShutterMuse (Ours)** | 0.52 | 0.54 | 0.53 | 0.34 | **4.96** | **412** |
+| Nano-Banana-Pro | **0.63** | **0.35** | **0.17** | **0.39** | 55.16 | 1370 |
+| GPT-Image-2 | 0.59 | 0.29 | 0.15 | 0.35 | 102.61 | 1427 |
+| **ShutterMuse (Ours)** | 0.58 | 0.27 | 0.14 | 0.34 | **4.96** | **412** |
 
 > ~10–20× faster inference, ~3× fewer tokens, within 0.05 mean score of best. The slight quality gap is expected — foundation models benefit from much larger capacity and broad pretraining priors over human anatomy and spatial interactions.
 

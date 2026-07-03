@@ -77,15 +77,15 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-improved-large-language-diffusion-models/breakdown.md",
-      "accessCount": 10,
-      "lastAccessed": 1783119559209,
+      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "accessCount": 11,
+      "lastAccessed": 1783121951058,
       "type": "file"
     },
     {
-      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "path": "papers/2026-improved-large-language-diffusion-models/breakdown.md",
       "accessCount": 10,
-      "lastAccessed": 1783121292997,
+      "lastAccessed": 1783119559209,
       "type": "file"
     },
     {
@@ -113,6 +113,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/breakdown.md",
+      "accessCount": 6,
+      "lastAccessed": 1783122227373,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
       "accessCount": 5,
       "lastAccessed": 1783117893190,
@@ -137,15 +143,21 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
-      "accessCount": 3,
-      "lastAccessed": 1783118125289,
+      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
+      "accessCount": 4,
+      "lastAccessed": 1783121957197,
       "type": "file"
     },
     {
-      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
+      "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/paper_layout.txt",
+      "accessCount": 4,
+      "lastAccessed": 1783122183078,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
       "accessCount": 3,
-      "lastAccessed": 1783119199073,
+      "lastAccessed": 1783118125289,
       "type": "file"
     },
     {
@@ -206,6 +218,12 @@
       "path": "papers/2026-improved-large-language-diffusion-models/paper_layout.txt",
       "accessCount": 1,
       "lastAccessed": 1783119345177,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/paper_full.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783121981765,
       "type": "file"
     }
   ],
