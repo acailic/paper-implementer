@@ -71,15 +71,33 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-the-verification-horizon-no-silver-bullet/paper.txt",
+      "accessCount": 4,
+      "lastAccessed": 1783118004985,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
+      "accessCount": 3,
+      "lastAccessed": 1783118125289,
+      "type": "file"
+    },
+    {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 1,
-      "lastAccessed": 1783117524163,
+      "accessCount": 2,
+      "lastAccessed": 1783117943696,
       "type": "file"
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
-      "accessCount": 1,
-      "lastAccessed": 1783117529259,
+      "accessCount": 2,
+      "lastAccessed": 1783117947220,
+      "type": "file"
+    },
+    {
+      "path": "papers/tracker.json",
+      "accessCount": 2,
+      "lastAccessed": 1783117954492,
       "type": "file"
     },
     {
@@ -95,21 +113,9 @@
       "type": "file"
     },
     {
-      "path": "papers/tracker.json",
-      "accessCount": 1,
-      "lastAccessed": 1783117544579,
-      "type": "file"
-    },
-    {
       "path": "templates/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783117559667,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783117559719,
       "type": "file"
     },
     {

@@ -316,11 +316,13 @@ A faithful evaluator yields monotonically increasing $\bar{S}_{\text{UT}}(\theta
 |-----------|:-:|:-:|:-:|:-:|:-:|
 | SWE-bench Verified | 54.2% | 55.2% | **59.8%** | +5.6pp | +4.6pp |
 | SWE-bench Pro | 33.4% | 36.5% | **38.1%** | +4.7pp | +1.6pp |
-| SWE-bench Multilingual | 52.0% | 41.2% | **59.8%** | **+7.8pp** | +18.6pp |
+| SWE-bench Multilingual | 37.7% | 41.2% | **45.5%** | **+7.8pp** | +4.3pp |
 | Aone-bench | 14.8% | 25.0% | **28.1%** | **+13.3pp** | +3.1pp |
 | Octo-bench | 62.3% | 67.0% | **67.4%** | +5.1pp | +0.4pp |
 
-> Span-KTO dominates on all 5 benchmarks. Biggest gains on Aone-bench (+13.3pp) and SWE-bench Multilingual (+7.8pp). Gap is smallest on OctoBench (+5.1pp) — this benchmark emphasizes scaffold-following rather than code repair.
+> Span-KTO dominates on all 5 benchmarks. Biggest gains on Aone-bench (+13.3pp) and SWE-bench Multilingual (+7.8pp). Gap is smallest on OctoBench (62.3→67.4 spread; the paper notes it emphasizes scaffold-following rather than code repair).
+>
+> *Values read from the Figure 10 bars; the Multilingual column (SFT 37.7 / RW-SFT 41.2 / Span-KTO 45.5) is corroborated by Table 21's β=0.01 ablation row (Multilingual = 45.55). The body text only states the +7.8pp Multilingual gain, not the absolute values, so the bar heights are the authoritative source.*
 
 #### §4: Negative Behavior Correction (Figure 11)
 
