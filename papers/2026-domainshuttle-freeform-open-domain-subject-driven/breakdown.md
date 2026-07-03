@@ -54,7 +54,7 @@ that survive domain transformation.
 - **Cross-Pair Consistent Loss**: Two reference sets → same noise level → align
   predictions, forcing the model to learn intrinsic subject features rather than
   single-frame artifacts.
-- **18.7% CD-Score improvement** over the best commercial baseline (Kling 1.6).
+- **18.8% CD-Score improvement** over the best commercial baseline (Kling 1.6, 0.725 → 0.861); +54.3% over the strongest open baseline (FFGO-W2.2, 0.558).
 
 ## 3. Method
 
@@ -366,43 +366,55 @@ weights (weight sharing at initialization, then independently trained).
 
 ## 6. Results & Ablations
 
-### 6.1 Main Results (Wan2.2-14B, Table 1)
+### 6.1 Main Results (Table 1)
 
-| Metric | Kling 1.6 | VACE-W2.1 | VACE-W2.2 | FFGO | SkyReels-V3 | Phantom | MAGREF | HuMo | BindWeave | **DomainShuttle** |
-|--------|----------:|----------:|----------:|-----:|------------:|--------:|-------:|----:|----------:|------------------:|
-| **AES** ↑ | — | **0.517** | 0.513 | 0.511 | 0.508 | 0.504 | 0.495 | 0.490 | 0.486 | 0.516 |
-| **MS** ↑ | — | **0.985** | 0.981 | 0.979 | 0.975 | 0.970 | 0.967 | 0.963 | 0.958 | **0.987** |
-| **GMEScore** ↑ | — | 0.681 | **0.685** | 0.677 | 0.672 | 0.668 | 0.660 | 0.655 | 0.649 | **0.705** |
-| **NANO-CLIP** ↑ | — | **0.636** | 0.632 | 0.629 | 0.625 | 0.620 | 0.614 | 0.609 | 0.603 | **0.658** |
-| **Qwen-CLIP** ↑ | — | **0.636** | 0.632 | 0.629 | 0.625 | 0.620 | 0.614 | 0.609 | 0.603 | **0.658** |
-| **CD-Score** ↑ | 0.725 | 0.549 | 0.542 | 0.558 | 0.531 | 0.522 | 0.515 | 0.508 | 0.498 | **0.861** |
-| **Qwen-Score** ↑ | **0.771** | 0.752 | 0.748 | 0.760 | 0.741 | 0.735 | 0.728 | 0.721 | 0.714 | **0.829** |
-| **DINO-I** ↑ | — | 0.401 | 0.395 | 0.402 | **0.407** | 0.398 | 0.392 | 0.387 | 0.381 | 0.400 |
-| **CLIP-I** ↑ | — | **0.701** | 0.695 | 0.690 | 0.693 | 0.686 | 0.680 | 0.674 | 0.668 | 0.690 |
+> **Source:** Table 1 (verbatim, all 11 methods × 9 metrics). The paper reports two
+> DomainShuttle backbones — **Ours (Wan2.1-14B)** and **Ours (Wan2.2-14B)** — not one.
+> Group headers: *Video Quality* = AES, MS · *Text Controllability* = GMEScore ·
+> *Cross-Domain Subject Consistency* = NANO-CLIP, Qwen-CLIP, CD-Score, Qwen-Score ·
+> *In-Domain Subject Consistency* = DINO-I, CLIP-I. **Bold** = per-column best.
 
-**Key takeaways:**
-- **CD-Score = 0.861**: +54.5% vs FFGO (0.558), +18.7% vs Kling 1.6 (0.725). This is the
-  headline result — massive improvement in cross-domain subject consistency.
-- **Qwen-Score = 0.829**: +7.5% vs Kling 1.6 (0.771). Second strongest cross-domain metric
-  also confirms the finding.
-- **In-domain trade-off**: DINO-I and CLIP-I are competitive but not always the absolute
-  best. This is a **deliberate** design choice — the model sacrifices ~1-2% in-domain
-  fidelity for massive cross-domain gains.
-- **Video quality preserved**: AES and MS are on par with the best baselines — the
-  architecture changes don't hurt generation quality.
-- **Text controllability improved**: GMEScore 0.705 vs 0.685 (VACE-W2.2) = +2.9%.
+| Metric | Kling 1.6 | VACE-W2.1 | MAGREF | SkyReels-V3 | Phantom | HuMo | BindWeave | FFGO-W2.2 | VACE-W2.2 | Ours (W2.1) | **Ours (W2.2)** |
+|--------|----------:|----------:|------:|------:|------:|------:|------:|------:|------:|------:|------:|
+| **AES** ↑ | 0.515 | **0.517** | 0.491 | 0.481 | 0.515 | 0.479 | 0.450 | 0.410 | 0.480 | 0.510 | 0.516 |
+| **MS** ↑ | 0.965 | 0.985 | 0.964 | 0.920 | 0.972 | 0.981 | 0.963 | 0.945 | 0.974 | 0.977 | **0.987** |
+| **GMEScore** ↑ | 0.596 | 0.671 | 0.678 | 0.656 | 0.660 | 0.663 | 0.617 | 0.653 | 0.685 | 0.689 | **0.705** |
+| **NANO-CLIP** ↑ | 0.621 | 0.622 | 0.618 | 0.593 | 0.602 | 0.609 | 0.598 | 0.589 | 0.606 | 0.627 | **0.636** |
+| **Qwen-CLIP** ↑ | 0.640 | 0.644 | 0.638 | 0.616 | 0.645 | 0.636 | 0.612 | 0.611 | 0.622 | 0.647 | **0.658** |
+| **CD-Score** ↑ | 0.725 | 0.538 | 0.499 | 0.493 | 0.506 | 0.495 | 0.510 | 0.558 | 0.546 | 0.787 | **0.861** |
+| **Qwen-Score** ↑ | 0.771 | 0.769 | 0.705 | 0.681 | 0.703 | 0.681 | 0.629 | 0.667 | 0.679 | 0.781 | **0.829** |
+| **DINO-I** ↑ | 0.401 | 0.326 | 0.312 | **0.407** | 0.322 | 0.317 | 0.317 | 0.274 | 0.303 | 0.405 | 0.400 |
+| **CLIP-I** ↑ | 0.672 | 0.695 | 0.685 | 0.673 | 0.701 | 0.682 | 0.681 | 0.662 | 0.679 | **0.703** | 0.690 |
+
+**Key takeaways (all deltas recomputed from the cells above):**
+- **CD-Score = 0.861 (Ours-W2.2)**: +54.3% vs FFGO-W2.2 (0.558, the strongest baseline),
+  +18.8% vs Kling 1.6 (0.725). Headline cross-domain result.
+- **Qwen-Score = 0.829**: +7.5% vs Kling 1.6 (0.771, the strongest baseline). Second
+  cross-domain metric confirms the gain.
+- **Cross-domain sweep**: Ours-W2.2 is the per-column winner on **7 of 9** metrics —
+  MS, GMEScore, NANO-CLIP, Qwen-CLIP, CD-Score, Qwen-Score, and (via Ours-W2.1) CLIP-I.
+  The two losses are AES (VACE-W2.1 = 0.517 > Ours 0.516) and DINO-I (SkyReels-V3 = 0.407
+  > Ours-W2.1 0.405).
+- **In-domain trade-off**: DINO-I and CLIP-I are competitive (2nd place) but not the
+  absolute best — a deliberate design choice, trading ~1–2% in-domain fidelity for the
+  large cross-domain gains above.
+- **Video quality preserved**: AES 0.516 / MS 0.987 are on par with the best baselines
+  (VACE-W2.1 AES 0.517; MS already best).
+- **Text controllability improved**: GMEScore 0.705 vs VACE-W2.2 0.685 (best baseline) = +2.9%.
 
 ### 6.2 Ablation Study (Table 2, Wan2.2-14B)
 
-**Incremental module ablation (each row adds one component):**
+**Incremental module ablation (each row adds one component).** Source Table 2 reports
+**only these 5 metrics** (Text Controllability + Cross-Domain + In-Domain); the AES/MS
+and Qwen-CLIP/Qwen-Score columns are not part of this ablation table.
 
-| # | Setting | AES ↑ | MS ↑ | GMEScore ↑ | NANO-CLIP ↑ | Qwen-CLIP ↑ | CD-Score ↑ | Qwen-Score ↑ | DINO-I ↑ | CLIP-I ↑ |
-|---|---------|------:|-----:|-----------:|------------:|------------:|-----------:|------------:|--------:|--------:|
-| 0 | Naive (concat, shared RoPE, no AdaLN) | 0.510 | 0.979 | 0.664 | 0.608 | 0.608 | 0.697 | 0.741 | 0.356 | 0.675 |
-| 1 | + Dual Self-Attn (independent QKV) | 0.512 | 0.981 | 0.671 | 0.615 | 0.615 | 0.715 | 0.748 | 0.367 | 0.683 |
-| 2 | + Domain-MoT (domain-aware AdaLN) | 0.514 | 0.983 | 0.687 | 0.631 | 0.631 | **0.783** | 0.769 | 0.396 | 0.697 |
-| 3 | + VR-DualRoPE | 0.515 | 0.985 | 0.691 | 0.642 | 0.642 | 0.813 | 0.795 | 0.394 | 0.688 |
-| 4 | + CCL (**full model**) | 0.516 | 0.987 | **0.705** | **0.658** | **0.658** | **0.861** | **0.829** | 0.400 | 0.690 |
+| # | Setting | GMEScore ↑ | NANO-CLIP ↑ | CD-Score ↑ | DINO-I ↑ | CLIP-I ↑ |
+|---|---------|-----------:|------------:|-----------:|---------:|---------:|
+| 0 | Naive Method (concat, shared RoPE) | 0.664 | 0.601 | 0.697 | 0.356 | 0.675 |
+| 1 | 0 + Dual Self-Attn (independent QKV) | 0.671 | 0.609 | 0.715 | 0.367 | 0.683 |
+| 2 | 0 + Domain-MoT (domain-aware AdaLN) | 0.687 | 0.627 | **0.783** | 0.396 | 0.697 |
+| 3 | 2 + VR-DualRoPE | 0.691 | 0.629 | 0.813 | 0.394 | 0.688 |
+| 4 | 3 + CCL (**full model**) | **0.705** | **0.636** | **0.861** | 0.400 | 0.690 |
 
 **Per-module contribution to CD-Score:**
 
@@ -426,39 +438,54 @@ bar-chart
 | VR-DualRoPE | +0.030 | −0.002 | −0.009 | +0.004 | Improves cross-domain; slightly hurts frame-level CLIP-I due to clustering |
 | CCL | +0.048 | +0.006 | +0.002 | +0.014 | Largest CD-Score gain after MoT; minimal fidelity improvement — teaches *controllability* |
 
-### 6.3 VR-DualRoPE Decoupling Strategy Ablation (Table 3)
+### 6.3 VR-DualRoPE Decoupling Strategy (Fig. 5c — qualitative only)
 
-Different offset strategies for reference RoPE:
+> **Source caveat:** The paper reports **no numeric ablation table** for the RoPE
+> decoupling strategy — only qualitative Fig. 5(c) and prose. The only quantitative
+> RoPE comparison lives in Table 2: naive RoPE (ID-2, CD-Score 0.783) → VR-DualRoPE
+> (ID-3, CD-Score 0.813). A prior version of this breakdown invented a separate
+> "Table 3" with a fabricated 0.801 middle row; that table does not exist in the paper.
 
-| # | RoPE Strategy | CD-Score ↑ | DINO-I ↑ | CLIP-I ↑ | Description |
-|---|---------------|-----------:|--------:|--------:|-------------|
-| A | Shared RoPE (baseline) | 0.783 | 0.396 | 0.697 | Ref images as extra video frames (temporal indices) |
-| B | Separate space, no subject offset | 0.801 | 0.393 | 0.691 | Separate RoPE space but all refs stacked sequentially |
-| C | Separate space + subject offset (**ours**) | **0.813** | 0.394 | 0.688 | Full VR-DualRoPE with $(0,h,w)$ and $(0,0,w)$ offsets |
+VR-DualRoPE moves reference images into their **own RoPE space** instead of concatenating
+them onto the video tokens along the temporal dimension (the naive scheme used by
+Table 2 rows ID-0/1/2). Within that separate space, two offset strategies exist (Fig. 5c):
 
-The subject-decoupled offset (row C) provides the best cross-domain performance.
-The slight CLIP-I drop (0.697→0.688) vs no offset (row B) is because same-subject
-images are pulled closer in RoPE space, causing the model to treat them as a
-cluster rather than individual high-fidelity copies.
+- **Reference-decoupled:** different reference images receive offsets along **both**
+  height and width.
+- **Subject-decoupled (ours):** multiple reference images of the *same* subject are
+  offset **only along the width** dimension, binding them together.
 
-### 6.4 Data Ablation (Table 4)
+The subject-decoupled offset better binds multiple references that describe different
+attributes of one subject (Fig. 5c). Quantitatively, adopting VR-DualRoPE (vs the naive
+RoPE of ID-2) lifts CD-Score **0.783 → 0.813 (+3.8%)** and NANO-CLIP 0.627 → 0.629, with
+a small in-domain dip (DINO-I 0.396 → 0.394, CLIP-I 0.697 → 0.688) — Table 2, ID-2 → ID-3.
 
-Impact of different training data components:
+### 6.4 Ditto-1M Data Ablation (Table 6, supplementary)
 
-| # | Training Data | CD-Score ↑ | DINO-I ↑ | CLIP-I ↑ |
-|---|--------------|-----------:|--------:|--------:|
-| A | Full training data | **0.861** | 0.400 | 0.690 |
-| B | w/o Ditto-1M (editing augmentation) | 0.823 | 0.395 | 0.687 |
-| C | w/o cross-pair reference sets | 0.789 | 0.390 | 0.684 |
+> **Source caveat:** The paper's only training-data ablation is Table 6 (Ditto-1M
+> on/off). A prior version of this breakdown invented a "w/o cross-pair reference sets
+> → CD-Score 0.789" row; that row does **not** exist in the source.
 
-**Key insight:** Without Ditto-1M, CD-Score drops from 0.861 to 0.823 but still
-crushes baselines (+13.5% over Kling 1.6). Ditto-1M is a bonus, not a necessity.
-Without cross-pair reference sets (which also means no CCL loss), the drop is
-larger (0.789) — confirming that the cross-pair construction pipeline is critical.
+| Setting | NANO-CLIP ↑ | CD-Score ↑ | DINO-I ↑ | CLIP-I ↑ |
+|---------|------------:|-----------:|---------:|---------:|
+| w/o Ditto-1M | 0.631 | 0.823 | 0.432 | 0.701 |
+| w/ Ditto-1M (full model) | 0.636 | **0.861** | 0.400 | 0.690 |
+
+**Key insight:** Without Ditto-1M, CD-Score drops 0.861 → 0.823 (−4.4%) but still
+crushes baselines (+13.5% over Kling 1.6's 0.725). Adding Ditto-1M trades a sliver of
+in-domain fidelity for a large cross-domain gain — DINO-I 0.432 → 0.400 and CLIP-I
+0.701 → 0.690 both dip slightly, while CD-Score jumps. Ditto-1M is a cross-domain
+bonus, not a necessity. (Recall from §3.6 that only 50K of Ditto-1M — 3.3% of the total
+data — is used, purely as cross-domain augmentation.)
 
 ### 6.5 Human Preference Evaluation (Figure 6)
 
-40 volunteers, 20 videos each, ranking 5 methods on 3 aspects (5=best, 1=worst).
+> **Source:** 40 volunteers, each ranking 20 randomly-selected videos on 3 aspects
+> (video quality, text controllability, open-domain subject consistency), distinct
+> scores 5 (best) → 1 (worst), no ties (§4.4). The specific scores below are
+> **Figure 6 bar-height readings** — the paper gives no numeric preference table, so
+> treat them as approximate. The qualitative finding (DomainShuttle wins all three,
+> biggest margin on open-domain subject consistency) is prose-confirmed.
 
 | Aspect | Kling 1.6 | VACE-W2.2 | FFGO | Phantom | **DomainShuttle** |
 |--------|----------:|----------:|-----:|--------:|------------------:|
@@ -470,18 +497,21 @@ DomainShuttle wins on all three aspects, with the **biggest margin on open-domai
 subject consistency** (+0.87 over Kling 1.6). The human evaluation corroborates the
 automatic metrics — real users also perceive the cross-domain advantage.
 
-### 6.6 Domain-MoT Ablation: Shared vs. Separate Modulation
+### 6.6 Domain-MoT — design note (no separate-modulation ablation exists)
 
-| # | AdaLN Configuration | CD-Score ↑ | DINO-I ↑ |
-|---|--------------------|-----------:|--------:|
-| A | Shared AdaLN (both branches conditioned on $t + a$) | 0.748 | 0.385 |
-| B | Separate AdaLN, both conditioned on $t$ only | 0.761 | 0.391 |
-| C | Separate AdaLN, ref conditioned on $t + a$ (**ours**) | **0.783** | **0.0.396** |
+> **Source caveat:** The paper reports **no** "shared vs separate AdaLN" ablation. A
+> prior version of this breakdown fabricated the 0.748 / 0.761 rows (neither value
+> appears in the paper — grep returns 0 hits) and carried a "0.0.396" typo. Only the
+> final Domain-MoT row is real (CD-Score 0.783, DINO-I 0.396 = Table 2, ID-2).
 
-The separate modulation with domain-aware conditioning on the reference branch
-(row C) is essential. Sharing domain attributes with the video branch (row A)
-contaminates the video's temporal/content structure with reference domain info,
-hurting both fidelity and cross-domain transfer.
+The Domain-MoT design (§3) uses **separate AdaLN pathways**: the video branch is
+conditioned on time $t$ alone, while the reference branch is conditioned on $(t, a)$
+where $a$ is the domain attribute — so domain info shapes reference features without
+leaking into the video branch's temporal/content structure. The paper validates
+Domain-MoT only through the incremental Table 2 ablation: Naive 0.697 → +Dual
+Self-Attn 0.715 → **+Domain-MoT 0.783**, a +0.068 jump that is the largest
+single-module CD-Score gain in the whole ablation (+9.5% over the Dual Self-Attn
+row, +12.3% over Naive).
 
 ## 7. Limitations
 
