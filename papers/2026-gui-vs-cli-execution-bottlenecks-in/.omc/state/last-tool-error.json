@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd papers/2026-gui-vs-cli-execution-bottlenecks-in/ && echo \\\"===TABLE1 REGION (200-235)===\\\" && sed -n '200,235p' paper_full.txt && echo \\\"===FAILURE TAXONOMY (250-330)===\\\" && sed -n '25...",
+  "error": "Exit code 1\n/bin/bash: line 1: cd: papers/2026-gui-vs-cli-execution-bottlenecks-in/: No such file or directory",
+  "timestamp": "2026-07-03T22:28:01.355Z",
+  "retry_count": 1
+}

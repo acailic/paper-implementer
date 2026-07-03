@@ -249,45 +249,97 @@ The paper describes a four-phase pipeline used to construct the patched skills (
 3. **Coverage report** — app-level README with pass/fail totals per application.
 4. **Skill documentation update** — update SKILL.md to match actual post-repair capabilities.
 
-### Per-workflow detailed breakdown (Table 3)
+### Per-workflow detailed breakdown (Tables 1 & 2)
 
-| Workflow | # Tasks | GUI Best | GUI Model | CLI Original | CLI Model | CLI Patched | Modality Winner |
-|----------|--------:|---------:|-----------|-------------:|-----------|------------:|-----------------|
-| Visual Design | 51 | 47.1% | GPT-5.4 | 54.9% | Codex GPT-5.5 | 66.7% | **CLI** |
-| Audio | 34 | **73.5%** | Claude Opus | 42.9% | Codex GPT-5.5 | 81.6% | CLI (patched) |
-| Knowledge | 28 | 42.9% | GPT-5.4 | 22.4% | Codex GPT-5.5 | **81.6%** | **CLI** (+38.7pp) |
-| CAD & 3D | 30 | 63.3% | Claude Opus | 67.3% | Codex GPT-5.5 | **73.5%** | **CLI** |
-| Graphics Debugging | 41 | **51.2%** | Claude Opus | 9.8% | Codex GPT-5.5 | 48.8% | GUI (margin) |
-| Documents | 43 | 60.5% | GPT-5.4 | 60.5% | Codex GPT-5.5 | **86.8%** | **CLI** |
-| Video & Streaming | 36 | **61.1%** | Claude Opus | 47.2% | Codex GPT-5.5 | 41.7% | **GUI** |
-| Spreadsheets | 32 | **78.1%** | GPT-5.4 | 46.9% | Codex GPT-5.5 | 65.6% | GUI |
-| Presentations | 20 | 70.0% | GPT-5.4 | 50.0% | Codex GPT-5.5 | **95.0%** | **CLI** (patched) |
-| Communication | 19 | **84.2%** | Claude Opus | 35.3% | Codex GPT-5.5 | 35.3% | **GUI** (+48.9pp) |
-| Game | 38 | 88.2% | Claude Opus | 89.5% | Codex GPT-5.5 | **100.0%** | **CLI** |
-| Web | 17 | 84.2% | Claude Opus | 100.0% | Codex GPT-5.5 | **100.0%** | **CLI** |
+> **Correction note:** An earlier version of this table mis-attributed per-category
+> scores to the wrong model and interleaved values from Codex GPT-5.4, Codex GPT-5.5,
+> and Claude Code variants. The figures below are transcribed **verbatim** from the
+> paper's Table 1 (per-category full-pass rates for all 10 models) and Table 2
+> (patched-skill diagnostic for Codex GPT-5.5), and the modality winners are
+> recomputed from those numbers.
+
+**Table 1 — per-category full pass rate (all models), verbatim from the paper.**
+Columns: Visual Design (Vis.) · Audio (Aud.) · Knowledge (Know.) · CAD & 3D (CAD.) ·
+Graphics Debugging (Gra.) · Documents (Doc.) · Video & Streaming (Vid.) · Spreadsheets
+(Sheet.) · Presentations (Slide.) · Communication (Comm.) · Game · Web · Avg · Time (s).
+
+| Modality | Model | Vis. | Aud. | Know. | CAD. | Gra. | Doc. | Vid. | Sheet. | Slide. | Comm. | Game | Web | Avg | Time |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| GUI | **GPT-5.4** | 47.1 | 73.5 | 42.9 | 46.9 | 51.2 | 51.3 | 60.5 | 61.1 | 78.1 | 70.0 | 84.2 | 88.2 | **59.1** | 455.8 |
+| GUI | Claude Sonnet 4.6 | 43.1 | 69.4 | 34.7 | 63.3 | 56.1 | 25.6 | 50.0 | 33.3 | 34.4 | 45.0 | 84.2 | 70.6 | 49.1 | 245.4 |
+| GUI | Claude Opus 4.7 | 37.3 | 81.6 | 34.7 | 59.2 | 70.7 | 53.9 | 55.3 | 63.9 | 56.3 | 15.0 | 73.7 | 70.6 | 55.9 | 346.4 |
+| GUI | EvoCUA-32B | 23.5 | 34.7 | 28.6 | 16.3 | 22.0 | 15.4 | 31.6 | 5.6 | 15.6 | 35.0 | 21.1 | 52.9 | 23.9 | 254.4 |
+| GUI | Qwen3.5-27B | 35.3 | 24.5 | 8.2 | 14.3 | 2.4 | 5.1 | 26.3 | 11.1 | 18.8 | 10.0 | 42.1 | 64.7 | 19.3 | 1306.8 |
+| GUI | Kimi-K2.6 | 41.2 | 51.0 | 32.7 | 51.0 | 36.6 | 15.4 | 44.7 | 16.7 | 21.9 | 25.0 | 68.4 | 82.4 | 38.6 | 1421.2 |
+| CLI | Codex GPT-5.4 | 47.1 | 20.4 | 8.2 | 61.2 | 4.9 | 5.1 | 36.8 | 0.0 | 9.4 | 5.0 | 89.5 | 0.0 | 24.3 | 254.4 |
+| CLI | **Codex GPT-5.5** | 54.9 | 42.9 | 22.4 | 67.3 | 9.8 | 64.1 | 60.5 | 47.2 | 46.9 | 50.0 | 100.0 | 35.3 | **48.2** | 188.1 |
+| CLI | Claude Code Sonnet 4.6 | 47.1 | 30.6 | 4.1 | 40.8 | 2.4 | 10.3 | 39.5 | 5.6 | 15.6 | 0.0 | 100.0 | 23.5 | 25.2 | 208.6 |
+| CLI | Claude Code Opus 4.7 | 41.2 | 20.4 | 8.2 | 36.7 | 17.1 | 12.8 | 39.5 | 5.6 | 15.6 | 0.0 | 100.0 | 5.9 | 24.3 | 248.8 |
+
+**Table 2 — verifier-guided skill patching for Codex GPT-5.5 (diagnostic upper bound).**
+
+| Setting | Vis. | Aud. | Know. | CAD. | Gra. | Doc. | Vid. | Sheet. | Slide. | Comm. | Game | Web | Avg | Time |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| GUI GPT-5.4 (reference) | 47.1 | 73.5 | 42.9 | 46.9 | 51.2 | 51.3 | 60.5 | 61.1 | 78.1 | 70.0 | 84.2 | 88.2 | 59.1 | 455.8 |
+| CLI original skills | 54.9 | 42.9 | 22.4 | 67.3 | 9.8 | 64.1 | 60.5 | 47.2 | 46.9 | 50.0 | 100.0 | 35.3 | 48.2 | 188.1 |
+| CLI patched skills | 66.7 | 81.6 | 81.6 | 73.5 | 48.8 | 56.4 | 86.8 | 41.7 | 65.6 | 95.0 | 100.0 | 35.3 | **69.3** | **162.6** |
+| Relative change (orig→patched) | +21.5% | +90.2% | +264.3% | +9.2% | +398.0% | −12.0% | +43.5% | −11.7% | +39.9% | +90.0% | 0.0% | 0.0% | +43.8% | −13.6% |
+
+### Per-category modality winners (recomputed from Table 1)
+
+"GUI best" = the maximum score across all six GUI models for that category (with the
+model that attained it). "CLI orig" and "CLI patch" are Codex GPT-5.5's two settings
+from Table 2. Δ = GUI-best − CLI-patched (the paper's coverage-controlled upper bound).
+
+| Workflow | GUI best | GUI model | CLI orig | CLI patch | Δ vs patch | Winner (vs patch) | Winner (vs orig) |
+|:--|--:|:--|--:|--:|--:|:--|:--|
+| Visual Design | 47.1 | GPT-5.4 | 54.9 | 66.7 | −19.6 | CLI | CLI |
+| Audio | 81.6 | Opus 4.7 | 42.9 | 81.6 | 0.0 | tie | GUI |
+| Knowledge | 42.9 | GPT-5.4 | 22.4 | 81.6 | −38.7 | CLI | GUI |
+| CAD & 3D | 63.3 | Sonnet 4.6 | 67.3 | 73.5 | −10.2 | CLI | CLI |
+| Graphics Debug | 70.7 | Opus 4.7 | 9.8 | 48.8 | +21.9 | GUI | GUI |
+| Documents | 53.9 | Opus 4.7 | 64.1 | 86.8 | −32.9 | CLI | CLI |
+| Video & Streaming | 60.5 | GPT-5.4 | 60.5 | 41.7 | +18.8 | GUI | tie |
+| Spreadsheets | 63.9 | Opus 4.7 | 47.2 | 41.7 | +22.2 | GUI | GUI |
+| Presentations | 78.1 | GPT-5.4 | 46.9 | 65.6 | +12.5 | GUI | GUI |
+| Communication | 70.0 | GPT-5.4 | 50.0 | 35.3 | +34.7 | GUI | GUI |
+| Game | 84.2 | GPT-5.4 / Sonnet | 100.0 | 100.0 | −15.8 | CLI | CLI |
+| Web | 88.2 | GPT-5.4 | 35.3 | 35.3 | +52.9 | GUI | GUI |
+
+> **Reading the two winner columns.** Against the *original* (incomplete) skill layer,
+> GUI best wins 7 categories (Audio, Knowledge, Graphics, Spreadsheets,
+> Presentations, Communication, Web), CLI wins 4 (Visual, CAD, Documents, Game), and
+> Video ties — matching the paper's stated tendency that GUI wins "Audio,
+> Presentations, Communication, and Web" while CLI is "competitive or stronger" in
+> "Visual Design, CAD & 3D, Documents, Video & Streaming, and Game." Against the
+> *patched* (coverage-controlled) skill layer the balance shifts to 6 GUI / 5 CLI / 1
+> tie, with CLI's biggest recoveries in Knowledge (+38.7) and Documents (+32.9) and
+> GUI's largest residual edges in Web (+52.9) and Communication (+34.7).
 
 #### Per-workflow analysis
 
-**GUI-dominant workflows (interface-exposed):**
-- **Audio (+30.6pp):** GUI wins with Claude Opus (73.5% vs CLI original 42.9%). Audio editing is heavily reliant on visual waveform inspection and interactive timeline manipulation.
-- **Communication (+48.9pp):** Largest GUI advantage. Real-time collaboration interfaces (Zoom, Obsidian) are fundamentally screen-mediated.
-- **Spreadsheets (+31.2pp):** Cell-level visual inspection and drag operations favor GUI.
-- **Video & Streaming (+13.9pp over original CLI; +19.4pp over patched CLI):** Timeline-based editing is inherently visual.
+**GUI-dominant workflows (interface-exposed — winner holds even after skill repair):**
+- **Web (+52.9 vs patch):** Largest GUI advantage. CLI is stuck at 35.3% (original *and* patched — repair cannot help, because the bottleneck is not skill coverage but visual browsing of live page state). GUI GPT-5.4 reaches 88.2%.
+- **Communication (+34.7 vs patch):** Real-time collaboration interfaces (Zoom, Obsidian) are fundamentally screen-mediated; CLI stays at 35.3% even after patching.
+- **Spreadsheets (+22.2 vs patch):** Cell-level visual inspection and drag operations favor the GUI (Opus 4.7 best at 63.9%); CLI actually *drops* 11.7% after patching.
+- **Graphics Debugging (+21.9 vs patch):** GUI Opus 4.7 (70.7%) leads; render inspection stays visual even though the underlying state is structured.
+- **Video & Streaming (+18.8 vs patch):** Timeline-based editing is inherently visual; GUI ties CLI-original (60.5) and pulls ahead once CLI is patched down to 41.7%.
+- **Presentations (+12.5 vs patch):** Slide workflows favor the GUI (GPT-5.4 78.1%) despite CLI recovering to 65.6%.
 
-**CLI-dominant workflows (structured-artifact):**
-- **Knowledge (+38.7pp with patched CLI):** Biggest gain from skill repair — from 22.4% → 81.6% (+264.3% relative improvement). Citation management and document structuring are well-served by programmatic operations.
-- **Graphics Debugging (+398% relative with patched CLI):** From 9.8% → 48.8% — debugging structured graphics state is highly programmatic. Note: GUI still holds a marginal edge (51.2%) because render inspection remains visual.
-- **Documents (+26.3pp with patched CLI):** From 60.5% → 86.8%. Structured document manipulation via CLI excels.
-- **Game (+10.5pp original CLI):** Already CLI-competitive before patching (89.5% vs 88.2%); reaches 100% patched. Scene graph manipulation is fundamentally programmatic.
-- **Web (+15.8pp original CLI):** Already 100% for CLI — web interaction is inherently URL/API-driven.
+**CLI-dominant workflows (structured-artifact — CLI wins once skills cover them):**
+- **Knowledge (−38.7 vs patch):** Biggest skill-repair recovery — CLI Codex-5.5 jumps 22.4% → 81.6% (+264.3% relative, the largest relative gain in Table 2). Citation/document structuring is inherently programmatic.
+- **Documents (−32.9 vs patch):** CLI climbs 64.1% → 86.8%; structured document manipulation suits programmatic operations.
+- **CAD & 3D (−10.2 vs patch):** CLI leads throughout (67.3% original already beats GUI-best 63.3%); scene-graph manipulation is fundamentally programmatic.
+- **Game (−15.8 vs patch):** CLI is already at 100% with *original* skills — the strongest original-CLI category — beating GUI-best 84.2%.
+- **Visual Design (−19.6 vs patch):** Despite the domain's visual surface, tasks involve structured artifact properties (pages, shapes, labels, connectors) that CLI manipulates more directly.
 
 ```mermaid
 xychart-beta
     title "Per-Workflow Full Pass Rates: GUI Best vs CLI Patched"
-    x-axis ["Visual Design", "Audio", "Knowledge", "CAD & 3D", "Graphics Debug", "Documents", "Video", "Spreadsheets", "Presentations", "Communication", "Game", "Web"]
+    x-axis ["Vis", "Aud", "Know", "CAD", "Gra", "Doc", "Vid", "Sheet", "Slide", "Comm", "Game", "Web"]
     y-axis "Full Pass Rate (%)" 0 --> 100
-    bar [47.1, 73.5, 42.9, 63.3, 51.2, 60.5, 61.1, 78.1, 70.0, 84.2, 88.2, 84.2]
-    bar [66.7, 81.6, 81.6, 73.5, 48.8, 86.8, 41.7, 65.6, 95.0, 35.3, 100.0, 100.0]
+    bar [47.1, 81.6, 42.9, 63.3, 70.7, 53.9, 60.5, 63.9, 78.1, 70.0, 84.2, 88.2]
+    bar [66.7, 81.6, 81.6, 73.5, 48.8, 56.4, 86.8, 41.7, 65.6, 95.0, 100.0, 35.3]
 ```
 
 ### Procedural grounding experiment (Table 4)
@@ -315,17 +367,21 @@ CLI agents are consistently faster than GUI agents across all models:
 
 ## 7. Failure Taxonomy
 
-### 7.1 CLI failure modes (93.8% in two primary categories)
+### 7.1 CLI failure modes (93.8% skill-layer)
 
-The paper analyzes 80 failed CLI trajectories and identifies three failure types:
+The paper samples failed trajectories from Codex GPT-5.5 (CLI) and GPT-5.4 (GUI),
+assigning each failed task a single primary failure label (Figure 4). For CLI, all
+three recurring error types are collapsed under the umbrella **"skill coverage and
+contract gaps" (93.8%)** — the paper does *not* publish a per-type percentage split,
+so the three types below are described qualitatively, not quantitatively.
 
-| Failure Type | Share | Description | Example |
-|-------------|------:|-------------|---------|
-| **Skill Coverage & Contract Gap** | ~62% (primary) | Required operations are missing from the skill library, or the documented behavior of a skill differs from its actual behavior. The agent calls a skill expecting one result but gets another. | CLI-Anything's GIMP skill lacks a "layer blend mode" operation; the agent hallucinates a plausible function name. |
-| **Implicit Default Reconstruction** | ~32% (sub-category) | The agent must reconstruct defaults that GUI users receive automatically — object naming conventions, identifier schemes, file naming rules. These are never documented in skill contracts. | An agent must guess the default layer name in GIMP; GUI users simply see it on screen. |
-| **Unobservable Application Semantics** | part of 93.8% | Critical application state is not exposed through any skill, so the agent hallucinates plausible values. | RenderDoc captures have internal format IDs not exposed via CLI; agent fabricates parameters. |
+| Failure Type | Description | Example |
+|-------------|-------------|---------|
+| **Skill Coverage & Contract Gap** | Required operations are missing from the skill library, **or** the documented behavior of a skill diverges from its actual implementation. The agent follows the prescribed workflow yet still fails final verifier checks on the produced artifacts. | CLI-Anything's GIMP skill lacks a "layer blend mode" operation; the agent calls a documented function that behaves differently than advertised. |
+| **Implicit Default Reconstruction** | The agent must explicitly reconstruct application-specific identity conventions that GUI users inherit implicitly from the interface — default object names, identifier assignment rules, internal-vs-user-facing label distinctions. Produces structurally correct objects with wrong identifiers/defaults. | An agent must guess the default layer name in GIMP; GUI users simply see it on screen. |
+| **Unobservable Application Semantics** | Critical application state is not exposed through any command/script/skill interface, so the agent hallucinates plausible default behaviors or hidden rules. Outputs appear structurally correct but violate implicit semantics. | RenderDoc captures have internal format IDs not exposed via CLI; the agent fabricates parameters. |
 
-> **Key insight:** 93.8% of CLI failures are skill-layer failures, not model reasoning failures. The model *knows what to do* but the skill interface prevents it.
+> **Key insight:** 93.8% of CLI failures are skill-layer failures, not model reasoning failures. The model *knows what to do* but the skill interface prevents it. (The 93.8% is the collapsed total of all three types above — when unobservable semantics are not exposed by the skill interface, they are assigned to the skill-coverage bucket.)
 
 ### 7.2 GUI failure modes
 
@@ -341,9 +397,9 @@ The paper analyzes 80 failed CLI trajectories and identifies three failure types
 
 ```mermaid
 flowchart LR
-    subgraph CLI_failures["CLI Failure Modes (93.8% skill-layer)"]
-        F1["Skill Coverage<br/>& Contract Gap<br/>~62%"]
-        F2["Implicit Default<br/>Reconstruction<br/>~32%"]
+    subgraph CLI_failures["CLI Failure Modes (93.8% skill-layer, collapsed)"]
+        F1["Skill Coverage<br/>& Contract Gap"]
+        F2["Implicit Default<br/>Reconstruction"]
         F3["Unobservable<br/>App Semantics"]
         F1 --- F2 --- F3
     end

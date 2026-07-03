@@ -1,0 +1,123 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1783117516760,
+  "projectRoot": "/home/nistrator/Documents/github/paper-implementer",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "scripts"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "papers": {
+      "path": "papers",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783117516756,
+      "keyFiles": [
+        "tracker.json"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 3,
+      "lastAccessed": 1783117516757,
+      "keyFiles": [
+        "daily_tracker_refresh.py",
+        "fetch_most_cited.py",
+        "requirements.txt"
+      ]
+    },
+    "templates": {
+      "path": "templates",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1783117516758,
+      "keyFiles": [
+        "breakdown.md",
+        "implementation.md",
+        "writeup.md"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
+      "accessCount": 5,
+      "lastAccessed": 1783117893190,
+      "type": "file"
+    },
+    {
+      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117524163,
+      "type": "file"
+    },
+    {
+      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117529259,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117533845,
+      "type": "file"
+    },
+    {
+      "path": "AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117533897,
+      "type": "file"
+    },
+    {
+      "path": "papers/tracker.json",
+      "accessCount": 1,
+      "lastAccessed": 1783117544579,
+      "type": "file"
+    },
+    {
+      "path": "templates/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117559667,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117559719,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117572936,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
