@@ -95,12 +95,6 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-are-we-ready-for-an-agent/breakdown.md",
-      "accessCount": 7,
-      "lastAccessed": 1783120832276,
-      "type": "file"
-    },
-    {
       "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
       "accessCount": 5,
       "lastAccessed": 1783117893190,
@@ -182,6 +176,12 @@
       "path": "papers/2026-improved-large-language-diffusion-models/paper_layout.txt",
       "accessCount": 1,
       "lastAccessed": 1783119345177,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-are-we-ready-for-an-agent/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783120504075,
       "type": "file"
     }
   ],

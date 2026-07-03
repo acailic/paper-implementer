@@ -407,8 +407,15 @@ flowchart TB
 | LongBench (long-context) | context compression | **MemTree** | best balance | Accuracy |
 | LongBench (long-context) | context compression | **MemoryOS** | best balance | Accuracy |
 
-> **MemoryOS and MemOS** are closest to the Pareto frontier *overall* —
-> robustness = preserving the right evidence at the right abstraction.
+> **MemoryOS** sits closest to the Pareto frontier *overall* — robustness =
+> preserving the right evidence at the right abstraction.
+>
+> **Sourcing note (RQ1):** the **leader identities** are body-confirmed
+> (MemOS best EM on LoCoMo; Long Context best EM and MemoChat best Task Success
+> Rate on DB-Bench), but the exact **scores** (48.0 / 35.3 / 11.5 / 48.2 / 55.4)
+> are bar-height readings from Figure 7's grouped bars, not table values —
+> treat them as approximate. The LongBench rows report only "best balance"
+> because the paper states no single LongBench winner.
 
 ### Retrieval fidelity (RQ2, Figure 8)
 
@@ -426,14 +433,36 @@ flowchart TB
 
 ### Update robustness (RQ3, Table 2)
 
-| Slice | Winner | Architecture | Substring EM | ROUGE-L F1 | LLM Judge |
-|-------|--------|-------------|:----------:|:----------:|:----------:|
-| KnowledgeUpdate (direct fact revision) | **Zep** | Graph multi-version | **44.4** | 36.8 | — |
-| KnowledgeUpdate (direct fact revision) | Mem0 | Structured + CRUD | 38.1 | 34.2 | — |
-| KnowledgeUpdate (direct fact revision) | MemoryOS | Composite + heat | 32.5 | 30.1 | — |
-| TemporalReasoning (dispersed evidence) | **Cognee** | Relational ECL | **18.7** | **35.8** | — |
-| TemporalReasoning (dispersed evidence) | A-MEM | Hybrid graph+dense | 16.2 | 31.4 | — |
-| ActiveEntity (entity state tracking) | **Mem0_g** | Directed labeled graph | — | — | **42.1** |
+Table 2 reports three update-stress slices: **Knowledge Update** and **Temporal
+Reasoning** from LongMemEval (Substring EM / ROUGE-L F1), and the **Temporal**
+slice from LoCoMo (Exact Match / Answer F1). Values below are transcribed
+verbatim from Table 2 (11 systems; no LLM-Judge and no "ActiveEntity" slice
+exist in this table).
+
+| Method | LoCoMo EM | LoCoMo F1 | KU Substr EM | KU ROUGE-L F1 | TR Substr EM | TR ROUGE-L F1 |
+|--------|:---------:|:---------:|:------------:|:-------------:|:------------:|:-------------:|
+| Long Context | 8.1 | 26.9 | 20.0 | 18.0 | 12.0 | 24.0 |
+| Embedding RAG | 1.6 | 7.9 | 20.0 | 17.8 | 10.7 | 22.7 |
+| Mem0 | 3.2 | 6.0 | 15.6 | 17.1 | 10.7 | 22.4 |
+| MemoChat | 2.4 | 15.4 | 8.9 | 12.9 | 10.7 | 25.3 |
+| **Cognee** | 4.0 | **28.1** | 37.8 | 34.0 | **18.7** | **35.8** |
+| **Zep** | 4.8 | 18.1 | **44.4** | **36.8** | 13.3 | 30.5 |
+| MemTree | 5.6 | 18.6 | 31.1 | 30.6 | 8.0 | 29.9 |
+| Letta (MemGPT) | 0.0 | 7.1 | 17.8 | 5.7 | 12.0 | 8.8 |
+| LightMem | 4.0 | 20.1 | 15.6 | 20.2 | 12.0 | 28.6 |
+| SimpleMem | 4.4 | 8.1 | 6.7 | 7.4 | 8.0 | 22.6 |
+| **MemOS** | **8.9** | 28.0 | 28.9 | 30.5 | 12.0 | 31.1 |
+| MemoryOS | 3.2 | 22.7 | 35.6 | 32.2 | 16.0 | 31.6 |
+| A-MEM | 4.8 | 17.7 | 26.7 | 22.8 | 8.0 | 22.5 |
+
+**Per-slice winners (per the paper body):**
+- **Knowledge Update (direct fact revision):** **Zep** — graph/relational
+  organization, 44.4 Substring EM / 36.8 ROUGE-L F1.
+- **Temporal Reasoning (dispersed evidence):** **Cognee** — relational ECL,
+  18.7 Substring EM / 35.8 ROUGE-L F1.
+- **LoCoMo Temporal (exact latest-state grounding):** **MemOS** highest EM
+  (8.9), **Cognee** highest Answer F1 (28.1). Among full-coverage methods,
+  Cognee / MemOS / MemoryOS sit closest to the frontier overall.
 
 - **Backbone robustness (O5):** changing the LLM changes absolute quality more
   than *which memory pipeline* wins → update behavior is a pipeline-level
@@ -454,37 +483,69 @@ flowchart TB
 | **Cognee** | 43.1 | 37.5 | 33.2 | −9.9 | decent |
 
 > Bigger prompts alone don't sustain quality. The challenge at long horizons is
-> **choosing the right abstraction**, not storing more. SimpleMem's −0.3 drift
-> over 31 sessions is remarkable.
+> **choosing the right abstraction**, not storing more.
+>
+> **Sourcing note (RQ4):** Figure 10 is three panels with three different
+> metrics, merged here into one table — **(a)** LongBench *Accuracy* over
+> Short/Medium/Long context buckets, **(b)** LongMemEval *ROUGE-L F1* over
+> session-count bins, **(c)** LoCoMo *Answer F1* over evidence-distance bins.
+> Only the **endpoints cited in the body** are hard-verified: Long Context
+> 42.6→19.0 (LongBench Acc), Embedding RAG 37.1→7.4 (LoCoMo Ans F1), and
+> SimpleMem 35.2→34.9 which the body gives as **Short→Medium** (not Short→Long
+> as the columns above imply — the 34.9 is the *Medium* bucket, so SimpleMem's
+> Long-bucket value and the "−0.3 over 31 sessions" claim are not
+> body-confirmed). All Medium-bin and other-system Long-bin cells are bar-height
+> readings from Figure 10 and should be treated as approximate.
 
 ### Cost (RQ5, Figure 11) — *the operational punchline*
 
-| System | Utility (0–100) | Latency/query (s) | Utility/latency | Tier |
-|--------|:---:|:---:|:---:|------|
-| **LightMem** | 48.3 | **3.7** 🏆 | **13.1** | 🏆 Efficiency king |
-| **MemTree** | 63.5 | 15.9 | 4.0 | Best balance |
-| **A-MEM** | 57.7 | 17.9 | 3.2 | Good value |
-| **Mem0** | 21.4 | 35.9 | 0.6 | 💀 Weak |
-| **MemoryOS** | 82.0 | 28.6 | 2.9 | Top utility @ fair cost |
-| **MemoChat** | 28.0 | 15.4 | 1.8 | 💀 Weak |
-| **Letta (MemGPT)** | ~62 | ~42 | ~1.5 | Moderate |
-| **MemAgent** | ~55 | ~55 | ~1.0 | Expensive |
-| **Cognee** | ~84 | 116.5 | 0.7 | Diminishing returns |
-| **Zep** | ~84 | 155.1 | 0.5 | Diminishing returns |
-| **MemOS** | ~88 | 286.4 | 0.3 | 💀 Extreme cost |
-| **SimpleMem** | ~90 | 374.2 | 0.2 | 💀 Extreme cost |
+**Two distinct figures, do not merge them:**
+- **Figure 11a — Cost-Effectiveness Frontier.** Normalized Utility (0–100, mean
+  of six min-max-normalized LoCoMo + LongMemEval metrics) vs **Avg. Operation
+  Latency/Query** (construction + query time, amortized). The paper evaluates
+  **8 memory-augmented systems** here; their (utility, latency) pairs from the
+  body text are verbatim:
+- **Figure 11b — Three-Benchmark Operation Latency.** **Outlier-filtered avg
+  total latency/query** per benchmark (LoCoMo / LongMemEval / LongBench) for a
+  different 9-system panel (incl. Long Context baseline, MemAgent, Letta,
+  SimpleMem, MemOS). These are *per-benchmark* numbers, NOT the overall avg
+  latency of 11a — the prior version of this table conflated the two.
 
-```mermaid
-xychart-beta
-    title "Utility vs. Latency Frontier (RQ5)"
-    x-axis "Latency / query (s)" 3.7 --> 400
-    y-axis "Normalized Utility (0-100)" 0 --> 100
-    line [48.3, 63.5, 57.7, 82.0, 84, 84, 88, 90]
-    line [3.7, 15.9, 17.9, 28.6, 116.5, 155.1, 286.4, 374.2]
-```
+#### Figure 11a — Utility vs. Avg Operation Latency (the 8 evaluated systems)
 
-> Heavy hybrids blow up to **374–552 s** on LongBench. **Localized maintenance
-> is the whole game for cost.**
+| System | Normalized Utility | Avg Latency/query (s) | Tier |
+|--------|:------------------:|:---------------------:|------|
+| **LightMem** | 48.3 | **3.67** 🏆 | 🏆 Efficiency king |
+| **MemTree** | 63.5 | 15.9 | Best balance |
+| **MemoChat** | 28.0 | 15.4 | 💀 Weak utility |
+| **A-MEM** | 57.7 | 17.9 | Good value |
+| **Mem0** | 21.4 | 35.9 | 💀 Weak |
+| **MemoryOS** | **82.0** | 28.6 | Top utility @ fair cost |
+| **Cognee** | ≥84 | 116.5 | Diminishing returns |
+| **Zep** | ≥84 | 155.1 | Diminishing returns |
+
+> The paper names exactly these 8 systems on the frontier; SimpleMem, MemOS,
+> Letta, and MemAgent are **not** in the Figure 11a evaluation, so they have no
+> verifiable overall (utility, avg-latency) pair — earlier entries for them
+> here were Figure 11b per-benchmark latencies misread as overall averages.
+
+#### Figure 11b — LongBench outlier-filtered total latency (the heavy-tail view)
+
+On LongBench the same separation sharpens dramatically (body, verbatim):
+
+| System | LongBench latency/query (s) |
+|--------|:---------------------------:|
+| LightMem | 17.3 |
+| MemTree | 116.7 |
+| Mem0 | 374.2 |
+| MemoChat | 460.2 |
+| MemoryOS | 490.0 |
+| A-MEM | 552.1 |
+
+> Heavy hybrids blow up to **374–552 s** on LongBench (Mem0 / MemoChat /
+> MemoryOS / A-MEM). **Localized maintenance is the whole game for cost.**
+> Note: the prior breakdown's "SimpleMem 374.2" was a misattribution — 374.2 is
+> **Mem0's** LongBench latency, not a SimpleMem overall number.
 
 - **O7 (Localized Maintenance):** efficiency is governed by **maintenance
   scope**, not by whether you use structure. Localized update/search = cheap;
