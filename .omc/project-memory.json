@@ -71,15 +71,15 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
-      "accessCount": 11,
-      "lastAccessed": 1783120002226,
+      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "accessCount": 12,
+      "lastAccessed": 1783122277176,
       "type": "file"
     },
     {
-      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
       "accessCount": 11,
-      "lastAccessed": 1783121951058,
+      "lastAccessed": 1783120002226,
       "type": "file"
     },
     {
@@ -116,6 +116,12 @@
       "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/breakdown.md",
       "accessCount": 6,
       "lastAccessed": 1783122227373,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-wan-streamer-v01-end-to-end/breakdown.md",
+      "accessCount": 6,
+      "lastAccessed": 1783122500377,
       "type": "file"
     },
     {
@@ -224,6 +230,12 @@
       "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/paper_full.txt",
       "accessCount": 1,
       "lastAccessed": 1783121981765,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-wan-streamer-v01-end-to-end/paper_layout.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783122323936,
       "type": "file"
     }
   ],

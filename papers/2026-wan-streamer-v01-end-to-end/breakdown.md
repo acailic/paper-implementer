@@ -495,89 +495,92 @@ The key difference from standard distillation: $\hat{\mathbf{h}}_k$ contains the
 
 ## Results
 
-### Latency Comparison
+### Latency Comparison (Table 1, verbatim)
 
-| System | Type | User-visible Latency | Notes |
-|--------|------|---------------------|-------|
-| Doubao Realtime Voice | speech-to-speech | ~1s overall | Speech-only product |
-| GPT-4o Realtime API | speech-to-speech | ~500ms API TTFB; ~800ms voice-to-voice | No visual output |
-| Hume EVI 3 | speech-to-speech | 0.9–1.4s web-app benchmark | No visual output |
-| Gemini Live API | speech-to-speech | 1.2–3.6s API benchmark | No visual output |
-| Moshi | speech-to-speech | ~200ms model latency | Native full-duplex but no visual |
-| Qwen3/3.5-Omni | audio-video in, speech out | 234–547ms first-packet | No visual avatar generation |
-| **Wan-Streamer** | **text/audio/video in+out** | **~550ms total (incl. 350ms network)** | **Single end-to-end model** |
+Per Table 1, the paper deliberately separates *user-visible response latency* from an *other reported metric* column and explicitly warns the table "should be read by measurement boundary rather than by the smallest raw number" (model-internal, first-packet, first-token, endpointing, and API TTFB latency are not directly comparable).
 
-### Latency Decomposition — Detailed Analysis
+| System | Interaction | User-visible response latency | Other reported metric | Comparison boundary |
+|--------|-------------|-------------------------------|----------------------|---------------------|
+| Doubao Realtime Voice | speech-to-speech | ~1s overall | ~700ms bare-model latency | Official speech-only product numbers; no visual agent output |
+| Seeduplex | speech-to-speech | N/R absolute | −250ms endpoint, −300ms interruption latency vs previous Doubao | Relative production improvement; speech-only |
+| GPT-4o / Realtime API | speech-to-speech, audio/vision input | protocol-dependent | 232/320ms official audio response; ~500ms API TTFB; ~800ms target voice-to-voice | Reported numbers mix model response, API TTFB, endpointing, and network |
+| Hume EVI 3 | speech-to-speech | 0.9–1.4s web-app benchmark | under 300ms model response | Vendor benchmark; no visual output stream |
+| Gemini Live API | speech-to-speech | 1.2–3.6s API benchmark | N/R model-side | Vendor benchmark; not an official model breakdown |
+| Sesame web app | speech-to-speech | 0.8–1.2s web-app benchmark | N/R model-side | Vendor benchmark; speech-only |
+| Moshi | speech-to-speech | N/R product path | 160ms theoretical; 200ms practical model latency | Native full-duplex speech model; no visual agent |
+| Qwen3/3.5-Omni | audio-video-text in, speech/text out | N/R interaction loop | first-packet: 234/547ms; Qwen3.5 Flash 235/426ms, Plus 435/651ms | First-packet metric; no synchronized visual avatar generation |
+| MiniCPM-o 4.5 | audio-video in, speech/text out | N/R interaction loop | 0.58s first-token; RTF 0.20–0.27 | First-token/RTF metric; no visual avatar generation |
+| **Wan-Streamer (ours)** | **text/audio/video in/out** | **~550ms total incl. 350ms network** | **~200ms model-side; 25 FPS video output** | **One end-to-end model; text I/O, speech, and synchronized visual response share one causal stream** |
 
-```mermaid
-gantt
-    title Wan-Streamer: Per-Step Latency Breakdown (Streaming Unit k)
-    dateFormat X
-    axisFormat %Lms
+> **Sourcing note.** The earlier version of this table dropped three of the nine compared systems (Seeduplex, Sesame web app, MiniCPM-o 4.5) and folded the "Other reported metric" column into Notes, which hid Doubao's ~700ms bare-model latency, Moshi's 160ms theoretical figure, and the Qwen3.5 Flash/Plus first-packet breakdown. Values above are verbatim from Table 1 (paper_layout.txt lines 349–376).
 
-    section Thinker GPU (parallel pipeline)
-    Encode user input u_k         :a1, 0, 30
-    Transformer pass (text+KV)    :a2, 25, 75
-    Decode prev latents (overlap)  :a3, 75, 170
+### Latency Decomposition — What the Paper Actually Reports
 
-    section Performer GPU
-    Recv KV slice from Thinker    :b1, 75, 80
-    Flow matching (N_S steps)     :b2, 80, 190
-    Keep clean latents             :b3, 190, 200
+> **Correction note.** A prior version of this section contained a per-step gantt chart and a "Full End-to-End Latency Budget" table breaking the ~200 ms model-side latency into specific per-component figures (encode ~25 ms, transformer ~50 ms, flow-matching ~110 ms, decode ~95 ms, comm ~5 ms, plus a "~285 ms serial" baseline and 175 ms upload/download splits). **None of these per-component millisecond figures appear in the paper.** The paper reports only the aggregate ~200 ms model-side latency, the 350 ms bidirectional network budget, and the ~550 ms total (Abstract; §1; §2.4; §3). The decomposition below is sourced verbatim.
 
-    section Communication
-    KV cache transfer (T→P)       :c1, 75, 80
-    Latent transfer (P→T, next k) :c2, 190, 200
-```
+The paper states (§2.4 / §3) that **model-side signal-to-signal latency** is "the sum of encoding, thinker state update, performer latent generation, and decoding, and is currently approximately 200 ms." The protocol: the clock starts when a 160 ms user streaming unit is available to the thinker and ends when the corresponding audio-video response unit has been decoded for emission at 25 FPS.
 
-The total **model-side latency** for a single streaming unit is approximately **200ms**, broken down as:
+**Sourced latency facts:**
 
-$$
-\underbrace{t_{\text{encode}}}_{\sim 25\,\text{ms}} + \underbrace{t_{\text{transformer}}}_{\sim 50\,\text{ms}} + \underbrace{t_{\text{FM}}}_{\sim 110\,\text{ms}} + \underbrace{t_{\text{decode}}}_{\sim 95\,\text{ms}} + \underbrace{t_{\text{comm}}}_{\sim 5\,\text{ms}} \approx 200\,\text{ms (with overlap)}
-$$
+| Quantity | Value | Source |
+|----------|-------|--------|
+| Streaming unit duration | 160 ms (4 frames @ 25 FPS) | Abstract; §2.4 |
+| Model-side signal-to-signal latency | ~200 ms | Abstract; §1; §2.4; §3 |
+| Bidirectional network budget | 350 ms | Abstract; §3 |
+| Total interaction latency (remote user) | ~550 ms | Abstract; §1; §3 |
+| Real-time throughput condition | performer wall-time + KV/latent communication must fit within one 160 ms unit | §2.4 (Fig. 2 caption) |
+| Additional optimizations | CUDA graph capture, compilation, optimized kernels, KV-cache exchange | §2.4 |
 
-**Critical overlap:** The Thinker decodes step $k-1$'s latents *while* the Performer runs flow matching for step $k$. This hides most of the decode latency, reducing perceived latency from ~285ms (serial) to ~200ms (parallel).
+**Thinker–Performer overlap (the only "decomposition" the paper gives, Fig. 2).** The schedule *pipelines across adjacent streaming units* — it does NOT give a within-unit ms breakdown:
 
-#### Full End-to-End Latency Budget
+- **Thinker GPU:** encodes current user observations $u_k$, updates the KV cache, and decodes the *previous* response latents $y_{k-1}$ for immediate emission.
+- **Performer GPU:** receives the current KV slice and runs *only* the flow-matching solver to produce the next clean audio-visual latents $y_k$, returned to the thinker at the following unit.
+- The short Thinker work is hidden under the longer Performer window; per-frame throughput is determined mainly by the Performer wall-time (plus the small KV/latent communication), which must stay under the 160 ms unit duration for real-time operation.
 
-| Component | Latency | Notes |
-|-----------|---------|-------|
-| Audio/video capture (client) | ~10ms | Microphone + camera |
-| Network upload (user → server) | ~175ms | One-way network RTT component |
-| **Encode (Thinker)** | ~25ms | Causal VAE encoding of user input |
-| **Transformer pass (Thinker)** | ~50ms | Text decoding + KV cache update |
-| KV cache transfer (T → P) | ~5ms | GPU-to-GPU communication |
-| **Flow matching (Performer)** | ~110ms | $N_S$ denoising steps |
-| Latent transfer (P → T) | ~5ms | GPU-to-GPU for next step's decode |
-| **Decode (Thinker, overlapped)** | ~95ms | VAE decoding to waveform + frames |
-| Network download (server → client) | ~175ms | One-way network RTT component |
-| Client playback buffer | ~5ms | Minimal buffering |
-| **Total (model-side)** | **~200ms** | Excluding network |
-| **Total (end-to-end)** | **~550ms** | Including ~350ms network RTT |
+**Observation:** Network latency (~350 ms) dominates the ~550 ms total. The ~200 ms model-side latency for synchronized audio + video is competitive with speech-only systems like Moshi (~200 ms practical model latency) that do not generate video at all.
 
-**Observation:** Network latency (~350ms) dominates the total budget. The model-side latency (~200ms) for generating synchronized audio + video is remarkably competitive — comparable to speech-only systems like Moshi (~200ms model latency) that don't have to generate video at all.
+#### Latency Scaling Considerations (engineering inference, not paper-measured)
 
-#### Latency Scaling Considerations
+> **Sourcing note.** The paper's only scaling statement is that "scaling to higher resolutions is straightforward and left to future work" (§5). The specific multipliers in the prior version of this table ("video latent space grows ~14×", "latency ~285ms serial") were not in the paper and have been removed. The qualitative directions below are reasonable engineering inference from the architecture (heavier latent load ⇒ heavier flow matching; distillation reduces solver steps; two-GPU overlap is lost on one GPU), but no measured scaling numbers exist in v0.1.
 
-| Scaling Factor | Impact on Latency | Notes |
-|---------------|-------------------|-------|
-| Higher resolution (192p → 720p) | $t_{\text{encode}}, t_{\text{decode}} \uparrow$; $t_{\text{FM}} \uparrow\uparrow$ | Video latent space grows ~14×; flow matching is the bottleneck |
-| More FM steps ($N_S \uparrow$) | $t_{\text{FM}} \propto N_S$ | Linear scaling; distillation trades quality for fewer steps |
-| Longer context window | KV cache grows; transfer time $\uparrow$ | May require cache eviction strategies |
-| Single GPU (no T/P split) | Lose overlap; latency ~285ms serial | Encode → FM → Decode cannot parallelize |
+| Scaling factor | Expected direction | Why |
+|----------------|-------------------|-----|
+| Higher resolution (192p → higher) | encode/decode and flow-matching cost ↑ | Larger video latent space; flow matching is the dominant per-unit cost |
+| More FM steps ($N_S \uparrow$) | performer wall-time ↑ roughly with $N_S$ | Stage-3 distillation reduces $N_S$ precisely to cut this |
+| Longer context window | KV cache grows; KV/latent transfer ↑ | Real-time condition requires performer + comm < 160 ms unit |
+| Single GPU (no Thinker/Performer split) | lose cross-unit overlap; throughput drops | Encode/KV-update/decode and flow matching can no longer run on separate GPUs |
 
-### Visual Agent Comparison
+### Visual Agent Comparison (Table 2, verbatim)
 
-| System | Scope | Runtime | Difference from Wan-Streamer |
-|--------|-------|---------|---------------------------|
-| Body of Her | end-to-end humanoid | 42ms/frame at 24 FPS | No deployed signal-to-signal latency |
-| X-Streamer | video chat from portrait | 25 FPS on 2×A100 | Absolute response latency undisclosed |
-| VASA-1 | audio-driven talking face | 40 FPS, 170ms preceding | Renderer only, no dialogue |
-| TalkingMachines | audio-driven video | real-time chunks | External audio LLM needed |
-| StreamAvatar | streaming avatar | FFD 0.33–0.39s | No unified dialogue model |
-| AvatarForcing (Cui) | one-step streaming avatar | 34ms/frame | Not perceptual dialogue |
-| Hallo-Live | text-driven avatar | 20.38 FPS, 0.94s latency | Text-driven, no user perception |
-| **Wan-Streamer** | **full perceptual dialogue + video** | **25 FPS, ~550ms total, ~200ms model** | **Single causal Transformer** |
+Table 2 separates **full-loop / interactive digital-human systems** from **avatar rendering / joint audio-visual generation components**, and records each system's reported runtime (FPS, first-frame delay, chunk latency, or audio-to-visual delay) plus the part of the interaction stack it covers — most numbers are component-level runtime, not the aligned response latency of Table 1.
+
+**Full-loop or interactive digital-human systems**
+
+| System | Visual interaction scope | Reported runtime | Main difference from Wan-Streamer |
+|--------|--------------------------|------------------|-----------------------------------|
+| Body of Her | end-to-end humanoid agent | next frame within 42ms at 24 FPS | Preliminary unified agent; no deployed signal-to-signal latency |
+| MIDAS | multimodal digital-human video synthesis | real-time frame-by-frame generation | Does not disclose absolute response latency |
+| U-Mind | text, speech, motion, and video interaction loop | real-time video rendering claimed | Text-first pipeline; latency breakdown not public |
+| X-Streamer | open-ended video chat from a portrait | 25 FPS multimodal streaming on two A100 GPUs | Absolute response latency is not disclosed |
+| LPM 1.0 | online character performance engine | low-latency real-time causal streaming | Visual engine coupled to external A2A systems; latency not intrinsic to LPM alone |
+| MAViD | audio-visual dialogue framework | no absolute latency reported | Modular framework; useful for capability comparison, not latency comparison |
+| M.I.O | interactive omni-avatar system | bounded-latency design discussed | Multi-module embodied system; no public signal-to-signal number |
+
+**Avatar rendering or joint audio-visual generation components**
+
+| System | Visual interaction scope | Reported runtime | Main difference from Wan-Streamer |
+|--------|--------------------------|------------------|-----------------------------------|
+| VASA-1 | audio-driven talking face | 40 FPS with 170ms preceding latency | Renderer only; no dialogue reasoning or user visual perception |
+| TalkingMachines | FaceTime-style audio-driven video | real-time chunk generation by TTBC | Relies on an external audio LLM for dialogue and speech |
+| StreamAvatar | streaming talking/listening avatar | FFD 0.33–0.39s; video latency ~1.20s | Avatar renderer driven by speech/audio; no unified dialogue model |
+| Avatar Forcing (Ki et al.) | interactive head-avatar reactions | ~500ms reaction latency; 6.8× speedup | Reacts to user audio/motion, but does not generate dialogue speech |
+| AvatarForcing (Cui et al.) | one-step streaming talking avatar | 34ms/frame; 0.51s audio-to-visual delay | Strong visual streaming metric, not perceptual dialogue |
+| LiveTalk | multimodal interactive avatar video | 24.82 FPS; 0.33s first-frame latency | Uses Qwen3-Omni for speech reasoning; video latency is separate |
+| Hallo-Live | text-driven joint audio-video avatar | 20.38 FPS with 0.94s latency | Text-driven; does not continuously perceive user audio-video |
+| OmniForcing | text-to-audio-video streaming generation | TTFC ~0.7s; ~25 FPS | First-chunk generation latency, not user response latency |
+| **Wan-Streamer (ours)** | **text/audio/video perceptual dialogue with synchronized speech and video output** | **25 FPS; ~550ms total; ~200ms model-side** | **Single causal Transformer learns text I/O, perception, speaking, listening behavior, interruption, and visual response together** |
+
+> **Sourcing note.** The earlier version of this table listed only 7 of the 15 compared systems, omitting MIDAS, U-Mind, LPM 1.0, MAViD, M.I.O, Avatar Forcing (Ki et al.), LiveTalk, and OmniForcing, and it truncated several runtime cells (e.g. AvatarForcing-Cui dropped its "0.51s audio-to-visual delay"; StreamAvatar dropped its "~1.20s video latency"). Values above are verbatim from Table 2 (paper_layout.txt lines 417–454).
 
 ### Naturalness & Full-Duplex Behavior
 

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"python3 -c \\\"\\nt=open('papers/2026-wan-streamer-v01-end-to-end/paper_layout.txt').read()\\nfor tok in ['25 ms','50 ms','110 ms','95 ms','285','bare-model','700 ms','160 ms','theoretical','f...",
+  "error": "Exit code 1\nTraceback (most recent call last):\n  File \"<string>\", line 2, in <module>\nFileNotFoundError: [Errno 2] No such file or directory: 'papers/2026-wan-streamer-v01-end-to-end/paper_layout.txt'",
+  "timestamp": "2026-07-03T23:46:46.141Z",
+  "retry_count": 2
+}
