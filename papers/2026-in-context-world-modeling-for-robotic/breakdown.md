@@ -330,11 +330,13 @@ Training on $8 \times$ A100 GPUs with standard VLA training compute. No addition
 
 | Suite | π-FAST | π₀.₅ | NORA | MV | EXP | **ICWM (Ours)** | Δ vs MV |
 |---|---|---|---|---|---|---|---|
-| Spatial | 14.0% | 20.6% | 17.8% | 78.4% | 82.6% | **88.0%** | +9.6% |
+| Spatial | 4.1% | 7.6% | 3.8% | 74.5% | 75.9% | **81.2%** | +6.7% |
 | Goal | 2.2% | 9.2% | 1.4% | 73.3% | 70.7% | **71.6%** | −1.7% |
 | Object | 1.5% | 8.1% | 0.6% | 64.9% | 66.6% | **70.5%** | +5.6% |
 | Long | 0.7% | 2.9% | 1.0% | 30.8% | 32.4% | **40.0%** | +9.2% |
-| **Average** | **4.6%** | **10.2%** | **5.2%** | **60.9%** | **63.1%** | **65.8%** | **+4.9%** |
+| **Average** | **2.1%** | **7.0%** | **1.7%** | **60.9%** | **61.4%** | **65.8%** | **+4.9%** |
+
+> 📌 **Sourced verbatim from Table 3 (Avg column) via `paper_layout.txt`.** ICWM wins all four seen-viewpoint suites; the Average Δ of +4.9pp (65.8 vs MV 60.9) is modest because seen viewpoints are already near-saturated for the multi-view methods — the larger ICWM advantage appears on OOD viewpoints (§6.2) and long-horizon tasks. (The earlier version of this table had grabbed the **330° column** values for the Spatial row — 14.0/20.6/17.8/78.4/82.6/88.0 — instead of the Avg column, and consequently reported +9.6pp instead of the true +6.7pp Spatial Δ.)
 
 ### 6.2 LIBERO Simulation — Unseen (OOD) Viewpoints
 
@@ -350,17 +352,28 @@ Training on $8 \times$ A100 GPUs with standard VLA training compute. No addition
 
 ### 6.3 Real Robot — UR5e, 4 Tasks, 6 Novel Viewpoints
 
-| Task | Standard VLA (Training Views) | Standard VLA (Novel Views) | **ICWM (Novel Views)** | Improvement |
-|---|---|---|---|---|
-| Pick (toy → basket) | 68% → ~low | ~17% | **~+33% gain** | |
-| Stack (yellow → red cup) | ~low | ~low | **+71% gain** | |
-| Lift (basket) | ~low | ~low | **+90% gain** | |
-| Move (eggplant → plate) | ~low | ~low | **+175% gain** | |
-| **Average** | **68%** | **~17%** | **~+129% avg gain** | |
+> Source: §5.3 prose + Figure 5 bar chart. The paper reports **no absolute per-task success-rate table** for the real robot — only (a) the average drop of the standard VLA from 68% (training views) to 17% (novel views), and (b) per-task **relative** gains of ICWM over the Multi-View (MV) baseline read from the Figure 5 bar labels. Absolute per-task MV/ICWM success rates are figure-bar-only and are not restated as numbers in the text, so they are not tabulated below.
 
-> Standard VLA drops from 68% (training views) to 17% (novel views) — a **75% relative collapse**. ICWM substantially recovers performance with zero parameter updates and zero task-specific demonstrations. The 600 total trials (4 tasks × 6 OOD viewpoints × 25 trials) show consistent gains.
+| Quantity | Value | Source |
+|---|---|---|
+| Standard VLA avg success, training viewpoints | **68%** | §5.3 prose |
+| Standard VLA avg success, novel viewpoints | **17%** (~75% relative collapse) | §5.3 prose |
 
-### 6.4 Ablation: Context Components (LIBERO-Spatial OOD)
+**ICWM relative gain over the MV baseline, per task (Fig. 5 bar labels):**
+
+| Task | ICWM vs MV (relative) |
+|---|---|
+| Pick (toy → basket) | +33% |
+| Stack (yellow → red cup) | +71% |
+| Lift (basket) | +90% |
+| Move (eggplant → plate) | +175% |
+| **Average** | **+129%** |
+
+> Standard VLA drops from 68% (training views) to 17% (novel views) — a **~75% relative collapse**. ICWM substantially recovers performance with zero parameter updates and zero task-specific demonstrations. The 600 total trials (4 tasks × 6 OOD viewpoints × 25 trials) show consistent gains; the largest relative recovery is on **Move (+175%)**.
+
+### 6.4 Ablation: Context Components (LIBERO-Long OOD)
+
+> Suite correction: Table 1's ICWM row (45°/135°/225°/255°/285°/315° = 36.6/2.2/8.8/28.4/36.6/37.6, avg 25.0) is **byte-identical to Table 4's LIBERO-Long OOD ICWM row**, and the w/o-context baseline (22.0) and false-context (18.9) rows sit between Long-OOD MV (19.8) and ICWM (25.0). So this ablation is run on the **LIBERO-Long OOD** suite (the hardest suite, where ICWM helps most), not LIBERO-Spatial OOD as previously headed.
 
 | Setting | Avg OOD Success | Δ from Full ICWM |
 |---|---|---|
@@ -372,7 +385,9 @@ Training on $8 \times$ A100 GPUs with standard VLA training compute. No addition
 
 > 💀 **Removing images causes the biggest collapse (−56.4%)** — without visual observations, the model treats exploratory actions as task demonstrations and mimics them. **False context is worse than no context** (−24.4% vs −12.0%), confirming that the model is performing genuine system identification rather than superficial pattern matching — wrong information actively harms performance.
 
-### 6.5 Ablation: Probing Strategy (LIBERO-Spatial OOD)
+### 6.5 Ablation: Probing Strategy (LIBERO-Long OOD)
+
+> Same suite correction as §6.4: Table 2's MV column (avg 19.8) and Random column (avg 25.0) are byte-identical to Table 4's LIBERO-Long OOD MV/ICWM rows, so the probing ablation is also on **LIBERO-Long OOD**, not Spatial.
 
 | Strategy | Avg OOD Success | Δ vs No Probing |
 |---|---|---|

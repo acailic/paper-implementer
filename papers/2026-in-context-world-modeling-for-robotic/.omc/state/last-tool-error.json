@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd papers/2026-in-context-world-modeling-for-robotic && echo \\\"=== search key tokens ===\\\" && rtk grep -nE '88\\\\.0|78\\\\.4|82\\\\.6|65\\\\.8|49\\\\.9|48\\\\.3|25\\\\.0|40\\\\.0|0\\\\.112|0\\\\.165|π-FAST|N...",
+  "error": "Exit code 1\n/bin/bash: line 1: cd: papers/2026-in-context-world-modeling-for-robotic: No such file or directory",
+  "timestamp": "2026-07-03T23:21:43.703Z",
+  "retry_count": 1
+}

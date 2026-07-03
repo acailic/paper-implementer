@@ -77,6 +77,12 @@
       "type": "file"
     },
     {
+      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "accessCount": 9,
+      "lastAccessed": 1783120873409,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/breakdown.md",
       "accessCount": 8,
       "lastAccessed": 1783118574894,
@@ -89,15 +95,15 @@
       "type": "file"
     },
     {
-      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 8,
-      "lastAccessed": 1783120458550,
-      "type": "file"
-    },
-    {
       "path": "papers/2026-are-we-ready-for-an-agent/breakdown.md",
       "accessCount": 7,
       "lastAccessed": 1783120832276,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-in-context-world-modeling-for-robotic/breakdown.md",
+      "accessCount": 6,
+      "lastAccessed": 1783121252086,
       "type": "file"
     },
     {
@@ -116,6 +122,12 @@
       "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper_layout.txt",
       "accessCount": 4,
       "lastAccessed": 1783118410114,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-in-context-world-modeling-for-robotic/paper_layout.txt",
+      "accessCount": 4,
+      "lastAccessed": 1783121113485,
       "type": "file"
     },
     {
