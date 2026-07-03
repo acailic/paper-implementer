@@ -399,12 +399,14 @@ bar-chart
     bar [12.08, 31.25, 38.33, 55.00]
 ```
 
-| Setting | Microwave Prog. | Microwave Succ. | Drawer Prog. | Drawer Succ. | Mug/Cup Prog. | Mug/Cup Succ. | Other Prog. | Other Succ. | **Overall Prog.** | **Overall Succ.** |
-|---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|--:|--:|
-| Robot pick-place only (no human) | 17.71 | 12.50 | 21.88 | 6.25 | 20.83 | 18.75 | 10.94 | 10.42 | **17.79%** | **12.08%** |
-| + Human co-training (Stage II) | 48.96 | 29.17 | 55.63 | 43.75 | 44.58 | 22.50 | 48.44 | 29.17 | **49.58%** | **31.25%** |
-| + Human pre-train (Stage I+II) | 64.58 | 45.83 | 56.88 | 43.75 | 52.50 | 15.63 | 61.67 | 50.00 | **59.75%** | **38.33%** |
-| + Few-shot post-train (Stage I+II+III) | 71.77 | 58.33 | 80.73 | 68.75 | 56.88 | 43.75 | 71.25 | 58.33 | **71.83%** | **55.00%** |
+> Source: paper Figure 5 / Figure 6 (radar + per-task bars). The **Overall** column below is read from the Figure 5 radar (outer ring = Avg-Progress, inner ring = Avg-Success); only the Stage-I+II Pre+Co-train Overall (59.75 / 38.33) is corroborated by Table 5's "Default (Ours)" row. The "+ Few-shot Post-train" Overall progress (71.83) is figure-only and differs slightly from Table 3's Stage-I+III run (71.21) — they are different checkpoints (Fig-5 includes Stage-II co-training, Table 3 does not). Per-task Prog/Succ cells are **not** transcribed here because Figure 6's bars do not extract reliably under `pdftotext`; they are not source-verifiable and a prior version of this table had filled them with values cross-contaminated from Tables 3/5.
+
+| Setting | **Overall Prog.** | **Overall Succ.** |
+|---------|--:|--:|
+| Robot pick-place only (no human) | **17.79%** | **12.08%** |
+| + Human co-training (Stage II) | **49.58%** | **31.25%** |
+| + Human pre-train (Stage I+II) | **59.75%** | **38.33%** |
+| + Few-shot post-train (Stage I+II+III) | **71.83%** | **55.00%** |
 
 **Key findings:**
 1. **Finding 1 (Skill transfer):** Robot pick-and-place alone gets ~18% progress / ~12% success. Adding human co-training jumps to ~50% / ~31%. The bridging action transfers skills well beyond generic pick-and-place.
@@ -412,32 +414,41 @@ bar-chart
 
 ### 6.2 Bridging vs. 6DoF Human Actions (Table 2)
 
+> Source: paper Table 2 (verbatim via `paper_layout.txt`). Both rows are **co-trained from scratch** — i.e. *without* Stage-I human pre-training — so the bridging row here is the from-scratch `a3D-wrist` result (Overall 44.58 / 22.50), **not** the pre-trained default (59.75 / 38.33, which is Table 5 / the §6.1 Pre+Co-train row).
+
 | Human Action Type | Microwave Prog. | Microwave Succ. | Drawer Prog. | Drawer Succ. | Mug/Cup Prog. | Mug/Cup Succ. | Other Prog. | Other Succ. | **Overall Prog.** | **Overall Succ.** |
 |-------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|--:|--:|
-| 6DoF wrist actions | 25.00 | 4.17 | 55.00 | 28.13 | 0.00 | 0.00 | 49.17 | 33.33 | **38.02%** | **25.00%** |
-| **Translation-only (bridging)** | **64.58** | **45.83** | **56.88** | **43.75** | **52.50** | **15.63** | **61.67** | **50.00** | **59.75%** | **38.33%** |
+| 6DoF wrist actions (`a6D-eef`) | 25.00 | 4.17 | 55.00 | 31.25 | 28.13 | 0.00 | 49.17 | 33.33 | **34.67%** | **12.50%** |
+| **Translation-only (bridging, `a3D-wrist`)** | **38.02** | **25.00** | **49.06** | **31.25** | **48.13** | **3.13** | **50.00** | **37.50** | **44.58%** | **22.50%** |
+| Δ (bridging − 6DoF) | +13.02 | +20.83 | −5.94 | 0.00 | +20.00 | +3.13 | +0.83 | +4.17 | **+9.91** | **+10.00** |
 
 **Analysis:**
-- The bridging action **dramatically outperforms** 6DoF human actions overall (+21.73pp progress, +13.33pp success).
-- The gap is largest on **microwave tasks** (+39.58pp progress) and **mug/cup tasks** (+52.50pp progress, from 0% to 52.50%).
-- 6DoF human actions achieve **0% success on mug/cup tasks** — the noise and contact-pattern mismatch completely destroy performance.
+- The bridging action outperforms 6DoF human actions overall (**+9.91pp progress, +10.00pp success**) — a clear but modest gap, *not* the dramatic +21.7/+13.3pp that the from-scratch-vs-pretrained confusion would suggest.
+- The gap is largest on **microwave success** (+20.83pp) and **mug/cup progress** (+20.00pp, from 28.13% to 48.13%) — the contact-rich / rotation-sensitive tasks where 6DoF wrist noise hurts most.
+- 6DoF human actions are actually **slightly ahead on drawer progress** (55.00 vs 49.06, −5.94pp) and **tie on drawer success** (31.25 = 31.25) — drawer motion is mostly translation, so the noisy rotation in 6DoF is less harmful there.
+- 6DoF achieves **0% success on mug/cup tasks** at the from-scratch setting — the noise and contact-pattern mismatch destroy the final grasping/contact step (bridging lifts this to only 3.13%, still low without pre-training).
 - Qualitatively (Figures 7–8): 6DoF produces **twisted, distorted, off-target** wrist poses; bridging gives **stable, natural** manipulation trajectories.
 
 ### 6.3 Post-Training Data Efficiency (Table 3)
 
+> Source: paper Table 3 (verbatim via `paper_layout.txt`). Both rows use the *same* few-shot robot post-training (Stage III, 10 traj/task); they differ only in whether Stage-I human-only pre-training preceded it.
+
 | Model | Microwave Prog. | Microwave Succ. | Drawer Prog. | Drawer Succ. | Mug/Cup Prog. | Mug/Cup Succ. | Other Prog. | Other Succ. | **Overall Prog.** | **Overall Succ.** |
 |-------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|--:|--:|
-| Stage III only (no pre-train) | 71.77 | 58.33 | 80.73 | 68.75 | 56.88 | 43.75 | 6.25 | 37.50 | **53.79%** | **35.83%** |
-| **Stage I + III** | **71.77** | **58.33** | **44.38** | **25.00** | **37.50** | **46.88** | **70.00** | **58.33** | **71.21%** | **55.00%** |
+| Stage III only (no pre-train) | 71.77 | 58.33 | 56.88 | 43.75 | 37.50 | 6.25 | 37.50 | 25.00 | **53.79%** | **35.83%** |
+| **Stage I + III** | **80.73** | **68.75** | **44.38** | **25.00** | **71.25** | **46.88** | **70.00** | **58.33** | **71.21%** | **55.00%** |
 
 **Key takeaway:** Pre-training on 600h of non-executable human translation-only actions makes few-shot robot fine-tuning (10 trajectories/task) substantially more efficient: **+17.42pp progress, +19.17pp success**. The model learns general manipulation priors from human data that transfer to robot control.
 
 ### 6.4 Bridging Objective Ablation (Table 4) — 🔥 Most Important Ablation
 
+> Source: paper Table 4 (verbatim via `paper_layout.txt`). Both rows are built on top of Stage-I human pre-training; they differ only in whether the random `a3D-wrist ↔ a6D-eef` substitution is applied to robot data during co-training.
+
 | Robot Data Supervision | Microwave Prog. | Microwave Succ. | Drawer Prog. | Drawer Succ. | Mug/Cup Prog. | Mug/Cup Succ. | Other Prog. | Other Succ. | **Overall Prog.** | **Overall Succ.** |
 |------------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|--:|--:|
-| w/o $\mathbf{a}^{3D\text{-}wrist}$ on robot data | 35.73 | 10.42 | 39.38 | 12.50 | 48.13 | 3.13 | 50.00 | 37.50 | **39.67%** | **12.50%** |
+| w/o $\mathbf{a}^{3D\text{-}wrist}$ on robot data | 35.73 | 10.42 | 39.38 | 12.50 | 39.38 | 0.00 | 48.13 | 33.33 | **39.67%** | **12.50%** |
 | **w/ $\mathbf{a}^{3D\text{-}wrist}$ on robot data** | **64.58** | **45.83** | **56.88** | **43.75** | **52.50** | **15.63** | **61.67** | **50.00** | **59.75%** | **38.33%** |
+| Δ (w − w/o) | +28.85 | +35.41 | +17.50 | +31.25 | +13.12 | +15.63 | +13.54 | +16.67 | **+20.08** | **+25.83** |
 
 **This is the single most important result in the paper.** Removing the random $\mathbf{a}^{3D\text{-}wrist} \leftrightarrow \mathbf{a}^{6D\text{-}eef}$ substitution on robot data during co-training **crashes overall success from 38.33% to 12.50%** (a 67% relative drop). The model needs to be explicitly forced to ground bridging representations into executable actions — without this binding, it learns the two action spaces as independent, non-transferable signals.
 
@@ -569,9 +580,9 @@ def build_interleaved_tokens(a_3d_wrist, a_6d_eef, a_gripper, data_source):
 | **Best overall success** | **55.00%** (Stage I+II+III) |
 | Upper bound progress | 73.54% |
 | Upper bound success | 55.83% |
-| 6DoF human action progress | 38.02% |
-| 6DoF human action success | 25.00% |
-| Bridging vs 6DoF progress gain | +21.73pp |
-| Bridging vs 6DoF success gain | +13.33pp |
+| 6DoF human action progress | 34.67% |
+| 6DoF human action success | 12.50% |
+| Bridging vs 6DoF progress gain | +9.91pp |
+| Bridging vs 6DoF success gain | +10.00pp |
 | Ablation crash (w/o bridging on robot) | 38.33% → 12.50% success |
 | Pre-training data efficiency gain | +17.42pp progress, +19.17pp success |
