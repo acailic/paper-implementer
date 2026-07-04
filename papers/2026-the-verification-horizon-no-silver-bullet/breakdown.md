@@ -379,12 +379,18 @@ Behavioral category analysis on SWE-bench Verified (Agent-as-Judge, 6 dimensions
 
 ### §5: RFT with Evaluator Filtering
 
-| Training Data | Size | Best Score | Steps |
-|---------------|-----:|----------:|------:|
-| Base model (before training) | — | 11.41 | — |
-| Random sample | 9,139 | 21.61 | — |
-| Evaluator-filtered ($S_{\text{eval}} \geq 8$) | 9,139 | **23.52** | +1.91 vs random |
-| All rule-based filtered | 19,050 | **24.75** | 600 steps |
+Table 10 — RFT on the OpenHands scaffold (anti-hacking, 3-run average); base model Qwen 3.6 Turbo scores **11.41** before training. Best per row bolded. † = step-426 checkpoint: the smaller 9,139-sample pools exhaust before the 600-step checkpoint, so their last reported point lands at step 426 and is shown in the 450-step column (checkpoints are saved every 150 steps).
+
+| Training Data | Size | 150 steps | 300 steps | 450 steps | 600 steps |
+|---------------|-----:|----------:|----------:|----------:|----------:|
+| Random sample (no evaluator) | 9,139 | 20.29 | 21.22 | **21.61**† | – |
+| All rule-based filtered (no evaluator) | 19,050 | 20.78 | 23.14 | 21.15 | **24.75** |
+| Evaluator-filtered ($S_{\text{eval}} \geq 8$) | 9,139 | 19.58 | 22.43 | **23.52**† | – |
+
+> **Takeaways:**
+> - RFT lifts the base model **11.41 → 23.52** (best controlled-config, evaluator-filtered). Under matched 9,139-sample size, evaluator-filtered beats random by **+1.91** (23.52 vs 21.61) — the evaluator supplies a real quality signal for data selection.
+> - Doubling the pool to the full 19,050 unfiltered set reaches **24.75** (600 steps) but is **non-monotone** (20.78 → 23.14 → 21.15 → 24.75): more data can compensate for the absence of evaluator filtering, but at higher compute cost and with checkpoint-selection volatility (the 450-step dip to 21.15).
+> - The two 9,139-sample runs stop at step 426 (†); their headline is the 450-step-column checkpoint, not a later one — so the evaluator-filtered vs random comparison is exactly controlled at matched size and matched final checkpoint.
 
 ## 7. Ablations
 

@@ -65,15 +65,15 @@
   },
   "hotPaths": [
     {
-      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/breakdown.md",
-      "accessCount": 29,
-      "lastAccessed": 1783126623479,
+      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "accessCount": 31,
+      "lastAccessed": 1783127736826,
       "type": "file"
     },
     {
-      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
+      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/breakdown.md",
       "accessCount": 29,
-      "lastAccessed": 1783127387764,
+      "lastAccessed": 1783126623479,
       "type": "file"
     },
     {
@@ -89,15 +89,15 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
-      "accessCount": 14,
-      "lastAccessed": 1783124298517,
+      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
+      "accessCount": 15,
+      "lastAccessed": 1783128004697,
       "type": "file"
     },
     {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
+      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
       "accessCount": 14,
-      "lastAccessed": 1783127622672,
+      "lastAccessed": 1783124298517,
       "type": "file"
     },
     {
