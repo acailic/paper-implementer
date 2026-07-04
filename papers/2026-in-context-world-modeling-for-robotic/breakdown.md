@@ -393,9 +393,9 @@ Training on $8 \times$ A100 GPUs with standard VLA training compute. No addition
 |---|---|---|
 | Multi-View Baseline (no probing) | 19.8% | — |
 | **Random (full DOF)** | **25.0%** | **+26.3%** |
-| XY-only movements | 22.8% | +15.2% |
-| Z-only movements | 23.4% | +18.2% |
-| Rotation-only movements | 24.9% | +25.8% |
+| XY-only movements | 24.9% | +25.8% |
+| Z-only movements | 22.8% | +15.2% |
+| Rotation-only movements | 23.4% | +18.2% |
 
 > ✅ **All probing strategies outperform the no-probing baseline by 15–27%.** The benefit comes from the interaction format itself, not any particular movement pattern. Even Z-only (vertical) probing — which seems least informative for viewpoint identification — provides significant gains. This aligns with Proposition 1: any action sequence enriches information about $\psi$.
 

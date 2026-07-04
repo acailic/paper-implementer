@@ -72,8 +72,8 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 25,
-      "lastAccessed": 1783126683073,
+      "accessCount": 27,
+      "lastAccessed": 1783127015868,
       "type": "file"
     },
     {
@@ -137,9 +137,15 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
+      "accessCount": 8,
+      "lastAccessed": 1783127166277,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-in-context-world-modeling-for-robotic/breakdown.md",
-      "accessCount": 6,
-      "lastAccessed": 1783121252086,
+      "accessCount": 8,
+      "lastAccessed": 1783127313980,
       "type": "file"
     },
     {
@@ -179,21 +185,15 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
-      "accessCount": 5,
-      "lastAccessed": 1783117893190,
+      "path": "papers/2026-in-context-world-modeling-for-robotic/paper_layout.txt",
+      "accessCount": 6,
+      "lastAccessed": 1783127245449,
       "type": "file"
     },
     {
       "path": "papers/2026-the-verification-horizon-no-silver-bullet/paper.txt",
       "accessCount": 4,
       "lastAccessed": 1783118004985,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-in-context-world-modeling-for-robotic/paper_layout.txt",
-      "accessCount": 4,
-      "lastAccessed": 1783121113485,
       "type": "file"
     },
     {
@@ -224,6 +224,12 @@
       "path": "papers/2026-qwen-image-agent-bridging-the-context/paper_layout.txt",
       "accessCount": 2,
       "lastAccessed": 1783126725839,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/paper_layout.txt",
+      "accessCount": 2,
+      "lastAccessed": 1783127082385,
       "type": "file"
     },
     {
