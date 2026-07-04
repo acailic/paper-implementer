@@ -1,0 +1,773 @@
+                                            On the Limits of Steering Vectors for Preference-Aligned Generation
+
+
+                                                             Melanie Subbiah∗ and Zara Hall∗ and Kathleen McKeown
+                                                              Department of Computer Science, Columbia University, USA
+                                                                               Correspondence: m.subbiah@columbia.edu
+
+
+
+
+                                                                  Abstract
+                                            Steering vectors have emerged as a promising
+arXiv:2607.01802v1 [cs.CL] 2 Jul 2026
+
+
+
+
+                                            approach to controlled text generation, offer-
+                                            ing interpretable, training-free mechanisms for
+                                            shaping model outputs. However, their practi-
+                                            cal generality remains poorly understood. We
+                                            study the limits of steering vector generaliza-
+                                            tion along three dimensions: trait expressibility,
+                                            task transfer, and multi-trait composition. Us-
+                                            ing the PLUME writing personalization bench-
+                                            mark, we extract steering vectors for a range
+                                            of preferences and evaluate them on summa-
+                                            rization and email-writing tasks across two
+                                            open-source models (Qwen2.5-7B-Instruct and
+                                            Llama3.1-8B-Instruct). We find that steering
+                                            effectiveness varies substantially across traits.
+                                            We further show that steering effectiveness can
+                                            degrade when vectors extracted from positive
+                                            and negative style examples are transferred to         Figure 1: We systematically study the limitations of
+                                            downstream writing personalization tasks. Fi-          steering vectors when scaled across trait types, tasks,
+                                            nally, we compare common methods for com-              and number of vectors.
+                                            posing multiple steering vectors and find that
+                                            all methods suffer significant drops in trait ex-
+                                            pression as more vectors are added, with a             just hundreds of synthetically generated examples
+                                            tradeoff between coherence and expressibility          (Turner et al., 2024; Zou et al., 2025). Prompting
+                                            that requires per-setting hyperparameter tun-          can also be a lightweight method for adaptation,
+                                            ing. Taken together, our results suggest that          but LLMs can get “lost" across long conversations
+                                            steering vectors face meaningful limits as a           and suffer from model drift (Liu et al., 2024a; Li
+                                            general-purpose tool for preference alignment.
+                                                                                                   et al., 2024; Choi et al., 2025). Additionally, clever
+                                        1   Introduction                                           system or user prompts can be used to “jailbreak”
+                                                                                                   models into problematic modes (Shen et al., 2024;
+                                        Steering vectors are directions in the model’s activa-     Liu et al., 2024c). Because activation steering di-
+                                        tion space, which have been shown to be effective          rectly modifies internal representations at inference
+                                        in both modeling and controlling model behavior            time, it has been explored as an alternative control
+                                        (Chen et al., 2025). Steering vectors have several         mechanism to prompting (Turner et al., 2024; Zou
+                                        interesting advantages. While RL methods can up-           et al., 2025; Rimsky et al., 2024).
+                                        date model weights to align them with specific pref-          In addition to controllable generation benefits,
+                                        erences (Ziegler et al., 2019; Wei et al., 2022), they     steering vectors provide interpretable insight into
+                                        require large datasets and costly fine-tuning. Steer-      how the model is processing the input (Chen et al.,
+                                        ing vectors can be extracted from examples alone           2025). When a certain input highly activates the di-
+                                        and added to the model at inference time, mak-             rection in activation space corresponding to a given
+                                        ing them lightweight, flexible, and effective with         steering vector, it indicates the model is recogniz-
+                                            ∗
+                                                indicates equal contribution                       ing that vector’s concept in the input (Zou et al.,
+2025; Chen et al., 2025). Examining how model             topics. Other work develops related steering meth-
+outputs change when steered with a given steering         ods for instruction following, safety, and concept
+vector also gives insight into how a model views a        control (Stolfo et al., 2025; Bhattacharjee et al.,
+certain concept or persona. For example, steering         2024; Zhang et al., 2025). Our work builds on this
+in an evil direction might make a model introduce         line of research by studying how activation steering
+more hallucinations into a summary.                       behaves when scaled across many stylistic traits,
+   For all of these reasons, steering vectors have be-    downstream tasks, and vector combinations.
+come a popular line of research in interpretability
+and alignment. However, most studies focus pri-           Style and Persona Control in Language Models.
+marily on only a handful of traits to steer for, such     Recent work applies activation steering specifically
+as being helpful, and generally only apply one steer-     toward stylistic traits and personas. Notably, Chen
+ing vector at inference time (Turner et al., 2024; Li     et al. (2025) propose vector-based control of char-
+et al., 2023; Rimsky et al., 2024). In reality though,    acter traits. This work builds upon frameworks
+for steering vectors to be an effective alignment         for translating concepts into linear directions (Rim-
+technique, we may want a model to be both helpful         sky et al., 2024; Turner et al., 2024; Liu et al.,
+and trustworthy, for example. In this paper, we           2024b), and recent approaches leverage linear vec-
+push the limits of steering vectors through system-       tors in representation space for controllable genera-
+atic empirical study, testing 36 vectors, across two      tion (Cao et al., 2024; Dunefsky and Cohan, 2025).
+transfer tasks, and with combinations of up to            Prior work has primarily focused on a small num-
+four vectors at once. These studies contribute the        ber of traits or narrowly scoped applications such
+following insights (summarized in Figure 1)1 :            as safety, hallucinations, sentiment, or persona con-
+                                                          trol. Konen et al. (2024) and Zhang et al. (2025)
+    • We show that steering effectiveness varies sub-
+                                                          extend these ideas to stylistic control, though they
+      stantially across trait types, with traits that
+                                                          evaluate a limited range of style traits. In con-
+      affect global structure and style being most re-
+                                                          trast, we study steering effectiveness systematically
+      liably steerable and unconventional or locally-
+                                                          across 36 stylistic preferences, two task transfer set-
+      expressed styles being least effective.
+                                                          tings, and four simultaneously applied vectors.
+    • We demonstrate that steering vectors do not
+      transfer reliably across contexts, with signif-     Preference Alignment for Assistive Writing.
+      icant drops in trait expression when vectors        Work on writing-agent alignment has largely ap-
+      extracted from style-elicitation prompts are        proached personalization by inferring natural-
+      applied to downstream summarization and             language descriptions of user preferences. PRE-
+      email-writing tasks.                                LUDE and CIPHER infer preferences from user
+                                                          edits (Gao et al., 2024), while PROSE extends
+    • We compare multiple methods for composing           this setup to richer preferences inferred from user
+      steering vectors at inference time, finding that    samples in PLUME (Aroca-Ouellette et al., 2025).
+      trait expression and output coherence degrade       More general personalization benchmarks such as
+      as more vectors are combined, and that no           LaMP evaluate whether language models can adapt
+      single method eliminates this tradeoff.             to user-specific histories (Salemi et al., 2024). Re-
+                                                          lated work also studies preference learning from
+2       Related Work                                      user edits, demonstrations, and content (Hewitt
+Activation Steering and Representation Engi-              et al., 2024; Shaikh et al., 2025; Tan et al., 2025).
+neering Prior work has introduced methods for             Our work differs from these approaches by study-
+controlling language models by modifying inter-           ing alignment through steering vectors rather than
+nal activations rather than updating model weights.       prompt optimization, editing, or finetuning.
+Subramani et al. (2022) showed latent space steer-
+ing vectors could be used for sentence recovery           3   Methods
+and unsupervised sentiment transfer. Zou et al.           To consider a setting with many steerable traits, we
+(2025) and Turner et al. (2024) extend activation         work on writing personalization. The preferences
+engineering to steer model outputs towards specific       involved with writing personalization are primar-
+    1
+    All experiments and code are available at: https://   ily stylistic rather than safety-related, but we can
+github.com/melaniesubbiah/steering-vectors .              easily work with a large number of traits that are
+  Task                  Source domain              User preferences
+      Summarization
+                        News (CNN/DM)              step-by-step structure · simile · ampersands · children’s book style
+                        Forum posts (SLF5k)        header-based structure · rhetorical questions · ALLCAPS · tweet style
+                        Encyclopedia (Wikipedia)   rhyming structure · modern slang · screenplay style
+                        Paper abstracts (ArXiv)    Q&A structure · personifications · archaic language · podcast style
+                        Movie reviews (IMDB)       stream of consciousness · onomatopoeias · imagery · old timey radio style
+   Email writing
+
+
+
+
+                        Personal advice (SLF5k)    intensely emotional · alliterations · formal tone · second person narrative
+                        Paper reviews (Ampere)     sharply critical · short punchy sentences · parenthetical asides · assertive
+                        Paper summaries (CC-BY)    highly inquisitive · long flowing sentences · emojis · conditional expressions
+                        Paper tweets               sarcastic · hyperboles · informal tone · third person perspective
+
+Table 1: Evaluation tasks and user preference sets from PLUME (Aroca-Ouellette et al., 2025). Each source domain
+corresponds to a distinct set of preferences that are expressible in that domain.
+
+
+
+
+Figure 2: To extract a steering vector, we first generate paired positive and negative examples of the stylistic
+preference, and then extract layer-level differences in activations across these paired examples.
+
+
+complementary in this setting.                                             line with Aroca-Ouellette et al. (2025) and Gao
+                                                                           et al. (2024), we sample 25 examples from each
+3.1                   Dataset                                              of the source datasets, resulting in 125 tasks for
+For selecting an appropriate range of traits to test                       summarization and 100 tasks for email writing2 .
+for steering effectiveness and task transfer, we
+draw from the writing personalization benchmark,                           3.2    Steering Vectors
+PLUME (Aroca-Ouellette et al., 2025). PLUME                                We extract vectors based on all possible preferences
+was developed in order to address limitations of                           in the PLUME data using the PersonaVectors ap-
+the assistive writing benchmark PRELUDE (Gao                               proach (Chen et al., 2025). This method has three
+et al., 2024). The dataset contains email-writing                          main components: (i) paired data generation, (ii)
+and summarization tasks, each of which have a set                          extracting activation-based steering vectors, and
+of users with distinct preferences for how each task                       (iii) steering output. To consider steering for multi-
+is completed (shown in Table 1).                                           ple traits at once, we add (iv) combining multiple
+   In either task, the model is given a source docu-                       traits. The first two steps are shown in Figure 2,
+ment to use as content for the summary or email. In                        and all steps are detailed in this section.
+addition, it is given preferences meant to control the
+stylistic traits, examples of which include rhetori-                       1. Paired data generation We first generate
+cal questions, formal tone and all-caps emphasis,                          paired instruction data that is designed to elicit
+or rhyming structure. The source documents and                             and suppress each target trait. Following Chen
+corresponding preferences are sampled from dif-                            et al. (2025), we create a set of positive prompts
+ferent datasets shown in Table 1. In the original                          that direct the LLM to generate text tailored to-
+PLUME task, the model has to iteratively infer                             wards a target preference and a set of negative
+and match user preferences from user demos, but                            prompts that direct it to avoid that preference. To
+we consider one-shot preference alignment using                               2
+                                                                                We release these evaluation sets in the GitHub repository
+steering vectors for preference traits instead. In                         to facilitate future work on these tasks.
+ensure that the vectors are content-agnostic, we pair         • Tuned mean – We multiply each vector by its
+the instructions with a set of questions across sub-            alpha and take the mean.
+jects (e.g. "How important is exercise for health?",
+                                                              • Unit norm – We take the mean of the unit
+"What makes a good cup of coffee?"). We use the
+                                                                norms of the vectors and multiply by an alpha.
+prompt generation instructions provided by Chen
+et al. (2025) with our own trait definitions shown        4    Experimental Setup
+in Appendix A.
+   To generate high-quality questions, we use a           Models To generate the questions and positive
+powerful LLM. However, the generated responses            and negative stylistic instructions, we use Claude-
+must be produced by the same model used in the            3.7-Sonnet as a powerful LLM which can handle
+steering pipeline, since steering vectors require di-     the nuance of the task. All generated prompts and
+rect access to the model’s internal activations dur-      questions are included in the GitHub repository
+ing generation. We therefore use smaller open-            or can be found in Chen et al. (2025). For each
+source models for response generation, enabling           trait, we generate 125 positive and negative ques-
+direct manipulation of activations and extraction of      tions. To generate responses for steering evalua-
+steering vectors.                                         tion, we use Qwen2.5-7B-Instruct and Llama3.1-
+                                                          8B-Instruct. Using two similarly sized models al-
+2. Extracting activation-based steering vectors           lows us to test whether observed steering behaviors
+We consider a language model fθ with parameters           and failure modes are consistent across architec-
+θ consisting of L transformer layers. At each layer       tures. For each model, we generate 100 responses
+l ∈ {1, . . . , L}, the hidden representation for token   to each question, resulting in 5000 total responses
+                 (l)
+t is denoted ht ∈ Rd . For each stylistic trait k ∈       per preference before filtering. We then use the
+{1, . . . , K}, we precompute an activation-based         trait expression judge (described below) to verify
+                     (l)
+steering vector vk ∈ Rd at selected layers. Each          and filter the generated responses based on trait-
+steering vector is defined as the difference of mean      expression thresholds, requiring expression greater
+hidden states between sentences with and without          than 50 for positive examples and lower than 50 for
+the target trait:                                         negative examples. We use two 40GB A100 GPUs.
+                   (l)    (l)     (l)                     Tasks For testing a variety of aspects of steering
+                 vk = h̄k − h̄\k ,
+                                                          vectors, we use two different task settings:
+         (l)                                                 • Extraction tasks – We use the prompts that
+where h̄k is the mean hidden activation at layer l
+                                                               Claude-3.7-Sonnet generated for each trait to
+over a corpus of responses exhibiting trait k and
+                                         (l)                   elicit that behavior. These prompts are gen-
+across all tokens in the response, and h̄\k is the             erally short questions or tasks, such as "How
+mean over responses and tokens without the trait.              can someone improve their public speaking
+3. Steering output At inference time, we ap-                   skills?" or "Describe the benefits of regular
+ply a vector by modifying the residual stream at a             exercise." These are the tasks we use to tune
+specific layer.                                                steering vector coefficients and test trait ex-
+                                                               pression because these are the prompts used
+                  (l)     (l)      (l)
+                 h̃t = ht + αvk                                to extract the steering vectors.
+
+Where l and α are tuned parameters.                           • PLUME tasks – We use the PLUME prompts
+                                                                for preference-aligned tasks, which ask the
+4. Combining multiple traits When multiple                      model to write an email or a summary of some
+traits are selected (e.g. both "childlike" and "simile-         content given in the prompt task. These are
+usage"), we consider different methods of combin-               the tasks we use to test task transfer and multi-
+ing steering vectors (full details of the implementa-           trait expression because this task is designed
+tion of each method shown in Appendix B):                       for preference-aligned generations with sets
+    • Orthogonalized – We orthogonalize the vec-                of four preferences that are complementary
+      tors, multiply them by their individual alphas,           (Aroca-Ouellette et al., 2025).
+      and sum them.                                       Evaluation We use several metrics to assess out-
+   • Different layers – We apply each vector at a         puts for trait expression and coherence. These met-
+     different layer multiplied by its alpha.             rics are based on LLM-as-a-judge scores, which
+have been shown to acheive high agreement with             We identify candidate layers based on prior work
+human preferences (Zheng et al., 2023) and have         (layers 16 and 20 for the models we use) and
+been established by other research. Prompts for         conduct an initial coarse search over integer co-
+the LLM-as-a-judge methods are included in the          efficients in [1, 5] at each layer. For each layer-
+GitHub repository and taken from Aroca-Ouellette        coefficient combination, we test responses to five
+et al. (2025) and Chen et al. (2025).                   randomly sampled questions from the question set
+   • PLUME trait expression – This metric is            generated for paired data generation. We select the
+      computed using GPT-4o as the LLM judge,           layer and coefficient that maximize average trait
+      J, to assess how closely the generations align    expression while maintaining an average coherence
+      with the ground-truth user preferences. Let       score ≥ 75; this combination serves as our anchor.
+      J(y, p) indicate GPT-4o’s judgment of how         We then perform a fine-grained sweep around the
+      well a generation y adheres to a preference p     anchor coefficient at the anchor layer, testing values
+      (on a 5-point Likert scale from -2 to 2). The     at increments of 0.1 over the range [anchor - 0.5, an-
+      Per Preference-Component Match (PPCM)             chor + 0.5], again selecting the configuration with
+      then averages these scores across the ground-     the highest trait expression subject to coherence
+      truth preferences P:                              ≥ 75. At any stage, the search terminates early if
+                              P                         a combination achieves trait expression ≥ 90 with
+                                 p∈P J(y, p)            coherence ≥ 75.
+             PPCM(y, P) =
+                                    |P|
+      Aroca-Ouellette et al. (2025) designed this       5     Results
+      metric for PLUME and verified it has good
+                                                        We test a variety of properties of how flexibly steer-
+      correlation with human judgments of genera-
+                                                        ing vectors can be applied, considering type of trait,
+      tion quality and preference adherence.
+                                                        task transfer, combination method for multiple vec-
+   • Extraction trait expression – This metric          tors, and number of vectors.
+     prompts GPT-4.1-mini to score trait expres-
+     sion on a scale of 0 to 100. Chen et al. (2025)    5.1    Which types of traits can be steered?
+     designed this evaluation for PersonaVectors        In Figure 3, we show how effectively each trait can
+     and found it has good correlation with human       be steered for each model using the best setting
+     judgments for the traits they assessed: evil,      from layer and coefficient tuning. In this plot, we
+     sycophancy, and hallucination. This judge is       use the same trait expression judge and extraction
+     also used in the paired data generation step of    tasks used for tuning settings, demonstrating the
+     steering vector extraction.                        best case scenario for trait expression. For both
+   • Coherence score - This metric prompts GPT-         models, we see there are steering vectors that re-
+     4.1-mini to score output coherence on a scale      sult in minimal trait expression and/or incoherent
+     of 0 to 100. Chen et al. (2025) and Betley         output. Qwen has more incoherent outputs, while
+     et al. (2026) use this evaluation for alignment    Llama has more unexpressed traits.
+     work. They generally use a threshold of 50 for        In terms of individual traits, there are some steer-
+     coherence. We use a stricter threshold of 75       ing vectors that are in the top ten most effective
+     to identify outputs that are unlikely to include   across both models: bullets, step-by-step, formal
+     repetition or incoherence.                         tone, rhetorical questions, all-caps emphasis, and
+                                                        informal tone. These traits seem to follow common
+4.1   Alpha and Layer Tuning                            overall structural or stylistic tendencies the mod-
+Steering vectors can be applied at any layer in the     els have. In contrast, some steering vectors consis-
+model and with varying degrees of strength. Since       tently appear in the bottom ten least effective across
+steering vectors directy affect the model’s residual    both models: tweet style, third person perspective,
+stream, interfering too much with the activations       question answering style, rhyming structure, condi-
+(with a high α) can lead to incoherence in the out-     tional expressions, and screenplay. These traits use
+put. There is therefore an explicit tradeoff between    more unconventional rhetorical devices that do not
+coherence and trait expression. As a result, we         affect all parts of the output equally, like rhyming
+need to tune which layer and strength to use for        structure that matters most at the end of each line.
+each vector to ensure optimal performance.              Lastly, there are some traits that work very well in
+                                                                                                                   Qwen                                                                             Llama
+Trait IDs:                                                                      100                                       34 20                     32
+                                                                                                                                            31 529 116              100 109 8             34                                      35 1229 326
+                                                                                           28                      21                      12 3 141                                                                                    31 111
+1 allcaps emphasis        19 old timey radio                                                                                                     30                                                                                       36
+2 alliteration            20 onomatopoeia                                                                           24                                    25
+                                                                                                                                                                                24                                  15        721
+                                                                                                                                                                                                                    2             22
+3 ampersand usage         21 parenthetical asides                                                                                               7
+4 archaic language        22 personification                                     80                                                        15                        80          28                                                30
+                                                                                                                              35
+
+
+
+
+                                                         Mean coherence score
+5 assertive               23 podcast style                                                                                                23
+                                                                                                                                          22                                                                                                14 25
+6 bullet parallel         24 question answering style                                                                                                    1710                                  35
+                                                                                                                                                                                                                                               20
+7 childlike               25 rhetorical questions                                                                                  33                                                                                         23
+                                                                                                                                                     9                                                        27                        17
+8 conditional expressions 26 rhyming structure                                   60                                                                                  60                                                                     16
+9 critical                27 sarcastic                                                                                             27        13                                                                26                        1813
+                                                                                                                                         18
+10 emoji usage            28 screenplay                                                                                                   36 4                                                                           19
+11 formal tone            29 second person narrative
+12 header structured      30 short punchy sentences                              40                       26                                                         40                                                                 4
+13 hyperbole              31 simile usage                                                                 8                        19                                                                                          33
+14 informal               32 step by step
+15 inquisitive            33 stream consciousness                                                                                    2              16
+16 intensely emotional    34 third person perspective
+17 long flowing sentences 35 tweet style                                         20                                                                                  20
+18 modern slang           36 vivid imagery
+
+                                                                                  0                                                                                   0
+                                                                                      0              20           40          60          80             100              0           20            40         60             80             100
+                                                                                        Mean trait expression score                                                                  Mean trait expression score
+                                                                                 Strong + coherent       Strong but incoherent                                                         Coherent but weak         Both weak
+
+                                                                                      Qwen                                                                                           Llama
+                                 bullet parallel                                                                                    bullet parallel
+                                  step by step                                                                                       step by step
+                                  emoji usage                                                                                      onomatopoeia
+                                   formal tone                                                                                        formal tone
+                          rhetorical questions                                                                               rhetorical questions
+                             allcaps emphasis                                                                                       vivid imagery
+                       long flowing sentences                                                                                intensely emotional
+                      short punchy sentences                                                                                    allcaps emphasis
+                                       informal                                                                                         hyperbole
+                      second person narrative                                                                                             informal
+                                                       Top 10                                                                                                       Top 10
+                                                       Bottom 10                                                                                                    Bottom 10
+                         stream consciousness                                                                                         alliteration
+                                old timey radio                                                                                rhyming structure
+                                    tweet style                                                                                         sarcastic
+                                 onomatopoeia                                                                                         tweet style
+                      third person perspective                                                                          third person perspective
+                      question answering style                                                                                        screenplay
+                           parenthetical asides                                                                         question answering style
+                             rhyming structure                                                                           conditional expressions
+                       conditional expressions                                                                                             critical
+                                     screenplay                                                                                     emoji usage
+                                                   0               20                 40        60         80      100                                          0         20         40        60        80    100
+
+                                                                                                                    Mean trait expression score
+                                                 Strong + coherent                                             Strong but incoherent                        Coherent but weak                             Both weak
+
+Figure 3: Steering effectiveness varies substantially across stylistic traits and models. Top: Trait-expression score
+versus coherence score for each trait. Bottom: Traits ranked by mean expression score, with colors indicating
+coherence outcomes. While many traits remain both expressive and coherent under steering, others exhibit weak
+controllability or incoherence.
+
+
+one model and not the other, such as emoji usage                                                                              strating that steering depends significantly on the
+for Qwen and onomatopoeia for Llama. Overall,                                                                                 context in which it is applied and vectors may be
+these results show that steering effectiveness de-                                                                            capturing task-dependent aspects of a trait. We also
+pends on context and trait. Many traits cannot be                                                                             notice that summarization has more traits that de-
+steered reliably without introducing incoherence in                                                                           grade significantly in performance. Summarization
+outputs. Finally, traits that follow common LLM                                                                               is typically a more impersonal task, so it may be
+output styles and affect the structure or style as a                                                                          more unnatural for the models to inject particular
+whole tend to be the most effective.                                                                                          style into summaries. For both models, the sec-
+                                                                                                                              ond person narrative and header structured traits
+5.2     Does steering transfer across tasks?                                                                                  transfer poorly, and for both models, the tweet style
+In Figure 4, we investigate whether steering effec-                                                                           trait increases significantly in expression. Overall,
+tiveness in the extraction setting transfers well to                                                                          these results indicate steering performance is highly
+the downstream PLUME tasks: summarization and                                                                                 dependent on the task and judge used for vector
+email writing. If steering transfers perfectly, we                                                                            extraction and coefficient tuning. Performance can
+would see all traits aligned along the middle diago-                                                                          then degrade substantially when the resulting vec-
+nal in the first plot and relatively short bars across                                                                        tors are applied in downstream settings.
+all traits in the second plot. We see that instead,
+there is significant change in steering effectiveness
+between the extraction and PLUME tasks, demon-
+                                                                                                                                  Qwen2.5-7B-Instruct
+                                                                                                                                                     28
+Trait IDs:                                                   100                                                  2            1412
+                                                                                                                                  4 15513  24
+                                                                                                                                           10
+                                                                                                                                        161 9
+                                                                                                                                      8 29
+                                                                                                                                                     11
+                                                                                                                                                     30
+
+
+
+
+                              Downstream PLUME trait score
+                                                                                                                           17                        32
+ 1 allcaps emphasis                                                                          20          34
+                                                                                                              26            3522 3                   31
+                                                                                                                                                     19
+ 2 alliteration                                                                                                                    6                 27
+                                                                                                                                                     23
+ 3 ampersand usage                                            80                                                             21                      336
+                                                                                                                                                     21 9
+ 4 archaic language                                                                                           18
+                                                                                                                                           31        16
+ 5 assertive                                                                                                                                         10
+                                                                                                                                                     24
+ 6 childlike                                                  60                                                                                     291
+ 7 conditional expressions                                                                         33                                                188
+                                                                                                                                  30
+ 8 critical                                                   40                       7      23        19                                           1335
+ 9 emoji usage                                                                         25                                       11       28          25
+                                                                                                                                                     22
+10 formal tone                                                                                                32                                     15
+                                                                                                                                                     357
+11 header structured                                                                                                                                    4
+12 hyperbole                                                  20                                                                                     12
+                                                                                                                                                     14
+13 informal                                                                                                                                          17
+                                                                                                                                                     262
+14 inquisitive                                                                                                                                       34
+                                                                                                                                                     20
+15 intensely emotional                                         0 27
+                                                                0                 20         40          60                  80               100           40         20        0       20        40        60
+16 long flowing sentences
+17 modern slang
+18 old timey radio
+                                                                                                                                 Llama-3.1-8B-Instruct
+19 onomatopoeia                                              100                        34                                   20        1613 15
+                                                                                                                                            1        28
+                                                                                                                                                     11
+                                                                                                             14                         171224       19
+20 parenthetical asides
+                              Downstream PLUME trait score
+
+
+
+
+                                                                                                                                  29                 216
+21 personification                                                                                                                  5 4 10           32
+                                                                                                                                                     30
+22 podcast style                                              80                                                                                     353
+23 question answering style                                                                         26                      22                       25
+                                                                                                                                                     31
+24 rhetorical questions                                                                                      2                                       27
+                                                                                                                                                     33
+25 rhyming structure                                                                                                  18                       31    18
+                                                                                                                                                     23
+26 sarcastic                                                  60                                                                                     10
+                                                                                                                                           35        24
+                                                                                                                                                     224
+27 screenplay                                                          7                                                                 30 19         5
+28 second person narrative                                    40                                                                   3                 15
+                                                                                                                                                     17
+29 short punchy sentences                                                                                                                            121
+30 simile usage                                                                                                                 32 21                132
+31 step by step                                                                                                             6           1128         29
+                                                              20 9                                      25                                           168
+32 stream consciousness                                                                                                                              26
+                                                                                                                                                     209
+33 third person perspective                                        8              33
+34 tweet style                                                                                                                                       147
+                                                               0           2327                                                                      34
+35 vivid imagery                                                   0              20         40          60                  80               100           60    40        20       0   20   40        60
+                                                                             Extraction-setting trait score                                                  Transfer gap (extraction downstream)
+                                                                                                                                 Email writing                   Summarization
+
+Figure 4: Steering transfer from the extraction setting to downstream PLUME tasks. Left: each trait is plotted
+by its extraction-setting trait score and downstream PLUME trait score; points on the diagonal indicate perfect
+transfer. Right: transfer gap, defined as extraction score minus downstream score, for each trait. Positive gaps
+indicate stronger expression in the extraction setting, while negative gaps indicate stronger expression downstream.
+Email-writing traits are shown in blue and summarization traits in orange.
+
+
+5.3    What is the best method to apply multiple                                                                                       competing effects. The only method which reduces
+       steering vectors simultaneously?                                                                                                trait expression only moderately while maintaining
+                                                                                                                                       output coherence across both models is the unit
+In Table 2, we report the results of trying to ap-
+                                                                                                                                       norm approach applied at layer 20. However, for
+ply two steering vectors simultaneously at infer-
+                                                                                                                                       both models, the trait expression for the two traits
+ence time. We evaluate these combinations using
+                                                                                                                                       is fairly imbalanced in this approach, demonstrat-
+the same setting and judge used during vector ex-
+                                                                                                                                       ing that there are different tradeoffs of different
+traction to isolate combination method from task
+                                                                                                                                       methods.
+transfer. We can see that for all methods, trait
+expression drops significantly (at least 15% reduc-
+                                                                                                                                       5.4          What is the effect of increasing the
+tion). Many outputs are also somewhat incoherent
+                                                                                                                                                    number of combined steering vectors?
+(considered as anything with a coherence score of
+< 75%). In many cases, one trait also dominates                                                                                        We expand on the previous question to also see how
+over another to some degree. This effect seems                                                                                         these combination methods scale to more steering
+more prominent in the unit norm methods. In these                                                                                      vectors on the PLUME tasks. We show plots for
+methods, traits are balanced equally rather than                                                                                       trait expression scores on the left in Figure 5 and
+allowing re-balancing effects from different coeffi-                                                                                   coherence scores on the right. We can see that the
+cients. However, we see that for both models, the                                                                                      unit norm methods remain substantially more co-
+unit norm methods produce significantly more co-                                                                                       herent across more traits, while the other methods
+herent outputs. This suggests that placing steering                                                                                    cross into incoherence. The trait expression de-
+vectors on different layers can amplify the effects                                                                                    creases across all methods as more traits are added.
+of each trait simultaneously, leading to incoherent                                                                                    Most methods have negative or no trait expression
+outputs. In contrast, applying multiple vectors at                                                                                     once their are four traits. For Qwen, the unit norm
+the same layer may allow the model to balance                                                                                          method at layer 20 does the best job of balancing
+                                    Method                                      Trait Expression                     Coherence
+                                                                   Trait 1     Trait 2  Average      ∆ vs baseline
+
+                                    Orthogonalized               45.2 ±4.2   48.3 ±4.4   46.8 ±3.7     −28.5 ±2.7     36.8 ±3.3
+                            Qwen    Different layers             51.3 ±3.9   48.5 ±3.9   49.9 ±3.2     −26.6 ±2.5     40.5 ±3.2
+                                    Tuned mean                   43.2 ±4.4   47.6 ±4.6   45.4 ±3.6     −29.9 ±2.8     47.9 ±4.2
+                                    Unit norm (layer=16, α=30)   39.4 ±5.4   33.5 ±5.2   36.5 ±3.7     −40.1 ±3.5     97.0 ±1.2
+                                    Unit norm (layer=20, α=58)   63.0 ±5.5   49.7 ±5.7   56.4 ±4.1     −20.1 ±3.3     75.9 ±3.5
+                                    Orthogonalized               63.9 ±4.4   49.0 ±5.1   56.5 ±3.7     −15.7 ±2.9     56.0 ±4.0
+                                    Different layers             55.2 ±4.0   50.7 ±4.1   53.0 ±3.1     −18.9 ±2.4     47.7 ±3.4
+                            Llama
+
+
+
+
+                                    Tuned mean                   61.9 ±4.6   42.8 ±4.9   52.3 ±3.6     −19.9 ±2.9     65.0 ±4.1
+                                    Unit norm (layer=16, α=4)    51.0 ±5.9   41.4 ±5.8   46.2 ±4.2     −25.7 ±3.5     94.5 ±1.0
+                                    Unit norm (layer=20, α=8)    55.8 ±6.0   42.6 ±5.7   49.2 ±4.7     −22.7 ±3.3     87.6 ±2.5
+
+Table 2: Comparing the effectiveness of different methods for combining multiple steering vectors at inference time
+(reported as mean ± SEM). Trait and coherence scores are 0–100. ∆ vs baseline is the signed difference from the
+single-trait score.
+Qwen2.5-7B-Instruct
+Llama-3.1-8B-Instruct
+
+
+
+
+Figure 5: We show how steering effectiveness changes as more traits are steered simultaneously. The left plot shows
+the PPCM score on PLUME tasks. The right pot shows the coherence score for outputs. We compare the different
+trait combination methods.
+
+
+trait expression and coherence, but for Llama, the                               fectively expressed through steering vectors and
+tuned mean method seems to be the best. Given                                    transferring steering across tasks depends on how
+that the coherence score actually increases as more                              natural steering is in the target task. We find that
+traits are added for the unit norm methods, it seems                             taking a mean of unit normalised vectors and apply-
+that the alpha value likely needs to be increased                                ing an alpha seems to be the most effective method
+as more traits are added to balance trait expression                             of combining vectors at inference time, but steering
+and coherence. While tuning this parameter could                                 effectiveness and coherence still decreases as more
+improve coherence, it exposes yet another parame-                                traits are combined. This alpha may additionally
+ter that requires tuning to apply steering vectors.                              require re-tuning each time the number of traits is
+                                                                                 increased. Collectively, these results reveal that
+6                       Conclusion                                               relying on steering vectors for interpretability and
+                                                                                 alignment will pose limits on generality.
+Through experimenting with a range of steering
+vectors across different tasks and combination set-                                In addition to issues for controllable generation,
+tings, we uncover many limitations in their flexible                             the task transfer results indicate there can be gen-
+application. We see that some traits are not ef-                                 eralization issues for alignment research relying
+on steering vectors to monitor or indicate trait ex-       large language models on narrow tasks can lead to
+pression in training data or inputs. This may be an        broad misalignment. Nature, 649(8097):584–589.
+effective approach for data that is similar enough       Amrita Bhattacharjee, Shaona Ghosh, Traian Rebedea,
+to the vector extraction setting but will perform         and Christopher Parisien. 2024. Towards inference-
+unreliably on data from other downstream settings.        time category-wise safety steering for large language
+                                                          models. In Neurips Safe Generative AI Workshop
+Limitations                                               2024.
+
+                                                         Yuanpu Cao, Tianrong Zhang, Bochuan Cao, Ziyi Yin,
+There are many parameters requiring tuning in the          Lu Lin, Fenglong Ma, and Jinghui Chen. 2024. Per-
+application of steering vectors. We cannot exhaus-         sonalized steering of large language models: Versa-
+tively tune each of these given time and resource          tile steering vectors through bi-directional preference
+limits around attaching different layer hooks for          optimization. In The Thirty-eighth Annual Confer-
+                                                           ence on Neural Information Processing Systems.
+each setting and using LLM-as-a-judge scores for
+evaluation. Additionally, selecting the perfect co-      Runjin Chen, Andy Arditi, Henry Sleight, Owain Evans,
+efficients for four steering vectors applied simulta-      and Jack Lindsey. 2025. Persona vectors: Monitoring
+neously is a complex optimization problem. As a            and controlling character traits in language models.
+                                                           Preprint, arXiv:2507.21509.
+result, there are places where coefficients or layers
+could be tuned further. Despite this limitation, we      Junhyuk Choi, Yeseon Hong, Minju Kim, and Bugeun
+see consistent patterns in our results that lead to        Kim. 2025. Examining identity drift in conversations
+                                                           of llm agents. Preprint, arXiv:2412.00804.
+our conclusions.
+   Since we need to modify and extract the residual      Jacob Dunefsky and Arman Cohan. 2025. One-shot
+stream from the model, we are limited to working            optimized steering vectors mediate safety-relevant
+with open-source models. For the same reasons               behaviors in LLMs. In Second Conference on Lan-
+                                                            guage Modeling.
+around resource constraints described above, we
+work with two commonly used models, but we are           Ge Gao, Alexey Taymanov, Eduardo Salinas, Paul
+therefore not able to conclude whether the limi-           Mineiro, and Dipendra Misra. 2024. Aligning LLM
+                                                           agents by learning latent preference from user edits.
+tations found in this study apply to much larger           In The Thirty-eighth Annual Conference on Neural
+models as well. However, the conclusions in this           Information Processing Systems.
+study can still provide useful pointers to future
+work around what is most likely to work or what          John Hewitt, Sarah Chen, Lanruo Lora Xie, Edward
+                                                           Adams, Percy Liang, and Christopher D. Manning.
+to look out for in applications with larger models.        2024. Model editing with canonical examples.
+   Finally, the evaluation in this work relies on          Preprint, arXiv:2402.06155.
+LLM-as-a-judge metrics. Given the extensive ex-
+                                                         Kai Konen, Sophie Jentzsch, Diaoulé Diallo, Peer
+perimentation with different settings required, it is      Schütt, Oliver Bensch, Roxanne El Baff, Dominik
+not feasible to use human-in-the-loop evaluation.          Opitz, and Tobias Hecking. 2024. Style vectors for
+The metrics we use were designed by prior work             steering generative large language models. In Find-
+and validated against human judgments. Because             ings of the Association for Computational Linguis-
+                                                           tics: EACL 2024, pages 782–802, St. Julian’s, Malta.
+the focus of our study is comparing the tradeoffs          Association for Computational Linguistics.
+and effects of different decisions in the application
+of steering vectors (including choice of task judge),    Kenneth Li, Tianle Liu, Naomi Bashkansky, David Bau,
+using LLM-based scoring is an effective method of          Fernanda Viégas, Hanspeter Pfister, and Martin Wat-
+                                                           tenberg. 2024. Measuring and controlling instruction
+demonstrating these tradeoffs at a coarse level.           (in)stability in language model dialogs. In First Con-
+                                                           ference on Language Modeling.
+
+References                                               Kenneth Li, Oam Patel, Fernanda Viégas, Hanspeter
+                                                           Pfister, and Martin Wattenberg. 2023. Inference-
+Stéphane Aroca-Ouellette, Natalie Mackraz, Barry-John      time intervention: Eliciting truthful answers from
+   Theobald, and Katherine Metcalf. 2025. Aligning         a language model. In Thirty-seventh Conference on
+   LLMs by predicting preferences from user writing        Neural Information Processing Systems.
+   samples. In Forty-second International Conference
+   on Machine Learning.                                  Nelson F. Liu, Kevin Lin, John Hewitt, Ashwin Paran-
+                                                           jape, Michele Bevilacqua, Fabio Petroni, and Percy
+Jan Betley, Niels Warncke, Anna Sztyber-Betley, Daniel     Liang. 2024a. Lost in the middle: How language
+   Tan, Xuchan Bao, Martín Soto, Megha Srivastava,         models use long contexts. Transactions of the Asso-
+   Nathan Labenz, and Owain Evans. 2026. Training          ciation for Computational Linguistics, 12:157–173.
+Sheng Liu, Haotian Ye, Lei Xing, and James Zou. 2024b.     Jason Wei, Maarten Bosma, Vincent Zhao, Kelvin Guu,
+  In-context vectors: Making in context learning more         Adams Wei Yu, Brian Lester, Nan Du, Andrew M.
+  effective and controllable through latent space steer-      Dai, and Quoc V Le. 2022. Finetuned language mod-
+  ing. Preprint, arXiv:2311.06668.                            els are zero-shot learners. In International Confer-
+                                                              ence on Learning Representations.
+Xiaogeng Liu, Nan Xu, Muhao Chen, and Chaowei
+  Xiao. 2024c. AutoDAN: Generating stealthy jail-          Hanyu Zhang, Xiting Wang, Chengao Li, Xiang Ao,
+  break prompts on aligned large language models. In         and Qing He. 2025. Controlling large language mod-
+  The Twelfth International Conference on Learning           els through concept activation vectors. Preprint,
+  Representations.                                           arXiv:2501.05764.
+Nina Rimsky, Nick Gabrieli, Julian Schulz, Meg Tong,
+                                                           Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan
+  Evan Hubinger, and Alexander Turner. 2024. Steer-
+                                                             Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin,
+  ing llama 2 via contrastive activation addition. In
+                                                             Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang,
+  Proceedings of the 62nd Annual Meeting of the As-
+                                                             Joseph E. Gonzalez, and Ion Stoica. 2023. Judging
+  sociation for Computational Linguistics (Volume 1:
+                                                             LLM-as-a-judge with MT-bench and chatbot arena.
+  Long Papers), pages 15504–15522, Bangkok, Thai-
+                                                             In Thirty-seventh Conference on Neural Information
+  land. Association for Computational Linguistics.
+                                                             Processing Systems Datasets and Benchmarks Track.
+Alireza Salemi, Sheshera Mysore, Michael Bendersky,
+  and Hamed Zamani. 2024. LaMP: When large lan-            Daniel M. Ziegler, Nisan Stiennon, Jeffrey Wu, Tom B.
+  guage models meet personalization. In Proceedings          Brown, Alec Radford, Dario Amodei, Paul F. Chris-
+  of the 62nd Annual Meeting of the Association for          tiano, and Geoffrey Irving. 2019. Fine-tuning lan-
+  Computational Linguistics (Volume 1: Long Papers),         guage models from human preferences. CoRR,
+  pages 7370–7392, Bangkok, Thailand. Association            abs/1909.08593.
+  for Computational Linguistics.
+                                                           Andy Zou, Long Phan, Sarah Chen, James Campbell,
+Omar Shaikh, Michelle S. Lam, Joey Hejna, Yijia Shao,        Phillip Guo, Richard Ren, Alexander Pan, Xuwang
+  Hyundong Justin Cho, Michael S. Bernstein, and             Yin, Mantas Mazeika, Ann-Kathrin Dombrowski,
+  Diyi Yang. 2025. Aligning language models with             Shashwat Goel, Nathaniel Li, Michael J. Byun, Zifan
+  demonstrated feedback. In The Thirteenth Interna-          Wang, Alex Mallen, Steven Basart, Sanmi Koyejo,
+  tional Conference on Learning Representations.             Dawn Song, Matt Fredrikson, and 2 others. 2025.
+                                                             Representation engineering: A top-down approach
+Xinyue Shen, Zeyuan Chen, Michael Backes, Yun                to ai transparency. Preprint, arXiv:2310.01405.
+  Shen, and Yang Zhang. 2024. "do anything now":
+  Characterizing and evaluating in-the-wild jailbreak
+  prompts on large language models.         Preprint,
+                                                           A    Trait Definitions
+  arXiv:2308.03825.
+                                                               • write assertively: use assertive language in
+Alessandro Stolfo, Vidhisha Balachandran, Safoora                the response
+  Yousefi, Eric Horvitz, and Besmira Nushi. 2025. Im-          • adopt a step-by-step structure: break the
+  proving instruction-following in language models
+  through activation steering. In The Thirteenth Inter-
+                                                                 response into individual steps
+  national Conference on Learning Representations.             • include rhetorical questions: ask rhetorical
+                                                                 questions in the response
+Nishant Subramani, Nivedita Suresh, and Matthew Pe-
+  ters. 2022. Extracting latent steering vectors from          • use semicolons (;) when possible: use semi-
+  pretrained language models. In Findings of the Asso-           colons when possible in the response
+  ciation for Computational Linguistics: ACL 2022,             • include personifications: include personifica-
+  pages 566–581, Dublin, Ireland. Association for                tions of the details described in the response
+  Computational Linguistics.
+                                                               • write in the style of old timey radio: write
+Zhaoxuan Tan, Zheng Li, Tianyi Liu, Haodong Wang,                the response as though it is part of the tran-
+  Hyokun Yun, Ming Zeng, Pei Chen, Zhihan Zhang,                 script of an old timey radio broadcast
+  Yifan Gao, Ruijie Wang, Priyanka Nigam, Bing Yin,
+  and Meng Jiang. 2025. Aligning large language mod-           • include a simile: use similes in the response
+  els with implicit preferences from user-generated            • use imagery: include vivid imagery to de-
+  content. In Proceedings of the 63rd Annual Meet-               scribe aspects of the response
+  ing of the Association for Computational Linguistics         • include modern slang: incorporate modern
+  (Volume 1: Long Papers), pages 7792–7820, Vienna,
+                                                                 slang in the response
+  Austria. Association for Computational Linguistics.
+                                                               • use ampersands (&) instead of "and"s: use
+Alexander Matt Turner, Lisa Thiergart, Gavin Leech,              ampersands in the response
+  David Udell, Juan J. Vazquez, Ulisse Mini, and
+  Monte MacDiarmid. 2024. Steering language
+                                                               • use ALLCAPS to emphasize certain words:
+  models with activation engineering.      Preprint,             capitalize all the letters in some words to em-
+  arXiv:2308.10248.                                              phasize their importance in the response
+• use archaic language: use old-fashioned lan-          • write in the style of a children’s book: write
+  guage in the response as though writing from            the response as though it is a written story for
+  a much earlier century                                  a child
+• write in the style of a podcast: write the            • write in the style of a screenplay: write the
+  response as though it is part of the transcript         response as though it is part of a screenplay
+  of a podcast episode                                    for a movie
+• sign off the email using an epithet: con-             • adopt a second person narrative: write the
+  clude the response by signing off with an epi-          response using second person narration
+  thet, meaning using an adjective or descriptive       • adopt a third person narrative: write the
+  phrase instead of a name                                response using third person narration
+• adopt a rhyming structure: write the re-              • use a formal tone: write the response in a
+  sponse with rhyming lines                               formal and professional tone
+• adopt a question-answering style structure:           • use an informal tone: write the response in
+  write the response as a series of questions and         an informal and casual tone
+  answers                                               • adopt a header and sub-header structure:
+• include alliterations: use some alliteration in         write the response with header and sub-header
+  the response, but do not write entire sentences         structure
+  with alliteration
+• include hyperboles: use hyperbole, meaning        B    Composition Methods
+  lots of exaggeration, in the response             Before combining vectors, each trait k is individ-
+• be intensely emotional: use intensely emo-        ually tuned to find the best layer ℓ∗k ∈ {16, 20}
+  tional language in the response                   and coefficient αk∗ using the approach describe in
+• be sharply critical: write the response using     Section 4.1. Given two traits k1 and k2 with tuned
+  critical and hostile language                     parameters (ℓ∗k1 , αk∗1 ) and (ℓ∗k2 , αk∗2 ), we compare
+• be highly inquisitive: write the response us-     four ways to compose their vectors. For clarity, we
+  ing an inquisitive and questioning style          focus on two traits here, but each method general-
+• be blatantly sarcastic: write the response        izes to more traits by following the same pattern.
+  using lots of clear sarcasm                          Orthogonalized. When both traits share the
+• include several long and flowing sentences:       same tuned layer, to reduce interference between
+  include many long, flowing sentence in the        vectors that share a direction in representation
+  response                                          space, the second vector is projected to remove
+• open the email using a movie reference:           its component along the first before application:
+  start the response with a reference to a movie
+                                                              vk⊥2 = vk2 − vk2 · v̂k1 v̂k1 ,
+                                                                                             
+• use parenthetical asides: use many paren-                                                              (1)
+  thetical asides within the response
+• write using conditional expressions: write        where v̂k1 = vk1 /∥vk1 ∥. Then αk∗1 vk1 and
+  the response using conditional expressions        αk∗2 vk⊥2 are summed and applied at ℓ∗ . When
+  (e.g., if/then statements)                        traits have different tuned layers, this reduces to
+• write using bullet points: include bullet         the different-layers method.
+  points in the response                               Different layers. Each vector is applied inde-
+• use emojis: use emojis in the response            pendently at its own tuned layer:
+• include several short and punchy sentences:                 (ℓ∗ )           (ℓ∗ )
+  focus the response on using short, impactful            h̃t k = ht k + αk∗ vk ,                      k ∈ {k1 , k2 }.   (2)
+  sentences to make a statement
+• write using a stream-of-consciousness style:      When both traits share the same tuned layer (ℓ∗k1 =
+  write using a stream-of-consciousness style       ℓ∗k−2 ), vk2 is shifted down one layer and still ap-
+  with one thought flowing directly into another    plied with αk∗2 .
+• write in the style of a tweet: write the re-         Tuned mean. When both traits share the same
+  sponse in the style of a tweet                    tuned layer, their scaled vectors are averaged and
+• include onomatopoeia: use onomatopoeia in         applied as a single intervention:
+  the response, meaning words that sound like             (ℓ∗k         )      (ℓ∗k      )       αk∗1 vk1 + αk∗2 vk2
+                                                                 1,2              1,2
+  what they are referring to                            h̃t                = ht             +                       .    (3)
+                                                                                                         2
+When traits have different tuned layers, this reduces
+to the different layers method.
+   Unit norm. Each vector is unit-normalised be-
+fore combining with a mean, and the result is ap-
+plied at a fixed layer ℓ with a single shared coeffi-
+cient α:
+                               n
+           (ℓ)     (ℓ)       1 X vk j
+          h̃t = ht + α ·                .          (4)
+                             n   ∥vkj ∥
+                                j=1
+
+This decouples the magnitude of each vector from
+the trait-specific tuning, making it straightforward
+to extend to n > 2 traits with a single scalar to tune.
+We evaluate ℓ ∈ {16, 20}. For our experiments, α
+is fixed per model and layer: for Qwen, α is 30 at
+layer 16 and 58 at layer 20; for Llama, α is 4 at
+layer 16 and 8 at layer 20. We set these α values
+as twice the mean norm of steering vectors at that
+layer (rounded to the nearest integer), which we
+found to be a reasonable value in early experiments.
+Future work could further tune this value.
+
