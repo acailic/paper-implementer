@@ -1,0 +1,1115 @@
+                                               MAVEN: Evidence-State Rewards for Long-Context Reasoning
+
+                                                                                 Ya Gao1 , Pekka Marttinen1
+                                                                                        1
+                                                                                            Aalto University
+                                                                                  Correspondence: ya.gao@aalto.fi
+
+
+
+
+                                                              Abstract                                   Q: What is the main business of the company that acquired the startup
+                                                                                                         founded by the author of Art of Sport?
+                                                                                                         Doc 3: ...Art of Sport was written by technology journalist Alice Chen.
+                                            Long-context reasoning requires models to lo-                Doc 8: ...Alice Chen founded Mavit, which received early investment from OldCorp, a
+                                                                                                         manufacturer of sports equipment...
+                                            cate, revise, and synthesize evidence distributed
+arXiv:2607.02073v1 [cs.AI] 2 Jul 2026
+
+
+
+
+                                                                                                         Doc 21: ...Before becoming an entrepreneur, Alice Chen worked at Casto as a
+                                                                                                         product analyst...
+                                            across lengthy inputs. Existing long-context                 Doc 30: ...Meckit announced the acquisition of NovaSport. Meckit is best known for
+                                                                                                         its sports watches...
+                                            RL methods usually reward final answers or                   Doc 34: ....Corporate records identify Alice Chen as the founder of NovaSport...
+
+                                            static evidence extraction, offering little feed-           The question asks about...                 The question asks about...
+                                                                                                        Doc 3 identifies Alice Chen...             Doc 3 says... Add Doc 3.
+                                            back on how intermediate actions change the                 Doc 8 says Alice Chen founded              Doc 8 says that Alice Chen founded Mavit
+                                                                                                        Mavit, which received investment           and that Mavit received investment
+                                            model’s evidence state. We propose M AVEN                   from OldCorp, a sports equipment           from... Add Doc 8.
+                                                                                                                                                   Doc 21 is not about...so I should not rely
+                                                                                                        manufacturer.
+                                            (Marginal-Value Evidence Navigation), a rein-               Doc 21 only says...... so it is not
+                                                                                                                                                   on it...
+                                                                                                                                                   Doc 34 shows that Alice Chen founded
+                                                                                                        useful..                                   NovaSport... Add Doc 34... Drop Doc 8.
+                                            forcement learning framework with an editable               Therefore, the relevant company is         Doc 30 says that Meckit acquired
+                                                                                                        OldCorp, and its main business is          NovaSport and that Meckit is best known
+                                            evidence memory. M AVEN defines an answer-                  sports equipment.                          for sports watches.
+                                                                                                        Answer: Sports equipment.                  Thus, the company is Meckit, and its
+                                            conditioned evidence-state value and rewards                                                           main business is sports watches.
+                                                                                                                                                   Answer: Sports watches.
+                                                                                                         Evidence-identification
+                                            action-level state transitions: add actions are              reward                                             MAVEN (Ours)
+
+                                            credited by marginal gain and hindsight contri-
+                                            bution, link actions by evidence synergy, and
+                                            drop actions by improved answer support af-              Figure 1: Motivating example illustrating the limita-
+                                            ter removing misleading evidence. These re-              tion of evidence-identification rewards. Although the
+                                            wards are assigned to the corresponding ac-              baseline finds a relevant first hop, it anchors on a plau-
+                                            tion spans in GRPO. Across Llama and Qwen                sible distractor and stops before recovering the full ev-
+                                            models on LongBench v2, LongReason, and                  idence chain. In contrast, M AVEN encourages explo-
+                                            RULER, M AVEN outperforms outcome-only                   ration, where the model revises its evidence state by
+                                            RL and evidence-identification baselines, pro-           dropping the misleading document, adding the missing
+                                            ducing more sufficient evidence sets and lower           evidence, and producing the correct answer.
+                                            distractor retention. Our results show that long-
+                                            context RL benefits from optimizing stateful
+                                            evidence navigation rather than one-shot evi-            premature reliance on partial evidence, failure to
+                                            dence extraction.                                        identify necessary information, or inability to syn-
+                                                                                                     thesize evidence distributed across distant parts of
+                                        1   Introduction                                             the context.
+                                        Advanced Large Language Models (LLMs), es-                      Reinforcement Learning (RL) has become an
+                                        pecially reasoning-oriented models, have shown               effective approach for improving the reasoning
+                                        strong performance on complex tasks such as math-            behavior of LLMs (Jin et al., 2025), and recent
+                                        ematical reasoning, coding, and multi-step problem           work has begun to apply RL to long-context reason-
+                                        solving (Jaech et al., 2024; Guo et al., 2025; Team          ing. A straightforward strategy is to optimize the
+                                        et al., 2025a). As LLMs are increasingly used in             model using only outcome rewards, which is based
+                                        real-world workflows, they are also expected to pro-         solely on verification of the final answer (Wan et al.,
+                                        cess and reason over large volumes of information.           2025; Wang et al., 2025). While simple and scal-
+                                        Recent models therefore support increasingly long            able, outcome-only rewards provide limited feed-
+                                        context windows (Team et al., 2025b). However,               back about the intermediate process (Chen et al.,
+                                        the ability to accept long inputs does not neces-            2026). Beyond outcome-only supervision, recent
+                                        sarily imply the ability to reason effectively over          studies introduce context-aware or evidence-aware
+                                        them. Long-context models may still suffer from              rewards (Chen et al., 2026; Guan et al., 2026; Ping
+                                        issues such as “lost in the middle” (Liu et al., 2024),      et al., 2026). These rewards commonly supervise
+evidence-related behavior, such as selecting gold             • We show consistent gains across model fami-
+chunks, quoting context segments, or assessing the              lies and benchmarks, with diagnostic evidence
+quality of extracted evidence. Such designs im-                 that M AVEN improves sufficiency and reduces
+prove over purely answer-level feedback. However,               distractor retention.
+they largely centered on evidence identification or
+evidence quality, where they evaluate evidence as         2     Methodology
+isolated chunks, quoted spans, or a final extracted
+                                                          M AVEN trains a policy to edit an evidence memory
+set. As a result, these rewards provide useful guid-
+                                                          before answering. Each generated action changes,
+ance for retrieval, but they do not fully capture
+                                                          explains, or uses the current memory, and receives a
+the dynamic and state-dependent nature of long-
+                                                          reward based on its contribution to answer support.
+context reasoning.
+   In challenging long-context tasks, evidence is         2.1    Problem Formulation
+rarely useful in isolation. A segment may become
+valuable only after another segment is found; a           Each training instance is denoted as: x =
+plausible document may need to be discarded af-           (C, Q, a⋆ ), where C is a long context, Q is the ques-
+ter later evidence reveals it as a distractor; and        tion, and a⋆ is the gold answer. The policy model
+two individually insufficient pieces may jointly          πθ receives (C, Q) as input and generates a trajec-
+bridge a reasoning gap. As shown in Figure 1, an          tory which is parsed into a sequence of high-level
+extraction-centric reward can encourage premature         actions. Each action mk corresponds to a contigu-
+commitment: once the model finds a locally plau-          ous span of generated tokens Ik ⊆ {1, . . . , T }.
+sible chunk, it may stop exploring, anchor on an          The model is allowed to use four action types:
+incorrect evidence path, or fail to revise its evidence   (1) <add id=i> ... </add>: add a quoted
+set. Effective long-context reasoning therefore re-       or referenced evidence span with the source id
+quires more than retrieving relevant chunks. The          i to the evidence memory; (2) <link ids=i,j>
+model should learn to build, revise, and synthesize       ... </link>: explain how two evidence pieces
+an evolving evidence state.                               jointly support the answer; (3) <drop id=i> ...
+   We propose M AVEN (Marginal-Value Evidence             </drop>: remove an evidence piece that is irrele-
+Navigation), a reinforcement learning framework           vant, redundant, or misleading; (4) <answer> ...
+with an editable evidence memory. The model               </answer>: produce the final answer. The action
+learns to add evidence, link complementary evi-           order is not predetermined. The model may add,
+dence, drop misleading evidence, and answer the           link, and drop evidence multiple times before an-
+question. Rather than rewarding isolated evidence         swering.
+extraction, M AVEN scores how each action changes            Let Ek = {e1 , e2 , . . . , enk }, a set of evidence
+the current answer-supporting evidence state.             items, denote the evidence memory after the k-th
+                                                          action, with E0 = ∅. Add and drop actions modify
+   We evaluate M AVEN on Llama-3.1-8B,
+                                                          the memory, while link actions leave the memory
+Qwen2.5-14B, and Qwen3-30B-A3B across Long-
+                                                          unchanged. The final kept evidence set is denoted
+Bench v2, LongReason, and RULER. M AVEN
+                                                          by EF .
+consistently improves final-answer performance,
+while also increasing evidence sufficiency and               We impose only lightweight structural con-
+reducing distractor retention. Our contributions          straints: each evidence item must have a unique
+are:                                                      identifier, drop and link actions must refer to exist-
+                                                          ing identifiers, the number of kept evidence items
+   • We identify a limitation of existing long-           is capped by Kmax , and evidence spans exceeding
+     context RL rewards: they often supervise             a maximum length are invalid. These constraints
+     static evidence extraction rather than evidence-     control computational cost and prevent degenerate
+     state transitions.                                   add–drop loops.
+
+   • We propose M AVEN, an editable evidence-             2.2 Answer-Conditioned Evidence-State Value
+     memory framework that defines an answer-             The central component of M AVEN is an evidence-
+     conditioned evidence-state value and trains          state value function that measures whether the cur-
+     LLMs to add, link, drop, and answer through          rent evidence memory helps predict the gold an-
+     stateful, action-local process rewards.              swer. We use a frozen verifier model pψ , rather
+                          ?      Step 1 Add        Step 2 Add             Step 3 Add           Step 4 Drop           Step 5 Link         Step 6
+                                      <add id=3>                            <add id=14>                                                  Answer
+           Long Context                               <add id=10>                               <drop id=10>            <link id=3,14>
+                                      ......          ......                ......              ......                  ......
+                                      </add>          </add>                </add>              </drop>                 </link>
+                                                                                                                                         <answer>
+                                      Doc 3           Doc 3                 Doc 3                Doc 3                  Doc 3            ......
+                                                     Doc 10                Doc 10               Doc 14                 Doc 14            </answer>
+                                                                           Doc 14
+
+               Evidence
+               Memory
+
+                                                                                                                  Final Evidence Set
+
+                                                                                                                      Doc 3
+                                                                                                                     Doc 14
+
+
+
+
+Figure 2: The model edits an evidence memory through add, drop, and link actions before answering. Actions
+receive local process rewards based on their effect on the evidence state, and final kept evidence receives hindsight
+credit for its contribution to the final evidence set.
+
+
+than training a separate reward model in the main                                However, online marginal gain alone can under-
+method.                                                                       credit early evidence in multi-hop reasoning. Sup-
+  Given a question Q, evidence memory E, and                                  pose two evidence pieces ei and ej are only use-
+gold answer a⋆ = (a⋆1 , . . . , a⋆|a⋆ | ), the verifier com-                  ful together, which means: Vψ (Q, {ei }) ≈ 0,
+putes the teacher-forced negative log-likelihood:                             Vψ (Q, {ej }) ≈ 0, and Vψ (Q, {ei , ej }) > 0. If
+                                                                              ei is added first, it may receive little online reward
+                              |a⋆ |
+               1 X                                                            even though it is necessary for the final reasoning
+                   log pψ a⋆j | Q, E, a⋆<j .
+                                          
+ ℓψ (Q, E) = − ⋆
+              |a |                                                            chain.
+                              j=1
+                                         (1)                                     To address this, we add a hindsight credit term.
+We then define the normalized evidence-state                                  After the trajectory terminates, for each final kept
+value:                                                                        evidence item ei ∈ EF , we compute:
+
+                              ℓψ (Q, ∅) − ℓψ (Q, E)                                          HCC(ei ; EF ) = [Vψ (Q, EF )
+        Vψ (Q, E) =                                 .               (2)                                                                              (4)
+                                  ℓψ (Q, ∅) + ϵ                                                          −Vψ (Q, EF \ {ei })]+ .
+  This value measures the relative reduction in                               where [z]+ = max(z, 0). This term measures how
+answer NLL caused by the evidence memory. A                                   much the final evidence value would decrease if
+positive value means that the evidence makes the                              ei were removed. It is an efficient leave-one-out
+correct answer more predictable.                                              approximation to Shapley-style evidence credit.
+                                                                                 The reward for a valid add action is:
+2.3   Action Rewards
+For each generated trajectory, M AVEN computes                                             ρadd
+                                                                                            k   = α clip (CAIGk (ek ), −c, c)
+                                                                                                                                                     (5)
+rewards for four action types: add, drop, link, and                                       +(1 − α)1[ek ∈ EF ] HCC(ek ; EF ).
+answer. These rewards are later assigned to the
+corresponding generated action spans.                                         where α ∈ [0, 1] balances online progress and hind-
+                                                                              sight credit.
+2.3.1 Add Reward                                                                 Thus, an added item is rewarded either for im-
+When the model adds a new evidence item ek , the                              mediately improving the current state or for being
+evidence memory changes from Ek−1 to Ek . We                                  necessary in the final evidence memory. Items later
+first compute the online Conditional Answer Infor-                            dropped receive no hindsight credit.
+mation Gain:
+                                                                              2.3.2 Drop Reward
+  CAIGk (ek ) = Vψ (Q, Ek ) − Vψ (Q, Ek−1 )                                   The drop action allows the model to revise its
+                ℓψ (Q, Ek−1 ) − ℓψ (Q, Ek ) (3)                               evidence memory. If action mk drops evidence
+             =                             .
+                       ℓψ (Q, ∅) + ϵ                                          e ∈ Ek−1 , then Ek = Ek−1 \ {e}. The drop re-
+                                                                              ward is:
+This term asks whether the newly added evidence
+improves the current evidence state, conditioned                              ρdrop
+                                                                               k    = clip (Vψ (Q, Ek ) − Vψ (Q, Ek−1 ), −c, c) .
+on what has already been collected.                                                                                           (6)
+   This reward is positive when removing evidence        denoted as Rx,b . The normalized action-level ad-
+improves the answer-conditioned evidence state           vantage is:
+and negative when removing evidence harms it.                                       ρi,k − mean(Rx,b(i,k) )
+Therefore, the model can recover from adding dis-               Âi,k = λb(i,k) ·                           .   (9)
+                                                                                         std(Rx,b(i,k) )
+tracting evidence, but dropping useful evidence is
+penalized.                                            where λb is the weight for action type b.
+                                                          For token yi,t , the token-level importance ratio
+2.3.3 Link Reward
+                                                      is:
+Long-context reasoning often requires synthesis:                             πθ (yi,t | C, Q, yi,<t )
+                                                                ri,t (θ) =                              .   (10)
+two evidence pieces may be individually insuffi-                            πθold (yi,t | C, Q, yi,<t )
+cient but jointly decisive. To encourage explicit     All tokens in the k-th action of the trajectory i
+synthesis, M AVEN rewards link actions between        receive the same advantage. The GRPO objective
+complementary evidence pieces.                        is:
+   We define the pairwise synergy score:                                     "              G X Ki
+                                                                                    1      X           1 X
+                                                       J (θ) = Ex,{τi }G PG
+Syn(ei , ej ; EF ) = Vψ (Q, EF ) − Vψ (Q, EF \ {ei })                    i=1                        |I |
+                                                                                  i=1 Ki i=1 k=1 i,k t∈Ii,k
+                     − Vψ (Q, EF \ {ej })                                                             
+                                                                                                          #
+                                                                                                
+                     + Vψ (Q, EF \ {ei , ej }). (7)              min ri,t (θ)Âi,k , Clip i, t Âi,k
+
+The link reward is:                                                − βDKL .                                 (11)
+           ρlink
+                                                                                                         
+            k    = [Syn(ei , ej ; EF )]+ .        (8)    where Clip i, t = clip ri,t (θ), 1 −ϵc , 1+ ϵc and
+                                                         DKL is a KL penalty against the reference policy.
+   This term is positive when ei and ej are more         We use a small β during training for stability. This
+valuable together than separately. If either evidence    objective preserves process-level credit assignment.
+piece is not retained in the final evidence set, the     For example, if a trajectory contains a bad add
+synergy score is set to zero. If two linked evidence     action followed by a useful drop action, the add
+pieces are redundant, the synergy score is near zero     span can receive a negative advantage while the
+or negative, and the link receives no positive reward.   drop span receives a positive advantage.
+Multi-hop reasoning can be represented by multiple          Training proceeds in two stages. We first per-
+pairwise links, forming an evidence graph over EF .      form a small supervised fine-tuning stage to teach
+2.3.4 Answer Reward                                      the model the editable evidence-memory interface.
+                                                         The demonstrations contain valid add, link, drop,
+We score the final answer using a substring match
+                                                         and answer actions, but do not impose a fixed ac-
+to measure whether the ground truth is covered
+                                                         tion order. This stage is used only to reduce invalid
+by the final answer, and define a binary answer
+                                                         rollouts and teach the action grammar. The main
+reward ρans ∈ {0, 1}. This keeps training aligned
+                                                         reasoning behavior is learned through RL. Starting
+with task success while add, drop, and link rewards
+                                                         from the cold-start policy, we train with the action-
+provide dense process supervision.
+                                                         local rewards defined above. In early RL, we use
+2.4   Training Objective and Procedure                   easier questions and data with shorter context to
+                                                         stabilize exploration. We cap the number of add,
+We optimize the policy with GRPO (Shao et al.,
+                                                         drop, and link actions to prevent degenerate loops
+2024). For each input x, the old policy πθold sam-
+                                                         and to bound verifier cost. Additional methodol-
+ples a group of G trajectories. For the k-th ac-
+                                                         ogy illustration, including details of the curriculum
+tion in trajectory i, we compute an action reward
+                  drop link ans                          training strategy, the choice of the maximum num-
+ρi,k ∈ {ρadd
+           i,k , ρi,k , ρi,k , ρi,k }.                   ber of allowed actions, and computational analysis
+   Process rewards are assigned to the token spans
+                                                         are presented in Appendix A.1.
+that generated the corresponding actions rather than
+collapsed into a single scalar trajectory reward. We      3     Experiments
+compute group-relative advantages separately for
+each action type. b(i, k) denotes the type of the         3.1     Setup
+k-th action in trajectory i. For each type, we col-       Training Data. For RL training, we train on 9K
+lect all rewards of that type from the rollout group,     long-context question–answer pairs with contexts
+from 8K to 64K tokens. The set contains 3K exam-         answer wrapped by <answer> and </answer>.
+ples from LongRLVR (Chen et al., 2026) and 6K            In the rollout prompt for outcome+evidence
+multi-hop examples from HotpotQA (Yang et al.,           identification baseline, we instruct the model to
+2018), 2WikiMultiHopQA (Ho et al., 2020), and            explicitly indicate the ID of selected chunks. We
+MuSiQue (Trivedi et al., 2022). For LongRLVR             additionally report results of stronger open-weight
+data, we select examples that require multiple ev-       models, including Llama-3.1-70B (Dubey et al.,
+idence chunks to answer and filter candidates ac-        2024), Qwen3-32B (Thinking) (Yang et al., 2025),
+cording to context length, number of necessary           and QwenLong-L1-32B (Wan et al., 2025), as
+evidence units, absence of single-evidence short-        reference points. We use YaRN (Peng et al., 2024)
+cuts, and question difficulty. For the multi-hop data,   to extend the context length of Qwen models
+we combine gold evidence with random, dataset-           to 128K when needed. We evaluate all models
+provided, and model-generated hard distractors.          on three long-context benchmarks: LongBench
+For cold-start SFT, we construct 2K trajectories         v2 (Bai et al., 2025), LongReason (Ling et al.,
+in the editable evidence-memory format from the          2025), and selected subsets from RULER (Hsieh
+same source datasets. Details of data sampling,          et al., 2024). All evaluations follow the official
+distractor construction, filtering criteria, and data    inference configuration of each benchmark. In
+statistics are provided in Appendix A.2.                 addition to benchmark accuracy, we evaluate
+                                                         evidence-process behavior on a held-out diagnostic
+Implementation Setup. We conduct experi-
+                                                         set of 150 constructed examples from multi-hop
+ments on three policy models from different model
+                                                         data with gold evidence annotations. We report
+families and scales: Llama-3.1-8B-Instruct (Dubey
+                                                         evidence sufficiency and distractor retention.
+et al., 2024), Qwen2.5-14B-Instruct (Yang et al.,
+                                                         Evidence sufficiency measures the fraction of
+2024), and Qwen3-30B-A3B-Instruct-2507 (Yang
+                                                         gold evidence chunks that are covered in the final
+et al., 2025). For cold-start SFT, we use a learning
+                                                         kept evidence. Distractor retention measures
+rate of 2 × 10−5 , a batch size of 16, and 30 warmup
+                                                         the percentage of final kept evidence items that
+steps. For RL training, we use GRPO with a rollout
+                                                         correspond to distractor chunks. For diagnostic
+group size of 8 and a global prompt batch size of
+                                                         evaluation, all models are prompted to output
+16. We train for one epoch with a learning rate
+                                                         evidence identifiers so that evidence behavior can
+of 1 × 10−6 , cosine decay, and 10 warmup steps.
+                                                         be measured consistently.
+The maximum response length is 4096 tokens,
+                                                            We provide additional implementation and eval-
+and rollouts are sampled with temperature=0.8
+                                                         uation details in Appendix A.3.
+and top_p=0.95. We use Qwen3-4B-Instruct-
+2507 (Yang et al., 2025) as the frozen verifier. Un-     3.2   Main Results
+less otherwise specified, we set the reward weights
+                                                         Table 1 reports the main results on LongBench
+of add, drop, link, and answer rewards to 0.5, 0.2,
+                                                         v2, LongReason, and RULER. M AVEN consis-
+0.3, and 1.0, respectively, and set α = 0.6 in the
+                                                         tently outperforms all controlled baselines across
+add reward.
+                                                         model families, model sizes, and benchmarks. On
+Baselines and Benchmarks. We compare                     LongBench v2 overall, M AVEN improves over the
+M AVEN with several controlled baselines trained         strongest baseline by +3.5, +3.2, and +4.0 points
+under the same data and optimization setup: the          on Llama-3.1-8B, Qwen2.5-14B, and Qwen3-30B-
+original base model, the cold-start SFT model,           A3B, respectively. Similar gains are observed on
+outcome-only RL using final answer correctness           LongReason and RULER, showing that the pro-
+as reward, outcome plus evidence identification          posed evidence-memory rewards transfer beyond
+reward, and outcome plus evidence identification         the training data distribution.
+reward with an exploration-oriented prompt. The             The improvements are especially clear in long-
+evidence identification reward is computed as the        context settings. On the LongBench v2 Long
+F1 score between the model’s final kept evidence         split, M AVEN improves Llama-3.1-8B from 25.9 to
+set and the gold evidence set. The prompted              32.1, Qwen2.5-14B from 33.0 to 37.0, and Qwen3-
+exploration baseline uses the same action format         30B-A3B from 43.8 to 46.3, compared with the
+as M AVEN, but does not reward add, drop, or link        strongest baseline for each model. On LongRea-
+actions separately. The rollout prompt for outcome-      son, M AVEN also gives substantial gains at 128K
+only baseline instructs the model to output the final    context length. These results suggest that model-
+Table 1: Main results on LongBench v2, LongReason, and RULER. Bold numbers indicate the best method for each
+trained model. Green cells indicate the best result among all listed models.
+
+                                                                LongBench v2                    LongReason                  RULER
+      Model
+                                                       Short   Medium   Long   Overall   32K    64K    128K   AVG    64K    128K    Avg.
+      LLaMA-3.1-70B                                    42.8     38.0    31.2    38.3     61.2   63.3   48.3   57.6   93.2    69.8   81.5
+      Qwen3-32B (Thinking)                             56.7     44.0    45.1    48.7     86.6   84.4   79.3   83.5   92.1    84.4   88.2
+      QwenLong-L1-32B                                  52.8     36.2    32.7    41.4     84.1   83.6   75.1   80.9   81.7    74.3   78.0
+
+      LLaMA-3.1-8B                                     33.3     30.7    22.5    29.9     51.4   49.9   46.5   49.3   85.1    77.2   81.1
+        + SFT                                          34.5     30.4    24.1    30.5     51.0   49.2   47.1   49.1   85.6    77.4   81.5
+        + Outcome                                      36.7     32.0    24.4    32.0     51.8   50.5   46.2   49.5   85.8    77.9   81.9
+        + Outcome+Evidence ID                          38.1     32.6    25.3    33.0     52.1   50.9   48.7   50.6   86.9    78.3   82.6
+        + Outcome+Evidence ID (Prompted exploration)   37.6     32.9    25.9    33.1     52.4   51.3   48.9   50.8   86.6    78.5   82.5
+        + MAVEN                                        39.8     36.2    32.1    36.6     55.9   55.2   55.8   55.6   88.4    80.1   84.3
+      Qwen2.5-14B                                      47.6     33.9    30.2    38.0     68.1   66.2   62.3   65.5   83.7    75.5   79.6
+       + SFT                                           46.8     34.7    31.2    38.3     67.6   66.8   61.5   65.3   83.9    75.2   79.6
+       + Outcome                                       48.1     34.9    31.2    38.8     69.5   67.4   62.0   66.3   84.1    75.7   79.9
+       + Outcome+Evidence ID                           49.3     36.1    33.0    40.1     70.3   67.8   64.7   67.6   86.7    76.9   81.8
+       + Outcome+Evidence ID (Prompted exploration)    49.3     36.5    33.0    40.3     70.2   67.6   64.5   67.4   86.5    77.1   81.8
+       + MAVEN                                         51.5     40.2    37.0    43.5     73.0   71.7   70.2   71.6   90.0    81.6   85.8
+      Qwen3-30B-A3B                                    50.7     39.4    40.7    43.7     84.8   82.9   77.1   81.6   88.2    82.6   85.4
+       + SFT                                           49.3     38.1    38.9    42.2     83.8   82.6   76.3   80.9   88.5    82.7   85.6
+       + Outcome                                       49.8     39.7    40.7    43.5     84.8   81.7   77.2   80.9   87.2    82.3   84.8
+       + Outcome+Evidence ID                           48.9     41.1    44.4    44.6     85.3   82.6   79.3   82.4   89.6    84.4   87.0
+       + Outcome+Evidence ID (Prompted exploration)    49.3     41.6    43.8    44.8     85.6   82.5   79.6   82.6   89.8    84.5   87.2
+       + MAVEN                                         53.9     45.9    46.3    48.8     86.6   85.1   81.7   84.5   93.4    88.8   91.1
+
+
+
+
+ing the evolving evidence state is particularly ben-                     come+Evidence ID, and M AVEN. We evaluate ev-
+eficial when the answer depends on information                           ery 50 steps on a fixed subset of 120 LongBench v2
+distributed across long contexts.                                        examples and on the diagnostic set. The monitoring
+   Compared with outcome-only RL, the Out-                               subset is used only for analysis, not for checkpoint
+come+Evidence ID baseline consistently improves                          selection.
+performance, confirming that dense evidence su-                             Outcome-only RL improves slowly and saturates
+pervision is useful for long-context RL. However,                        early. Adding evidence identification reward leads
+it remains notably below M AVEN. This gap indi-                          to stronger improvement. M AVEN improves more
+cates that rewarding final evidence overlap alone                        steadily throughout training and shows a higher
+is insufficient: the model also needs feedback on                        performance ceiling.
+how evidence is added, revised, and synthesized                             The diagnostic curves explain this gap. Out-
+during the reasoning process. The prompted ex-                           come+Evidence ID substantially improves evi-
+ploration baseline gives only marginal additional                        dence sufficiency, showing that evidence identifica-
+gains over Outcome+Evidence ID, suggesting that                          tion reward can guide the model toward selecting
+simply instructing the model to explore is less effec-                   relevant chunks. However, its distractor retention
+tive than explicitly rewarding useful evidence-state                     remains relatively high. In contrast, M AVEN im-
+transitions.                                                             proves evidence sufficiency to over 85 and signifi-
+   Among all listed models, Qwen3-30B-A3B                                cantly reduces distractor retention. This suggests
+trained with M AVEN achieves the best or tied-best                       that M AVEN not only teaches the model to find use-
+result on most reported columns, including the                           ful evidence, but also trains it to revise the evidence
+overall scores of all three benchmarks. Notably,                         memory and discard misleading chunks.
+on RULER, Llama-3.1-8B trained with M AVEN
+                                                                         3.4     Impact of Action Rewards
+surpasses the Llama-3.1-70B reference model on
+the evaluated subsets. Meanwhile, Qwen3-30B-                             Figure 4 studies the impact of different action re-
+A3B already performs strongly before training, but                       wards in our method on Qwen2.5-14B-Instruct. Re-
+M AVEN further improves its RULER average from                           moving the add reward causes the largest drop in
+85.4 to 91.1, showing that the proposed method re-                       LongBench v2 overall score. The link and drop
+mains beneficial even for strong long-context mod-                       rewards also contribute complementary benefits.
+els.                                                                     Removing the link reward lowers evidence suffi-
+                                                                         ciency, suggesting that explicit synthesis rewards
+3.3     Training Dynamics                                                help the model combine complementary evidence
+Figure 3 compares training dynamics of Qwen2.5-                          pieces. Removing the drop reward leads to the
+14B-Instruct across outcome-only RL, Out-                                highest distractor retention, which confirms that
+                                                          Outcome reward only                    Outcome+Evidence Identification reward                 MAVEN
+                                LongBench v2 (Overall)                                           Evidence Sufficiency                                           Distractor Retention
+                                                                                                                                                27.5
+
+        42                                                                       80                                                             25.0
+
+                                                                                                                                                22.5
+        41                                                                       70
+
+
+
+
+                                                                    Percentage
+
+
+
+
+                                                                                                                                   Percentage
+                                                                                                                                                20.0
+Score
+
+
+
+
+        40                                                                       60
+                                                                                                                                                17.5
+
+        39                                                                       50                                                             15.0
+
+                                                                                                                                                12.5
+                                                                                 40
+        38
+                                                                                                                                                10.0
+                         0 50 100 150 200 250 300 350 400 450 500 550                   0 50 100 150 200 250 300 350 400 450 500 550                   0 50 100 150 200 250 300 350 400 450 500 550
+                                       Training step                                                  Training step                                                  Training step
+
+Figure 3: Training dynamics of outcome-only RL, Outcome+Evidence ID, and M AVEN. We evaluate every 50 RL
+steps on a fixed subset of LongBench v2 examples and on the diagnostic set.
+
+
+                         45
+                                   LongBench v2 (overall)                                     Evidence sufficiency (%)                  25
+                                                                                                                                                         Distractor retention (%)
+                                                                                 90
+                         44
+                                                                                 85                                                     20
+    Score / Percentage
+
+
+
+
+                         43
+                         42                                                      80                                                     15
+                         41                                                      75
+                                                                                                                                        10
+                         40                                                      70
+                                                                                 65                                                        5
+                         39
+                         38                                                      60                                                        0
+                              EN     ard    ard    ard    Set                             EN     ard    ard    ard     Set                      EN     ard    ard    ard     Set
+                          MAV dd rew ink rew op rew Final-                            MAV dd rew ink rew op rew Final-                      MAV dd rew ink rew op rew Final-
+                              a       l     d r    o n                                    a       l     d r    on                               a       l     d r    on
+                          w/o     w/o w/o eward                                       w/o     w/o w/o eward                                 w/o     w/o w/o eward
+                                              r                                                           r                                                     r
+
+Figure 4: Impact of action rewards. We measure LongBench V2 overall score, evidence sufficiency, and distractor
+retention.
+
+
+drop supervision is important for evidence revision                                                           4B verifier with a Qwen2.5-7B-Instruct verifier on
+and distractor removal. We also compare against                                                               Llama-3.1-8B and Qwen2.5-14B. The results are
+a final-evidence-only variant, where the add, link                                                            nearly unchanged. This suggests that M AVEN is
+and drop reward is computed only from the final                                                               not highly sensitive to the specific frozen verifier
+kept evidence set. This variant achieves scores that                                                          used for answer-NLL scoring. We therefore use the
+are substantially below full M AVEN. This shows                                                               smaller Qwen3-4B verifier in the main experiments
+that action-local process rewards are important for                                                           for better efficiency.
+learning how to build and revise the evidence mem-
+ory.                                                                                                          Contrastive Answer Scoring. The main method
+   Interestingly, the effects of action rewards are                                                           computes evidence-state value using the teacher-
+not isolated to their corresponding behaviors. For                                                            forced probability of the gold answer over the full
+example, removing the drop reward also reduces                                                                vocabulary. One concern is that the verifier’s prior
+evidence sufficiency, and removing the add reward                                                             knowledge may introduce noise into this value esti-
+increases distractor retention. This supports our                                                             mate. To examine this, we construct a contrastive
+central claim that long-context reasoning is a dy-                                                            answer set for each training example, containing
+namic process involving interactions among dif-                                                               the gold answer, several similar but incorrect an-
+ferent actions. Additional action-level diagnostics,                                                          swers, and an abstention option. We then compute
+including add precision, drop precision, and link                                                             the value using the normalized probability of the
+precision, are provided in Appendix A.5.                                                                      gold answer within this contrastive set. Results of
+                                                                                                              Qwen2.5-14B are shown in Table 2. Contrastive
+3.5                      Further Analysis                                                                     scoring yields a small improvement, but the gain is
+Choice of Verifier. Table 3 studies the effect of                                                             limited relative to its additional construction cost.
+verifier choice. We compare the default Qwen3-                                                                Therefore, we use full-vocabulary answer-token
+Table 2: Comparison with scoring using contrastive             et al., 2025; Zhang et al., 2025a; Wang et al., 2025)
+answers on LongBench v2.                                       or add context-aware rewards that score selected
+                             Short   Medium   Long   Overall
+                                                               chunks (Chen et al., 2026; Guan et al., 2026; Ping
+    whole vocabulary         51.5     40.2    37.0    43.5
+                                                               et al., 2026). While context-aware rewards provide
+    contrastive answer set   51.6     41.1    37.6    44.1     denser feedback than outcome-only supervision,
+                                                               they largely remain extraction-centric. In contrast,
+                                                               M AVEN treats long-context reasoning as evidence-
+NLL in the main method as an efficient approxima-              state navigation: it rewards how different actions
+tion.                                                          change an answer-conditioned evidence memory.
+Reward Hyperparameters. We study the sen-                      Our method is therefore complementary to retrieval,
+sitivity of M AVEN to reward weights and to α,                 agentic workflows, and architecture-level context
+which balances online CAIG and hindsight credit                extension, while targeting a different bottleneck:
+in the add reward. Overall, the best performance               learning to build and revise the evidence state used
+is achieved around our default setting. The results            for reasoning.
+show a trade-off between answer supervision and
+                                                               Reward design and process credit assignment.
+process supervision: underweighting process re-
+                                                               RL with verifiable rewards has improved LLM
+wards weakens evidence construction, while over-
+                                                               reasoning (Jaech et al., 2024; Guo et al., 2025),
+weighting them can distract the model from final
+                                                               but final-answer rewards provide only trajectory-
+answer correctness. Increasing the add weight gen-
+                                                               level feedback. Process supervision assigns feed-
+erally improves evidence sufficiency, and increas-
+                                                               back to intermediate steps (Lightman et al., 2024;
+ing the drop weight reduces distractor retention,
+                                                               Zhang et al., 2025b; Khalifa et al., 2025); however,
+but overly aggressive evidence addition or removal
+                                                               long-context reasoning requires process feedback
+can hurt overall performance. Detailed results are
+                                                               over evidence editing, not only free-form reasoning
+provided in Appendix A.7.
+                                                               traces. M AVEN assigns action-local advantages to
+Performance on General Short-Context Reason-                   add, link, drop, and answer spans using an answer-
+ing. To examine whether long-context RL train-                 conditioned evidence-state value, distinguishing it
+ing harms general short-context reasoning ability,             from static evidence rewards and learned black-box
+we evaluate the base and M AVEN-trained models                 process reward models.
+on MMLU-Pro (Wang et al., 2024). As shown in
+Table 4, M AVEN does not lead to clear degradation,            5   Conclusion
+suggesting that the proposed method preserves the
+models’ general reasoning capability.                          We presented M AVEN, a reinforcement learning
+                                                               framework that treats long-context reasoning as
+4    Related Work                                              stateful evidence-memory navigation. By using an
+                                                               answer-conditioned evidence-state value and add,
+Long-context grounding and reasoning. Prior                    link, and drop rewards, M AVEN provides process
+work has addressed long contexts by extending                  supervision for building, revising, and synthesizing
+the usable context window through architectural                evidence rather than only rewarding final answers
+or positional methods (Chen et al., 2023; Su et al.,           or static evidence overlap. Across Llama and Qwen
+2024; Ding et al., 2024; Team et al., 2025b), reduc-           models on three benchmarks, M AVEN consistently
+ing the effective input length with retrieval (Lewis           improves over RL baselines. Analyses further show
+et al., 2020; Jiang et al., 2024; Zhao et al., 2024),          higher evidence sufficiency, lower distractor reten-
+or decomposing long inputs with agentic work-                  tion, and complementary benefits from the three
+flows (Zhang et al., 2024). These approaches im-               action rewards. These results suggest that effective
+prove access to information, but they do not nec-              long-context RL should optimize evidence-state
+essarily teach the model to reason over long in-               transitions, not merely evidence extraction.
+puts. A closer line of work trains models directly
+for long-context behavior using supervised fine-               Limitations
+tuning (Bai et al., 2024) or reinforcement learn-
+ing (Wan et al., 2025; Wang et al., 2025; Chen                 M AVEN relies on gold answers during training to
+et al., 2026). Existing long-context RL methods                compute verifier-based evidence-state values, so it
+commonly optimize final-answer rewards (Wan                    is most directly applicable to tasks with verifiable
+answers. The editable evidence interface also as-           Zhang, Shirong Ma, Xiao Bi, and 1 others. 2025.
+sumes that evidence can be represented as bounded           Deepseek-r1: Incentivizing reasoning capability in
+                                                            llms via reinforcement learning. arXiv preprint
+text spans. Extensions to multimodal evidence, or
+                                                            arXiv:2501.12948.
+open-ended generation may require additional ac-
+tion designs and evaluation protocols. Finally, the       Xanh Ho, Anh-Khoa Duong Nguyen, Saku Sugawara,
+diagnostic evidence annotations are constructed for         and Akiko Aizawa. 2020. Constructing a multi-hop
+                                                            qa dataset for comprehensive evaluation of reasoning
+controlled analysis, so broader human evaluation            steps. In Proceedings of the 28th International Con-
+of evidence quality and faithfulness remains impor-         ference on Computational Linguistics, pages 6609–
+tant future work.                                           6625.
+                                                          Cheng-Ping Hsieh, Simeng Sun, Samuel Kriman, Shan-
+                                                            tanu Acharya, Dima Rekesh, Fei Jia, Yang Zhang,
+References                                                  and Boris Ginsburg. 2024. Ruler: What’s the real
+Yushi Bai, Xin Lv, Jiajie Zhang, Yuze He, Ji Qi, Lei        context size of your long-context language models?
+  Hou, Jie Tang, Yuxiao Dong, and Juanzi Li. 2024.          arXiv preprint arXiv:2404.06654.
+  Longalign: A recipe for long context alignment of
+                                                          Aaron Jaech, Adam Kalai, Adam Lerer, Adam Richard-
+  large language models. In Findings of the Associa-
+                                                            son, Ahmed El-Kishky, Aiden Low, Alec Helyar,
+  tion for Computational Linguistics: EMNLP 2024,
+                                                            Aleksander Madry, Alex Beutel, Alex Carney, and 1
+  pages 1376–1395.
+                                                            others. 2024. Openai o1 system card. arXiv preprint
+Yushi Bai, Shangqing Tu, Jiajie Zhang, Hao Peng, Xi-        arXiv:2412.16720.
+  aozhi Wang, Xin Lv, Shulin Cao, Jiazheng Xu, Lei        Ziyan Jiang, Xueguang Ma, and Wenhu Chen. 2024.
+  Hou, Yuxiao Dong, and 1 others. 2025. Longbench           Longrag: Enhancing retrieval-augmented gener-
+  v2: Towards deeper understanding and reasoning            ation with long-context llms.   arXiv preprint
+  on realistic long-context multitasks. In Proceedings      arXiv:2406.15319.
+  of the 63rd Annual Meeting of the Association for
+  Computational Linguistics (Volume 1: Long Papers),      Bowen Jin, Hansi Zeng, Zhenrui Yue, Jinsung Yoon,
+  pages 3639–3664.                                          Sercan Arik, Dong Wang, Hamed Zamani, and Jiawei
+                                                            Han. 2025. Search-r1: Training llms to reason and
+Guanzheng Chen, Michael Qizhe Shieh, and Lidong             leverage search engines with reinforcement learning.
+  Bing. 2026. LongRLVR: Long-context reinforce-             arXiv preprint arXiv:2503.09516.
+  ment learning requires verifiable context rewards. In
+  The Fourteenth International Conference on Learn-       Muhammad Khalifa, Rishabh Agarwal, Lajanugen Lo-
+  ing Representations.                                     geswaran, Jaekyeom Kim, Hao Peng, Moontae Lee,
+                                                           Honglak Lee, and Lu Wang. 2025. Process reward
+Shouyuan Chen, Sherman Wong, Liangjian Chen, and           models that think. arXiv preprint arXiv:2504.16828.
+  Yuandong Tian. 2023. Extending context window of
+  large language models via positional interpolation.     Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio
+  arXiv preprint arXiv:2306.15595.                          Petroni, Vladimir Karpukhin, Naman Goyal, Hein-
+                                                            rich Küttler, Mike Lewis, Wen-tau Yih, Tim Rock-
+Yiran Ding, Li Lyna Zhang, Chengruidong Zhang,              täschel, and 1 others. 2020. Retrieval-augmented gen-
+  Yuanyuan Xu, Ning Shang, Jiahang Xu, Fan Yang,            eration for knowledge-intensive nlp tasks. Advances
+  and Mao Yang. 2024. Longrope: Extending llm con-          in neural information processing systems, 33:9459–
+  text window beyond 2 million tokens. arXiv preprint       9474.
+  arXiv:2402.13753.
+                                                          Hunter Lightman, Vineet Kosaraju, Yuri Burda, Harri-
+Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey,            son Edwards, Bowen Baker, Teddy Lee, Jan Leike,
+  Abhishek Kadian, Alon Al-Dahle, Allan Letman,             John Schulman, Ilya Sutskever, and Karl Cobbe.
+  Andy Mathur, Angie Schelten, Anthony Yang, Armin          2024. Let’s verify step by step. In International
+  Fan, Aruna Goyal, Bram Roziere, Branislav Biron,          Conference on Learning Representations, volume
+  Charbel Bitar, Chantat Ng, Chen Xia, Cheng Tan,           2024, pages 39578–39601.
+  Christian Keller, Christian Touret, and 4 others.
+  2024. The llama 3 herd of models. Preprint,             Zhan Ling, Kang Liu, Kai Yan, Yifan Yang, Weijian Lin,
+  arXiv:2407.21783.                                         Ting-Han Fan, Lingfeng Shen, Zhengyin Du, and
+                                                            Jiecao Chen. 2025. Longreason: A synthetic long-
+Xin Guan, Zijian Li, Shen Huang, Pengjun Xie, Jin-          context reasoning benchmark via context expansion.
+  gren Zhou, and Jiuxin Cao. 2026. Evidence-                arXiv preprint arXiv:2501.15089.
+  augmented policy optimization with reward co-
+  evolution for long-context reasoning. arXiv preprint    Nelson F Liu, Kevin Lin, John Hewitt, Ashwin Paran-
+  arXiv:2601.10306.                                         jape, Michele Bevilacqua, Fabio Petroni, and Percy
+                                                            Liang. 2024. Lost in the middle: How language mod-
+Daya Guo, Dejian Yang, Haowei Zhang, Junxiao                els use long contexts. Transactions of the association
+  Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu             for computational linguistics, 12:157–173.
+Bowen Peng, Jeffrey Quesnelle, Honglu Fan, and En-             2025. Qwen3 technical report.       arXiv preprint
+  rico Shippole. 2024. Yarn: Efficient context window          arXiv:2505.09388.
+  extension of large language models. In International
+  Conference on Learning Representations, volume             Qwen An Yang, Baosong Yang, Beichen Zhang,
+  2024, pages 31932–31951.                                    Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan
+                                                              Li, Dayiheng Liu, Fei Huang, Guanting Dong, Hao-
+Bowen Ping, Zijun Chen, Yiyao Yu, Tingfeng Hui,               ran Wei, Huan Lin, Jian Yang, Jianhong Tu, Jianwei
+  Junchi Yan, and Baobao Chang. 2026. Longr: Un-              Zhang, Jianxin Yang, Jiaxin Yang, Jingren Zhou, Jun-
+  leashing long-context reasoning via reinforcement           yang Lin, and 25 others. 2024. Qwen2.5 technical
+  learning with dense utility rewards. arXiv preprint         report. ArXiv, abs/2412.15115.
+  arXiv:2602.05758.
+                                                             Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Bengio,
+Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu,                William Cohen, Ruslan Salakhutdinov, and Christo-
+  Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan               pher D Manning. 2018. Hotpotqa: A dataset for
+  Zhang, YK Li, Yang Wu, and 1 others. 2024.                   diverse, explainable multi-hop question answering.
+  Deepseekmath: Pushing the limits of mathematical             In Proceedings of the 2018 conference on empiri-
+  reasoning in open language models. arXiv preprint            cal methods in natural language processing, pages
+  arXiv:2402.03300.                                            2369–2380.
+Jianlin Su, Murtadha Ahmed, Yu Lu, Shengfeng Pan,            Jiajie Zhang, Zhongni Hou, Xin Lv, Shulin Cao, Zhenyu
+   Wen Bo, and Yunfeng Liu. 2024. Roformer: En-                 Hou, Yilin Niu, Lei Hou, Yuxiao Dong, Ling Feng,
+   hanced transformer with rotary position embedding.           and Juanzi Li. 2025a. Longreward: Improving long-
+   Neurocomputing, 568:127063.                                  context large language models with ai feedback. In
+                                                                Proceedings of the 63rd Annual Meeting of the As-
+Kimi Team, Yifan Bai, Yiping Bao, Y Charles, Cheng              sociation for Computational Linguistics (Volume 1:
+  Chen, Guanduo Chen, Haiting Chen, Huarong Chen,               Long Papers), pages 3718–3739.
+  Jiahao Chen, Ningxin Chen, and 1 others. 2025a.
+  Kimi k2: Open agentic intelligence. arXiv preprint         Yusen Zhang, Ruoxi Sun, Yanfei Chen, Tomas Pfis-
+  arXiv:2507.20534.                                            ter, Rui Zhang, and Sercan Ö Arık. 2024. Chain
+                                                               of agents: Large language models collaborating on
+Kimi Team, Yu Zhang, Zongyu Lin, Xingcheng Yao,                long-context tasks. Advances in Neural Information
+  Jiaxi Hu, Fanqing Meng, Chengyin Liu, Xin Men,               Processing Systems, 37:132208–132237.
+  Songlin Yang, Zhiyuan Li, and 1 others. 2025b. Kimi
+  linear: An expressive, efficient attention architecture.   Zhenru Zhang, Chujie Zheng, Yangzhen Wu, Beichen
+  arXiv preprint arXiv:2510.26692.                             Zhang, Runji Lin, Bowen Yu, Dayiheng Liu, Jin-
+                                                               gren Zhou, and Junyang Lin. 2025b. The lessons of
+Harsh Trivedi, Niranjan Balasubramanian, Tushar Khot,          developing process reward models in mathematical
+  and Ashish Sabharwal. 2022. Musique: Multi-                  reasoning. In Findings of the Association for Compu-
+  hop questions via single-hop question composition.           tational Linguistics: ACL 2025, pages 10495–10516.
+  Transactions of the Association for Computational
+  Linguistics, 10:539–554.                                   Qingfei Zhao, Ruobing Wang, Yukuo Cen, Daren Zha,
+                                                               Shicheng Tan, Yuxiao Dong, and Jie Tang. 2024.
+Fanqi Wan, Weizhou Shen, Shengyi Liao, Yingcheng               Longrag: A dual-perspective retrieval-augmented
+  Shi, Chenliang Li, Ziyi Yang, Ji Zhang, Fei Huang,           generation paradigm for long-context question an-
+  Jingren Zhou, and Ming Yan. 2025. Qwenlong-                  swering. In Proceedings of the 2024 Conference on
+  l1: Towards long-context large reasoning mod-                Empirical Methods in Natural Language Processing,
+  els with reinforcement learning. arXiv preprint              pages 22600–22632.
+  arXiv:2505.17667.
+Siyuan Wang, Gaokai Zhang, Li Lyna Zhang, Ning
+  Shang, Fan Yang, Dongyao Chen, and Mao Yang.
+  2025. Loongrl: Reinforcement learning for ad-
+  vanced reasoning over long contexts. arXiv preprint
+  arXiv:2510.19363.
+Yubo Wang, Xueguang Ma, Ge Zhang, Yuansheng Ni,
+  Abhranil Chandra, Shiguang Guo, Weiming Ren,
+  Aaran Arulraj, Xuan He, Ziyan Jiang, and 1 others.
+  2024. Mmlu-pro: A more robust and challenging
+  multi-task language understanding benchmark. Ad-
+  vances in Neural Information Processing Systems,
+  37:95266–95290.
+An Yang, Anfeng Li, Baosong Yang, Beichen Zhang,
+  Binyuan Hui, Bo Zheng, Bowen Yu, Chang
+  Gao, Chengen Huang, Chenxu Lv, and 1 others.
+A     Appendix                                               For each trajectory, the required verifier evalua-
+                                                          tions are:
+A.1     Additional Methodology Details
+                                                             • the empty-memory value Vψ (Q, ∅);
+A.1.1    Curriculum RL Training Strategy
+We apply a simple curriculum strategy during the             • evidence-state values for add and drop transi-
+early stage of RL training. In the first 20% training          tions;
+updates under our default batch size, we exclude ex-
+amples whose context length exceeds 16K tokens               • leave-one-out values Vψ (Q, EF \ {ei }) for
+and use only examples requiring at most three evi-             final kept evidence;
+dence chunks. We train on all remaining training
+                                                             • pair-removal values Vψ (Q, EF \ {ei , ej }) for
+data after the early stage.
+                                                               linked pairs.
+  The motivation is to stabilize early exploration.
+Very long contexts and many-hop evidence chains           With caps Kmax on final evidence size, Nmax on
+can lead to invalid actions and noisy rewards in the      memory-edit actions, and Lmax on links, the num-
+early stage.                                              ber of verifier calls is bounded by:
+
+A.1.2    Maximum Number of Actions                                    O(Nmax + Kmax + Lmax ).             (12)
+To control computational cost, we set the action
+limits according to the empirical distribution of         These calls are inexpensive relative to long-context
+required evidence units in the training data. Specif-     generation because the verifier conditions only on
+ically, we set the maximum final evidence memory          the question and selected evidence snippets, not on
+size to Kmax = 6, which covers all filtered train-        the full long context, and it scores the gold answer
+ing examples. We set the maximum numbers of               under teacher forcing rather than generating new
+add, drop, and link actions to: Nadd = 7, Ndrop =         text.
+3, Nlink = 4. These limits provide a small addi-          A.1.4    Inference
+tional budget for exploratory evidence additions
+                                                          At inference time, the trained policy receives only
+and subsequent removal of distractors, while pre-
+                                                          the long context and question. It generates an ed-
+venting degenerate add–drop loops.
+                                                          itable evidence trajectory and a final answer:
+   The action limits are explicitly stated in the roll-
+out prompt. During training, we also enforce them                           τ̂ = πθ (C, Q).               (13)
+in the parser. We parse actions sequentially from
+left to right and maintain the evidence memory on-        The answer inside the <answer> span is returned
+line. If an action references a nonexistent evidence      as the model prediction.
+identifier, or exceeds the allowed action budget,
+we mark the action as invalid and do not assign it        A.2     Training Dataset
+positive process reward. Over-budget actions are          We construct RL and SFT data from two sources:
+ignored for evidence-memory updates. For link             LongRLVR-style grounded long-context examples
+actions, both referenced evidence identifiers must        and public multi-hop QA datasets. Our goal is to
+exist in the current evidence memory. For drop ac-        build training examples that require evidence addi-
+tions, the referenced evidence identifier must also       tion, synthesis, and revision, rather than examples
+exist in the current evidence memory. If the model        that are merely long.
+generates a malformed action or an action with
+nonexistent identifiers, the action is ignored and        A.2.1    LongRLVR Data
+receives no positive process reward.                      We sample 3K examples from the LongRLVR train-
+                                                          ing data. We retain examples satisfying the follow-
+A.1.3    Computational Considerations                     ing conditions: (1) the context length is between
+M AVEN does not require training a separate process       16K and 64K tokens; (2) the number of reference
+reward model. The verifier pψ is frozen and is used       evidence chunks is between 2 and 5; (3) the origi-
+only during training to compute answer-token NLL          nal abstractive answer can be converted into a short
+under compact evidence memories. At inference             and unambiguous answer list; (4) the example does
+time, the verifier is not used.                           not contain a single-evidence shortcut.
+   For the answer conversion step, we prompt                 Most SFT trajectories contain only useful evi-
+Qwen3-32B (Thinking) to convert the original ab-          dence additions and links. To teach the model how
+stractive answer into a list of short answer aliases or   to revise its evidence memory, we include drop
+keywords. We discard examples whose answer can-           actions in at most 20% of the SFT examples. For
+not be converted into a concise and unambiguous           these examples, the teacher is instructed to inten-
+form. The resulting answer list is used for answer        tionally add one plausible distractor evidence item
+matching during training.                                 and then drop it after identifying that it does not
+   To remove examples with single-evidence short-         support the correct reasoning chain.
+cuts, we use the frozen verifier pψ . Let G =               During RL, trajectories are generated online
+{g1 , . . . , gm } be the reference evidence set. We      by the policy using the rollout prompt in Ap-
+discard an example if one evidence chunk alone            pendix A.4.
+accounts for most of the value of the full evidence
+set:
+                                                          A.3     Implementation and Evaluation Details
+      max Vψ (Q, {gi }) > 0.8 Vψ (Q, G).          (14)
+      gi ∈G
+                                                          A.3.1    Implementation Details
+This filter encourages examples where multiple
+evidence chunks are needed jointly.                       We train three policy models: Llama-3.1-8B-
+                                                          Instruct (8.01B parameters), Qwen2.5-14B-Instruct
+A.2.2 Multi-Hop QA Data                                   (14.7B parameters), and Qwen3-30B-A3B-Instruct-
+We construct 6K RL examples from public multi-            2507 (30.5B total parameters, 3.3B activated). We
+hop QA datasets, including 1K examples from Hot-          use Qwen3-4B-Instruct-2507 as the frozen veri-
+potQA, 1K examples from 2WikiMultiHopQA, and              fier. For cold-start SFT, we use a learning rate
+4K examples from MuSiQue. We run Qwen3-30B-               of 2 × 10−5 , a global batch size of 16, and 30
+A3B-Instruct-2507 eight times and remove exam-            warmup steps. We train Llama-3.1-8B-Instruct and
+ples with pass rate 0 or 1. We also apply the same        Qwen2.5-14B-Instruct for 2 epochs, and Qwen3-
+single-evidence shortcut filter used for LongRLVR-        30B-A3B-Instruct-2507 for 1 epoch. For RL train-
+derived data.                                             ing, we use GRPO with rollout group size G = 8
+   We construct long contexts from 8K to 64K by           and global prompt batch size 16. We train for one
+combining gold supporting evidence with distrac-          epoch over the RL training set. We use a learn-
+tors. Distractors come from (1) randomly sampled          ing rate of 1 × 10−6 , 10 warmup steps, and co-
+documents from filtered-out examples in the orig-         sine learning-rate decay. The maximum response
+inal datasets; (2) teacher-generated hard distrac-        length is 4096 tokens. The KL coefficient is set
+tors produced by Qwen3-235B-A22B-Thinking-                to 0.001, and the GRPO clipping threshold is set
+2507 (Yang et al., 2025). For hard distractors, we        to 0.2. For rollouts, we sample with temperature
+prompt the teacher model to generate passages that        0.8 and top_p=0.95. For reward computation, we
+are lexically or semantically related to the question     set the local reward clipping threshold to c = 0.3.
+but do not support the gold answer. In particu-           The reward weights for add, drop, link, and an-
+lar, we construct partial-chain distractors that share    swer rewards are set to: λadd = 0.5, λdrop =
+entities, relations, or answer types with the gold        0.2, λlink = 0.3, λans = 1.0. For the add reward,
+reasoning chain but lead to an incorrect conclusion.      we set α = 0.6.
+We discard distractors that contain the gold answer,
+                                                             We implement RL training using verl. The
+or make the question ambiguous.
+                                                          frozen verifier is used only during training to com-
+A.2.3 Cold-Start SFT Data                                 pute teacher-forced answer NLL over selected evi-
+We construct 2K cold-start SFT examples from the          dence memories.
+same source datasets. The context length of SFT ex-          Experiments are conducted on 8 NVIDIA A100
+amples ranges from 4K to 16K tokens. We first en-         GPUs and 4 AMD MI250X GPUs. The total train-
+sure that Qwen3-235B-A22B-Thinking-2507 can               ing budget for SFT and RL training across three
+answer each selected example correctly. We then           models, averaged on two hardware environments is
+prompt it to produce an editable evidence-memory          approximately 1,250 GPU hours, computed as the
+trajectory using add, link, drop, and answer ac-          number of GPUs multiplied by wall-clock training
+tions.                                                    time.
+A.3.2    Evaluation Details
+                                                               • Use only source identifiers that appear
+We use vLLM for benchmark inference and follow                   in the context.
+the official inference configuration of each bench-
+mark whenever available. We report the average                 • Do not invent evidence.
+accuracy across three runs under the official evalu-
+                                                               • A link or drop action can only refer to
+ation protocol. For RULER, we evaluate selected
+                                                                 an evidence id that has already been
+subsets: Needle-in-a-Haystack (NIAH), variable
+                                                                 added and not dropped.
+tracking, and SQuAD QA subsets, and evaluate
+them at 64K and 128K context lengths.                          • You may use at most 7 add actions, 3
+   We construct a held-out diagnostic set of 150 ex-             drop actions, and 4 link actions.
+amples from HotpotQA, 2WikiMultiHopQA, and
+MuSiQue using the same filtering and distractor-               • Stop after producing        the   final
+construction strategy as the training data. These                <answer> action.
+examples are not used during SFT or RL training.
+                                                          Long context: {{CONTEXT}}
+Each diagnostic example contains gold evidence
+                                                          Question: {{QUESTION}}
+annotations and distractor labels, allowing us to
+                                                          Now produce your trajectory using the al-
+evaluate evidence-process behavior.
+                                                          lowed actions.
+A.4     Prompts
+A.4.1    RL Rollout Prompt                             A.4.2    SFT Trajectory Generation Prompt
+The following prompt is used for RL rollouts.          We use the following prompt to generate cold-start
+                                                       SFT trajectories.
+   RL Rollout Prompt
+                                                          SFT Trajectory Generation Prompt
+   You are given a long context and a question.
+   Your task is to answer the question.                   You are an expert annotator creating a
+   You may use the following actions:                     teacher trajectory used to train a long-
+   <add id=i>                                             context QA model.
+   Add one useful evidence unit from the con-             You are given:
+   text to your evidence memory. The field
+   id=i must refer to a valid source identifier                • a long context segmented into source
+   in the context. Briefly summarize the evi-                    units;
+   dence and explain briefly how evidence i is                 • a question;
+   relevant to the question.
+   </add>                                                      • the gold answer;
+   <link ids=i,j>
+   Explain how evidence i and evidence j                       • the gold supporting source identifiers;
+   jointly support the answer. Use this when                   • optional hard distractor source identi-
+   two evidence pieces need to be combined.                      fiers.
+   </link>
+   <drop id=i>                                            Your task is to write an ideal editable
+   Remove evidence i if it is irrelevant, redun-          evidence-memory trajectory to reason over
+   dant, or misleading. Explain briefly why it            the question using the following actions:
+   should be removed.                                     <add>, <link>, <drop>, and <answer>.
+   </drop>                                                Here is the required format for each action:
+   <answer>                                               <add id=i>
+   Give the final answer (without extra text)             Add one gold evidence unit from the context
+   only after you have collected enough evi-              to your evidence memory. Briefly summa-
+   dence.                                                 rize the evidence and explain briefly how
+   </answer>                                              evidence i is relevant to the question.
+   Rules:                                                 </add>
+                                                        Table 3: Effect of verifier choice on LongBench v2. We
+   <link ids=i,j>                                       observe only minor differences between Qwen3-4B and
+   Explain how evidence i and evidence j                Qwen2.5-7B verifiers.
+   jointly support the answer. Use this when
+   two evidence pieces need to be combined.                                          LongBench v2
+                                                          Model
+   </link>                                                                  Short   Medium   Long   Overall
+   <drop id=i>                                            LLaMA-3.1-8B
+                                                            w/ Qwen3-4B     39.8     36.2    32.1    36.6
+   Remove distractor i if it is irrelevant, redun-          w/ Qwen2.5-7B   40.2     35.8    32.3    36.6
+   dant, or misleading. Explain briefly why it            Qwen2.5-14B
+   should be removed.                                      w/ Qwen3-4B      51.5     40.2    37.0    43.5
+                                                           w/ Qwen2.5-7B    51.8     40.4    36.9    43.7
+   </drop>
+   <answer>
+   Give the final answer.                               dence set; (3) whether two evidence chunks linked
+   </answer>                                            by a link action are truly relevant. Before evaluat-
+   Requirements:                                        ing the link action, we used Gemini 3 to construct
+                                                        a reference link set for this diagnostic set. Based
+      • The final answer must exactly match
+                                                        on the result, we draw the same conclusion as we
+        or be equivalent to the gold answer.
+                                                        illustrated in Sec. 3.4.
+      • Add the necessary gold evidence using
+                                                        A.6   Choice of Verifier
+        valid source identifiers.
+                                                        Table 3 shows results with two frozen verifiers.
+      • Use link actions to connect comple-
+        mentary evidence pieces.                        A.7   Hyperparameter Analysis
+                                                        We analyze the sensitivity of M AVEN to the relative
+      • Keep explanations concise.
+                                                        weighting of reward components by an ablation
+      • Do not exceed 7 add actions, 3 drop             study on a fixed subset of 120 LongBench v2.
+        actions, or 4 link actions.
+                                                        Answer-process balance. We first vary the ratio
+   If DROP_EXAMPLE = true, intentionally add            between the answer reward weight and the sum of
+   one plausible distractor evidence item first,        process reward weights: λadd +λλdrop
+                                                                                         ans
+                                                                                             +λlink .
+   then later drop it after explaining why it              We fix the sum of all reward weights to 2 and
+   does not support the correct reasoning chain.        keep the relative ratio among process rewards fixed
+   If DROP_EXAMPLE = false, do not add un-              to the default proportion: λadd : λdrop : λlink = 5 :
+   necessary distractors.                               2 : 3.
+   Context: {{CONTEXT}}                                    As shown in Figure 6, performance peaks around
+   Question: {{QUESTION}}                               rans = 1.0, which corresponds to a balanced
+   Gold answer: {{ANSWER}}                              weighting between final answer correctness and
+   Gold       supporting        source      ids:        process-level evidence supervision. Smaller ratios
+   {{GOLD_SOURCES}}                                     underweight the answer reward, while larger ratios
+   Optional hard distractor source ids: {{DIS-          reduce the influence of process rewards.
+   TRACTOR_SOURCES}}
+                                                        Process reward weights. We then study the rel-
+   DROP_EXAMPLE:
+                                                        ative weights among add, drop, and link rewards.
+   {{DROP_EXAMPLE}}
+                                                        In these experiments, we fix λans = 1.0, λadd +
+   Now write the trajectory.
+                                                        λdrop + λlink = 1.0.
+                                                           When varying one process weight, we distribute
+A.5   Ablation (cont.)                                  the remaining process weight to the other two ac-
+Figure 5 presents more ablation results on action re-   tions according to their default ratio. For example,
+wards. We measure the precision of add/drop/link        when varying λadd , the remaining process weight
+actions, which is defined as: (1) whether an evi-       is divided between drop and link rewards with ratio
+dence chunk selected by an add action is a gold         2 : 3.
+evidence chunk; (2) whether an evidence chunk              Figure 7 and 8 shows that the best overall per-
+dropped by a drop action is not from the gold evi-      formance is achieved near the default process ratio:
+                      90
+                                   Add Action Prec            90
+                                                                           Drop Action Prec           95
+                                                                                                                   Link Action Prec
+                      85                                      85                                      90
+                      80                                      80                                      85
+         Percentage
+
+
+                      75                                      75                                      80
+                      70                                      70                                      75
+                      65                                      65                                      70
+                      60                                      60                                      65
+                           EN     ard    ard    ard    Set         EN     ard    ard    ard     Set        EN     ard    ard    ard     Set
+                       MAV dd rew ink rew op rew Final-        MAV dd rew ink rew op rew Final-        MAV dd rew ink rew op rew Final-
+                           a       l      r      n                 a       l      r      n                 a       l      r      n
+                       w/o     w/o w/o d eward o               w/o     w/o w/o d eward o               w/o     w/o w/o d eward o
+                                          r                                       r                                       r
+
+                                 Figure 5: Impact of action rewards. We measure Add/Link/Drop Action Precision.
+
+
+                43.0                                                               Table 4: Performance on MMLU-Pro. The model is
+                                                                                   evaluated by generating CoT.
+                42.5
+Overall Score
+
+
+
+
+                                                                                        Model                               Base      MAVEN
+                42.0                                                                    Llama-3.1-8B-Instruct               44.3        45.7
+                                                                                        Qwen2.5-14B-Instruct                64.0        64.2
+                41.5                                                                    Qwen3-30B-A3B-Instruct-2507         77.5        76.9
+
+                41.0
+
+                40.5                                                               Table 4, M AVEN does not cause clear degradation.
+                           0.6        0.8         1.0        1.2         1.4
+                                      answer/( add + drop + link)
+                                                                                   B     Potential Risks
+ Figure 6: Overall score on the subset of LongBench v2
+ from Qwen2.5-14B. Vary the ratio between the answer                               MAVEN improves the ability of LLMs to navi-
+ reward weight and the sum of process reward weights.                              gate, revise, and synthesize evidence from long
+                                                                                   contexts. While this can benefit document under-
+                                                                                   standing, question answering, and research assis-
+ λadd = 0.5, λdrop = 0.2, λlink = 0.3. Increasing
+                                                                                   tance, stronger long-context reasoning may also
+ the add weight improves evidence sufficiency, but
+                                                                                   increase the effectiveness of harmful applications
+ overly large add weight does not further improve
+                                                                                   that require processing large volumes of informa-
+ final accuracy. Increasing the drop weight reduces
+                                                                                   tion. In addition, the generated evidence trajecto-
+ distractor retention, while too much drop reward
+                                                                                   ries should not be treated as guaranteed faithful
+ may encourage the model to remove useful evi-
+                                                                                   explanations. Our experiments are conducted in a
+ dence. Link precision improves as the link weight
+                                                                                   research setting, and deployment in high-stakes do-
+ increases to a moderate value, but excessive link
+                                                                                   mains should require additional human oversight,
+ reward can hurt overall answer performance.
+                                                                                   stronger faithfulness checks, and domain-specific
+Online versus hindsight add credit. Finally, we                                    safety evaluation.
+vary α in the add reward. As shown in Figure 9,
+α = 0.6 gives the best overall performance. This                                   C      LLM Usage
+suggests that online marginal progress should re-
+ceive slightly more weight than hindsight credit,                                  We used large language models to assist with writ-
+while both terms are necessary for stable evidence                                 ing, grammar improvement, and clarity edits. We
+construction.                                                                      also used teacher LLMs to generate hard distractors
+                                                                                   and cold-start SFT trajectories, as described in the
+ A.8                   Performance on Short Reasoning Tasks
+                                                                                   data construction appendix. All model-generated
+We evaluate whether training with M AVEN affects                                   text used in the paper was reviewed and edited by
+general short-context reasoning ability. We report                                 the authors. LLMs were not used to make final
+results on MMLU-Pro (Wang et al., 2024), using                                     scientific claims or to replace author judgment in
+CoT generation during evaluation. As shown in                                      experimental analysis.
+                                43.0                                                                 43.0
+
+                                42.5                                                                 42.5                                                       42.0
+         Overall Score
+
+
+
+
+                                                                              Overall Score
+
+
+
+
+                                                                                                                                                Overall Score
+                                42.0
+                                                                                                     42.0                                                       41.5
+                                41.5
+                                                                                                     41.5                                                       41.0
+                                41.0
+
+                                40.5                                                                 41.0                                                       40.5
+
+                                        0.3    0.4         0.5    0.6   0.7                                     0.1       0.2          0.3    0.4                       0.1    0.2   0.3     0.4   0.5
+                                                            add                                                                 drop                                                  link
+
+
+Figure 7: Overall score on the subset of LongBench v2 from Qwen2.5-14B. We vary the add, drop, and link reward
+weights.
+
+                                                                                                     20
+                                                                                                                                                                92
+                                88
+                                                                                                     18                                                         90
+         Evidence Sufficiency
+
+
+
+
+                                                                              Distractor Retention
+
+
+
+                                86
+
+
+
+
+                                                                                                                                                Link Accuracy
+                                84                                                                   16                                                         88
+
+                                82                                                                                                                              86
+                                                                                                     14
+                                80                                                                                                                              84
+                                78                                                                   12
+                                                                                                                                                                82
+                                76                                                                   10                                                         80
+                                       0.3    0.4          0.5    0.6   0.7                               0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40                      0.1    0.2    0.3     0.4   0.5
+                                                           add                                                              drop                                                     link
+
+
+ Figure 8: Corresponding diagnostic metrics from Qwen2.5-14B. We vary the weight value. Larger add weight
+ improves evidence sufficiency, larger drop weight reduces distractor retention, and moderate link weight improves
+ link precision.
+
+
+                                                                                                                                CC BY-SA 4.0; 2WikiMultiHopQA is distributed
+                 42.8                                                                                                           under Apache 2.0; and MuSiQue is distributed un-
+                 42.6                                                                                                           der CC BY 4.0. We use Llama models under the
+Overall Score
+
+
+
+
+                 42.4                                                                                                           Llama 3.1 Community License and Qwen models
+                                                                                                                                under their released model licenses. Any derivative
+                 42.2
+                                                                                                                                data released from this work should preserve the
+                 42.0                                                                                                           usage restrictions and attribution requirements of
+                 41.8                                                                                                           the source artifacts and should be used only for
+                 41.6
+                                                                                                                                research purposes.
+                                       0.4           0.5          0.6                    0.7                     0.8                We do not collect data from human participants.
+                                                                                                                                Our data are derived from public QA datasets.
+                                                                                                                                Since some QA examples may mention public en-
+ Figure 9: Overall score on the subset of LongBench v2                                                                          tities or persons as part of the question-answering
+ from Qwen2.5-14B. We vary α, which balances online                                                                             task, we do not anonymize entity names that are
+ CAIG and hindsight credit in the add reward.                                                                                   necessary for answering.
+
+ D                       Artifact Use
+We use existing datasets and models only for re-
+search purposes. The training and evaluation data
+are derived from public research artifacts, including
+HotpotQA, 2WikiMultiHopQA, MuSiQue, Lon-
+gRLVR data, LongBench v2, LongReason, and
+RULER. We follow the licenses and terms of the
+original artifacts. HotpotQA is distributed under
+

@@ -1585,6 +1585,52 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown from paper_layout.txt (pdftotext -layout, 1071 lines, 15pp, 1 explicit table T1 + 7 figures). Table 1 (4 models x 2 datasets x Base/OPSD-Standard/OPSD-PMI x AIME24/AIME25/HMMT25/Avg, paper_layout.txt lines 599-616) transcribed VERBATIM. Source-free reconciliation PASSED: all 20 Avg cells reproduce from their 3 benchmark cells (0 mismatches); every distinctive cell grep-confirmed. All section-4.2 prose claims recompute exactly (PMI>Base 8/8 Avg, PMI>Std 8/8 Avg, DASD degrades 3-of-4 with R1 near-zero -0.2, Math OPSD-Std marginal gain only on Qwen3-8B +0.5 with OLMo largest drop -2.3). PMI-Base Avg gains +1.5 to +4.2pp (honest modest magnitude). Figure-derived numbers (Fig 1/4 training curves, Fig 2/5 marker bars, Fig 3 decomposition cos/norm curves, Fig 6/7 ablation curves) NOT back-filled; only prose-confirmed marker counts (73K->40K, 71K->115K, Wait 34K->83K) and prose-confirmed decomposition endpoints (cos(delta_total,delta_it) -0.95->~0; cos(delta_total,delta_ref) 0.58->0.99; ||delta_ref||/||delta_total|| > 1.0) quoted. NO numeric prose-vs-table contradiction (paper internally consistent, unlike iter-30/31/34/46 class). 2 inline flags (figure-curve origin of decomposition metrics; honest-scope modest-magnitude caveat) - neither a numeric defect. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+    },
+    {
+      "rank": 35,
+      "arxiv_id": "2607.02073",
+      "arxiv_url": "https://arxiv.org/abs/2607.02073",
+      "pdf_url": "https://arxiv.org/pdf/2607.02073",
+      "title": "MAVEN: Evidence-State Rewards for Long-Context Reasoning",
+      "authors": [
+        "Ya Gao",
+        "Pekka Marttinen"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "FIRST long-context RL paper in the repo with ACTION-LOCAL process rewards over an EDITABLE EVIDENCE MEMORY (Marginal-Value Evidence Navigation). Distinct from the agentic-RL/reward-design lineage (distribution-wise-rewards, vprm, opid, decomprl) which optimize tool-use trajectories or static evidence overlap: MAVEN gives the policy four actions -- add/link/drop/answer -- and rewards each by how it changes an ANSWER-CONDITIONED EVIDENCE-STATE VALUE V_psi = relative reduction in gold-answer NLL caused by the current memory, scored by a FROZEN verifier (Qwen3-4B, no learned PRM). Add reward = alpha*clip(CAIG) + (1-alpha)*hindsight leave-one-out Shapley credit (HCC) where CAIG = V(E_k)-V(E_{k-1}); link reward = positive-part 2nd-order synergy (pair Shapley); drop reward = clipped V-improvement from REMOVING evidence (positive when removal helps -- teaches revision). All rewards assigned to action token spans in GRPO with per-action-type group-relative advantages. Diagnosis: extraction-centric rewards anchor on the first plausible chunk; MAVEN rewards state TRANSITIONS (drop a distractor, link complementary pieces). Headline (Table 1): vs strongest controlled baseline on LongBench v2 Overall, MAVEN +3.5/+3.2/+4.0 on Llama-3.1-8B/Qwen2.5-14B/Qwen3-30B-A3B; LBv2 Long split +6.2/+4.0/+2.5; evidence sufficiency >85% with lower distractor retention; Llama-8B+MAVEN RULER Avg 84.3 > Llama-3.1-70B 81.5; Qwen3-30B+MAVEN best/tied-best on overalls of all 3 benchmarks (LBv2 48.8, LongReason AVG 84.5, RULER 91.1). Sibling to drowning-in-documents (architecture-level attention-dilution diagnosis); MAVEN attacks the training-SIGNAL level. ~1,250 GPU-hours total (3 models, 8xA100+4xMI250X).",
+      "ai_keywords": [
+        "long-context reasoning",
+        "reinforcement learning",
+        "GRPO",
+        "process reward",
+        "evidence-state value",
+        "evidence navigation",
+        "editable memory",
+        "multi-hop QA",
+        "reward design",
+        "frozen verifier",
+        "Shapley credit",
+        "hindsight credit",
+        "marginal gain",
+        "evidence sufficiency",
+        "distractor retention",
+        "LongBench v2",
+        "LongReason",
+        "RULER",
+        "action-local advantage",
+        "CAIG"
+      ],
+      "abstract": "Long-context reasoning requires models to locate, revise, and synthesize evidence distributed across lengthy inputs. Existing long-context RL methods usually reward final answers or static evidence extraction, offering little feedback on how intermediate actions change the model's evidence state. We propose MAVEN (Marginal-Value Evidence Navigation), a reinforcement learning framework with an editable evidence memory. MAVEN defines an answer-conditioned evidence-state value and rewards action-level state transitions: add actions are credited by marginal gain and hindsight contribution, link actions by evidence synergy, and drop actions by improved answer support after removing misleading evidence. These rewards are assigned to the corresponding action spans in GRPO. Across Llama and Qwen models on LongBench v2, LongReason, and RULER, MAVEN outperforms outcome-only RL and evidence-identification baselines, producing more sufficient evidence sets and lower distractor retention. Our results show that long-context RL benefits from optimizing stateful evidence navigation rather than one-shot evidence extraction.",
+      "popularity": "",
+      "citation_count": "",
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-evidence-state-rewards-long-context-reasoning",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "sourcing_note": "Source-first breakdown built from paper.pdf (16pp) + paper_layout.txt (pdftotext -layout, 1114 lines). All 4 explicit tables (T1 main L354-381, T2 contrastive L514-518, T3 verifier-choice L876-888, T4 MMLU-Pro L963-974) transcribed verbatim with sourcing line-ranges. Source-free reconciliation: LongReason AVG=mean(32K,64K,128K) reconciles for all 9 model rows; RULER Avg=mean(64K,128K) for all 9; headline LBv2-Overall deltas +3.5/+3.2/+4.0 and Long-split deltas +6.2/+4.0/+2.5 exact; Qwen2.5-14B MAVEN row byte-identical across T1/T2/T3. LBv2 Overall is the official category-weighted metric (NOT a 3-split mean) -- flagged inline. Equations 1-14 cited by number. 0 numeric prose-vs-table contradictions; 5 inline scope/rounding caveats flagged with warning."
     }
   ],
   "updated_at": "2026-07-04"
