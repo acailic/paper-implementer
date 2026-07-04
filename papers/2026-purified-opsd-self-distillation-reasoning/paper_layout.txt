@@ -1,0 +1,1072 @@
+                                            Purified OPSD: On-Policy Self-Distillation Without
+                                                         Losing How to Think
+
+
+                                                    Zhanming Shen1,2 Jintao Tong2,3 Shaotian Yan2 Chen Shen2†‡ Hao Chen1,2
+                                                      Wentao Ye1 Xiaomeng Hu1,2 Rui Miao2,4 Haobo Wang1† Junbo Zhao1
+                                                                             Gang Chen1 Jieping Ye2
+                                                                    1
+                                                                    Zhejiang University 2 Tongyi Lab, Alibaba Group
+                                                          3
+                                                              Huazhong University of Science and Technology 4 Jilin University
+arXiv:2607.02234v1 [cs.AI] 2 Jul 2026
+
+
+
+
+                                                                           †                          ‡
+                                                                               Corresponding Author       Project Leader
+
+
+
+                                                                                           Abstract
+
+                                                    On-policy self-distillation (OPSD) has emerged as a promising paradigm for im-
+                                                    proving LLM reasoning, where a privileged teacher with access to reference
+                                                    solutions provides token-level supervision on the student’s own generated trajec-
+                                                    tories. However, we find that OPSD consistently fails on long chain-of-thought
+                                                    (long-CoT) reasoning models, yielding at best marginal gains while destabilizing
+                                                    the reflective reasoning capability these models depend on. Through a novel de-
+                                                    composition of the teacher’s supervision signal, we identify the root cause: the
+                                                    teacher’s supervision is dominated by a reference-induced component that drives
+                                                    rote memorization of reference-specific shortcuts, while the question-conditioned,
+                                                    inference-transferable component is ignored or actively opposed. Based on this
+                                                    diagnosis, we propose a two-step solution. First, we construct a reference-only
+                                                    teacher, i.e., the same model conditioned on the reference without the question,
+                                                    to isolate the non-transferable component of the supervision signal; the residual
+                                                    after subtracting this component captures the question-conditioned, inference-
+                                                    transferable correction. Second, we use pointwise mutual information (PMI) as the
+                                                    mechanism to transform this residual into a well-formed PMI target distribution
+                                                    that the student can directly distill from, filtering out the reference-induced shortcut.
+                                                    Experiments on four long-CoT models across two datasets demonstrate consistent
+                                                    improvements over both the base model and standard OPSD, while preserving the
+                                                    models’ natural epistemic behavior throughout training.
+
+
+                                        1    Introduction
+                                        Recent advances in large language model (LLM) reasoning have demonstrated that long chain-of-
+                                        thought (long-CoT) reasoning, where models engage in extended, reflective thinking processes before
+                                        arriving at answers, can substantially improve performance on complex reasoning tasks [Jaech et al.,
+                                        2024, Guo et al., 2025, Team, 2024]. Distilling these capabilities into smaller, more efficient models
+                                        has become a central challenge, with on-policy self-distillation (OPSD) [Agarwal et al., 2024, He
+                                        et al., 2026, Zhao et al., 2026, Cui et al., 2026] emerging as a promising paradigm. In OPSD, a
+                                        student model generates reasoning trajectories on-policy, which are then evaluated by a privileged
+                                        teacher that has access to reference solutions, providing token-level supervision through divergence
+                                        minimization.
+                                        However, applying OPSD to long-CoT reasoning models yields surprisingly poor results. As
+                                        shown in Figure 1, our systematic evaluation across four long-CoT models reveals that OPSD provides
+                                        at best marginal, short-lived gains, and may even degrade performance on long-CoT models. This
+
+                                        Preprint.
+finding is corroborated by concurrent works [Kaur et al., Kim et al., 2026a], which report similarly
+limited or negative outcomes when applying OPSD to thinking models.
+
+
+                                                                                              68                                                                                                                                         68
+                          68
+ AIME 2025 Accuracy (%)
+
+
+
+
+                                                                     AIME 2025 Accuracy (%)
+
+
+
+
+                                                                                                                                             AIME 2025 Accuracy (%)
+
+
+
+
+                                                                                                                                                                                                                AIME 2025 Accuracy (%)
+                                                                                                                                                                      40
+                                                                                              66                                                                                                                                         66
+                          66
+                                                                                                                                                                      38
+                                                                                              64                                                                                                                                         64
+                          64                                                                                                                                          36
+                                                                                              62                                                                                                                                         62
+                          62                                                                                                                                          34
+                                                                                              60                                                                                                                                         60
+                                                                                                                                                                      32
+                          60
+                                                                                              58                                                                                                                                         58
+                                                                                                                                                                      30
+                               0    25   50 75 100 125 150 175 200                                 0    25   50 75 100 125 150 175 200                                     0   25   50 75 100 125 150 175 200                                 0   25   50 75 100 125 150 175 200
+                                          Training Step                                                       Training Step                                                          Training Step                                                      Training Step
+
+
+                                   (a) Qwen3-8B                                                        (b) Qwen3-4B                                                        (c) R1-Distill-7B                                                      (d) OLMo-7B
+
+Figure 1: AIME 2025 accuracy across OPSD training checkpoints on Math-CoT-20K. OPSD provides
+at best marginal, short-lived gains, and may even degrade performance on long-CoT models. This
+finding is corroborated by concurrent works [Kaur et al., Kim et al., 2026a], which report similarly
+limited or negative outcomes when applying OPSD to thinking models.
+
+
+What goes wrong? To investigate, we examine the model’s generated outputs across training
+checkpoints. Following Kim et al. [2026a,b], we track epistemic markers (tokens such as “Wait”, “Let
+me think”, “Perhaps”, and “Maybe”) that indicate uncertainty externalization and reflective reasoning,
+which are central to long-CoT models’ generalization ability [Gandhi et al., 2024, Li et al., 2025]. We
+observe a striking and pathological pattern (Figure 2): as OPSD training progresses, these epistemic
+markers exhibit violent, erratic fluctuations across different models. On Qwen3-8B, the total count
+collapses; on R1-Distill-Qwen-7B, it explodes with the increase concentrated almost entirely on the
+single token “Wait”. When combined with the steady performance degradation, this pattern suggests
+that OPSD’s answer-directed teaching paradigm may not stably preserve the reflective reasoning
+capability that long-CoT models fundamentally depend on for generalization.
+This observation leads us to a natural hypothesis: OPSD’s privileged teacher, having access to
+the reference solution, already knows the answer and therefore has no need to reflect, explore, or
+self-correct. Rather than providing selective, beneficial corrections to the student’s reasoning (the
+intended purpose of privileged supervision), the teacher may instead be driving the student toward
+rote memorization of the specific reasoning path dictated by the reference, destabilizing the
+model’s ability to think independently.
+We verify this hypothesis through a novel decomposition of the teacher’s supervision signal. We
+construct a reference-only teacher (the same model conditioned on the reference solution without
+the question), and use it to decompose the teacher’s supervision into two components: a reference-
+induced component (the supervision that exists even without the question) and the remaining question-
+conditioned component. Our analysis across training checkpoints reveals a striking finding: the
+reference-induced component dominates both the direction and magnitude of the teacher’s
+update (Figure 3), while the question-conditioned component, which genuinely helps solve the
+problem, remains nearly orthogonal or even anti-aligned with the total update direction, and, especially
+in the early training phase, accounts for only a small fraction of the update norm. These findings
+directly corroborate the performance and reflection destabilization, forming a coherent explanation:
+OPSD collapses on long-CoT models because it drives rote memorization of reference-specific
+shortcuts rather than transferable reasoning improvement.
+A natural solution emerges from the diagnosis. Our decomposition reveals that the reference-only
+teacher serves as a precise probe for identifying the non-transferable component of the supervision
+signal. Once this component is identified, the residual, obtained by subtracting the reference-induced
+signal from the teacher’s total update, can be interpreted as a conditional PMI-style quantity that
+captures the question-conditioned, inference-transferable correction we want the student to learn.
+However, this residual exists only as a per-token log-probability difference, not as a distribution the
+student can directly distill from. We leverage pointwise mutual information (PMI), a classical tool
+from information theory widely used in NLP for measuring association strength [Church and Hanks,
+1990, Levy and Goldberg, 2014], to transform this residual into a well-formed target distribution.
+
+
+                                                                                                                                         2
+Concretely, standard OPSD distills from the raw teacher distribution πT , which we have shown to be
+dominated by the reference-induced shortcut:
+                                      LOPSD = DJSD (πθ ∥ πT ) .                                      (1)
+We replace πT with a purified PMI target that strips out the reference-induced shortcut using the
+reference-only teacher πref :
+                                                                                     
+       Lours = DJSD (πθ ∥ PPMI ) , PPMI (v) ∝ P0 (v) exp β1 log πT (v) − log πref (v) ,        (2)
+
+where P0 is the clean base model distribution (without reference), πref is the reference-only teacher
+that isolates the non-transferable component, and β controls the correction strength. The difference
+log πT − log πref removes the reference-specific shortcut from the teacher’s prediction, leaving only
+the question-conditioned correction. This target can be seamlessly integrated into the standard OPSD
+framework, achieving results far superior to standard OPSD and protecting the natural epistemic
+behavior of the base model.
+
+2     Revisiting On-Policy Self-Distillation for Long-CoT Models
+On-Policy Self-Distillation (OPSD) [Agarwal et al., 2024, He et al., 2026, Zhao et al., 2026, Cui et al.,
+2026] has shown promise for improving reasoning capabilities through privileged teacher guidance.
+However, when applied to long chain-of-thought (long-CoT) reasoning models, i.e., models that
+rely on extended, reflective reasoning processes, we observe a surprising and consistent failure. In
+this section, we first introduce the relevant background, then systematically investigate this failure
+through three progressive analyses.
+
+2.1   Preliminaries
+
+On-Policy Self-Distillation. OPSD trains a student model πθ to learn from a privileged teacher
+that shares the same base model π0 but has access to a reference solution r. The student generates
+reasoning trajectories on-policy: ŷ ∼ πθ (· | q), and the teacher evaluates them token-by-token. The
+training objective minimizes:
+                                     T
+                                 1X
+                      LOPSD =          DJSD (πθ (· | ŷ<t , q) ∥ πT (· | ŷ<t , q, r)) ,             (3)
+                                 T t=1
+where DJSD denotes the generalized Jensen-Shannon divergence.
+
+Pointwise Mutual Information. Pointwise mutual information (PMI) is a classical measure from
+information theory that quantifies the association between two events beyond what would be expected
+under independence [Church and Hanks, 1990, Bouma, 2009]. Given two random variables X and
+Y , the PMI of a specific outcome pair (x, y) is PMI(x; y) = log PP(x)P (x,y)
+                                                                           (y) . PMI has been widely
+used in NLP for collocation detection [Church and Hanks, 1990], word embedding evaluation [Levy
+and Goldberg, 2014], and more recently for analyzing the information content of language model
+predictions [Holtzman et al., 2021]. In our setting, we adopt a PMI-style conditional log-likelihood
+ratio to measure how much the teacher’s prediction changes when the question is introduced on top
+of the reference-conditioned context, enabling us to separate inference-transferable supervision from
+reference-induced shortcuts (Section 2.4).
+
+2.2   OPSD Degrades Long-CoT Model Performance
+
+We apply standard OPSD to four long-CoT reasoning models (Qwen3-8B, Qwen3-4B, DeepSeek-
+R1-Distill-Qwen-7B, and OLMo-7B-Thinking) using Math-CoT-20K with reference solutions as
+privileged information. We evaluate performance across training checkpoints on the AIME 2025
+benchmark.
+As shown in Figure 1, OPSD provides at best marginal, short-lived gains, and may even degrade
+performance on long-CoT models. This finding is corroborated by concurrent works [Kaur et al.,
+Kim et al., 2026a], which report similarly limited or negative outcomes when applying OPSD to
+thinking models.
+
+
+                                                     3
+                                                                                                                                             Epistemic Token Count (×1000)
+ Epistemic Token Count (×1000)
+                                                                                                                             Base                                                                                                                                        Base
+                                                             OPSD-Standard
+                                                                                             25                              OPSD-Standard
+                                                                                                                                                                                       OPSD-Standard
+                                                                                                                                                                                                                                          80                             OPSD-Standard
+                                 70
+                                                                                                                                                                             110
+                                                                                                                                                                                                                                          70
+                                 65
+                                                                                             20
+
+
+
+
+                                                                             Count (×1000)
+
+
+
+
+                                                                                                                                                                                                                          Count (×1000)
+                                                                                                                                                                                                                                          60
+                                                                                                                                                                             100
+                                 60                                                                                                                                                                                                       50
+                                                                                             15
+                                 55
+                                                                                                                                                                              90
+                                                                                                                                                                                                                                          40
+                                 50
+                                                                                             10                                                                                                                                           30
+                                                                                                                                                                              80                                                          20
+                                 45                                                           5
+                                                                                                                                                                                                                                          10
+                                 40                                                                                                                                           70
+                                                                                              0                                                                                                                                            0
+                                      0   25   50   75 100 125 150 175 200                        "wait"     "maybe"   "check"    Others                                           0   25   50   75 100 125 150 175 200                        "wait"    "perhaps" "maybe"    Others
+                                                Training Step                                              Epistemic Marker                                                                  Training Step                                              Epistemic Marker
+(a) Qwen3-8B: epistemic (b) Qwen3-8B: marker dis- (c) R1-7B: epistemic count (d) R1-7B: marker distribu-
+count                   tribution                                            tion
+
+Figure 2: Epistemic marker analysis during OPSD training on Math-CoT-20K. Qwen3-8B collapses
+uniformly, while R1-Distill-Qwen-7B explodes with the increase concentrated almost entirely on
+“Wait”. Both patterns are pathological and correlate with performance degradation.
+
+
+2.3                                   The Destabilization of Reflective Reasoning
+
+To understand the mechanism behind performance degradation, we examine the model’s generated
+outputs across training checkpoints on the AIME test set. Following Kim et al. [2026a], we track
+epistemic markers across OPSD training checkpoints. They indicate uncertainty externalization and
+reflective reasoning, which are central to long-CoT models’ generalization ability [Gandhi et al.,
+2024, Li et al., 2025].
+As shown in Figure 2, we observe pathological behavior: On Qwen3-8B, epistemic markers collapse,
+with nearly all marker types declining uniformly; On R1-Distill-Qwen-7B, the total count explodes,
+but this increase is concentrated almost entirely on the single token “Wait” (from 34K to 83K), while
+other markers decrease, suggesting degenerate repetition rather than genuine deliberation.
+In both cases, the epistemic marker distribution undergoes violent shifts that correlate with perfor-
+mance degradation. This observation leads us to a natural hypothesis: OPSD’s privileged teacher,
+having access to the reference solution, already knows the answer and therefore has no need to reflect,
+explore, or self-correct. Rather than providing selective, beneficial corrections to the student’s reason-
+ing (the intended purpose of privileged supervision), the teacher may instead be driving the student
+toward rote memorization of the specific reasoning path dictated by the reference, destabilizing
+the model’s ability to think independently.
+
+2.4                                   Diagnosing the Root Cause: Rote Memorization of Privileged Information
+
+The destabilization of reflective reasoning suggests that OPSD may be driving the student toward rote
+memorization of the specific reasoning path dictated by the reference, rather than learning transferable
+corrections. To test this, we decompose the teacher’s supervision into interpretable components.
+
+Decomposition of OPSD supervision. We construct a reference-only teacher πref , defined as the
+same model conditioned only on the reference solution r without the question q. This enables us to
+decompose the teacher’s total update relative to the current student πθ into two components:
+                                                                   log πT − log πθ = log πref − log πθ + log πT − log πref ,                                                                                                                                                           (4)
+                                                                   |     {z      } |         {z      }   |      {z       }
+                                                                             ∆total                                    ∆ref : reference-induced                                             ∆it : inference-transferable
+
+where πθ is the current student model at each checkpoint. The reference-induced signal ∆ref
+captures supervision driven purely by the reference solution, i.e., information the student will never
+have access to during inference. The remaining inference-transferable signal ∆it could capture
+supervision that depends on understanding the problem and would remain useful at inference
+time when no reference is available. If OPSD is working as intended, ∆total should align primarily
+with ∆it ; if it is memorizing the reference, it should align with ∆ref .
+
+Experimental setup. For each OPSD checkpoint, we generate on-policy trajectories using the
+current student πθ , then compute the decomposition above using the frozen base model for πT
+and πref . We measure two complementary metrics: (1) cosine similarity cos(∆total , ∆ref ) and
+cos(∆total , ∆it ), capturing the directional alignment; and (2) norm fraction ∥∆ref ∥/∥∆total ∥ and
+
+
+                                                                                                                                             4
+                    1.00                              cos(Δtotal, Δref)                                                         ‖Δref‖/‖Δtotal‖                                 cos(Δtotal, Δref)                                                                                       ‖Δref‖/‖Δtotal‖
+                                                                                                                                                                      1.0
+                                                      cos(Δtotal, Δit)                                                          ‖Δit‖/‖Δtotal‖                                  cos(Δtotal, Δit)                                                                                        ‖Δit‖/‖Δtotal‖
+                    0.75                                                                  1.2
+                                                                                                                                                                                                                                                  1.2
+
+
+
+
+Cosine Similarity
+
+
+
+
+                                                                                                                                                  Cosine Similarity
+                                                                                                                                                                      0.8
+
+
+
+
+                                                                          Norm Fraction
+
+
+
+
+                                                                                                                                                                                                                                  Norm Fraction
+                    0.50
+
+                                                                                          1.0                                                                                                                                                     1.0
+                    0.25                                                                                                                                              0.6
+
+
+
+                    0.00                                                                  0.8                                                                                                                                                     0.8
+                                                                                                                                                                      0.4
+
+                    −
+                    0.25
+
+                                                                                                                                                                                                                                                  0.6
+                    −                                                                     0.6                                                                         0.2
+                    0.50
+
+
+
+                    −
+                    0.75
+                                                                                          0.4
+                                                                                                                                                                      0.0                                                                         0.4
+
+
+
+
+                           0   25   50   75   100 125 150 175 200                               0   25   50   75   100   125   150   175   200                              0   25     50      75   100   125   150   175   200                         0   25   50   75   100   125   150   175   200
+
+                                    Training Step                                                         Training Step                                                                  Training Step                                                            Training Step
+(a) Qwen3-8B: cosine sim- (b) Qwen3-8B: norm frac- (c) R1-7B: cosine similar- (d) R1-7B: norm fraction
+ilarity                   tion                     ity
+
+Figure 3: Decomposition of the teacher’s update ∆total = log πT − log πθ into reference-induced
+(∆ref , red) and inference-transferable (∆it , green) components across OPSD checkpoints. Left
+columns: directional alignment (cosine similarity). Right columns: magnitude dominance (norm
+fraction). The reference component dominates in both direction and magnitude.
+
+
+
+∥∆it ∥/∥∆total ∥, capturing the magnitude dominance. Both are computed over the full vocabulary at
+each token position and averaged across 100 samples per checkpoint.
+
+
+Results.                            The results on Qwen3-8B and R1-Distill-7B (Figure 3) reveal two key findings:
+
+
+(1) The teacher’s update is dominated by the reference-induced component in both direction and
+magnitude. On both models, cos(∆total , ∆ref ) remains high throughout training, confirming that
+the teacher persistently pulls the student toward the reference rather than toward question-conditioned
+reasoning. The norm fraction plots reinforce this: ∥∆ref ∥/∥∆total ∥ consistently exceeds 1.0, meaning
+the reference-induced component is larger than the total update itself. The inference-transferable
+component partially cancels it rather than reinforcing it.
+
+
+(2) The inference-transferable signal partially recovers as reference memorization saturates.
+An interesting dynamic emerges over the course of training. On Qwen3-8B, cos(∆total , ∆it ) rises
+from −0.95 to near zero; on R1-Distill-7B, cos(∆total , ∆ref ) rapidly climbs from 0.58 to 0.99 in the
+first 100 steps and then plateaus. This pattern is consistent with the reference-induced component
+being quickly memorized during training: as the student absorbs the reference signal, the update
+along ∆ref diminishes, and the residual ∆it becomes relatively more visible. However, this partial
+recovery does not translate into performance improvement. As shown in Figure 1, accuracy continues
+to decline throughout this period. The damage from early reference memorization has already
+destabilized the model’s reasoning capability.
+
+These findings directly corroborate the performance and reflection destabilization observed in Sec-
+tions 2.2 and 2.3: OPSD’s failure on long-CoT models is caused by the dominance of reference-
+induced supervision (∆ref ) over inference-transferable supervision (∆it ) in the teacher’s update
+signal.
+
+
+A natural solution emerges. Our decomposition identifies ∆ref as the non-transferable compo-
+nent of the teacher’s supervision. The residual ∆it = log πT − log πref , obtained by subtracting
+this reference-induced component, can be interpreted as a conditional PMI-style residual: it mea-
+sures how much the teacher’s prediction changes when the question is introduced on top of the
+reference-conditioned context, capturing the question-conditioned correction that transfers to in-
+ference. However, ∆it is a per-token log-probability difference, not a distribution the student can
+directly learn from. In the following section, we show how this residual can be transformed into a
+well-formed target distribution, purifying the learning objective so that the student distills only the
+inference-transferable signal.
+
+
+                                                                                                                                                  5
+3     Method
+3.1   PMI Target for Robust Self-Distillation
+
+Our analysis in Section 2.4 reveals that OPSD’s training signal is dominated by the reference-induced
+component ∆ref , while the question-conditioned residual
+                                       ∆it = log πT − log πref
+is ignored or even opposed. We interpret this residual as a conditional PMI-style quantity: it measures
+how much the teacher’s prediction changes when the question is available in addition to the reference,
+capturing the inference-transferable signal we want the student to learn. However, ∆it is a log-
+probability difference rather than a valid probability distribution, and therefore cannot be directly
+used as a distillation target.
+We use pointwise mutual information (PMI), a classical measure of association strength [Church and
+Hanks, 1990, Levy and Goldberg, 2014], as the mechanism to convert this residual into a well-formed
+target distribution. At each token position t, let
+                                       P0 (v) = π0 (v | ŷ<t , q)
+denote the clean base distribution conditioned on the question but not on the reference solution.
+We construct the PMI target by anchoring the question-conditioned residual onto this clean base
+distribution:                                                      
+                                            1             1
+                               PPMI (v) = P0 (v) exp        ∆it (v) ,                         (5)
+                                            Z             β
+where
+                                 ∆it (v) = log πT (v) − log πref (v),
+β > 0 controls the correction strength, and Z is the normalization constant. Equivalently,
+                                                          1
+                           log PPMI (v) = log P0 (v) +      ∆it (v) − log Z.                         (6)
+                                                          β
+This formulation starts from P0 , which is free of reference contamination, and adjusts it by the
+question-conditioned residual. When β = 1, the full correction is applied; larger β yields a more
+conservative target closer to the base distribution.
+
+Optimality under KL-regularized distillation. The PMI target in Eq. 5 can be derived as the
+closed-form optimal distribution under a KL-regularized distillation objective. Suppose that, at a fixed
+token position, the transferable reward of choosing vocabulary item v is the inference-transferable
+residual
+                                          r(v) = ∆it (v).
+We seek a target distribution P that maximizes this transferable reward while remaining close to the
+clean base distribution P0 :
+                          P ⋆ = arg max [Ev∼P r(v) − βDKL (P ∥P0 )] .                                (7)
+                                     P ∈∆(V)
+
+This objective is the token-level analogue of KL-regularized policy improvement used in RLHF and
+DPO-style derivations [Rafailov et al., 2024], with P0 serving as the reference policy and ∆it serving
+as the implicit reward. Solving Eq. 7 yields
+                                                                
+                                     ⋆       1              r(v)
+                                   P (v) = P0 (v) exp              .                                (8)
+                                             Z               β
+Substituting r(v) = ∆it (v) recovers exactly the PMI target in Eq. 5. Thus, the PMI target is not a
+heuristic normalization of the residual; it is the optimal KL-regularized target distribution induced by
+the inference-transferable reward ∆it with P0 as the reference policy.
+For completeness,
+          P       the derivation is straightforward. Introducing a Lagrange multiplier λ for the
+constraint v P (v) = 1, the Lagrangian is
+                                                                                !
+                       X                   X             P (v)      X
+           J (P, λ) =      P (v)r(v) − β       P (v) log        +λ     P (v) − 1 .            (9)
+                        v                   v
+                                                         P0 (v)      v
+
+
+                                                   6
+Setting ∂J /∂P (v) = 0 gives
+                                                      
+                                             P (v)
+                                r(v) − β log        + 1 + λ = 0,                                   (10)
+                                             P0 (v)
+which implies                                                
+                                                         r(v)
+                                     P (v) ∝ P0 (v) exp         .                                  (11)
+                                                          β
+After normalization and substituting r(v) = ∆it (v), we obtain Eq. 5.
+
+Training objective.    The final loss replaces the raw privileged teacher with the PMI target:
+                                       T
+                                   1X
+                         Lours =         DJSD (πθ (· | ŷ<t , q) ∥ Ptarget (·)) ,                  (12)
+                                   T t=1
+
+where Ptarget denotes the stabilized implementation of PPMI described in Section 3.2. In contrast
+to standard OPSD, which distills from πT and therefore inherits the reference-induced shortcut, our
+objective distills only the question-conditioned correction while keeping the student anchored to its
+clean base reasoning prior.
+
+3.2   Implementation
+
+We now describe the concrete computational procedure for constructing the stabilized PMI target
+at each token position t. The procedure requires three forward passes through the same frozen base
+model π0 , differing only in their input prompts, plus the student’s own forward pass.
+
+Step 1: On-policy generation and forward passes. The student generates a trajectory ŷ ∼ πθ (· |
+q). We then obtain three sets of logits over the full vocabulary V at each position t:
+
+       • Teacher: ℓT (v) = logitπ0 (v | ŷ<t , q, r) (question + reference)
+       • Reference probe: ℓref (v) = logitπ0 (v | ŷ<t , r) (reference only)
+       • Base: ℓ0 (v) = logitπ0 (v | ŷ<t , q) (question only)
+
+All three use the same frozen base model weights. The student logits
+                                     ℓθ (v) = logitπθ (v | ŷ<t , q)
+are computed with gradients tracked.
+
+Step 2: Compute the raw PMI signal. The inference-transferable signal is computed in log-
+probability space:
+        ∆it (v) = log πT (v) − log πref (v),    πT = softmax(ℓT ),        πref = softmax(ℓref ).   (13)
+
+Step 3: Centering. We subtract the vocabulary-level mean to ensure that the correction is zero-
+centered:
+                           ¯ it (v) = ∆it (v) − 1
+                                                   X
+                          ∆                           ∆it (v ′ ).                          (14)
+                                               |V| ′
+                                                           v ∈V
+Centering removes global logit shifts in the residual and makes the PMI correction numerically stable
+without changing its relative token-level preference structure.
+
+Step 4: Soft clipping. We apply tanh-based soft clipping to bound extreme PMI values while
+preserving the direction and relative ordering of moderate values:
+                                                       ¯      
+                                    ˜ it (v) = c · tanh ∆it (v) ,
+                                    ∆                                                 (15)
+                                                          c
+where c > 0 is the clipping threshold. For |∆    ¯ it (v)| ≪ c, this transformation is approximately the
+               ¯
+identity; for |∆it (v)| ≫ c, it saturates at ±c. We use c = 10 in all experiments.
+
+
+                                                    7
+Step 5: Construct the stabilized PMI target. The practical target distribution is formed by adding
+the stabilized PMI signal to the base model’s log-probabilities and normalizing:
+                                                                       
+                                                                   1˜
+                         Ptarget = softmax log π0 (· | ŷ<t , q) + ∆it .                      (16)
+                                                                   β
+Equivalently,
+                                                         1˜
+                     log Ptarget (v) = log π0 (v | ŷ<t , q) +
+                                                           ∆it (v) − log Zt ,            (17)
+                                                         β
+where Zt is the token-position-specific normalization constant. We use β = 1 unless otherwise
+specified.
+
+Step 6: Training loss. The student is updated by minimizing the generalized Jensen-Shannon
+divergence between the student distribution and the stabilized PMI target:
+                                    T
+                             1X
+                          L=       DJSD (πθ (· | ŷ<t , q) ∥ Ptarget (·)) .                    (18)
+                             T t=1
+
+Computational overhead. Compared to standard OPSD, our method requires two additional
+forward passes per training step: one for the reference probe and one for the base distribution.
+These forward passes differ only in their input prompts. Moreover, they are based on the same
+already generated trajectory and do not require backpropagation. As a result, our method introduces
+no additional trainable parameters and increases wall-clock training time by less than 10% in our
+implementation. Further efficiency gains may be obtained by batching the three frozen-model forward
+passes together, which we leave for future work.
+
+4     Experiments
+4.1   Setup
+
+Models and Datasets. We evaluate on four long-CoT reasoning models spanning different archi-
+tectures and scales: Qwen3-8B, Qwen3-4B [Yang et al., 2025], DeepSeek-R1-Distill-Qwen-7B [Guo
+et al., 2025] (abbreviated R1-Distill-7B), and OLMo-7B-Thinking [Team et al., 2025]. We use two
+training datasets with reference solutions as privileged information: DASD-10K, a 10K-sample subset
+from DASD [Yan et al., 2026], and Math-CoT-20K [Ren et al., 2026], a 20K-sample collection of
+competition-level math problems with detailed chain-of-thought solutions.
+
+Baselines and Evaluation. We compare three configurations: (1) Base: the base model without
+any distillation, (2) OPSD-Standard: standard on-policy self-distillation [Zhao et al., 2026] with
+JSD loss, and (3) OPSD-PMI (Ours): on-policy self-distillation with our PMI target (Section 3.1).
+Following OPSD, we evaluate checkpoints every 50 steps up to 200 steps and report best accuracy
+on three challenging mathematical reasoning benchmarks: AIME 2024, AIME 2025, and HMMT
+2025. All the scores are 12-run averages.
+
+Implementation details. Unless otherwise specified, we follow the training configuration of OPSD.
+All methods use LoRA [Hu et al., 2022] adaptation with rank 64. Training uses a learning rate of
+5e-6, a batch size of 32, and gradient checkpointing. On-policy trajectories are generated using
+vLLM [Kwon et al., 2023]. The PMI target uses β = 1, tanh soft clipping with c = 10, and
+centering. Maximum completion length is 1024 tokens during training. We do not apply any post-hoc
+token-level loss clipping, as the tanh soft clipping in the PMI target construction (Eq. 15) already
+bounds extreme values.
+
+4.2   Main Results
+
+Table 1 presents the main results across four models and two training datasets. We highlight three
+key findings:
+(1) OPSD-Standard fails on long-CoT models. Consistent with our analysis in Section 2, OPSD-
+Standard provides negligible or negative gains across all settings. On DASD-10K, OPSD-Standard
+
+
+                                                   8
+Table 1: Main results on mathematical reasoning benchmarks. Bold indicates the best result per
+model-dataset combination. OPSD-Standard uses the raw teacher distribution as the distillation target;
+OPSD-PMI (Ours) replaces it with our purified PMI target. OPSD-PMI consistently improves over
+both the base model and OPSD-Standard across all four models and both training datasets.
+                                                                                                                                DASD-10K                                                                                Math-CoT-20K
+  Model                                               Method                                             AIME24            AIME25             HMMT25                                      Avg.         AIME24           AIME25                                 HMMT25              Avg.
+                                                      Base                                                 75.8               65.6                             43.9                           61.8        75.8                       65.6                            43.9          61.8
+  Qwen3-8B                                            OPSD-Standard                                        75.4               65.2                             42.2                           60.9        75.8                       66.7                            44.4          62.3
+                                                      OPSD-PMI (Ours)                                      79.4               71.9                             46.7                           66.0        77.1                       70.8                            47.5          65.1
+                                                      Base                                                 74.9               66.4                             42.2                           61.2        74.9                       66.4                            42.2          61.2
+  Qwen3-4B                                            OPSD-Standard                                        74.2               65.2                             42.2                           60.5        73.3                       64.2                            40.8          59.4
+                                                      OPSD-PMI (Ours)                                      76.3               68.3                             46.4                           63.7        76.1                       67.5                            44.4          62.7
+                                                      Base                                                 52.0               39.6                             24.4                           38.7        52.0                       39.6                            24.4          38.7
+  R1-Distill-7B                                       OPSD-Standard                                        51.9               39.2                             24.4                           38.5        52.2                       38.1                            24.4          38.2
+                                                      OPSD-PMI (Ours)                                      54.0               43.1                             25.3                           40.8        55.3                       41.1                            26.1          40.8
+                                                      Base                                                 71.9               66.7                             45.2                           61.3        71.9                       66.7                            45.2          61.3
+  OLMo-7B                                             OPSD-Standard                                        68.1               66.4                             45.0                           59.8        69.7                       65.6                            41.7          59.0
+                                                      OPSD-PMI (Ours)                                      74.7               68.9                             46.1                           63.2        73.3                       70.3                            46.4          63.3
+
+
+
+
+                                                                                                                                                                                                                                                 72
+                          72        OPSD-Standard                                                                           OPSD-Standard                                                                                                                  OPSD-Standard
+                                                                                                                                                                           42
+ AIME 2025 Accuracy (%)
+
+
+
+
+                                                                       AIME 2025 Accuracy (%)
+
+
+
+
+                                                                                                                                                  AIME 2025 Accuracy (%)
+
+
+
+
+                                                                                                                                                                                                                        AIME 2025 Accuracy (%)
+                                    OPSD-PMI (Ours)                                             68                          OPSD-PMI (Ours)                                                                                                                OPSD-PMI (Ours)
+                                                                                                                                                                                                                                                 70
+                          70
+                                                                                                                                                                           40
+                                                                                                66                                                                                                                                               68
+                          68
+                                                                                                                                                                           38
+                                                                                                                                                                                                                                                 66
+                          66                                                                    64
+                                                                                                                                                                           36
+                                                                                                                                                                                                                                                 64
+                          64                                                                    62
+                                                                                                                                                                           34                                                                    62
+                          62
+                                                                                                60
+                                                                                                                                                                           32                                                                    60
+                          60                                                                                                                                                        OPSD-Standard
+                                                                                                58                                                                                  OPSD-PMI (Ours)
+                                                                                                                                                                           30                                                                    58
+                               0    25   50   75 100 125 150 175 200                                 0    25   50   75 100 125 150 175 200                                      0   25   50    75 100 125 150 175 200                                 0   25   50   75 100 125 150 175 200
+                                          Training Step                                                         Training Step                                                             Training Step                                                         Training Step
+
+
+                                   (a) Qwen3-8B                                                          (b) Qwen3-4B                                                           (c) R1-Distill-7B                                                         (d) OLMo-7B
+
+Figure 4: Training dynamics on Math-CoT-20K (AIME 2025). OPSD-Standard (red) uses the raw
+teacher as the distillation target and degrades progressively; OPSD-PMI (Ours, green) replaces it
+with our purified PMI target and remains stably above the baseline (dashed) throughout training.
+
+
+
+degrades performance on three of four models, with only R1-Distill-7B showing near-zero change. On
+Math-CoT-20K, OPSD-Standard provides a marginal gain on Qwen3-8B but degrades the other three
+models, with OLMo-7B suffering the largest drop. These results confirm that the reference-induced
+supervision dominance identified in Section 2.4 translates directly into practical failure.
+(2) OPSD-PMI consistently improves over the base model. In contrast to OPSD-Standard’s failure,
+OPSD-PMI achieves gains on every model-dataset combination. These results demonstrate that the
+inference-transferable signal, once isolated via the reference-only teacher and transformed into a
+learnable target via PMI, provides genuinely useful supervision for long-CoT models.
+(3) The gap between OPSD-Standard and OPSD-PMI is large and consistent. Comparing the two
+methods directly, OPSD-PMI outperforms OPSD-Standard on both DASD-10K and Math-CoT-20K.
+This gap is remarkably consistent across models and datasets, suggesting that the reference-induced
+noise is a universal bottleneck in OPSD-Standard for long-CoT models, and that OPSD-PMI
+addresses it effectively regardless of the specific model architecture or training data.
+
+
+Training dynamics. While the main results table reports best-checkpoint performance, Figure 4
+reveals the full training trajectory, directly contrasting with the OPSD-Standard collapse shown in
+Figure 1. Two key observations emerge. First, OPSD-PMI improves and remains stable, whereas
+OPSD-Standard peaks briefly (if at all) before steadily declining. Second, OPSD-PMI is robust
+to checkpoint selection: the variance across checkpoints is small, meaning practitioners do not
+need careful early stopping to avoid catastrophic degradation. This is a practical advantage over
+OPSD-Standard, where later checkpoints consistently perform worse.
+
+
+                                                                                                                                              9
+                                                                                                                                             Epistemic Token Count (×1000)
+Epistemic Token Count (×1000)
+                                75                                                                                        Base                                                                                                                                         Base
+                                                                                                                          OPSD-Standard
+                                                                                                                                                                                       OPSD-Standard
+                                                                                                                                                                                                                                          80                           OPSD-Standard
+                                70
+                                                                                            25                            OPSD-PMI (Ours)                                    110
+                                                                                                                                                                                       OPSD-PMI (Ours)
+                                                                                                                                                                                                                                                                       OPSD-PMI (Ours)
+                                                                                                                                                                                                                                          70
+
+
+
+
+                                                                            Count (×1000)
+
+
+
+
+                                                                                                                                                                                                                          Count (×1000)
+                                65                                                          20                                                                                                                                            60
+                                                                                                                                                                             100
+                                60                                                                                                                                                                                                        50
+                                                                                            15
+                                55                                                                                                                                            90                                                          40
+                                                                                            10                                                                                                                                            30
+                                50
+                                                                                                                                                                              80
+                                                                                                                                                                                                                                          20
+                                45                                                           5
+                                         OPSD-Standard                                                                                                                                                                                    10
+                                         OPSD-PMI (Ours)                                                                                                                      70
+                                40
+                                                                                             0                                                                                                                                             0
+                                     0   25   50   75 100 125 150 175 200                        "wait"     "maybe"   "check"   Others                                             0   25   50   75 100 125 150 175 200                        "wait"    "perhaps" "maybe"   Others
+                                               Training Step                                              Epistemic Marker                                                                   Training Step                                              Epistemic Marker
+(a) Qwen3-8B: epistemic (b) Qwen3-8B: marker dis- (c) R1-7B: epistemic count (d) R1-7B: marker distribu-
+count                   tribution                                            tion
+
+Figure 5: Epistemic marker analysis on Math-CoT-20K. OPSD-Standard uses the raw teacher
+distribution; OPSD-PMI (Ours) uses our purified PMI target. (a, c) Total epistemic token count
+across training steps: OPSD-Standard causes pathological collapse or explosion, while OPSD-PMI
+remains stable at baseline levels. (b, d) Per-marker distribution at step 200: OPSD-Standard distorts
+the distribution, while OPSD-PMI closely preserves the base model’s natural epistemic behavior.
+
+
+4.3                                  Preservation of Reflective Reasoning
+
+A central claim of our work is that OPSD-PMI preserves the reflective reasoning capability that
+OPSD-Standard destabilizes (Section 2.3). To verify this, we revisit the epistemic marker analysis on
+Qwen3-8B and R1-Distill-7B, now comparing the two methods side by side.
+
+Epistemic marker trajectories. Figure 5 (a, c) shows the total epistemic token count across
+training checkpoints. Under OPSD-Standard, Qwen3-8B’s epistemic count collapses from 73K to
+40K, while R1-Distill-7B’s explodes from 71K to 115K. In stark contrast, OPSD-PMI maintains
+the epistemic count at near-baseline levels throughout training on both models: Qwen3-8B and
+R1-Distill-7B remain within the 70K range. The stability is remarkable: OPSD-PMI trains the model
+to improve its reasoning accuracy without disrupting its reflective behavior.
+
+Marker distribution preservation. Figure 5 (b, d) compares the per-marker distribution at the
+final checkpoint. On Qwen3-8B, OPSD-Standard uniformly suppresses all marker types (“wait”
+drops from 27K to 10K, “maybe” from 12K to 3K), while OPSD-PMI closely preserves the base
+distribution across all markers. On R1-Distill-7B, OPSD-Standard concentrates the increase almost
+entirely on “wait” (34K → 83K) while other markers remain stable or decline, a degenerate pattern
+suggesting repetitive rather than genuine deliberation. OPSD-PMI maintains a balanced distribution
+nearly identical to the base model.
+These results are consistent with our diagnosis that the reference-induced supervision identified in
+Section 2.4 is the main driver of epistemic destabilization, and OPSD-PMI, by filtering out this
+component, preserves the model’s natural reflective reasoning while still enabling effective knowledge
+transfer.
+
+4.4                                  Ablation Studies
+
+We ablate the two key hyperparameters of the PMI target, namely the soft clipping threshold c and
+the correction strength β, on Qwen3-8B and R1-Distill-7B using Math-CoT-20K. We evaluate on
+AIME 2024 and AIME 2025 across checkpoints 50 to 200.
+
+Soft clipping threshold c. Figure 6 compares c ∈ {5, 10, 20} with β = 1 fixed. All three settings
+consistently improve over the baseline and substantially outperform OPSD-Standard across both
+models and benchmarks. c = 20 exhibits training trajectories closely matching c = 10, as most PMI
+values naturally fall well within this range. c = 5 introduces slightly more volatile trajectories, it
+may be because extreme PMI values are more aggressively compressed by the tanh nonlinearity at
+this threshold, which may cause minor distortion. However, it does not much lower the performance
+ceiling. Overall, the method is robust to the choice of c: the tanh soft clipping serves as a safety net
+for numerical stability rather than a performance-critical component.
+
+
+                                                                                                                                            10
+                                                        c=5
+                                                                                                      71                                                                                                           c=5                                        c=5
+                                                                                                                                                                                58
+                             78.0                       c = 10                                                                                                                                                     c = 10                                     c = 10
+
+
+
+
+    AIME 2024 Accuracy (%)
+
+
+
+
+                                                                                                                                                       AIME 2024 Accuracy (%)
+
+
+
+
+                                                                                                                                                                                                                            AIME 2025 Accuracy (%)
+                                                                             AIME 2025 Accuracy (%)
+                                                        c = 20                                                                                                                                                     c = 20                            42       c = 20
+                                                                                                      70                                                                        57
+                             77.5
+                                                                                                                                                                                                                                                     41
+                                                                                                      69                                                                        56
+                                                                                                                                         c=5
+                             77.0
+                                                                                                                                         c = 10                                 55                                                                   40
+                                                                                                      68                                 c = 20
+
+                                                                                                                                                                                54
+                             76.5                                                                                                                                                                                                                    39
+                                                                                                      67
+                                                                                                                                                                                53
+                             76.0                                                                     66                                                                                                                                             38
+                                                                                                                                                                                52
+                                    0   25   50   75   100 125 150 175 200                                 0   25    50 75 100 125 150 175 200                                       0   25    50 75 100 125 150 175 200                                  0   25       50 75 100 125 150 175 200
+                                             Training Step                                                            Training Step                                                             Training Step                                                           Training Step
+
+
+ (a) Qwen3-8B (AIME24) (b) Qwen3-8B (AIME25)                                                                                                                                    (c) R1-7B (AIME24)                                                   (d) R1-7B (AIME25)
+
+Figure 6: Ablation on the soft clipping threshold c (β = 1 fixed). All settings consistently improve
+over the baseline and show similar trajectories, confirming robustness to this hyperparameter.
+
+                             79.0
+                                                        β = 0.5
+                                                                                                      72                                                                                 β = 0.5
+                                                                                                               β = 0.5                                                          56
+                                                        β=1                                                                                                                              β=1
+    AIME 2024 Accuracy (%)
+
+
+
+
+                                                                                                                                                       AIME 2024 Accuracy (%)
+
+
+
+
+                                                                                                                                                                                                                            AIME 2025 Accuracy (%)
+                                                                             AIME 2025 Accuracy (%)
+
+
+
+
+                                                                                                               β=1
+                             78.5
+                                                        β=2                                           71                                                                                 β=2                                                         42
+                                                                                                               β=2
+                             78.0
+                                                                                                      70                                                                        55
+                                                                                                                                                                                                                                                     41
+                             77.5
+
+                                                                                                      69
+                             77.0                                                                                                                                               54
+                                                                                                                                                                                                                                                     40
+                                                                                                      68
+                             76.5
+
+
+                                                                                                      67                                                                        53
+                             76.0                                                                                                                                                                                                                    39
+                                                                                                                                                                                                                                                                                          β = 0.5
+                             75.5
+                                                                                                      66                                                                                                                                                                                  β=1
+                                                                                                                                                                                52                                                                                                        β=2
+                                                                                                                                                                                                                                                     38
+                                    0   25   50   75   100 125 150 175 200                                 0   25    50 75 100 125 150 175 200                                       0   25    50 75 100 125 150 175 200                                  0   25       50 75 100 125 150 175 200
+                                             Training Step                                                            Training Step                                                             Training Step                                                           Training Step
+
+
+ (a) Qwen3-8B (AIME24) (b) Qwen3-8B (AIME25)                                                                                                                                    (c) R1-7B (AIME24)                                                   (d) R1-7B (AIME25)
+
+Figure 7: Ablation on the correction strength β (c = 10 fixed). β = 0.5 produces volatile trajectories;
+β = 2 yields smoother curves with occasionally higher peaks; β = 1 balances stability and
+performance.
+
+
+Correction strength β. Figure 7 compares β ∈ {0.5, 1, 2} with c = 10 fixed. All three settings
+improve over both the baseline and OPSD-Standard, but exhibit distinct training dynamics. The
+performance curves differ across settings: different β values achieve the best result at different
+checkpoints and benchmarks, with no single value uniformly dominating. This is expected, since
+β controls the trade-off between the strength of the question-conditioned correction and proximity
+to the base distribution. Importantly, all settings consistently outperform both the base model and
+OPSD-Standard, demonstrating that OPSD-PMI is robust to the choice of β. For simplicity and to
+avoid additional tuning, we use β = 1 in all main experiments.
+
+
+5                              Related Work
+
+Long chain-of-thought reasoning. Chain-of-thought (CoT) prompting [Wei et al., 2022] demon-
+strated that eliciting intermediate reasoning steps substantially improves LLM performance on
+complex tasks. This insight has been scaled to long chain-of-thought (long-CoT) reasoning, where
+models engage in extended, reflective thinking processes including self-correction, backtracking, and
+uncertainty externalization [Jaech et al., 2024, Guo et al., 2025, Team, 2024]. Models such as OpenAI
+o1 [Jaech et al., 2024], DeepSeek-R1 [Guo et al., 2025], and QwQ [Team, 2024] have shown that
+scaling test-time compute through longer reasoning chains can be more effective than scaling model
+parameters [Snell et al., 2024]. A key characteristic of long-CoT models is their use of epistemic
+markers, such as “Wait”, “Perhaps”, and “Let me reconsider”, that externalize uncertainty and enable
+reflective deliberation [Gandhi et al., 2024, Li et al., 2025]. Distilling long-CoT capabilities into
+smaller models has attracted significant attention. Supervised approaches include fine-tuning on
+curated long-CoT traces [Muennighoff et al., 2025, Ye et al., 2025, Xu et al., 2025, Wen et al., 2025],
+structured decomposition of reasoning chains [Luo et al., 2025b, Chen et al., 2025b], data-efficient
+frameworks [Wu et al., 2025], progressive training through the “valley” of capability [Luo et al.,
+2025a], chunk-wise distillation [Chen et al., 2025a], and long-CoT compression [Wang et al., 2025].
+However, these off-policy approaches suffer from train-test distribution mismatch, as the student
+trains on teacher-generated trajectories rather than its own. Our work addresses this limitation through
+
+
+                                                                                                                                                  11
+on-policy distillation, while identifying and solving a fundamental failure mode specific to long-CoT
+models.
+
+On-policy self-distillation. Knowledge distillation [Hinton et al., 2015] transfers knowledge from
+a teacher to a student via soft label matching. On-Policy Self-Distillation (OPSD) [Agarwal et al.,
+2024] extends this paradigm by having the student generate its own trajectories and receive token-
+level feedback from a privileged teacher with access to reference solutions, directly addressing the
+distribution mismatch problem inherent in off-policy distillation [Yu et al., 2024]. Several concurrent
+works have extended OPSD: Zhao et al. [2026] proposed Self-Distilled Reasoner for general LLM
+reasoning, He et al. [2026] introduced Self-Distillation Zero combining self-revision with binary
+rewards to provide dense supervision, and Cui et al. [2026] provided a comprehensive overview of
+the OPSD landscape. However, recent investigations have revealed critical limitations when applying
+OPSD to thinking models. Kaur et al. showed that standard OPSD provides limited gains on models
+with strong reasoning capabilities, and Kim et al. [2026a] investigated why self-distillation sometimes
+degrades reasoning, identifying the destabilization of epistemic markers as a key symptom. Our
+work makes three advances beyond these findings: (1) we provide a mechanistic diagnosis through a
+decomposition of the teacher’s supervision signal, showing that a reference-only teacher can isolate
+the non-transferable component and reveal that the reference-induced signal dominates while the
+inference-transferable residual is ignored or opposed; (2) we propose the PMI target, which leverages
+pointwise mutual information as the mechanism to transform this residual into a purified target
+distribution; and (3) we demonstrate that this approach consistently improves performance while
+preserving the reflective reasoning capability across multiple long-CoT models.
+
+6   Conclusion
+We investigated why on-policy self-distillation (OPSD) fails on long-CoT reasoning models. Through
+a decomposition of the teacher’s supervision signal, we showed that the reference-induced component
+dominates both the direction and magnitude of the training signal, while the question-conditioned,
+inference-transferable component is suppressed or opposed. This explains the observed performance
+degradation and epistemic marker destabilization: OPSD drives rote memorization of the reference
+rather than transferable reasoning improvement.
+Based on this diagnosis, we proposed a two-step solution: first, constructing a reference-only teacher
+to isolate the non-transferable component and reveal the question-conditioned residual; second,
+using pointwise mutual information (PMI) as the mechanism to anchor this residual onto the base
+distribution, producing a purified PMI target that the student can directly distill from. The method
+integrates seamlessly into the standard OPSD framework with minimal overhead. Across four long-
+CoT models and two training datasets, our approach consistently improves over both the base model
+and standard OPSD, while preserving the models’ reflective reasoning capability throughout training.
+Our ablation studies also confirm robustness to key hyperparameters.
+
+
+
+
+                                                  12
+References
+Rishabh Agarwal, Nino Vieillard, Piotr Stanczyk, Sabela Ramos, Matthieu Geist, and Olivier Bachem.
+  On-policy distillation of language models: Learning from self-generated mistakes. arXiv preprint
+  arXiv:2306.13649, 2024.
+Gerlof Bouma. Normalized (pointwise) mutual information in collocation extraction. Proceedings of
+  GSCL, pages 31–40, 2009.
+Xiao Chen, Sihang Zhou, Ke Liang, Xiaoyu Sun, and Xinwang Liu. Skip-thinking: Chunk-wise
+  chain-of-thought distillation enable smaller language models to reason better and faster. arXiv
+  preprint arXiv:2505.18642, 2025a.
+Xinghao Chen, Zhijing Sun, Wenjin Guo, Miaoran Zhang, Yanjun Chen, Yirong Sun, Hui Su, Yijie
+  Pan, Dietrich Klakow, Wenjie Li, et al. Unveiling the key factors for distilling chain-of-thought
+  reasoning. arXiv preprint arXiv:2502.18001, 2025b.
+Kenneth Ward Church and Patrick Hanks. Word association norms, mutual information, and lexicog-
+  raphy. In Computational Linguistics, volume 16, pages 22–29, 1990.
+Fangming Cui, Sunan Li, and Jiahong Li. A brief overview: On-policy self-distillation in large
+  language models. arXiv preprint arXiv:2605.18141, 2026.
+Kanishk Gandhi, Denise Lee, Gabriel Grand, Muxin Liu, Winson Cheng, Archit Sharma, and
+  Noah D Goodman. Stream of search (sos): Learning to search in language. arXiv preprint
+  arXiv:2404.03683, 2024.
+Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu,
+  Shirong Ma, Peiyi Wang, Xiao Bi, et al. Deepseek-r1: Incentivizing reasoning capability in llms
+  via reinforcement learning. arXiv preprint arXiv:2501.12948, 2025.
+Yinghui He, Simran Kaur, Adithya Bhaskar, Yongjin Yang, Jiarui Liu, Narutatsu Ri, Liam Fowl,
+  Abhishek Panigrahi, Danqi Chen, and Sanjeev Arora. Self-distillation zero: Self-revision turns
+  binary rewards into dense supervision. arXiv preprint arXiv:2604.12002, 2026.
+Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. Distilling the knowledge in a neural network. arXiv
+  preprint arXiv:1503.02531, 2015.
+Ari Holtzman, Peter West, Vered Shwartz, Yejin Choi, and Luke Zettlemoyer. Surface form com-
+  petition: Why the highest probability answer isn’t always right. In Proceedings of EMNLP,
+  2021.
+Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang,
+  and Weizhu Chen. Lora: Low-rank adaptation of large language models. arXiv preprint
+  arXiv:2106.09685, 2022.
+Aaron Jaech, Adam Kalai, Adam Lerer, Adam Richardson, Ahmed El-Kishky, Aiden Low, Alec
+  Helyar, Aleksander Madry, Alex Beutel, Alex Carney, et al. Openai o1 system card. arXiv preprint
+  arXiv:2412.16720, 2024.
+Simran Kaur, Narutatsu Ri, Yinghui He, Liam H Fowl, and Sanjeev Arora. Rethinking on-policy
+  self-distillation for thinking models. In ICML 2026 Workshop on Foundations of Deep Generative
+  Models: Understanding Memorization, Generalization, and Reasoning.
+Jeonghye Kim, Xufang Luo, Minbeom Kim, Sangmook Lee, Dohyung Kim, Jiwon Jeon, Dongsheng
+  Li, and Yuqing Yang. Why does self-distillation (sometimes) degrade the reasoning capability of
+  llms? arXiv preprint arXiv:2603.24472, 2026a.
+Jeonghye Kim et al. Understanding the role of epistemic markers in long chain-of-thought reasoning.
+  arXiv preprint, 2026b.
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E
+ Gonzalez, Hao Zhang, and Ion Stoica. Efficient memory management for large language model
+ serving with pagedattention. In Proceedings of the 29th Symposium on Operating Systems
+ Principles, pages 611–626, 2023.
+
+
+                                                13
+Omer Levy and Yoav Goldberg. Neural word embedding as implicit matrix factorization. In Advances
+ in Neural Information Processing Systems, volume 27, 2014.
+Zihao Li, Xu Wang, Yuzhe Yang, Ziyu Yao, Haoyi Xiong, and Mengnan Du. Feature extrac-
+  tion and steering for enhanced chain-of-thought reasoning in language models. arXiv preprint
+  arXiv:2505.15634, 2025.
+Renjie Luo, Jiaxi Li, Chen Huang, and Wei Lu. Through the valley: Path to effective long cot training
+  for small language models. arXiv preprint arXiv:2506.07712, 2025a.
+Yijia Luo, Yulin Song, Xingyao Zhang, Jiaheng Liu, Weixun Wang, GengRu Chen, Wenbo Su, and
+  Bo Zheng. Deconstructing long chain-of-thought: A structured reasoning optimization framework
+  for long cot distillation. arXiv preprint arXiv:2503.16385, 2025b.
+Niklas Muennighoff, Zitong Yang, Weijia Shi, Xiang Lisa Li, Li Fei-Fei, Hannaneh Hajishirzi, Luke
+  Zettlemoyer, Percy Liang, Emmanuel Candès, and Tatsunori Hashimoto. s1: Simple test-time
+  scaling. arXiv preprint arXiv:2501.19393, 2025.
+Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher D Manning, and Chelsea
+  Finn. Direct preference optimization: Your language model is secretly a reward model. Advances
+  in Neural Information Processing Systems, 36, 2024.
+Qihan Ren, Peng Wang, Ruikun Cai, Shuai Shao, Dadi Guo, Yuejin Xie, Yafu Li, Quanshi Zhang,
+  Xia Hu, Jing Shao, and Dongrui Liu. Rethinking generalization in reasoning sft: A conditional
+  analysis on optimization, data, and model capability, 2026. URL https://arxiv.org/abs/
+  2604.06628.
+Charlie Snell, Jaehoon Lee, Kelvin Xu, and Aviral Kumar. Scaling llm test-time compute optimally
+  can be more effective than scaling model parameters. arXiv preprint arXiv:2408.03314, 2024.
+OLMo Team, Dirk Groeneveld, Luca Soldaini, Pete Walsh, Akshita Bhagia, Rodney Kinney, Oyvind
+ Tafjord, Ananya Harsh Jha, Hamish Ivison, Ian Magnusson, et al. Olmo 2: The best fully open
+ language model to date. arXiv preprint arXiv:2501.00656, 2025.
+Qwen Team. Qwq: Reflect deeply on the boundaries of the unknown. Hugging Face, 2024.
+Yibo Wang, Li Shen, Huanjin Yao, Tiansheng Huang, Rui Liu, Naiqiang Tan, Jiaxing Huang,
+  Kai Zhang, and Dacheng Tao. R1-compress: Long chain-of-thought compression via chunk
+  compression and search. arXiv preprint arXiv:2505.16838, 2025.
+Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc V
+  Le, and Denny Zhou. Chain-of-thought prompting elicits reasoning in large language models.
+  Advances in Neural Information Processing Systems, 35:24824–24837, 2022.
+Liang Wen et al. Light-r1: Curriculum sft, dpo and rl for long cot from scratch and beyond. arXiv
+  preprint arXiv:2503.10460, 2025.
+Xiaojun Wu, Xiaoguang Jiang, Huiyang Li, Jucai Zhai, Dengfeng Liu, Qiaobo Hao, Huang Liu,
+  Zhiguo Yang, Ji Xie, Ninglun Gu, et al. Beyond scaling law: A data-efficient distillation framework
+  for reasoning. arXiv preprint arXiv:2508.09883, 2025.
+Haotian Xu, Xing Yang, Yixiao Song, Hengyuan Wang, Yezeng Ren, Erlu Liu, Haoran Peng, et al.
+  Redstar: Does scaling long-cot data unlock better slow-reasoning systems? arXiv preprint
+  arXiv:2501.11284, 2025.
+Shaotian Yan, Kaiyuan Liu, Chen Shen, Bing Wang, Sinan Fan, Jun Zhang, Yue Wu, Zheng Wang,
+  and Jieping Ye. Distribution-aligned sequence distillation for superior long-cot reasoning, 2026.
+  URL https://arxiv.org/abs/2601.09088.
+An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang
+  Gao, Chengen Huang, Chenxu Lv, et al. Qwen3 technical report. arXiv preprint arXiv:2505.09388,
+  2025.
+Yixin Ye, Zhen Huang, Yang Xiao, Ethan Chern, Shijie Xia, and Pengfei Liu. Limo: Less is more for
+  reasoning. arXiv preprint arXiv:2502.03387, 2025.
+
+
+                                                 14
+Ping Yu, Jing Xu, Jason Weston, and Ilia Kulikov. Distilling system 2 into system 1. arXiv preprint
+  arXiv:2407.06023, 2024.
+Siyan Zhao, Zhihui Xie, Mengchen Liu, Jing Huang, Guan Pang, Feiyu Chen, and Aditya Grover.
+  Self-distilled reasoner: On-policy self-distillation for large language models. arXiv preprint
+  arXiv:2601.18734, 2026.
+
+
+
+
+                                                15
+
