@@ -1,0 +1,539 @@
+                                                Population-Based Multi-Objective Training of
+                                                 Discriminators for Semi-Supervised GANs
+                                                     Francisco Sedeño                            Francisco Chicano                             Jamal Toutouh
+                                            ITIS Software, University of Malaga          ITIS Software, University of Malaga         ITIS Software, University of Malaga
+                                                      Malaga, Spain                                Malaga, Spain                               Malaga, Spain
+                                                  0009-0000-7797-3562                          0000-0003-1259-2990                   CSAIL MIT, Cambridge, MA, USA
+                                                                                                                                           0000-0003-1152-0346
+
+
+
+                                           Abstract—Semi-supervised generative adversarial networks            has been widely studied [5], with several surveys summarizing
+                                        (SSL-GANs) can exploit large unlabeled datasets while retaining
+arXiv:2607.01907v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                                                                                               recent developments [6], [7].
+                                        a classifier in the discriminator, but their training is often            In literature, the application of co-evolutionary algorithms
+                                        unstable. This paper proposes a population-based evolutionary
+                                        training strategy in which discriminator learning is formulated        to SSL-GANs is recent. Previous works explored spatial co-
+                                        as a multi-objective optimization problem. Instead of aggregating      evolutionary populations to improve classification and gener-
+                                        the supervised and unsupervised components of the SSL objective        ation quality [8], [9]. Recently, Sedeño et al. [10] proposed
+                                        into a single scalar loss, the method maintains a population           Co-evolutionary Elitist SSL-GAN (CE-SSL-GAN), introduc-
+                                        of discriminators ranked by Pareto dominance, enabling the             ing panmictic populations, elitist replacement, and multiple
+                                        exploration of different trade-offs between classification accuracy
+                                        and real/fake discrimination. This formulation aims to improve         offspring generation. These approaches optimize the discrim-
+                                        both roles of SSL-GANs: learning accurate classifiers and              inator using a single scalar loss obtained by aggregating the
+                                        training generators capable of producing realistic samples. We         supervised and unsupervised SSL objectives. However, these
+                                        analyze several variants, including an elitist strategy and a mono-    objectives correspond to different learning tasks: classifying
+                                        objective ablation, to assess the role of multi-objective selection.   labeled samples and distinguishing real from generated data.
+                                        Experiments on MNIST with limited labels show improved
+                                        training robustness compared to SSL-GAN and CE-SSL-GAN                    In this work, we propose, CO-evolutionary Multi-Objective
+                                        state-of-the-art baselines, while the elitist variant consistently     Discriminator SSL-GAN (COMOD-SSLGAN), a population-
+                                        achieves the highest classification accuracy.                          based SSL-GAN training strategy in which discriminator
+                                           Index Terms—Semi-supervised learning, Generative Adversar-          learning is formulated as an explicit multi-objective opti-
+                                        ial Networks, Multi-objective optimization, Coevolution.               mization problem. Instead of aggregating the supervised and
+                                                                                                               unsupervised losses, we treat them as separate objectives and
+                                                               I. I NTRODUCTION                                apply Pareto-based selection to maintain a diverse population
+                                           A generative adversarial network (GAN) [1] consists of two          of discriminators representing different trade-offs between
+                                        neural networks trained in an adversarial setting: a genera-           classification and adversarial discrimination.
+                                        tor, which produces synthetic samples, and a discriminator,               Thus, the main contributions of this work are: (a) a
+                                        which distinguishes real from generated data. The generator            population-based SSL-GAN training framework where dis-
+                                        is rewarded when its samples are classified as real, while the         criminator learning is formulated as a bi-objective optimization
+                                        discriminator is rewarded for correctly identifying real and           problem separating supervised and unsupervised losses; (b) a
+                                        fake samples. GANs can learn complex data distributions and            Pareto-based discriminator selection mechanism that preserves
+                                        have been successfully applied in domains such as medical              diverse trade-offs during training; and (c) an empirical analysis
+                                        image generation [2], [3].                                             of evolutionary variants, including elitist replacement and a
+                                           Training GANs is challenging due to the non-stationary              mono-objective ablation corresponding to CE-SSL-GAN [10].
+                                        interaction between generator and discriminator, which may                The remainder is organized as follows. Section II introduces
+                                        lead to issues such as vanishing gradients or mode collapse.           background. Section III describes the proposed method. Sec-
+                                        Among different approaches to mitigate GAN training patholo-           tion IV and Section V present the experimental setup and the
+                                        gies, evolutionary computation (EC) has been proposed as               results. Section VI concludes the paper.
+                                        a mechanism to stabilize this process by maintaining mul-
+                                        tiple interacting models. For example, Lipizzaner combines                                   II. BACKGROUND
+                                        competitive co-evolution with spatially distributed populations          Let us assume a partially labeled dataset containing samples
+                                        inspired by cellular evolutionary algorithms [4].                      belonging to K classes. Each sample is represented as a d-
+                                           GANs are also well suited for semi-supervised learning              dimensional real vector x ∈ Rd . For labeled samples, the
+                                        (SSL) to learn classifiers, where datasets contain both labeled        associated class is encoded as a one-hot vector y ∈ {0, 1}K .
+                                        and unlabeled samples. In SSL-GANs, the discriminator acts             We denote the labeled real samples as pla ⊆ Rd × {0, 1}K
+                                        both as a classifier and as a real/fake detector. This framework       and the unlabeled real samples as pun ⊆ Rd .
+   A SSL-GAN consists of two neural networks: a generator                 A. SSL-GAN training
+and a discriminator (Fig. 1). The generator Gu maps a ran-
+                                                                             SSL-GAN training alternates between updating the discrim-
+dom vector from a latent space to the data space. Formally,
+                                                                          inator and the generator. The discriminator is trained using
+Gu : Rℓ → Rd , where ℓ is the dimension of the latent space
+                                                                          labeled and unlabeled real samples together with generated
+and u denotes the generator parameters.
+                                                                          samples, while the generator is trained to produce samples
+   The discriminator Dv outputs a probability distribution over
+                                                                          that the discriminator classifies as real.
+K + 1 classes: the first K correspond to the real classes,
+                                                                             Algorithm 1 summarizes the standard SSL-GAN training
+and the (K + 1)-th corresponds to the samples produced by
+                                                                          procedure. The training proceeds over T training epochs,
+the generator. This K + 1 trick allows the discriminator to
+                                                                          iterating through batches of real samples (labeled, BL , and
+act simultaneously as a classifier and as a real/fake detector.
+                                                                          unlabeled, BU ) and latent space vectors (z) to compute LD,s ,
+Formally, Dv : Rd → [0, 1]K+1 , where v denotes the dis-
+                                                                          LD,u , LD , and LG . The two loss functions, LD and LG , are
+criminator parameters. The first K components represent the
+                                                                          used to update the parameters of the discriminator and the
+class probabilities, denoted as Dvclass (x) ∈ [0, 1]K , while the
+                                                                          generator, respectively, by stochastic gradient descent.
+last component represents the probability that x is generated,
+denoted as Dvf ake (x).
+                                                                          Algorithm 1 SSL-GAN training
+                                                                          Require: T : training epochs, pla : labeled dataset, pun : unlabeled
+                                                                              dataset, Bs : batch size
+                                                                           1: Initialize generator g and discriminator d
+                                                                           2: for t = 1 to T do
+                                                                           3:     for batches BL ⊆ pla and BU ⊆ pun do
+                                                                           4:          Sample latent noise z
+                                                                           5:          Xf ← g(z)                      ▷ Generate fake samples
+                                                                           6:          Compute LD,s using BL
+                                                                           7:          Compute LD,u using BU and Xf
+                                                                           8:          Update discriminator using LD,s + LD,u
+                                                                           9:          Sample new latent noise z
+                                                                          10:          Xf ← g(z)
+                                                                          11:          Compute LG
+                                                                          12:          Update generator
+                                                                          13:     end for
+                                                                          14: end for
+Fig. 1: SSL-GAN architecture. The generator maps latent                   15: return trained generator and discriminator
+noise to synthetic samples, while the discriminator outputs
+probabilities for the K real classes and an additional fake class.
+
+   The objective of the generator is to produce samples that              B. Related work
+resemble the distribution of real data. Thus, the genera-                    Training GANs is challenging due to the adversarial inter-
+tor loss decreases when generated samples are classified as               action between generator and discriminator. This interaction
+real by the discriminator.
+                           The generator loss  is defined as           creates a non-stationary optimization process that can lead to
+LG = Ez∼N ℓ (0,I) − log 1 − Dvf ake (Gu (z)) .                            training pathologies such as oscillatory dynamics and mode
+   The discriminator has two objectives: (i) classify labeled             collapse. These difficulties become even more pronounced in
+samples into the correct class and (ii) distinguish real samples          semi-supervised settings, where the discriminator must simul-
+from generated ones. Thus, its loss is composed of two terms              taneously perform classification and real/fake discrimination.
+LD = LD,s + LD,u , where LD,s is the supervised loss                      Consequently, several works have explored alternative train-
+over labeled samples and LD,u is the unsupervised loss over               ing strategies, including evolutionary and population-based
+unlabeled and generated samples.                                          approaches, to improve GAN training stability.
+   The supervised loss is                                                    Evolutionary Computation (EC) has been widely investi-
+                            "K                              #             gated as a mechanism to improve GAN training. An early
+                             X
+                                               class
+                                                                          example is Evolutionary GAN (EGAN) [11], which maintains
+        LD,s = E(x,y)∼pla           yi (− log Dv,i   (x))       ,   (1)   multiple generators trained with different loss functions and
+                              i=1
+                                                                          applies evolutionary selection to identify the best-performing
+  while the unsupervised loss is                                          models. Similarly, Multi-objective Evolutionary GAN (MO-
+                                                                          EGAN) [12] addresses GAN training as a multi-objective
+         LD,u = Ex∼pun − log(1 − Dvf ake (x))                             optimization problem, balancing conflicting criteria such as
+                                               
+                                                                    (2)
+                                                                          fidelity and diversity. Other approaches apply evolutionary
+              + Ez∼N ℓ (0,I) − log(Dvf ake (Gu (z))) ,
+                                                   
+                                                                    (3)
+                                                                          search directly to GAN parameters, such as Differential Evo-
+        class
+where Dv,i    (x) denotes the i-th component of the output                lution GAN (DE-GAN) [13], which uses differential evolution
+        class
+vector Dv (x) in the discriminator.                                       to explore the parameter space during training.
+   Coevolutionary algorithms, where generators and discrimi-       by training coupled SSL-GANs. Finally, we introduce the
+nators evolve in separate populations, have also been proposed.    selection and elitism mechanisms and summarize the overall
+For example, COEGAN [14], [15] coevolves generator and             training procedure.
+discriminator architectures that cooperate to produce high-        A. Populations and objectives
+quality synthetic samples. More generally, competitive co-
+evolution has proven effective in adversarial learning scenar-        The method operates over two populations of neural
+ios by promoting continuous adaptation between competing           networks of the same size µ: a population of generators
+agents [4], [8], [16]–[19]. Typically, individuals exchange        G = {Gu1 , . . . , Guµ } and a population of discriminators
+components with neighboring models based on performance,           D = {Dv1 , . . . , Dvµ }. Each individual generator Gui and
+creating distributed coevolutionary dynamics that help mitigate    discriminator Dvj follows the notation in Section II, where
+GAN training instabilities. Casas and Toutouh [20] investi-        ui and vj denote their parameters, respectively.
+gates different coevolutionary replacement schemes, including         Given a discriminator Dv and a generator Gu , we define
+(µ, λ) and (µ + λ) strategies, highlighting the importance         the generator loss LG (u; v) as in Section II:
+                                                                      LG (u; v) = Ez∼N ℓ (0,I) − log 1 − Dvf ake (Gu (z)) . (4)
+                                                                                                                        
+of balancing exploration and exploitation in population-based
+adversarial learning.
+                                                                      The discriminator loss LD (v; u) keeps the decomposition
+   Although many evolutionary GAN approaches focus on
+                                                                   into supervised LD,s (v) and unsupervised LD,u (v; u) terms,
+unsupervised generative modeling, some studies have explored
+                                                                   where LD,s depends on labeled samples from pla and LD,u
+their application to SSL. The spatial coevolutionary SSL-
+                                                                   depends on unlabeled samples from pun and fake samples
+GAN framework proposed in [8], [9] introduces a distributed
+                                                                   produced by Gu (see Section II). Instead of collapsing LD,s
+population of GANs arranged in a two-dimensional grid,
+                                                                   and LD,u into a single scalar, we treat discriminator learning
+where neighboring models exchange components based on
+                                                                   as a bi-objective minimization problem:
+performance. This approach improves both classification accu-
+racy and image generation quality when only a limited number                        min (LD,s (v), LD,u (v; u)) .               (5)
+                                                                                     v
+of labeled samples is available. A recent approach is CE-SSL-
+                                                                      This formulation explicitly captures the two complementary
+GAN) [10], which introduces panmictic populations, elitist
+                                                                   roles of the discriminator in SSL-GANs: acting as a classi-
+replacement, and multiple offspring generation per iteration,
+                                                                   fier for labeled data and distinguishing real from generated
+showing that generating multiple offspring can improve both
+                                                                   samples. By optimizing these objectives jointly through Pareto
+classification accuracy and sample quality.
+                                                                   dominance and diversity preservation [21], the algorithm aims
+   Despite these advances, most existing evolutionary SSL-
+                                                                   to maintain a set of discriminators representing different
+GAN approaches rely on predefined evolutionary replacement
+                                                                   trade-offs between classification performance and adversarial
+schemes or spatial population structures. In contrast, COMOD-
+                                                                   discrimination. Ultimately, this encourages the training process
+SSLGAN models discriminator training as a multi-objective
+                                                                   to produce SSL-GAN models that simultaneously learn strong
+optimization problem and applies Pareto-based selection to
+                                                                   discriminative classifiers and effective generative models.
+maintain a diverse set of discriminators during training, ex-
+plicitly capturing the trade-off between supervised and unsu-      B. Competitive evaluation and fitness aggregation
+pervised objectives within a population-based framework.              Because the loss of each discriminator depends on the cur-
+                                                                   rent generators (and vice versa), individual quality is assessed
+       III. CO- EVOLUTIONARY M ULTI -O BJECTIVE
+                                                                   through competitive matchups between both populations. Let
+              D ISCRIMINATOR SSL-GAN
+                                                                   M ⊆ {1, . . . , µ} × {1, . . . , µ} be a set of matchups between
+   This section presents COMOD-SSLGAN, a co-evolutionary           discriminators and generators. For each matchup (i, j) ∈ M,
+method to train SSL-GANs using small populations. COMOD-           we compute LD,s (vi ), LD,u (vi ; uj ), and LG (uj ; vi ) using
+SSLGAN combines a a (µ + λ) competitive co-evolution with          mini-batches drawn from pla and pun (and latent noise). To
+the standard SSL-GAN training loop described in Section II.        obtain a population-level evaluation, we aggregate objectives
+The key idea is to maintain two populations (generators and        across opponents. Concretely, we define the aggregated dis-
+discriminators) and to formulate discriminator training as a       criminator objectives as
+bi-objective optimization problem, where supervised and unsu-
+                                                                               LbD,s (vi ) = LD,s (vi ),                         (6)
+pervised losses are treated as separate objectives. This enables
+the algorithm to preserve diverse discriminator behaviors along                                  1     X
+                                                                              LbD,u (vi ) =                 LD,u (vi ; uj ),     (7)
+the trade-off between classification and discrimination.                                     |O(i)|
+                                                                                                   j∈O(i)
+   This section describes the main components of COMOD-
+                                                                   where O(i) = {j | (i, j) ∈ M} is the set of generators faced
+SSLGAN. We first define the generator and discriminator pop-
+                                                                   by discriminator Dvi . Similarly, the aggregated generator loss
+ulations and formulate discriminator training as a bi-objective
+                                                                   is
+optimization problem. We then present the competitive evalu-                                 1       X
+ation mechanism used to assess individuals through matchups                    LbG (uj ) =                LG (uj ; vi ),       (8)
+                                                                                           |O(j)|
+                                                                                                   i∈O(j)
+between populations. Next, we describe the variation operator,
+where stochastic gradient descent acts as a mutation operator      where O(j) = {i | (i, j) ∈ M}.
+  In our experiments COMOD-SSLGAN applies all-vs-all                Algorithm 2 Population-based multi-objective SSL-GAN
+matchup policy, i.e., every discriminator is evaluated against      training
+every generator in the population at each generation, providing     Require: T : generations, pla : labeled samples, pun : unlabeled samples, Bs :
+comprehensive competitive feedback across populations.                  batch size, µ: population size, nt : training epochs per matchup, M:
+                                                                        matchup policy (all-vs-all or diagonal)
+                                                                     1: Initialize    populations     G          =      {Gu1 , . . . , Guµ }  and
+C. Variation operator: training as mutation                             D = {Dv1 , . . . , Dvµ }
+   The variation operator of the co-evolutionary loop is defined     2: Evaluate G, D under M to compute L        bG and (LbD,s , L
+                                                                                                                                  bD,u )
+as a mutation of the network parameters induced by stochastic        3: for t = 1 to T do                            ▷ Main co-evolutionary loop
+                                                                     4:     Create offspring G∗ ← copy(G), D∗ ← copy(D)
+gradient descent. Specifically, for a given matchup (i, j), we       5:     for all (i, j) ∈ M do
+apply a number nt of training epochs of Algorithm 1 to the           6:         Train coupled pair (Gu∗ , Dv∗ ) for nt epochs using Algorithm 1
+                                                                                                        j      i
+coupled SSL-GAN (Guj , Dvi ) using mini-batches from pla             7:     end for
+                                                                     8:     G←G∪G , D←D∪D   ∗                 ∗          ▷ Parent+offspring union
+and pun . This produces updated parameters u′j and vi′ and           9:     Evaluate G, D under M
+therefore new individuals Gu′j and Dvi′ .                           10:     G ← selectBestµ (G, L   bG )
+                                                                    11:     D ← selectBestµ (D, (L   bD,s , L
+                                                                                                            bD,u ))
+D. Selection and elitism                                            12: end for
+                                                                    13: return best generator Gu ∈ G and discriminator Dv ∈ D according to
+   After variation and evaluation, survival selection is applied        validation criteria
+independently in each population. The next generation is
+formed from µ individuals from the parent+offspring union.          class are selected from the training set, while the remaining
+   Discriminators are ranked under Pareto
+                                          dominance using the      59,000 images are treated as unlabeled data. Discriminator
+bi-objective vector LbD,s (v), LbD,u (v) . We select the best µ     classification performance is evaluated on the MNIST test set.
+discriminators by nondominated sorting and break ties with a
+diversity criterion (e.g., crowding distance) to preserve a well-
+spread approximation of the trade-off surface. Following the
+same selection method than NSGA-II (Non-dominated Sorting
+Genetic Algorithm II) [21]. In contrast, generators are selected
+by minimizing the aggregated loss LbG (u).
+   We also consider an elitist replacement mechanism in which
+the best individuals in each population are preserved un-
+changed when forming the next generation. Elitism reduces the
+risk of losing high-quality solutions due to stochastic training    Fig. 2: Samples of the MNIST dataset used in the experiments.
+noise and helps stabilize the co-evolutionary dynamics.
+                                                                      The discriminator is assessed using the classification ac-
+E. Algorithm                                                        curacy on the test set. The generator is evaluated using
+   Algorithm 2 summarizes the main steps of the proposed            the Structural Similarity Index Measure (SSIM). Given two
+method. The algorithm starts by initializing populations G          images x and y, SSIM is computed as:
+and D (Line 1). Then, individuals are evaluated using a                                            (2µx µy + c1 )(2σxy + c2 )
+matchup policy M and objective aggregation (Line 2). The                     SSIM(x, y) =                                          ,          (9)
+                                                                                                (µ2x + µ2y + c1 )(σx2 + σy2 + c2 )
+main loop runs for T generations. In each generation, offspring
+are created by copying selected individuals and applying SGD-       where µx and µy are mean intensities, σx2 and σy2 are variances,
+based mutation by training coupled SSL-GANs for nt epochs           and σxy is the covariance between x and y. Constants c1
+(Line 5). After training, the union of parents and offspring        and c2 stabilize the division. The resultant SSIM index is a
+is evaluated again and the next populations are obtained by         decimal value between -1 and 1, where 1 indicates perfect
+survival selection (Lines 10–11). Finally, the method returns       similarity, 0 indicates no similarity, and -1 indicates perfect
+the best generator and a representative discriminator from the      anti-correlation.
+final non-dominated set.                                               The SSL-GANs in our experiments are based on convo-
+                                                                    lutional neural networks. The generator begins with a fully
+                 IV. E XPERIMENTAL SETUP                            connected layer mapping the latent vector into a 7×7 feature
+   We perform an empirical analysis of the proposed                 map, which is then upsampled through two transposed convo-
+COMOD-SSLGAN by examining both (i) the discriminator                lutional layers with ReLU activations and batch normalization,
+classification accuracy and (ii) the quality of the samples         producing a final 28×28 grayscale image. The discriminator
+produced by the generator.                                          consists of four convolutional blocks that downsample the
+   Experiments are conducted on the MNIST dataset, which            input, followed by a sigmoid-based binary classifier.
+contains gray-scale images of handwritten digits (0–9) with            Our experiments compare a standard SSL-GAN training
+a resolution of 28 × 28 pixels (see Fig. 2). The dataset            against population-based training configurations. The base-
+includes 60,000 training images and 10,000 test images. We          line SSL-GAN uses a single generator and discriminator
+consider a limited-label setting with 100 labeled samples per       trained by alternating SGD updates. The proposed approach
+TABLE I: Classification accuracy results (higher is better ↑). Absolute (∆Median) and relative (Improvement (%)) median
+improvements are computed with respect to the standard SSL-GAN. Best values in bold.
+               Population size   Variant      Median     Q1     Q3     IQR    Min    Max    ∆Median     Improvement (%)
+                                 SSL-GAN         0.75   0.67   0.83    0.16   0.52   0.90           -                 -
+               µ=1               base            0.82   0.82   0.83    0.01   0.82   0.83      +0.07              +9.33
+               µ=5               base            0.85   0.81   0.89    0.08   0.72   0.92      +0.10             +13.34
+               µ=5               CE-SSL-GAN      0.85   0.82   0.88    0.06   0.74   0.92      +0.10             +13.33
+               µ=5               elitist         0.90   0.88   0.91    0.03   0.83   0.92      +0.15             +20.00
+               µ=7               base            0.81   0.78   0.87    0.09   0.71   0.91      +0.06              +8.01
+               µ=7               CE-SSL-GAN      0.82   0.79   0.87    0.08   0.70   0.91      +0.07              +9.33
+               µ=7               elitist         0.90   0.88   0.92    0.04   0.82   0.93      +0.16             +20.01
+               µ=9               base            0.81   0.79   0.86    0.07   0.68   0.91      +0.06              +8.02
+               µ=9               CE-SSL-GAN      0.81   0.78   0.86    0.08   0.71   0.91      +0.06              +8.00
+               µ=9               elitist         0.89   0.87   0.91    0.04   0.72   0.92      +0.14             +18.67
+
+
+is evaluated in three variants: (i) base COMOD-SSLGAN,                maximum values. We also report the absolute improvement
+where discriminators are selected by Pareto dominance on              in median accuracy (∆Median) with respect to the standard
+(LbD,s , LbD,u ) and generators are selected by minimizing LbG ;      SSL-GAN baseline, and the relative improvement computed
+                                                                                                    ∆Median
+(ii) an elitist COMOD-SSLGAN variant, which preserves the             as Improvement(%) = Median      SSL-GAN
+                                                                                                              × 100.
+best individuals unchanged when forming the next generation;             When comparing the standard SSL-GAN with the base
+and (iii) a mono-objective variant, i.e., CE-SSLGAN [10],             configuration of COMOD-SSLGAN using µ = 1, a clear
+where discriminator selection is performed using the scalarized       improvement is observed. The median accuracy increases from
+aggregated objective.                                                 0.75 to 0.82, corresponding to a relative improvement of
+   Based on previous results in the literature [10], [20], we         +9.33%. In addition, the variability across runs is substantially
+evaluate population sizes µ ∈ {5, 7, 9} and set the offspring         reduced, as reflected by the decrease of the IQR from 0.16 to
+size equal to the population size, i.e., λ = µ, so that               0.01. According to the Wilcoxon statistical test with α < 0.01,
+each generation produces µ offspring per population and               this improvement is statistically significant. These results
+replacement is performed on the parent+offspring union. The           indicate that the Pareto-based selection mechanism introduced
+baseline SSL-GAN is run for 100 training epochs. Population-          in COMOD-SSLGAN already improves discriminator training
+based configurations are run for 50 epochs due to their               even when population effects are removed.
+higher computational cost. Each experiment variant is executed           When population-based configurations are considered
+30 independent times.                                                 (µ > 1), the results further improve. Across all tested pop-
+   The proposed methods were developed in Python. The most
+                                                                      ulation sizes, the median accuracy ranges between 0.81 and
+significant libraries used are Pytorch, Numpy, and DEAP [22].
+                                                                      0.90, corresponding to relative improvements between approx-
+The experiments were performed on a cluster of 126×SD530
+                                                                      imately 8% and 20% with respect to the SSL-GAN baseline.
+nodes, with 52 cores (Intel Xeon Gold 6230R @ 2.10GHz)
+                                                                      This indicates that incorporating multiple interacting gener-
+and 192 GB of RAM.
+                                                                      ators and discriminators helps the training process discover
+               V. R ESULTS AND D ISCUSSION                            more effective discriminator strategies. However, increasing
+   In this section, we present the experimental results obtained      the population size does not always lead to additional gains.
+on the MNIST dataset, where 30 independent runs were                  For example, the base configuration achieves its best median
+performed. We first analyze the classification performance of         accuracy with µ = 5 (0.85), while larger populations (µ = 7
+the discriminator in terms of accuracy. Then, we assess the           and µ = 9) produce slightly lower median values (0.81). These
+quality of the generated samples produced by the generator.           observations are consistent with previous findings in the liter-
+   The experiments include base COMOD-SSLGAN with                     ature [10], [20], where increasing the population size beyond
+µ = 1 in order to compare against standard SSL-GAN. When              a certain point does not necessarily improve performance.
+µ = 1, population effects vanish and the algorithm reduces to         This suggests that population-based training mainly benefits
+a single generator-discriminator pair. This setting allows us         from maintaining diversity rather than simply increasing the
+to isolate the impact of the Pareto-based selection mechanism         number of individuals. Indeed, when comparing the same
+used to retain the networks.                                          variant across different population sizes, the differences are
+                                                                      not statistically significant.
+A. Discriminator accuracy results                                        Finally, when comparing the different population-based
+  Table I summarizes the classification accuracy achieved             variants, the elitist configuration consistently achieves the best
+by the discriminator across all evaluated configurations. For         performance. For µ = 5 and µ = 7, it reaches a median
+each method, the table reports the median accuracy over 30            accuracy of 0.90, corresponding to an absolute improvement of
+independent runs together with the first and third quartiles          +0.15 and a relative improvement of +20% over SSL-GAN.
+(Q1 , Q3 ), the interquartile range (IQR), and the minimum and        Moreover, the elitist variant produces more robust results, as
+          (a) µ = 1 and µ = 5                                 (b) µ = 7                                      (c) µ = 9
+          Fig. 3: Evolution of the discriminator classification accuracy during training for different population sizes.
+
+indicated by its smaller IQR values (between 0.03 and 0.04).         training progresses, the generator produces samples increas-
+Wilcoxon tests with Bonferroni correction confirm that the           ingly similar to real data, making the discriminative task
+elitist variant significantly outperforms the other approaches.      more difficult [23]. Fig. 4 shows samples generated by the
+A possible explanation is that elitism preserves the best-           base variant with µ = 5 at epoch 10, when the generator
+performing discriminator solutions across generations, pre-          still produces low-quality samples that are easier for the
+venting high-quality classifiers from being lost due to stochas-     discriminator to distinguish. As the generator improves in later
+tic updates during training. This stabilizes the co-evolutionary     epochs (see Fig 5), the task becomes harder, contributing to
+dynamics and allows the population to progressively refine           the observed reduction in classification accuracy.
+strong discriminator strategies.
+   Regarding the evolution of the discriminator accuracy dur-
+ing training, Fig. 3 shows the median classification accuracy
+across training epochs for the analyzed variants in a randomly
+chosen representative run.
+   For population sizes greater than one, a consistent pattern
+appears across methods. During the initial training phase,
+discriminator accuracy increases rapidly, reaching its highest
+values around epochs 10-20. After this stage, the accuracy
+gradually declines. This behavior is observed across popula-         Fig. 4: Generated samples by the base COMOD-SSLGAN
+tion sizes and variants, although its magnitude depends on the       with µ = 5 at training epoch = 10.
+training strategy.
+   In contrast, when the population size is µ = 1, accuracy
+improves more gradually and then stabilizes. This reflects           B. Generated sample quality (SSIM) results
+the absence of competitive interactions among individuals,              Table II summarizes the SSIM obtained for the generated
+resulting in a more stable but less exploratory training process.    samples across all evaluated configurations. For each method,
+In some runs, the final accuracy obtained with µ = 1 even            the table reports the median SSIM over 30 independent runs
+surpasses the values achieved by the base and CE-SSL-                together with the first and third quartiles (Q1 , Q3 ), the
+GAN variants, indicating that population-based methods may           interquartile range (IQR), and the minimum and maximum
+experience performance degradation during training.                  values. We also report the absolute and relative improvement in
+   The elitist variant consistently maintains the highest accu-      median SSIM with respect to the standard SSL-GAN baseline.
+racy throughout training. By preserving the best-performing          In addition to the quantitative analysis, Fig. 5 illustrates rep-
+individuals, elitism reduces the impact of stochastic updates        resentative samples generated by the coevolutionary variants
+and prevents strong discriminators from being replaced by            of SSL-GAN with µ = 5.
+weaker offspring. Consequently, the elitist configuration ex-           When comparing the standard SSL-GAN with the base
+hibits a slower and less pronounced degradation compared             configuration of COMOD-SSLGAN using µ = 1, a clear
+with the other variants.                                             improvement in the quality of generated samples is observed.
+   The degradation in discriminator accuracy becomes more            The median SSIM increases from 0.32 to 0.39, corresponding
+pronounced as the population size increases. Larger popula-          to an absolute improvement of +0.07 and a relative im-
+tions introduce stronger competitive pressure between genera-        provement of +20.76%. Additionally, the variability across
+tors and discriminators, accelerating changes in the adversarial     runs is substantially reduced, as indicated by the dramatic
+dynamics. Nevertheless, the elitist strategy mitigates this effect   reduction in IQR from 0.11 to 0.01. These results show that
+by preserving the best classifiers across generations.               even without population effects, the Pareto-based selection
+   Finally, the decrease in discriminator accuracy can be ex-        mechanism introduced by COMOD-SSLGAN improves the
+plained by the improving quality of generated samples. As            quality and stability of generated samples.
+TABLE II: SSIM results (higher is better ↑). Absolute (∆Median) and relative (Improvement (%)) median improvements are
+computed with respect to the standard SSL-GAN.
+                Population size   Variant      Median     Q1     Q3      IQR    Min    Max    ∆Median   Improvement (%)
+                                  SSL-GAN        0.32    0.26   0.37     0.11   0.16   0.45         -                 -
+                µ=1               base           0.39    0.38   0.39     0.01   0.38   0.39     +0.07            +20.76
+                µ=5               base           0.38    0.37   0.39     0.02   0.34   0.42     +0.06            +18.88
+                µ=5               CE-SSL-GAN     0.39    0.36   0.40     0.04   0.34   0.45     +0.07            +21.67
+                µ=5               elitist        0.38    0.34   0.39     0.04   0.32   0.44     +0.06            +17.97
+                µ=7               base           0.41    0.39   0.42     0.03   0.36   0.45     +0.09            +27.41
+                µ=7               CE-SSL-GAN     0.41    0.40   0.42     0.02   0.38   0.44     +0.09            +28.66
+                µ=7               elitist        0.38    0.37   0.40     0.03   0.35   0.43     +0.06            +19.57
+                µ=9               base           0.40    0.39   0.41     0.02   0.38   0.43     +0.08            +26.56
+                µ=9               CE-SSL-GAN     0.41    0.40   0.42     0.03   0.38   0.44     +0.09            +28.91
+                µ=9               elitist        0.41    0.40   0.42     0.03   0.37   0.44     +0.09            +27.88
+
+
+
+   When population-based configurations are considered                 C. General discussion
+(µ > 1), the SSIM values improve further. Across all
+population-based variants, the median SSIM ranges between
+0.38 and 0.41, corresponding to relative improvements be-                 The results highlight the impact of the Pareto-based discrim-
+tween approximately 18% and 29% with respect to the SSL-               inator selection introduced in COMOD-SSLGAN. Even with-
+GAN baseline. The best performance is achieved with µ = 9              out population effects (µ = 1), the method improves both dis-
+using the CE-SSL-GAN variant, reaching a median SSIM                   criminator accuracy and SSIM compared with standard SSL-
+of 0.41. However, despite these quantitative differences, the          GAN. This suggests that treating discriminator training as a
+visual inspection of the generated digits in Fig. 5 shows that         multi-objective optimization problem enables a better balance
+all coevolutionary variants produce samples with very similar          between supervised classification and unsupervised real/fake
+perceptual quality.                                                    discrimination. In contrast to approaches such as CE-SSL-
+                                                                       GAN, which aggregate these objectives into a single scalar
+                                                                       loss [10], the Pareto-based formulation explicitly preserves
+                                                                       the trade-off between them. This allows the discriminator to
+                                                                       explore multiple solutions along the objective frontier rather
+                                                                       than collapsing the objectives into a single optimization target.
+                                                                          When population-based configurations are considered, the
+                                                                       interaction between multiple generators and discriminators
+                                                                       further improves training performance. However, increasing
+                                                                       the population size does not consistently lead to additional
+     (a) base           (b) CE-SSL-GAN            (c) elitist          gains, indicating that the main benefit of population-based
+                                                                       training arises from maintaining diversity rather than simply
+Fig. 5: Generated samples by the analyzed coevolutionary
+                                                                       increasing the number of individuals.
+SSL-GAN variants with µ = 5.
+                                                                          Among the analyzed variants, the elitist configuration con-
+   Interestingly, increasing the population size does not always       sistently achieves the best discriminator accuracy and the most
+lead to consistent improvements across variants. For example,          stable results across runs. By preserving the best individuals
+the base configuration improves from 0.38 at µ = 5 to 0.41 at          across generations, elitism prevents strong discriminators from
+µ = 7, but slightly decreases to 0.40 at µ = 9. Similar trends         being replaced by weaker offspring and stabilizes the coevo-
+appear in other variants. This suggests that population-based          lutionary dynamics.
+training mainly benefits from maintaining diversity rather than
+simply increasing the number of individuals.                              The experiments reveal a clear interaction between gener-
+   Finally, when comparing the different population-based              ator improvement and discriminator accuracy. As the gener-
+variants, the CE-SSL-GAN and elitist configurations tend to            ator produces more realistic samples, the classification task
+produce the highest SSIM values. The elitist variants show             becomes harder for the discriminator, leading to the decrease
+slightly more stable behavior across runs, as indicated by their       in accuracy observed during later training stages [23].
+moderate IQR values. However, statistical tests do not reveal             Therefore, the results suggest that combining multi-
+significant differences among the analyzed population-based            objective discriminator training with competitive coevolution
+variants. Overall, these results indicate that coevolutionary          provides a robust framework for stabilizing SSL-GAN
+training consistently improves SSIM with respect to stan-              training, improving discriminator classification performance,
+dard SSL-GAN, while producing visually comparable samples              and producing higher-quality generated samples.
+across the different evolutionary configurations.
+            VI. C ONCLUSIONS AND F UTURE W ORK                                    [5] R. Tachibana, T. Matsubara, and K. Uehara, “Semi-supervised
+                                                                                      learning using adversarial networks,” in 15th IEEE/ACIS International
+   This paper investigated COMOD-SSLGAN, a population-                                Conference on Computer and Information Science, ICIS 2016,
+based training strategy for SSL-GANs in which discriminator                           Okayama, Japan, June 26-29, 2016. IEEE Computer Society, 2016,
+                                                                                      pp. 1–6. [Online]. Available: https://doi.org/10.1109/ICIS.2016.7550881
+learning is formulated as a multi-objective optimization prob-                    [6] A. R. Sajun and I. Zualkernan, “Survey on implementations of generative
+lem. Instead of aggregating the supervised and unsupervised                           adversarial networks for semi-supervised learning,” Applied Sciences,
+components of the SSL objective into a single loss, the                               vol. 12, no. 3, 2022. [Online]. Available: https://www.mdpi.com/2076-
+                                                                                      3417/12/3/1718
+proposed approach maintains a population of discriminators                        [7] Y. Ma, Y. Zheng, W. Zhang, B. Wei, Z. Lin, W. Liu, and Z. Li, “Op-
+evaluated through Pareto dominance, allowing the training                             timization of semi-supervised generative adversarial network models: a
+process to explore different trade-offs between classification                        survey,” International Journal of Intelligent Computing and Cybernetics,
+                                                                                      vol. 17, no. 4, 2024.
+accuracy and real/fake discrimination.                                            [8] J. Toutouh, S. Nalluru, E. Hemberg, and U.-M. O’Reilly, “Semi-
+   The experimental results on MNIST with limited labeled                             supervised generative adversarial networks with spatial coevolution for
+data show that the proposed training framework improves the                           enhanced image generation and classification,” Applied Soft Computing,
+                                                                                      vol. 148, p. 110890, 2023.
+robustness of SSL-GAN optimization. Even without popula-                          [9] J. Toutouh, S. Nalluru, E. Hemberg, and U.-M. O’Reilly, “Semi-
+tion effects, the Pareto-based selection mechanism produces                           supervised learning with coevolutionary generative adversarial net-
+more stable and accurate discriminators than the standard SSL-                        works,” in Proceedings of the Genetic and Evolutionary Computation
+                                                                                      Conference, 2023, pp. 568–576.
+GAN baseline and CE-SSL-GAN. When population-based                               [10] F. Sedeño, J. Toutouh, and F. Chicano, “Generate more than one child in
+configurations are considered, the interaction between mul-                           your co-evolutionary semi-supervised learning gan,” in Proceedings of
+tiple generators and discriminators further improves training                         the The Leading European Event on Bio-Inspired AI (EVOSTAR), 2025,
+                                                                                      p. 16.
+dynamics. In particular, the elitist configuration consistently                  [11] C. Wang, C. Xu, X. Yao, and D. Tao, “Evolutionary generative adversar-
+achieves the best classification accuracy and the most stable                         ial networks,” IEEE Transactions on Evolutionary Computation, vol. 23,
+results across runs. The results also indicate that population-                       no. 6, pp. 921–934, 2019.
+                                                                                 [12] M. Baioletti, C. A. C. Coello, G. Di Bari, and V. Poggioni, “Multi-
+based training improves the consistency of generated samples,                         objective evolutionary gan,” in Proceedings of the 2020 genetic and
+although the differences between evolutionary variants remain                         evolutionary computation conference companion, 2020, pp. 1824–1831.
+moderate. Therefore, these findings suggest that combining                       [13] W. Zheng, C. Gou, L. Yan, and F.-Y. Wang, “Differential-evolution-based
+                                                                                      generative adversarial networks for edge detection,” in Proceedings of
+multi-objective optimization with competitive co-evolution,                           the IEEE/CVF international conference on computer vision workshops,
+extending ideas explored in CE-SSL-GAN, provides a promis-                            2019, pp. 0–0.
+ing direction for stabilizing SSL-GAN training.                                  [14] V. Costa, N. Lourenço, J. Correia, and P. Machado, “Coegan: evaluating
+                                                                                      the coevolution effect in generative adversarial networks,” in Proceed-
+   Future work includes: (i) evaluating the approach on more                          ings of the genetic and evolutionary computation conference, 2019, pp.
+complex datasets such as CIFAR-10 and SVHN; (ii) defining                             374–382.
+generator training as a multi-objective problem, considering                     [15] ——, “Neuroevolution of generative adversarial networks,” Deep Neural
+                                                                                      Evolution: Deep Learning with Evolutionary Computation, pp. 293–322,
+both fidelity and diversity objectives rather than only fidelity;                     2020.
+(iii) exploring alternative multi-objective selection strategies;                [16] J. Toutouh, M. Esteban, and S. Nesmachnow, “Parallel/distributed gen-
+and (iv) studying distributed implementations to scale the                            erative adversarial neural networks for data augmentation of covid-
+                                                                                      19 training images,” in Latin American High Performance Computing
+population-based training process.                                                    Conference. Springer, 2020, pp. 162–177.
+                                                                                 [17] J. Toutouh, E. Hemberg, and U.-M. O’Reilly, “Spatial evolutionary
+                         ACKNOWLEDGMENT                                               generative adversarial networks,” in Proceedings of the genetic and
+                                                                                      evolutionary computation conference, 2019, pp. 472–480.
+   This research is partially funded by the Universidad de                       [18] J. Toutouh, E. Hemberg, and U.-M. O’Reilly, “Data dieting in gan
+Málaga (UMA) under grant PID2024-158752OB-I00 (AIM-                                  training,” in Deep Neural Evolution: Deep Learning with Evolutionary
+ZERO) by MICIU/AEI/10.13039/501100011033. The authors                                 Computation. Springer, 2020, pp. 379–400.
+                                                                                 [19] J. Toutouh and U.-M. O’Reilly, “Signal propagation in a gradient-based
+thank the Supercomputing and Bioinformatics center at the                             and evolutionary learning system,” in Proceedings of the Genetic and
+UMA for their computer resources and assistance. Funding                              Evolutionary Computation Conference, 2021, pp. 377–385.
+for open access charge: Universidad de Málaga / CBUA.                           [20] W. Casas and J. Toutouh, “Multi-population gan training: Analyzing
+                                                                                      co-evolutionary algorithms,” in Proceedings of the Genetic and Evolu-
+                                                                                      tionary Computation Conference Companion, 2025, pp. 2028–2036.
+                              R EFERENCES                                        [21] K. Deb, A. Pratap, S. Agarwal, and T. Meyarivan, “A fast and elitist
+ [1] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley,               multiobjective genetic algorithm: Nsga-ii,” IEEE transactions on evolu-
+     S. Ozair, A. Courville, and Y. Bengio, “Generative adversarial networks,”        tionary computation, vol. 6, no. 2, pp. 182–197, 2002.
+     Communications of the ACM, vol. 63, no. 11, pp. 139–144, 2020.              [22] F.-A. Fortin, F.-M. De Rainville, M.-A. Gardner, M. Parizeau, and
+ [2] H. Wang, D. Won, and S. W. Yoon, “An adaptive neural architecture                C. Gagné, “DEAP: Evolutionary algorithms made easy,” Journal of
+     optimization model for retinal disorder diagnosis on 3d medical                  Machine Learning Research, vol. 13, pp. 2171–2175, jul 2012.
+     images,” Appl. Soft Comput., vol. 111, p. 107686, 2021. [Online].           [23] Z. Dai, Z. Yang, F. Yang, W. W. Cohen, and R. R. Salakhutdinov, “Good
+     Available: https://doi.org/10.1016/j.asoc.2021.107686                            semi-supervised learning that requires a bad gan,” Advances in neural
+ [3] D. Flores, E. Hemberg, J. Toutouh, and U.-M. O’Reily, “Coevolutionary            information processing systems, vol. 30, 2017.
+     generative adversarial networks for medical image augumentation at
+     scale,” in Proceedings of the genetic and evolutionary computation
+     conference, 2022, pp. 367–376.
+ [4] E. Hemberg, J. Toutouh, A. Al-Dujaili, T. Schmiedlechner, and U.-M.
+     O’Reilly, “Spatial coevolution for generative adversarial network train-
+     ing,” ACM Transactions on Evolutionary Learning and Optimization,
+     vol. 1, no. 2, pp. 1–28, 2021.
+
