@@ -1,0 +1,1372 @@
+                                                 Visually Grounded Self-Reflection for Vision-Language Models
+                                                                 via Reinforcement Learning
+
+                                                                      Liyan Tang*♠ ,Fangcong Yin*♢ , Greg Durrett♢
+                                                                ♠
+                                                                    The University of Texas at Austin ♢ New York University
+                                                                     lytang@utexas.edu, {fy666,gdurrett}@nyu.edu
+
+
+
+                                                                Abstract                                  made (Madaan et al., 2023; Guo et al., 2025). How-
+                                             Large vision-language models can reason over                 ever, this skill remains under-developed in LVLMs.
+                                             multimodal inputs by generating textual chains               Prior work suggests that a key bottleneck stems
+arXiv:2607.02490v1 [cs.CL] 2 Jul 2026
+
+
+
+
+                                             of thought (CoT). A key capability exhibited                 from the modality gap (Yi et al., 2024): LVLMs
+                                             in CoT reasoning is self-reflection: revisiting              often fail to attend to relevant visual tokens (Ma
+                                             earlier decisions and correcting previous er-                et al., 2026) and struggle to translate visual evi-
+                                             rors. However, existing LVLMs often fail to                  dence into grounded corrective behaviors (Huang
+                                             properly attend to visual inputs during reflec-
+                                                                                                          et al., 2025; Zhang et al., 2026), particularly for
+                                             tion, limiting their ability to translate feedback
+                                             into grounded corrections, especially for out-of-            complex or out-of-distribution (OOD) images that
+                                             distribution images. To address this issue, we               differ substantially from pre-training distributions.
+                                             propose a novel reinforcement learning train-                Achieving visual self-reflection in LVLMs requires
+                                             ing framework VRRL, with two components                      additional post-training.
+                                             explicitly designed to elicit visually grounded                 To address this limitation, we first use supervised
+                                             self-reflection. First, we randomly mask trajec-             fine-tuning (SFT) to teach the model the basic struc-
+                                             tory prefixes during training to emphasize re-               ture of multi-turn visual feedback and then propose
+                                             covery from incorrect intermediate predictions
+                                                                                                          a novel Visual Reflection RL (VRRL) training
+                                             rather than making early mistakes. Second,
+                                             we introduce buffered roll-ins from an experi-               recipe explicitly designed to instill reflective error-
+                                             ence replay buffer to expose the model to di-                correction from such feedback. During RL, VRRL
+                                             verse failure states that it must learn to correct.          combines two complementary strategies that ex-
+                                             We evaluate our approach on visual ground-                   pose the model to diverse error-recovery scenarios.
+                                             ing tasks involving tables and charts, as well               First, for newly generated on-policy trajectories,
+                                             as spatial navigation benchmarks. While off-                 we introduce Random Turn Masking, which com-
+                                             the-shelf and conventionally fine-tuned models
+                                                                                                          putes policy updates only on randomly selected suf-
+                                             degrade substantially under distribution shift,
+                                             our method substantially improves average out-               fixes of a rollout. This teaches the model to learn to
+                                             of-distribution accuracy over standard RL and                correct errors while masking the steps which may
+                                             reflection-oriented fine-tuning baselines by us-             have led to those errors. Second, we introduce a
+                                             ing self-reflection effectively.1                            Buffered Roll-In strategy that samples historical
+                                                                                                          “mistake prefixes” from a replay buffer of past fail-
+                                        1    Introduction
+                                                                                                          ures and asks the model to continue the rollout and
+                                        Large vision-language models (LVLMs) can solve                    correct previous errors. By explicitly training the
+                                        complex multimodal reasoning tasks over text and                  model to reason over multi-turn visual feedback,
+                                        images by generating CoT traces (Zhang et al.,                    these strategies improve both the robustness and
+                                        2024; Hu et al., 2024). Textual reasoning mod-                    OOD generalization of visual reasoning.
+                                        els use CoT to improve performance through a                         We evaluate VRRL on two tasks where a VLM
+                                        number of cognitive skills (Gandhi et al., 2025),                 acts in an environment that provides visual feed-
+                                        among them self-reflection. Self-reflection is the                back: (1) Visual grounding, where the model pre-
+                                        act of a model reasoning about the correctness of                 dicts the coordinates of a queried visual element
+                                        a candidate answer or solution step, then poten-                  in an image; and (2) Spatial navigation, where the
+                                        tially correcting it or revising it if an error was               model solves maze-like navigation tasks from vi-
+                                            1*
+                                            Equal contribution. Our code and data are available at:       sual inputs. For both tasks, we first establish basic
+                                        https://github.com/fc2869/VRRL                                    self-reflection capabilities through SFT, and then
+
+                                                                                                      1
+  Visual                       SFT + RL                                           Inference
+Grounding                                                                        Single-Turn
+                                                              It’s in Row 3, Column 3. …
+                                                              Answer: [80, 73]                           [80, 73]
+                               Single-Turn
+
+                                                                          Mul -Turn Re ec on
+    Q: Find 11                               It’s in Row 3,                                I need to move           It’s correct and I
+                               Single-Turn   Column 3. …                   …               down …                   will stop.
+                                             point(80, 73)                                 point(120, 169)          Answer: [120, 169]
+                               Mul -Turn
+     ti
+          ti
+                     fl
+                          ti
+Figure 1: A motivating example of multi-turn reflection for visual grounding. In this illustrative task, the goal is
+to find the pixel coordinate for the value “11” in a table image. In a single turn, an LVLM can reason over text in
+the instruction but may fail to provide accurate pixel-level grounding output. However, if given its prediction as
+visual feedback (a red dot on the image), the LVLM can reflect to iteratively correct its inaccurate grounding and
+determine when to stop and give an answer.
+
+
+enhance them using several RL baselines and our                     It ∈ O from the environment. A standard LVLM
+proposed method under the same training distri-                     πθ (a | I, Q) typically makes a one-shot decision
+bution (Guo et al., 2025; KimiTeam et al., 2025;                    by producing a single action and immediately ter-
+Zhai et al., 2024; Feizi et al., 2026). We evaluate                 minating with a final answer. While simple, this
+whether each approach generalizes its reflective                    single-turn setting does not allow the model to ver-
+correction behavior to OOD settings.                                ify its prediction or recover from mistakes.
+   Our experiments show that off-the-shelf LVLMs                       In this work, we formulate multimodal reasoning
+struggle to generalize OOD under direct prompt-                     as a multi-turn sequential decision process. Instead
+ing, and that prompt engineering alone fails to elicit              of relying on a single prediction, the model can
+meaningful self-reflection, often leading to repeti-                iteratively propose an action, receive visual feed-
+tive behaviors that degrade performance. Explicit                   back from the environment, and decide whether
+training for self-reflection improves OOD gener-                    to refine its prediction or terminate. Figure 1 il-
+alization, while VRRL further outperforms stan-                     lustrates the difference between single-turn and
+dard RL and existing reflection-oriented fine-tuning                multi-turn inference. We define this process by the
+methods by inducing visually grounded error cor-                    tuple (S, A, O, R).
+rection more effectively.                                              State and Observation. At turn t, the under-
+   The main contributions of this work are as fol-                  lying state st = (I, Q, Ht ) ∈ S with the interac-
+lows: (1) We demonstrate that visually grounded                     tion history Ht = {(a0 , I0 ), . . . , (at−1 , It−1 )} for
+self-reflection is an effective mechanism for im-                   at ∈ A. Upon taking an action at , the model re-
+proving LVLM robustness under distribution shifts,                  ceives an image It ∈ O as the visual observation
+outperforming non-reflective and weakly grounded                    rendered by the environment, and can reflect on
+reflection baselines. (2) We introduce VRRL, a                      the observation to adjust its future actions. For
+novel RL framework that combines Random Turn                        example, in the visual grounding task in Figure 1,
+Masking and Buffered Roll-In to train models to                     the model predicts a coordinate tuple for the given
+recover from diverse intermediate errors, leading                   query. The environment then marks the predicted
+to stronger OOD generalization across visual feed-                  location on the image, e.g., with a red point, and
+back environments.                                                  returns a fixed-size crop centered at the predicted
+                                                                    coordinates. This crop serves as the image obser-
+2              Problem Formulation: Multi-turn
+                                                                    vation It for the next turn.
+               Inference with Reflection
+                                                                       Action Space. An action at ∈ A corresponds to
+Reasoning with Multi-turn Inference. We con-                        a reasoning step followed by an answer proposal or
+sider a multimodal reasoning task in which a model                  a termination: the policy πθ (at | st ) can propose
+interacts with an environment E. Given an input                     an answer candidate that could be changed in later
+image I and a natural language instruction Q, the                   turns, or terminate the trajectory τ by finalizing an
+goal is to answer Q by taking a sequence of ac-                     answer candidate from the last turn that it considers
+tions at ∈ A and receiving image observations                       already correct. Upon termination, the final answer
+
+                                                                2
+                  (a) Random Turn Masking
+                                                                                      Masked (No Gradient)                       Gradient Update
+                                                                                      T1              T2                        T3               T4
+                                                    Generate
+                                                   full rollouts                                                                                   End
+                         Q: Find 11
+
+
+                                                                                                  Random Gradient Start Turn (Tk)
+                  (b) Bu ered Roll-In
+                                                              T21         T22
+                                                                                                                                 GRPO on
+                                             Q2
+                                                                                                                          generated su x rollouts
+                                             Replay Bu er
+                                                                                                                         T22’                    Reward1
+                               Q1
+                                                        T11         T12                               Pre x
+                                                                                         Sample
+                                                                                                            T21          T22’      T23’   T24’   Reward2
+                               Q2
+                                                        T21                                          Q2
+
+
+                             ……                                                                                         ……
+
+                                   Qn
+                                                        Tn1         Tn2         Tn3                                      T22’      T23’          Rewardn
+                    fi
+                              ff
+                                        ff
+                                                  ffi
+Figure 2: (a) Random Turn Masking masks gradient updates on a random number of prefix steps to avoid training
+on potentially erroneous steps. (b) Buffered Roll-In begins roll-outs from a potentially erroneous step in the replay
+buffer, enabling correction of this mistake. Note that partial rewards are assigned for correct reflection steps.
+
+
+will be evaluated. In the visual grounding task, for                                                      multi-turn trajectories teach the model the format
+example, an answer proposal at turn t is a selection                                                      of reflection based on visual feedback from the
+of pixel coordinates pt = (xt , yt ) within the image                                                     environment.
+space, and a final answer needs to be locked in with                                                         Each instance consists of an image I, an instruc-
+a termination function call.                                                                              tion Q, and a trajectory τ . Single-turn trajectories
+   Trajectory Reward. The reward function R is                                                            consist of a single action leading to the correct
+only evaluated when the trajectory τ is terminated                                                        answer, the visual feedback I0 , and a termination
+at turn t = T . The learning objective is to opti-                                                        action a1 , τ = {a0 , I0 , a1 }. A multi-turn trajectory
+mize the policy πθ to maximize the final answer                                                           τ = {a0 , I0 , . . . , aT −1 , IT −1 , aT } consists of alter-
+accuracy, enabling the model to refine its predic-                                                        nating visual feedback It and assistant responses
+tions iteratively based on visual feedback. Note                                                          at (CoT and answer candidates). Note that the last
+that R involves multiple components that evaluate                                                         action aT is always a termination action.
+different aspects of the entire multi-turn trajectory,                                                       On multi-turn trajectories, we optimize the stan-
+including final answer correctness, response format,                                                      dard auto-regressive cross-entropy loss over the
+and task progress at each turn (e.g., the reflection                                                      assistant turns a1 , ..., aT . Note that a0 is excluded
+reward in Section 3.2).                                                                                   from the multi-turn loss update because a0 is con-
+                                                                                                          structed to be erroneous so that the model needs to
+3     Methods                                                                                             correct in the following assistant turns. This stage
+Training Framework. Our training pipeline fol-                                                            establishes the interaction format and initializes
+lows a two-stage SFT → RL recipe designed to                                                              the policy with basic error-correction behaviors.
+instill and then refine reflective capabilities (Guo
+                                                                                                          3.2     Stage 2: RL with Random Turn Masking
+et al., 2025; KimiTeam et al., 2025; Zhai et al.,
+                                                                                                                  and Buffered Roll-In
+2024; Feizi et al., 2026; Sprague et al., 2026). Our
+goal is to improve the generalizability of the trained                                                    To explicitly train the model to recover from errors,
+model over OOD tasks.                                                                                     we do reinforcement learning on a set of examples
+                                                                                                          DRL . Our reward R is as defined below. We em-
+3.1    Stage 1: Supervised Fine-Tuning (SFT)                                                              ploy Group Relative Policy Optimization (GRPO;
+In the first stage, we first construct an offline dataset                                                 Shao et al. (2024b)) augmented with two novel
+DSFT with trajectories containing both immediate                                                          mechanisms: Random Turn Masking (RTM) and
+correct answers (single-turn) and iterative correc-                                                       Buffered Roll-In (see Figure 2).
+tions (multi-turn): single-turn trajectories aim at                                                         Reward Function. We combine three reward
+teaching the model the visual reasoning task, and                                                         components: format validity, answer correctness,
+
+                                                                                                    3
+                                                Visual Grounding                                            Spa al Naviga on
+         (a) Table Related Tasks                     (b) Bar Chart                 (c) Sca er Plot               (d) FrozenLake
+
+
+
+
+Q: Locate "F1" in the “HotpotQA" sec on.        Q: Please locate the bar with     Q: Please locate the   Q: Find the shortest path from the sprite
+Q: Locate “47.2” in the table.                  the smallest value.               cross represen ng H.   to the chest without falling into holes.
+    ti
+          tt
+               ti
+                            ti
+                                     ti
+Figure 3: Evaluation tasks for visually grounded self-reflection. (1) Visual Grounding. models are trained to
+localize headers of synthetic small tables. OOD tasks include generalization to larger tables (Large Table) queries
+of inner cell values rather than headers (Cell Query), and queries about bar charts (b), and scatter plots (c). (2)
+Spatial Navigation. The model is given a maze-style map and needs to find the shortest path from the start to the
+goal without running into obstacles. We train models on smaller maps and evaluate on larger maps as OOD tests.
+
+
+and reflection shaping. (1) Format Reward: We                                    where Ât is the GRPO advantage estimate. Al-
+assign rfmt = 1 if the model response utilizes the                              though prefix turns before k do not directly con-
+valid tool-call format, and 0 otherwise. Invalid for-                           tribute to the gradient, they determine the condi-
+mats result in a total trajectory reward of 0. (2)                              tioning state sk . RTM therefore trains the policy to
+Outcome reward: We assign Ranswer = 1.0 if the                                  optimize returns from arbitrary intermediate states,
+final answer is correct based on the task-specific                              including potentially erroneous ones, without learn-
+metric, and 0 otherwise. (3) Reflection reward: To                              ing to make the mistakes in the erroneous states.
+encourage convergence toward the target through                                 We interpret RTM as a form of reweighted per-
+multi-turn inference, we define a reflection reward                             decision policy gradient; a derivation is provided
+Rrefl based on an improvement-based reward func-                                in Appendix A.
+tion ϕ(τ ). Reflection reward is task-specific, and                                Buffered Roll-In. RTM reweights gradient up-
+details for the evaluation tasks can be found in                                dates across turns, but it still relies on on-policy
+Section 4; ablations in Section 7 show that reflec-                             rollouts. As the policy improves, failure states
+tion reward elicits self-reflection better than the                             become less frequent, reducing the amount of train-
+outcome reward.                                                                 ing signal for error recovery. To maintain a diverse
+   The final scalar reward R for a rollout is:                                  set of difficult recovery scenarios, we introduce
+                    (                                                           Buffered Roll-In. We maintain a replay buffer B
+                        0                       if rfmt = 0,
+               R=                                                               of previously generated prefixes. During rollout
+                        max(Ranswer , Rrefl )   if rfmt = 1                     generation on training examples from DRL , if a
+                                                                                trajectory terminates with an incorrect final answer,
+   For incorrect predictions (Ranswer = 0), we pro-
+                                                                                we treat the state immediately before termination
+vide partial credits based on improvements.
+                                                                                as a valid but unresolved intermediate state. We re-
+   For a given question q ∈ DRL , we sample a                                   move the termination action and store the resulting
+group of G trajectories {τ1 , . . . , τG } from the old                         prefix τpre in B. During training, instead of always
+policy πθold and follow the standard GRPO training                              generating rollouts from scratch, we also sample
+objective (Appendix A).                                                         prefixes from B. For each sampled prefix τpre ,
+   Random Turn Masking (RTM). Given a full                                      the policy generates a group of G suffix comple-
+trajectory rollout τ of length T , we sample a start                                     (1)           (G)
+                                                                                tions {τsuf , . . . , τsuf }, and GRPO is applied only
+index k ∼ Unif({1, . . . , T }) and compute policy-                             to these generated suffixes. This directly trains the
+gradient updates only on the suffix from turn k to                              model to recover from previously failed intermedi-
+T , masking the loss for earlier turns. Formally, let                           ate states.
+J (θ) denote the RL objective. Under RTM, the
+gradient estimate is                                                              To balance exploring new questions with ad-
+                                                                                dressing past failures, we construct each training
+                                                                                batch by sampling questions from DRL for RTM
+                                          " T                         #
+                                           X                                    with probability ρ and prefixes from the buffer B
+∇JRTM (θ) = Eτ ∼πθ Ek∼U (1,T )                  ∇ log πθ (at |st )Ât ,
+                                          t=k
+                                                                                for Buffered Roll-In with probability 1 − ρ. The
+
+                                                                            4
+final optimization objective is:                              evaluate OOD generalization on four 1K-example
+                                                              test sets: (1) Large Tables, which increases table
+      JTotal (θ) = ρJRTM (θ) + (1 − ρ)JBuff (θ)               size; (2) Cell Query, which asks for inner table
+                                                              cells; (3) Bar Chart, which transfers grounding to
+   This creates a self-paced curriculum: as the pol-          bar charts; (4) and Scatter Plot, which requires lo-
+icy improves with RTM, the buffer naturally ac-               calizing labeled points. Figure 3 illustrates these
+cumulates “harder” failure modes that the current             tasks, with full generation details in Appendix C.
+policy struggles to resolve.
+
+4     Task Setup
+                                                              4.2   Spatial Navigation
+We study multi-turn inference with self-reflection
+in two visual feedback environments: visual                   Spatial navigation is challenging for LVLMs (Wang
+grounding and spatial navigation. In both tasks, the          et al., 2024a; Stogiannidis et al., 2025) and pro-
+model proposes an intermediate answer, receives               vides a natural visual feedback environment be-
+an image observation It from the environment, and             cause agent movement can be inspected and cor-
+either refines its prediction or terminates with a            rected over multiple turns. We use FrozenLake
+final answer.                                                 (Wu et al., 2025b; Brockman et al., 2016), a grid-
+                                                              based navigation task where the agent must reach
+4.1    Visual Grounding                                       a goal while avoiding holes and impassable ob-
+Visual grounding (Kazemzadeh et al., 2014; Plum-              stacles. Prior work shows that textual chain-of-
+mer et al., 2017; Yu et al., 2018; Mao et al., 2016)          thought alone is insufficient for such tasks (Xu
+aims to localize image regions referred to by nat-            et al., 2026).
+ural language. We focus on data visualizations,                  Task and Environment. Given an input map im-
+where precise localization is challenging because             age I and a fixed instruction Q, the model predicts
+tables and charts differ substantially from the real-         the shortest, valid path from the start to the goal that
+world image distributions commonly seen during                does not run into holes or walls. A path proposal is
+pre-training (Wang et al., 2024b; Tang et al., 2025).         a sequence of actions vt = (vt1 , vt2 , . . . , vtL ), where
+This provides a controlled testbed for studying               each action is in {left, right, up, down}. At each
+whether models can use visual feedback to self-               turn, the model either proposes a path or terminates
+correct under distribution shifts.                            with a final prediction. After each proposal, the
+   Task and Environment. Given an image I and                 environment returns visual feedback It by drawing
+instruction Q, the model must predict the target              a segmented red line for the predicted path on the
+coordinate p = (x, y). At each turn t, it either              map. Figure 10 shows a detailed example.
+proposes a coordinate pt or terminates with a final
+prediction. After each proposal, the environment re-             Reward and Evaluation. Following Xu et al.
+turns visual feedback It : a 200 × 200 crop centered          (2026), we use exact match (EM) as both the out-
+at pt with a red marker indicating the proposed               come reward and evaluation metric. A trajectory
+location.                                                     receives reward 1.0 if the final path vT is valid and
+   Reward and Evaluation. The outcome reward                  matches the optimal solution length, and 0 other-
+is 1.0 if the final coordinate pT falls within a Eu-          wise. We additionally use an improvement-based
+clidean distance threshold δtol = 40 px of the                reflection reward that measures partial progress to-
+ground-truth coordinate, and 0 otherwise. We re-              ward the optimal path, detailed in Appendix A.
+port accuracy under this criterion, except for Bar               Data and Training. We adopt the training and
+Chart, where a prediction is correct if it falls within       evaluation data from Xu et al. (2026), using 3–5
+the target bar’s bounding box. We also use a                  grid maps as the in-distribution training setting and
+distance-based reflection reward during training              larger 6 × 6 and 7 × 7 maps as OOD evaluations.
+(Appendix A).                                                 Because spatial navigation is difficult for LVLMs,
+   Data and Splits. We synthesize tables and                  we first warm-start the model with direct-answer
+charts following prior data generation procedures             training on in-distribution examples without visual
+(Long et al., 2025; Zheng et al., 2025). The training         feedback, following Xu et al. (2026), and then ap-
+and in-distribution test sets use small arXiv-style           ply all subsequent training methods to this warm-
+tables with row- or column-header queries. We                 started model. Details can be found in Appendix D.
+
+                                                          5
+                                                                         Out-of-Distribution
+                           In-Distribution
+                                             Large Table       Cell Query     Bar Chart        Scatter Plot   OOD Avg
+    Zero-shot
+     Qwen2.5-VL-3BSingle          5.3             4.8               3.4          13.1               2.9        6.0
+     Qwen2.5-VL-3B∗Multi     5.6 (77.3%)     2.2 (69.2%)       1.3 (86.1%)   12.0 (14.7%)      2.4 (75.5%)     4.5
+     Qwen2.5-VL-7BSingle         17.9             9.7               6.1          15.1               4.5        8.8
+     Qwen2.5-VL-7B∗Multi    19.8 (58.0%)     8.9 (49.3%)       7.2 (76.8%)   14.7 (15.5%)      4.6 (38.2%)     8.8
+        VL-Rethinker-7B          15.1             7.9               5.7           1.0               3.7        4.6
+       VL-Rethinker-32B          42.4            18.7              27.6           9.5              32.7        22.1
+                                              Qwen2.5-VL-3B-Instruct
+    SFT
+             Single-SFT         80.4            46.1               2.4           25.7             23.8         24.5
+              Multi-SFT         84.7            50.4               1.6           13.1             24.8         22.5
+       Reflection Tuning        92.7            52.5               7.0           25.0             27.4         28.0
+    RL
+    Single-SFT → GRPO           96.2            53.3               5.3           27.1             34.7         30.1
+     Multi-SFT → GRPO           99.6            78.6              13.5           30.7             37.2         40.0
+           VRRL(Ours)           99.6            88.6              20.3           33.5             40.3         45.7
+                                              Qwen2.5-VL-7B-Instruct
+    SFT
+             Single-SFT         83.6            62.8              34.0           20.3             68.9         46.5
+              Multi-SFT         84.8            66.2              39.1           20.9             73.3         49.9
+       Reflection Tuning        95.3            75.1              51.8           14.2             81.3         55.6
+    RL
+    Single-SFT → GRPO           99.6            89.6              68.3           38.6             84.3         70.2
+     Multi-SFT → GRPO           99.6            91.4              68.4           46.8             86.0         73.2
+           VRRL(Ours)           99.7            89.6              77.3           57.0             89.7         78.4
+
+Table 1: In-distribution and OOD evaluation results for visual grounding across models. We perform
+paired bootstrap tests to compare the best-performing model with the second-best model in each column. Bold
+indicates that the best result is better by a statistically significant margin (p < 0.05). For Qwen2.5-VL-3BMulti
+and Qwen2.5-VL-7BMulti , we report the percentage of traces where the model’s reflection turns repeat the same
+predictions as previous turns.
+
+
+5   Experimental Setup                                         to refine its prediction until correct.
+We compare our proposed method against baseline                   RL Baselines. We apply standard GRPO to
+methods below. Implementation details and exam-                Single-SFT and Multi-SFT (Single/Multi-SFT →
+ple outputs can be found in Appendix B and F.                  GRPO). These baselines (1) use a sparse binary
+   Zero-Shot Baselines. We evaluate Qwen2.5-                   outcome reward (1 for success, 0 for failure) with-
+VL-3B-Instruct and 7B models (Bai et al., 2025b)               out the reflection reward shaping Rrefl ; (2) calculate
+under two settings: direct pointing and a multi-turn           loss over the full trajectory without Random Turn
+reflection prompt that asks the model to critique              Masking; and (3) do not use Buffered Roll-In.
+and refine its coordinates without parameter up-                  Reflection-Oriented Baselines. We include
+dates. For spatial navigation tasks, we also evaluate          prior fine-tuning approaches designed to instill
+Qwen3-VL-4B-Instruct (Bai et al., 2025a).                      self-reflection in LVLMs as baselines: (1) VL-
+   Supervised Fine-Tuning (SFT) Baselines. We                  Rethinker (Wang et al., 2026a) augments GRPO
+compare two SFT strategies for Qwen2.5-VL-                     training with selective sampling and forced rethink-
+3B/7B on visual grounding, and Qwen2.5-VL-                     ing to encourage self-reflection through textual rea-
+3B and Qwen3-VL-4B on spatial navigation.                      soning only by scaling long CoT traces. This dif-
+Single-SFT trains on perfect single-turn trajecto-             fers from our setting, which focuses on visually
+ries, where the model outputs the correct coordinate           grounded self-reflection driven by visual feedback.
+and terminates immediately. Multi-SFT trains on                We directly evaluate the released VL-Rethinker
+a mixture of perfect and synthetic recovery trajec-            models trained on diverse multimodal reasoning
+tories, where the model first predicts an incorrect            tasks for their OOD generalization capabilities.
+coordinate and then iteratively uses visual feedback           (2) Reflection Tuning (Wu et al., 2025a) trains
+
+                                                           6
+Figure 4: Performance for multi-turn reflection across in-distribution and OOD tasks for visual grounding
+tasks. The top row illustrates the progression of cumulative accuracy across turns. Single-SFT → GRPO is a
+single-turn baseline method where its per-turn accuracy remains the same. The bottom row shows the percentage of
+examples reaching turn X. VRRL generally uses reflection better, improving more over iterations.
+
+
+LVLMs to perform self-reflection based on visual           textual CoT alone (Wu et al., 2026b, 2025c; Huang
+feedback through iterative online SFT, where the           et al., 2025; Jiang et al., 2025).
+model learns from corrections of its own generated            SFT is limited. SFT methods, including
+error trajectories. Since this approach is naturally       Multi-SFT and reflection tuning that specifically
+compatible with our visually grounded setting, we          instill visual self-reflection, mainly teach the in-
+apply reflection tuning on top of our multi-turn SFT       distribution knowledge, but remain brittle on the
+model using the same in-distribution training data.        evaluated OOD tasks. For example, Multi-SFT
+   VRRL (Ours). Our method applies our full                only learns the format of reflection rather than ro-
+training recipe on top of Multi-SFT.                       bust error-correcting behavior.
+   Training. For visual grounding, we use 15K                 RL on multi-turn reflection models improves
+training examples for SFT and 6K for RL. For               OOD generalization. RL substantially improves
+spatial navigation, we use 4K training examples            OOD performance over SFT. Even single-turn RL,
+for SFT and 2K for RL. Implementation details,             Single-SFT → GRPO, raises Large Table accuracy
+dataset details, and training configurations can be        to 53.3% for 3B and 89.6% for 7B. However, the
+found in Appendix B.                                       main gains come from combining RL with a multi-
+                                                           turn reflection formulation: Multi-SFT → GRPO
+6     Results                                              improves the 3B model to 78.6% on Large Ta-
+                                                           ble, 13.5% on Cell Query, 30.7% on Bar Chart,
+6.1    Visual Grounding                                    and 37.2% on Scatter Plot, yielding 3–25% abso-
+Prompting does not elicit reliable self-reflection.        lute gains over its single-turn counterpart. VRRL
+Table 1 shows that off-the-shelf LVLMs struggle            further improves over Multi-SFT → GRPO by 3–
+with precise spatial localization. In the zero-shot        10% on most OOD tasks while maintaining near-
+setting, both 3B and 7B models achieve low accu-           perfect in-distribution accuracy for both model
+racy across tasks: Prompting models to reflect pro-        scales. These gains are notable because the OOD
+vides little benefit and can even hurt performance.        splits require generalization across table size, query
+In many multi-turn traces, zero-shot models sim-           type, and visual domain, indicating that VRRL in-
+ply repeat previous predictions without meaningful         duces a more robust visual grounding capability.
+correction.                                                   VRRL teaches effective reflection. Figure 4
+   Furthermore, VL-Rethinker models that have              shows that VRRL’s gains come from improved
+been trained to reflect with textual CoT reasoning         multi-turn correction rather than stronger one-shot
+underperform on OOD tasks; their reflective CoT            grounding alone. While Single-SFT → GRPO
+traces generally fail to correct mistakes. These re-       improves single-turn accuracy, it lacks the turn-
+sults suggest that visually grounded self-correction       by-turn refinement behavior of multi-turn RL.
+cannot be reliably elicited through prompting or           Multi-SFT → GRPO improves across early reflec-
+
+                                                       7
+                                                        Qwen2.5-VL-3B-Instruct       Qwen3-VL-4B-Instruct
+                                                        ID            OOD            ID            OOD
+                                                        Avg. 6 × 6 7 × 7 Avg. Avg. 6 × 6 7 × 7 Avg.
+
+                          Zero-shot
+                          Single                         2.4 1.2      1.6     1.4     8.4   2.4    2.0    2.2
+                          Multi                         2.8 0.8       2.0     1.4    34.0   8.8    2.4    5.6
+                          VL-Rethinker-7B               11.3 3.2      3.2     3.2      -     -      -      -
+                          VL-Rethinker-32B              26.5 10.8     3.6     7.2      -     -      -      -
+                          SFT
+                          Base∗                         77.7   33.2    4.8    19.0   88.1   49.6    5.6   27.6
+                          Single-SFT                    83.5   39.2    8.8    24.0   90.7   56.8    8.0   32.4
+                          Multi-SFT                     81.2   41.6   10.2    25.9   86.9   60.4   21.2   40.8
+                          Reflection Tuning             85.7   49.6   12.4    31.0   93.6   63.6   13.2   38.4
+                          RL
+                          Single-SFT → GRPO 85.9 49.2                  8.8 29.0 93.2 62.4           5.6 34.0
+                          Multi-SFT → GRPO 85.2 42.8                   9.2 26.0 87.9 61.6          10.4 36.0
+                          VRRL (Ours)       83.9 54.8                 23.6 39.2 89.1 65.2          39.2 52.2
+
+Table 2: In-distribution (ID) and OOD evaluation for spatial navigation on Qwen2.5-VL-3B-Instruct and
+Qwen3-VL-4B-Instruct. Base∗ : We first train models on ID data with direct answering without visual feedback to
+obtain Base as a warm-started model on the task distribution, and then apply all training methods based upon this
+model. We perform paired bootstrap tests to compare the best-performing model with the second-best model in
+each column. Bold indicates that the best result is statistically significant (p < 0.05).
+
+
+                                ID                 OOD                    racy to the baselines while outperforming all base-
+                          # Turns    ∆ref     # Turns      ∆ref           lines on OOD settings for both models. On OOD
+                     Qwen2.5-VL-3B-Instruct                               tasks, VRRL improves multi-turn SFT by 13.3%
+      Single-SFT → GRPO      2.00      +0       2.00         +0
+                                                                          on Qwen2.5-VL-3B and 11.4% on Qwen3-VL-4B,
+      Multi-SFT              2.41    + 0.1      3.51       + 2.8          and it outperforms the second-best baselines by 9.8
+      Multi-SFT → GRPO       2.00      +0       2.00         +0
+      Reflection Tuning      2.23    + 1.3      3.17       + 3.4          % on average across two models.
+      VRRL(Ours)             2.37    + 6.0      3.39      + 13.6
+                                                                             VRRL uses reflection more efficiently. We
+                      Qwen3-VL-4B-Instruct
+                                                                          next analyze reflection behavior in spatial naviga-
+      Single-SFT → GRPO      2.00      +0       2.00         +0           tion. Table 3 reports the average number of turns,
+      Multi-SFT              2.24    + 1.1      4.57      + 11.0
+      Multi-SFT → GRPO       2.00      +0       2.00         +0           including the required termination call, as well as
+      Reflection Tuning      2.24    + 1.7      4.69       + 7.4
+      VRRL(Ours)             2.22    + 1.1      4.64      + 23.0
+                                                                          the performance improvement from multi-turn re-
+                                                                          flection. Standard GRPO with only outcome re-
+Table 3: Reflection behaviors of training methods                         ward (Multi-SFT → GRPO) largely suppresses the
+for spatial navigation. # Turns denotes the average                       reflection behavior learned during multi-turn SFT
+number of turns, including a termination turn, of the                     in this setting. In contrast, VRRL uses reflection
+model responses, and ∆ref is the improvement of task                      more effectively and selectively: it improves perfor-
+accuracy by multi-turn reflection inference.
+                                                                          mance over turns while requiring similar number
+                                                                          of turns on average than other reflection-oriented
+tion turns, but VRRL converts this behavior into                          baselines.
+stronger OOD generalization. The turn-distribution
+plots further show that VRRL adapts its number of                         7   Ablations
+refinement steps to task familiarity: it terminates
+early on in-distribution examples, but continues re-                      Table 4 and 5 show ablation studies for visual
+fining on OOD tasks and achieves higher accuracy                          grounding and spatial navigation, respectively, to
+in later turns.                                                           isolate the impact of each proposed component.
+                                                                          When added individually to the Multi-SFT →
+6.2     Spatial Navigation                                                GRPO baseline, RTM and Buffered roll-in produce
+VRRL improves OOD spatial navigation. Ta-                                 mixed results. In particular, buffered roll-in alone
+ble 2 shows results on our spatial navigation task.                       causes the model to collapse into mostly single-turn
+VRRL achieves comparable in-distribution accu-                            behavior, losing the reflection capability learned
+
+                                                                      8
+                                                                     Out-of-Distribution
+                                          Large Table      Cell Query      Bar Chart   Scatter Plot   Average
+            Single-SFT → GRPO                53.3              5.3           27.1          34.7        30.1
+            Multi-SFT → GRPO                 78.6             13.5           30.7          37.2        40.0
+                             + RTM           70.5             11.4           33.8          34.1        37.5
+                  + Buffered Roll-In         63.2             26.1           43.9          37.1        42.6
+            + RTM + Buffered Roll-In         78.6             18.1           36.9          39.9        43.4
+                + Reflection Reward          79.1             19.5           38.0          34.1        42.7
+            VRRL (Ours)                      88.6             20.3           33.5          40.3        45.7
+
+Table 4: Ablation study on VRRL over the 3B model (Reflection Reward + RTM + Buffered Roll-In) on visual
+grounding. We find that with only the Buffered Roll-In method, the model fails to learn multi-turn reflection and
+terminates immediately after one pointing call. However, it still outperforms the single-turn model Single-SFT →
+GRPO on all settings by a large margin.
+
+
+                             ID           OOD                    the query type is unseen. The full model outper-
+                            Avg 6 × 6 7 × 7 Avg                  forms all ablated baselines, indicating that the best
+                                                                 OOD robustness is obtained only when all three
+                Qwen2.5-VL-3B-Instruct
+                                                                 components are combined.
+   Single-SFT → GRPO        85.9 49.2       8.8     29.0
+   Multi-SFT → GRPO         85.2 42.8       9.2     26.0         8     Related Work
+   + RTM                    84.4   48.0     9.2     28.6
+   + Buffered Roll-In       85.3   47.6    7.6      27.6         Self-Reflection of LVLMs. Self-reflection, the
+   + RTM + Buffered Roll-In 83.3   52.4    13.2     32.8         process of inspecting previously generated outputs
+   + Reflection Reward      86.9   51.6    10.0     30.8
+                                                                 and correcting potential mistakes, has emerged as
+   VRRL (Ours)              83.9 54.8      23.6     39.2
+                                                                 an important capability of LLMs (Madaan et al.,
+                                                                 2023; Gou et al., 2024) and has been applied to
+Table 5: Ablation study on VRRL over the 3B model
+(Reflection Reward + RTM + Buffered Roll-In) on spa-             a variety of downstream tasks (Shinn et al., 2023;
+tial navigation.                                                 Wadhwa et al., 2024). As pre-trained LVLMs only
+                                                                 exhibit limited self-reflection capabilities (Cheng
+                                                                 et al., 2025), post-training methods have been ex-
+during multi-turn SFT. However, by exposing the                  plored to further improve this behavior (Li et al.,
+model to diverse intermediate states, it still im-               2025; Huang et al., 2024). As existing approaches
+proves average single-turn performance, leading to               mainly train LVLMs for self-reflection by scaling
+42.6% on visual grounding and substantially out-                 CoT reasoning in text (Wan et al., 2025; Yang et al.,
+performing Single-SFT → GRPO at 30.1%.                           2025a; Chung et al., 2025; Jian et al., 2025; Wang
+   Importantly, combining RTM with buffered                      et al., 2026a), they often over-rely on the textual
+roll-in restores and enhances multi-turn behavior.               information in prompts (Vo et al., 2026; Tang et al.,
+This combination resolves the single-turn collapse,              2026), and fail to utilize visual feedback to adjust
+restoring Large Table performance to the baseline                predictions. In contrast, visually grounded self-
+level and improving all other OOD settings, demon-               reflection, where models learn self-verification and
+strating that these two components are highly com-               error recovery by leveraging image inputs and in-
+plementary. Reflection reward is also necessary to               termediate visual feedback, is less explored.
+achieve strong performance for both tasks, indicat-                 Thinking with Images. A recent line of work
+ing that the best OOD robustness is obtained only                studies the paradigm of “thinking with images” (Su
+when all three components are combined. Further-                 et al., 2025b), in which VLMs are augmented with
+more, the reflection reward alone proves to be an                external tools (e.g., OCR, depth analysis, zooming,
+effective individual addition (for example, 42.7%                and image segmentation) that provide new visual in-
+average on visual grounding). By providing a re-                 formation as tool outputs across multiple turns (Su
+ward shaping signal rather than a sparse binary                  et al., 2025a; Hu et al., 2024; Shao et al., 2024a).
+reward, it teaches the model to iteratively move                 These methods equip VLMs with the ability to
+toward better states even when the final answer re-              make accurate visual tool calls (Wu et al., 2026a)
+mains incorrect, which is particularly useful when               and to integrate tool outputs into their reasoning
+
+                                                             9
+process (Huang et al., 2025; Wang et al., 2026b;            //www.cosmicai.org/, and an award from Exxon-
+Yang et al., 2025b), but they mainly focus on incen-        Mobil. This work was also partially supported by
+tivizing correct tool calls from VLMs rather than           the Sloan Foundation. Finally, this work has been
+reflective capability of VLMs over tool outputs to          supported by a compute grant from NVIDIA. We
+validate their candidate answers.                           also acknowledge use of the research computing
+                                                            resources of the Empire AI Consortium, Inc., with
+9   Conclusion                                              support from the State of New York, the Simons
+                                                            Foundation, and the Secunda Family Foundation.
+In this paper, we showed that multi-turn reflection
+can improve robustness of visual grounding and
+spatial navigation for LVLMs. To this end, we               References
+propose VRRL, an RL training method that com-               Shuai Bai, Yuxuan Cai, Ruizhe Chen, Keqin Chen,
+bines Random Turn Masking and Buffered Roll-In                Xionghui Chen, Zesen Cheng, Lianghao Deng, Wei
+to teach models both when to stop and how to re-              Ding, Chang Gao, Chunjiang Ge, Wenbin Ge, Zhi-
+cover from intermediate mistakes using visual feed-           fang Guo, Qidong Huang, Jie Huang, Fei Huang,
+                                                              Binyuan Hui, Shutong Jiang, Zhaohai Li, Mingsheng
+back. Our method achieves strong in-distribution              Li, and 45 others. 2025a. Qwen3-vl technical report.
+performance while substantially improving OOD                 Preprint, arXiv:2511.21631.
+generalization over zero-shot, SFT, and standard
+                                                            Shuai Bai, Keqin Chen, Xuejing Liu, Jialin Wang, Wen-
+RL baselines. Our model successfully uses multi-              bin Ge, Sibo Song, Kai Dang, Peng Wang, Shi-
+ple steps of refinement to achieve this performance.          jie Wang, Jun Tang, Humen Zhong, Yuanzhi Zhu,
+Our work highlights multi-turn self-reflection as             Mingkun Yang, Zhaohai Li, Jianqiang Wan, Pengfei
+a key direction for improving the robustness and              Wang, Wei Ding, Zheren Fu, Yiheng Xu, and 8 others.
+                                                              2025b. Qwen2.5-vl technical report. arXiv preprint
+generalization of LVLMs.
+                                                              arXiv:2502.13923.
+
+Limitations                                                 Greg Brockman, Vicki Cheung, Ludwig Pettersson,
+                                                              Jonas Schneider, John Schulman, Jie Tang, and Wo-
+We acknowledge several limitations in our work.               jciech Zaremba. 2016. OpenAI Gym. Preprint,
+                                                              arXiv:1606.01540.
+First, our evaluation assumes visual feedback is
+available from the environment, which is not read-          Kanzhi Cheng, Li YanTao, Fangzhi Xu, Jianbing Zhang,
+ily applicable to some multi-modal reasoning tasks            Hao Zhou, and Yang Liu. 2025. Vision-language
+such as open-ended VQA on real-world images.                  models can self-improve reasoning via reflection. In
+                                                              Proceedings of the 2025 Conference of the Nations
+While this design choice was intentional, allowing            of the Americas Chapter of the Association for Com-
+us to isolate multi-turn grounding and refinement             putational Linguistics: Human Language Technolo-
+mechanics, it may not fully capture the complexity            gies (Volume 1: Long Papers), pages 8876–8892,
+and diversity of real-world tasks.                            Albuquerque, New Mexico. Association for Compu-
+                                                              tational Linguistics.
+   Second, due to computational constraints, all
+training experiments are conducted with a single            Jiwan Chung, Junhyeok Kim, Siyeol Kim, Jaeyoung
+model family of Qwen (Qwen2.5-VL and Qwen3-                    Lee, Min Soo Kim, and Youngjae Yu. 2025. v1:
+                                                               Learning to point visual tokens for multimodal
+VL), up to 7B model scale. While our results have              grounded reasoning. Preprint, arXiv:2505.18842.
+clearly demonstrated the effectiveness of our train-
+ing method, we have not evaluated whether the               Aarash Feizi, Shravan Nayak, Xiangru Jian,
+                                                              Kevin Qinghong Lin, Kaixin Li, Rabiul Awal,
+same conclusions hold consistently across larger              Xing Han Lù, Johan Obando-Ceron, Juan A.
+model scale or different architectures.                       Rodriguez, Nicolas Chapados, David Vazquez,
+                                                              Adriana Romero-Soriano, Reihaneh Rabbany,
+Acknowledgments                                               Perouz Taslakian, Christopher Pal, Spandana Gella,
+                                                              and Sai Rajeswar. 2026. Grounding computer
+This work was supported by NSF CAREER Award                   use agents on human demonstrations. In The
+                                                              Fourteenth International Conference on Learning
+IIS-2145280, NSF grant IIS-2433071, the NSF                   Representations.
+AI Institute for Foundations of Machine Learning
+(IFML), the NSF under Cooperative Agreement                 Kanishk Gandhi, Ayush K Chakravarthy, Anikait Singh,
+                                                              Nathan Lile, and Noah Goodman. 2025. Cognitive
+2421782 and the Simons Foundation grant MPS-                  behaviors that enable self-improving reasoners, or,
+AI-00010515 awarded to the NSF-Simons AI In-                  four habits of highly effective STars. In Second Con-
+stitute for Cosmic Origins — CosmicAI, https:                 ference on Language Modeling.
+
+
+                                                       10
+Zhibin Gou, Zhihong Shao, Yeyun Gong, yelong shen,               Jiaze Li, Hao Yin, Wenhui Tan, Jingyang Chen, Boshen
+  Yujiu Yang, Nan Duan, and Weizhu Chen. 2024.                      Xu, Yuxun Qu, Yijing Chen, Jianzhong Ju, Zhenbo
+  CRITIC: Large language models can self-correct                    Luo, and Jian Luan. 2025. Revisor: Beyond textual
+  with tool-interactive critiquing. In The Twelfth Inter-           reflection, towards multimodal introspective reason-
+  national Conference on Learning Representations.                  ing in long-form video understanding. arXiv preprint
+                                                                    arXiv:2511.13026.
+Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song,
+  Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang,                 Hui Long, Haoli Yu, Jingqiao Wang, Jian Long, and
+  Shirong Ma, Xiao Bi, Xiaokang Zhang, Xingkai Yu,                 Changxin Fang. 2025. ChartBench: A Comprehen-
+  Yu Wu, Z. F. Wu, Zhibin Gou, Zhihong Shao, Zhu-                  sive Evaluation Benchmark for Chart Understanding
+  oshu Li, Ziyi Gao, Aixin Liu, and 175 others. 2025.              Capabilities of Vision-Language Models. In Proceed-
+  Deepseek-r1 incentivizes reasoning in llms through               ings of the 2025 2nd International Conference on
+  reinforcement learning. Nature, 645(8081):633–638.               Virtual Reality, Image and Signal Processing, VRISP
+                                                                   ’25, page 253–257, New York, NY, USA. Association
+Yushi Hu, Weijia Shi, Xingyu Fu, Dan Roth, Mari Os-                for Computing Machinery.
+  tendorf, Luke Zettlemoyer, Noah A. Smith, and Ran-
+  jay Krishna. 2024. Visual sketchpad: Sketching as              Ji Ma, Wei Suo, Peng Wang, and Yanning Zhang. 2026.
+  a visual chain of thought for multimodal language                 Understanding and mitigating hallucinations in mul-
+  models. In The Thirty-eighth Annual Conference on                 timodal chain-of-thought models. arXiv preprint
+  Neural Information Processing Systems.                            arXiv:2603.27201.
+Jie Huang, Xinyun Chen, Swaroop Mishra,                          Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler
+   Huaixiu Steven Zheng, Adams Wei Yu, Xiny-                      Hallinan, Luyu Gao, Sarah Wiegreffe, Uri Alon,
+   ing Song, and Denny Zhou. 2024. Large language                 Nouha Dziri, Shrimai Prabhumoye, Yiming Yang,
+   models cannot self-correct reasoning yet. In The               Shashank Gupta, Bodhisattwa Prasad Majumder,
+   Twelfth International Conference on Learning                   Katherine Hermann, Sean Welleck, Amir Yazdan-
+   Representations.                                               bakhsh, and Peter Clark. 2023. Self-refine: Itera-
+Xinyu Huang, Yuhao Dong, Weiwei Tian, Bo Li, Rui                  tive refinement with self-feedback. In Thirty-seventh
+  Feng, and Ziwei Liu. 2025. High-resolution visual               Conference on Neural Information Processing Sys-
+  reasoning via multi-turn grounding-based reinforce-             tems.
+  ment learning. Preprint, arXiv:2507.05920.
+                                                                 Junhua Mao, Jonathan Huang, Alexander Toshev, Oana
+Pu Jian, Junhong Wu, Wei Sun, Chen Wang, Shuo Ren,                 Camburu, Alan Yuille, and Kevin Murphy. 2016.
+  and Jiajun Zhang. 2025. Look again, think slowly:                Generation and comprehension of unambiguous ob-
+  Enhancing visual reflection in vision-language mod-              ject descriptions. In CVPR.
+  els. In Proceedings of the 2025 Conference on Em-
+  pirical Methods in Natural Language Processing,                Ahmed Masry, Mohammed Saidul Islam, Mahir Ahmed,
+  pages 9251–9270, Suzhou, China. Association for                  Aayush Bajaj, Firoz Kabir, Aaryaman Kartha,
+  Computational Linguistics.                                       Md Tahmid Rahman Laskar, Mizanur Rahman,
+                                                                   Shadikur Rahman, Mehrad Shahmohammadi, Megh
+Dongzhi Jiang, Renrui Zhang, Ziyu Guo, Yanwei Li,                  Thakkar, Md Rizwan Parvez, Enamul Hoque, and
+  Yu Qi, Xinyan Chen, Liuhui Wang, Jianhan Jin,                    Shafiq Joty. 2025. ChartQAPro: A more diverse and
+  Claire Guo, Shen Yan, Bo Zhang, Chaoyou Fu,                      challenging benchmark for chart question answering.
+  Peng Gao, and Hongsheng Li. 2025. MME-CoT:                       In Findings of the Association for Computational
+  Benchmarking Chain-of-Thought in Large Multi-                    Linguistics: ACL 2025, pages 19123–19151, Vienna,
+  modal Models for Reasoning Quality, Robustness,                  Austria. Association for Computational Linguistics.
+  and Efficiency. In Forty-second International Con-
+  ference on Machine Learning.                                   Bryan A. Plummer, Liwei Wang, Christopher M. Cer-
+                                                                   vantes, Juan C. Caicedo, Julia Hockenmaier, and
+Sahar Kazemzadeh, Vicente Ordonez, Mark Matten,                    Svetlana Lazebnik. 2017. Flickr30k entities: Col-
+  and Tamara Berg. 2014. ReferItGame: Referring to                 lecting region-to-phrase correspondences for richer
+  objects in photographs of natural scenes. In Proceed-            image-to-sentence models. IJCV, 123(1):74–93.
+  ings of the 2014 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP), pages 787–                Hao Shao, Shengju Qian, Han Xiao, Guanglu Song,
+  798, Doha, Qatar. Association for Computational                  Zhuofan Zong, Letian Wang, Yu Liu, and Hongsheng
+  Linguistics.                                                     Li. 2024a. Visual CoT: Advancing Multi-Modal Lan-
+                                                                   guage Models with a Comprehensive Dataset and
+KimiTeam, Angang Du, Bofei Gao, Bowei Xing,                        Benchmark for Chain-of-Thought Reasoning. In The
+  Changjiu Jiang, Cheng Chen, Cheng Li, Chenjun                    Thirty-eight Conference on Neural Information Pro-
+  Xiao, Chenzhuang Du, Chonghua Liao, Chuning                      cessing Systems Datasets and Benchmarks Track.
+  Tang, Congcong Wang, Dehao Zhang, Enming Yuan,
+  Enzhe Lu, Fengxiang Tang, Flood Sung, Guangda                  Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu,
+  Wei, Guokun Lai, and 77 others. 2025. Kimi k1.5:                 Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan
+  Scaling reinforcement learning with llms. Preprint,              Zhang, YK Li, Yang Wu, and 1 others. 2024b.
+  arXiv:2501.12599.                                                DeepSeekMath: Pushing the limits of mathematical
+
+
+                                                            11
+  reasoning in open language models. arXiv preprint            Manya Wadhwa, Xinyu Zhao, Junyi Jessy Li, and Greg
+  arXiv:2402.03300.                                             Durrett. 2024. Learning to refine with fine-grained
+                                                                natural language feedback. In Findings of the Associ-
+Noah Shinn, Federico Cassano, Ashwin Gopinath,                  ation for Computational Linguistics: EMNLP 2024,
+  Karthik R Narasimhan, and Shunyu Yao. 2023. Re-               pages 12281–12308, Miami, Florida, USA. Associa-
+  flexion: language agents with verbal reinforcement            tion for Computational Linguistics.
+  learning. In Thirty-seventh Conference on Neural
+  Information Processing Systems.                              Zhongwei Wan, Zhihao Dou, Che Liu, Yu Zhang,
+                                                                 Dongfei Cui, Qinjian Zhao, Hui Shen, Jing Xiong,
+Aaditya Singh, Adam Fry, Adam Perelman, Adam Tart,               Yi Xin, Yifan Jiang, Chaofan Tao, Yangfan He,
+  Adi Ganesh, Ahmed El-Kishky, Aidan McLaughlin,                 Mi Zhang, and Shen Yan. 2025. SRPO: Enhanc-
+  Aiden Low, AJ Ostrow, Akhila Ananthram, Akshay                 ing multimodal LLM reasoning via reflection-aware
+  Nathan, Alan Luo, Alec Helyar, Aleksander Madry,               reinforcement learning. In The Thirty-ninth Annual
+  Aleksandr Efremov, Aleksandra Spyra, Alex Baker-               Conference on Neural Information Processing Sys-
+  Whitcomb, Alex Beutel, Alex Karpenko, and 467                  tems.
+  others. 2026. Openai gpt-5 system card. Preprint,
+  arXiv:2601.03267.                                            Haozhe Wang, Chao Qu, Zuming Huang, Wei Chu,
+                                                                 Fangzhen Lin, and Wenhu Chen. 2026a. VL-
+Zayne Sprague, Jack Lu, Manya Wadhwa, Sedrick Keh,               rethinker: Incentivizing self-reflection of vision-
+  Mengye Ren, and Greg Durrett. 2026. SkillFactory:              language models with reinforcement learning. In
+  Self-Distillation For Learning Cognitive Behaviors.            The Thirty-ninth Annual Conference on Neural Infor-
+  In Proceedings of the International Conference on              mation Processing Systems.
+  Learning Representations (ICLR).
+                                                               Jiacong Wang, Zijian Kang, Haochen Wang, LiangXiao,
+Ilias Stogiannidis, Steven McDonagh, and Sotirios A.              Ya Wang, Jiawen Li, Bohong Wu, Ran Jiao, Haiyong
+   Tsaftaris. 2025. Mind the gap: Benchmarking spa-               Jiang, ChaoFeng, and Jun Xiao. 2026b. VGR: Visual
+   tial reasoning in vision-language models. Preprint,            grounded reasoning. In The Fourteenth International
+   arXiv:2503.19707.                                              Conference on Learning Representations.
+
+Zhaochen Su, Linjie Li, Mingyang Song, Yunzhuo Hao,            Jiayu Wang, Yifei Ming, Zhenmei Shi, Vibhav Vineet,
+  Zhengyuan Yang, Jun Zhang, Guanjie Chen, Jiawei                 Xin Wang, Yixuan Li, and Neel Joshi. 2024a. Is A
+  Gu, Juntao Li, Xiaoye Qu, and 1 others. 2025a. Open-            Picture Worth A Thousand Words? Delving Into Spa-
+  ThinkIMG: Learning to Think with Images via Vi-                 tial Reasoning for Vision Language Models. In The
+  sual Tool Reinforcement Learning. arXiv preprint                Thirty-eighth Annual Conference on Neural Informa-
+  arXiv:2505.08617.                                               tion Processing Systems.
+
+Zhaochen Su, Peng Xia, Hangyu Guo, Zhenhua Liu,                Zirui Wang, Mengzhou Xia, Luxi He, Howard Chen,
+  Yan Ma, Xiaoye Qu, Jiaqi Liu, Yanshu Li, Kaide                 Yitao Liu, Richard Zhu, Kaiqu Liang, Xindi Wu, Hao-
+  Zeng, Zhengyuan Yang, and 1 others. 2025b. Think-               tian Liu, Sadhika Malladi, Alexis Chevalier, Sanjeev
+  ing with images for multimodal reasoning: Founda-              Arora, and Danqi Chen. 2024b. Charxiv: Charting
+  tions, methods, and future frontiers. arXiv preprint            gaps in realistic chart understanding in multimodal
+  arXiv:2506.23918.                                               LLMs. In The Thirty-eight Conference on Neural
+                                                                  Information Processing Systems Datasets and Bench-
+Kaihua Tang, Jiaxin Qi, Jinli Ou, Yuhua Zheng, and                marks Track.
+  Jianqiang Huang. 2026. Scaling test-time robustness
+  of vision-language models via self-critical inference        Mingyuan Wu, Jingcheng Yang, Jize Jiang, Meitang Li,
+  framework. In Proceedings of the IEEE/CVF Con-                 Kaizhuo Yan, Hanchao Yu, Minjia Zhang, ChengX-
+  ference on Computer Vision and Pattern Recognition             iang Zhai, and Klara Nahrstedt. 2026a. VTool-r1:
+  (CVPR).                                                        VLMs learn to think with images via reinforcement
+                                                                 learning on multimodal tool use. In The Fourteenth
+Liyan Tang, Grace Kim, Xinyu Zhao, Thom Lake,                    International Conference on Learning Representa-
+  Wenxuan Ding, Fangcong Yin, Prasann Singhal,                   tions.
+  Manya Wadhwa, Zeyu Leo Liu, Zayne Rea Sprague,
+  Ramya Namuduri, Bodun Hu, Juan Diego Rodriguez,              Penghao Wu, Shengnan Ma, Bo Wang, Jiaheng Yu,
+  Puyuan Peng, and Greg Durrett. 2025. Chartmu-                  Lewei Lu, and Ziwei Liu. 2025a. GUI-reflection:
+  seum: Testing visual reasoning capabilities of large           Empowering multimodal GUI models with self-
+  vision-language models. In The Thirty-ninth Annual             reflection behavior. In The Thirty-ninth Annual Con-
+  Conference on Neural Information Processing Sys-               ference on Neural Information Processing Systems.
+  tems Datasets and Benchmarks Track.
+                                                               Qiucheng Wu, Handong Zhao, Michael Saxon, Trung
+An Vo, Khai-Nguyen Nguyen, Mohammad Reza Taesiri,                Bui, William Yang Wang, Yang Zhang, and Shiyu
+  Vy Tuong Dang, Anh Totti Nguyen, and Daeyoung                  Chang. 2025b. VSP: Assessing the dual challenges
+  Kim. 2026. Vision language models are biased. In               of perception and reasoning in spatial planning tasks
+  The Fourteenth International Conference on Learn-              for VLMs. In Proceedings of the IEEE/CVF Interna-
+  ing Representations.                                           tional Conference on Computer Vision (ICCV).
+
+
+                                                          12
+Xueqing Wu, Yuheng Ding, Bingxuan Li, Pan Lu,                  Zhuosheng Zhang, Aston Zhang, Mu Li, hai zhao,
+  Da Yin, Kai-Wei Chang, and Nanyun Peng. 2025c.                 George Karypis, and Alex Smola. 2024. Multi-
+  Visco: Benchmarking fine-grained critique and cor-             modal chain-of-thought reasoning in language mod-
+  rection towards self-improvement in visual reasoning.          els. Transactions on Machine Learning Research.
+  In Proceedings of the Computer Vision and Pattern
+  Recognition Conference, pages 9527–9537.                     Mingyu Zheng, Zhifan Feng, Jia Wang, Lanrui Wang,
+                                                                 Zheng Lin, Hao Yang, and Weiping Wang. 2025.
+Yuan Wu, Zongxian Yang, Jiayu Qian, Songpan Gao,                 TableDreamer: Progressive and weakness-guided
+  Guanxing Chen, Qiankun Li, Yu-An Huang, and                    data synthesis from scratch for table instruction tun-
+  Zhi-An Huang. 2026b. Better eyes, better thoughts:             ing. In Findings of the Association for Computa-
+  Why vision chain-of-thought fails in medicine. arXiv           tional Linguistics: ACL 2025, pages 7290–7315, Vi-
+  preprint arXiv:2603.06665.                                     enna, Austria. Association for Computational Lin-
+                                                                 guistics.
+Yi Xu, Chengzu Li, Han Zhou, Xingchen Wan, Caiqi
+  Zhang, Anna Korhonen, and Ivan Vulić. 2026. Visual          A     Method Details
+  planning: Let’s think only with images. In The Four-
+  teenth International Conference on Learning Repre-           GRPO. For a given question q, we sample a
+  sentations.                                                  group of G trajectories {τ1 , . . . , τG } from the old
+                                                               policy πθold and optimize the standard GRPO ob-
+Shuo Yang, Yuwei Niu, Yuyang Liu, Yang Ye, Bin
+  Lin, and Li Yuan. 2025a. Look-back: Implicit vi-             jective:
+  sual re-focusing in MLLM reasoning. arXiv preprint
+  arXiv:2507.03019.                                                                                                                   
+                                                                                                         G   |τi |
+                                                                                                       1 X 1 X
+Wenxi Yang, Yuzhong Zhao, Fang Wan, and Qixiang Ye.            JGRPO (θ) = Eq,{τi }G                                          ℓi,t (θ) ,
+  2025b. Thinking with images via self-calling agent.
+                                                                                             i=1       G         |τi |
+                                                                                                           i=1           t=1
+  arXiv preprint arXiv:2512.08511.
+                                                                   where {τi }G
+                                                                              i=1 ∼ πθold and
+Chao Yi, Yuhang He, De-Chuan Zhan, and Han-Jia
+  Ye. 2024. Bridge the modality and capability gaps
+  in vision-language model selection. In The Thirty-
+  eighth Annual Conference on Neural Information                      ℓi,t (θ) = Lclip
+                                                                                  i,t (θ) − βDKL (πθ ∥ πref ) .
+  Processing Systems.
+                                                                   The clipped objective is defined as
+Licheng Yu, Zhe Lin, Xiaohui Shen, Jimei Yang, Xin
+  Lu, Mohit Bansal, and Tamara L. Berg. 2018. Mat-                                             πθ (ai,t | si,t )
+  tnet: Modular attention network for referring expres-                         ri,t (θ) =                         ,
+  sion comprehension. In 2018 IEEE/CVF Conference                                             πθold (ai,t | si,t )
+  on Computer Vision and Pattern Recognition, pages
+                                                                    clip
+  1307–1315.                                                       Li,t (θ) = min (ri,t (θ)Ai , clip (ri,t (θ), 1 − ϵ, 1 + ϵ) Ai ) .
+
+
+Qiying Yu, Zheng Zhang, Ruofei Zhu, Yufeng Yuan, Xi-              DKL is the regularization term ensuring the pol-
+  aochen Zuo, YuYue, Weinan Dai, Tiantian Fan, Gao-            icy does not deviate too much from the reference
+  hong Liu, Juncai Liu, LingJun Liu, Xin Liu, Haibin           model and Ai is the advantage computed by nor-
+  Lin, Zhiqi Lin, Bole Ma, Guangming Sheng, Yuxuan
+  Tong, Chi Zhang, Mofan Zhang, and 17 others. 2026.           malizing the trajectory reward within the group:
+  DAPO: An open-source LLM reinforcement learning
+  system at scale. In The Thirty-ninth Annual Confer-                               ri − mean({r1 , . . . , rG })
+                                                                           Ai =                                   .
+  ence on Neural Information Processing Systems.                                        std({r1 , . . . , rG })
+
+Yuexiang Zhai, Hao Bai, Zipeng Lin, Jiayi Pan, Sheng-             Random Turn Masking (RTM) Interpretation.
+  bang Tong, Yifei Zhou, Alane Suhr, Saining Xie,              We can interpret RTM as a form of reweighted
+  Yann LeCun, Yi Ma, and Sergey Levine. 2024. Fine-            per-decision policy gradient. By expanding the
+  tuning large vision-language models as decision-
+                                                               expectation over the uniform starting index k, we
+  making agents via reinforcement learning. In The
+  Thirty-eighth Annual Conference on Neural Informa-           observe that the contribution of each turn t to the
+  tion Processing Systems.                                     total gradient is weighted by the probability of it
+                                                               being included in the suffix. Let wt be the weight
+Haoyu Zhang, Yuwei Wu, Pengxiang Li, Xintong                   assigned to the gradient at turn t. Since a turn t
+  Zhang, Zhi Gao, Rui Gao, Mingyang Gao, Che Sun,
+  and Yunde Jia. 2026. MIRROR: Multimodal Iterative
+                                                               is included in the loss whenever the sampled start
+  Reasoning via Reflection on Visual Regions. arXiv            index k ≤ t, and k is sampled uniformly, the effec-
+  preprint arXiv:2602.18746.                                   tive weight is:
+
+                                                          13
+                                                            to avoid over-penalizing regressive reflection at-
+                              t
+                              X 1        t                  tempts: empirically, allowing negative shaping re-
+           wt = P (k ≤ t) =           =                     duced the model’s tendency to engage in reflection,
+                                   T     T
+                              j=1
+                                                            since it can always achieve the base format reward
+   Substituting this back into the gradient formula- (0.1) without attempting corrective moves.
+tion, the expected RTM gradient is equivalent to a             Reward Function for Spatial Navigation. Fol-
+weighted standard policy gradient:                          lowing  Xu et al. (2026), we build reflection reward
+                                                            upon progress rate for the spatial navigation task
+                          " T                             # as follows. Given a model predicted path v̂ and M
+                           X t                              ground truth optimal paths vm for m ∈ {1, ..., M },
+E [∇JRTM (θ)] = Eτ ∼πθ             · ∇ log πθ (at |st )Ât the progress rate is computed as
+                                T
+                            t=1
+                                                                                  n
+                                                                                    " j                #
+   This suggests that RTM applies a linear weight-                              1X Y            (m)
+                                                                                                     
+                                                               PR = max                 I v̂k = vk
+ing schedule wt ∝ t. Later turns, which correspond                 m∈{1,...,M } n
+                                                                                              j=1    k=1
+to refinement and reflection steps, receive higher
+gradient magnitude than early turns. This implicitly         In other words, progress rate measures the ratio of
+prioritizes the optimization of recovery behavior            consecutive correct steps from the start that align
+over initial exploration.                                    with at least one ground truth trajectory.
+   Reward Function for Visual Grounding. In                     Then, the unshaped reflection reward is
+this work, we define potential function ϕ(d) based
+on the Euclidean distance d to the target:
+                                                                                           T
+                                                                                                                        !
+                                                                                           X
+                  2       2                                        rrefl = clip            w(∆PRt ), 0, 1
+          1         d         d
+   ϕ(d) =      exp − 2 + exp − 2   .                                                       t=2
+          2         σ1        σ2
+                                                              where T is the total number of turns, ∆PRt =
+   We select different σ values to ensure the model          PRt − PRt−1 , and
+receives meaningful feedback signals when the pre-                          (
+diction is both far from (via σ2 ) and near (via σ1 )                         ∆PR          if ∆PR ≥ 0
+the target. We choose to use improvement based                  w(∆PR) =
+                                                                              λdeg · ∆PR if ∆PR < 0
+reward function as we find that when the reflection
+reward is only based on the distance of final pre-           where λdeg is a hyperparameter.
+diction to the ground truth, then the model will im-            In other words, the design rewards improvement
+prove its prediction in the first turn and hence lose        towards the optimal trajectories over multiple turns
+the ability to keep the reflection behavior. There           of refinement, and penalize unhelpful revisions that
+is a large space in the design of reflection rewards         lead to regression in progress.
+and finding the best reflection reward is beyond the            We define the following shaping to obtain the
+scope of this work as the best reflection reward may         final reflection reward Rrefl when the response has
+be task dependent.                                           the correct format (i.e., rfmt = 1).
+   We define the raw, unshaped improvement-based
+reward rrefl based on ϕ(d). We define the following                      (
+                                                                          0.1 + 0.9 · max(0, rrefl ) + αrrefl − γT   if rcoord = 1,
+                                                               Rrefl =
+shaping to obtain the final reflection reward Rrefl .                      0.1 + 0.9 · max(0, rrefl ) − γT           if rcoord = 0
+
+
+   Rrefl = 0.1 + 0.9 · max(0, rrefl ) if rfmt = 1             Where rcoord is the correctness of the final answer,
+                                                             α is the reflection bonus coefficient, and γ is the
+We give a weight of 0.9 to the reflection reward             step cost penalty coefficient.
+and 0.1 indicates the format reward when the for-               The first two terms (format reward and weighted
+mat of the output is correct rfmt = 1. For correct           raw reflection reward) are the same as the reflection
+predictions, note that rrefl is capped to 1.0 given          shaping for visual grounding, and we added the last
+the definition of ϕ(d), so the total reward R is             two terms for spatial navigation specifically: (1)
+capped to 1.0 in combination with the format re-             Reflection bonus: if the final answer is correct, we
+ward. For incorrect predictions, we provide partial          provide the model with a reward bonus of α if the
+credit based on improvement, using max(0, rrefl )            response uses reflections. This provides incentive
+
+                                                        14
+for the model to perform more multi-turn reflec-               are conducted on Qwen2.5-VL-3B-Instruct and
+tions during training for this difficult task; (2) Step        Qwen3-VL-4B-Instruct using 4 NVIDIA A100
+cost: to prevent the model from over-reflecting to             (80GB) GPUs. Following the settings and training
+hack the reflection bonus, we apply a step cost of γ           configurations in Xu et al. (2026), we first warm-up
+to the number of turns T in the response. By com-              the model with 10 epochs of SFT on the 3K single-
+bining these two terms, we empirically incentivize             turn examples of maps of size 3 − 5 with only the
+the model to use more reflections during training              direct answer as the task is very out-of-distribution
+for spatial navigation while not over-reflecting. We           of the instruction-tuned model.
+set α = 0.2 and γ = 0.05 by default.                              For the SFT stage of Single-SFT and Multi-SFT,
+                                                               we train on 4K examples from maps of size 4−5 as
+B     Implementation Details                                   performance on 3×3 maps is already saturated after
+                                                               the warm-up stage. We run SFT with a learning
+B.1    VRRL
+                                                               rate of 2e-6 and a global batch size of 48.
+Visual Grounding. All training experiments                        For the RL stage, we use 2K data from maps of
+are conducted on Qwen2.5-VL-3B-Instruct and                    size 4 − 5. we apply online data filtering adapted
+Qwen2.5-VL-7B-Instruct using 4 NVIDIA A100                     from DAPO (Yu et al., 2026) to stabilize training
+(80GB) GPUs. For the SFT stage, we train on 15K                by filtering out examples where all rollouts get 1 or
+small table header lookup data with a learning rate            0 reward uniformly. For Qwen3-VL-4B, because
+of 5e-6 and a global batch size of 48. For the RL              its base capability is strong enough for multi-turn
+stage, We utilize a learning rate of 1e-6 and a global         reflection, we use a smaller reflection bonus coef-
+batch size of 32 on the SFT model that is trained              ficient in the reflection reward to prevent reward
+for 5 epochs, where the model has already devel-               hacking with α = 0.1 and γ = 0.01. We utilize a
+oped self-reflection output format. For GRPO, we               learning rate of 1e-6 for Qwen2.5-VL-3B and 5e-7
+sample G = 8 rollouts per question and set the                 for Qwen3-VL-4B. We use a global batch size of
+maximum trajectory length to T = 8 turns. The                  32 on the SFT model that is trained for 5 epochs.
+KL coefficient is set to β = 0.01. For the reward              For GRPO, we sample G = 8 rollouts per question
+function, we set the shaping parameters σ1 = 2δtol             and set the maximum trajectory length to T = 8
+and σ2 = 5δtol (where δtol = 40) to provide gra-               turns. The KL coefficient is set to β = 0.01. We
+dient signals at both coarse and fine granularities.           use the same training curriculum and replay buffer
+We set the per-step cost to 0. For the training cur-           configurations as the one for the visual grounding
+riculum, we set the mixing probability ρ = 2/3,                task. We use λdeg = 0.5 to balance between incen-
+meaning 66% of training samples come from stan-                tivizing reflections and penalizing over revisions.
+dard on-policy generation (with RTM applied) and                  We run RL training for 1200 steps for all of
+33% from the replay buffer (Buffered Roll-In).                 our trained models and most models converge in
+   The replay buffer B has a maximum capacity of               250 steps given the strong warm-up-ed model. We
+500 prefixes. To prevent the model from overfitting            then use the checkpoints that achieve the best per-
+to failure states, which could cause the policy to             formance on a 250-example heldout set on the in-
+unlearn immediate termination, we enforce a con-               distribution maps.
+straint where 30% of the examples in B are forced
+to be correct states (prefixes ending in a successful          B.2   Baselines
+point). This ensures the policy practices validation           VL-Rethinker. We directly evaluate the official
+(terminating when correct) alongside correction                released models of VL-Rethinker (Wang et al.,
+(refining when wrong). The buffer operates as a                2026a) with two model sizes (7B and 32B) on our
+First-In-First-Out (FIFO) queue; given the small               evaluation tasks to test their OOD generalization ca-
+capacity, this ensures the “mistake states” remain             pability when using textual CoT for self-reflection,
+relevant to the current policy’s capabilities.                 since these models have already been trained on
+   We run RL training for 1200 steps for all of our            chart and diagram data during fine-tuning. At in-
+trained models and most models converge in 600                 ference time, we follow Wang et al. (2026a) and
+steps. We then use the checkpoints that achieve the            prepend reflection prefixes after each assistant turn
+best performance on a 200-example holdout set on               to encourage the model to reflect. We set the maxi-
+the Large Table task for all OOD evaluations.                  mum number of reflections to 5.
+   Spatial Navigation. All training experiments                   Reflection Tuning. Wu et al. (2025a) proposes
+
+                                                          15
+reflection tuning to train models to self-reflect using        the model’s ability to generalize the pointing mech-
+visual feedback through online iterative SFT, where            anism to unseen query types without explicit train-
+a teacher model provides supervision signals for               ing. Note that this represents a harder task: local-
+revising incorrect generations. The original setup             izing a row or column header is effectively a 1D
+in Wu et al. (2025a) focuses on GUI tasks. It first            search problem along a single axis, whereas find-
+performs SFT on multi-turn self-reflection data to             ing an exact inner cell requires precise 2D spatial
+obtain a warm-up model, and then applies iterative             localization.
+SFT on top of this model. To adapt this method to                 OOD-Bar Chart: Domain Generalization. We
+our setting, we use Multi-SFT as the base model                synthetically generate bar chart images with fine-
+and apply 5 iterations of iterative SFT, following             grained control over chart metadata. This evaluates
+the same SFT-then-RL pipeline as our method. At                the model’s ability to transfer its self-reflection
+each iteration, SFT data is created by sampling tra-           skills to a novel visual domain where the objec-
+jectories from the training prompts and collecting             tive is to point to the highest, lowest bar, or any
+both correct and incorrect trajectories. For incor-            bar given a specific category label. While visu-
+rect trajectories, we inject reflection by generating          ally identifying these bars is straightforward, we
+thinking traces together with the ground-truth an-             show that precisely localizing them within the im-
+swer, following Wu et al. (2025a).                             age coordinate space remains highly error-prone
+                                                               (Table 1).
+C     Data Generation for Visual Grounding                        OOD-Scatter Plot: Domain Generalization.
+      Tasks                                                    We synthetically generate scatter plots where each
+                                                               plot contains 10 to 20 dots labeled with unique
+In this section, we describe the pipeline for syn-
+                                                               letters, and the model must point to the dot corre-
+thesizing our training and evaluation datasets. The
+                                                               sponding to a queried label. This reflects realistic
+core advantage of programmatic generation is the
+                                                               data-extraction scenarios, where accurate spatial
+ability to extract perfect ground-truth spatial meta-
+                                                               grounding of densely packed, uniquely labeled data
+data, which we leverage to construct precise visual
+                                                               points is an essential prerequisite for downstream
+question-answering pairs. Examples of each setting
+                                                               tasks, such as reasoning over complex charts (Tang
+can be found in Figure 3.
+                                                               et al., 2025; Masry et al., 2025).
+C.1    Dataset Splits and Evaluation Tasks                     C.2   Table Image Generation
+We train on a single in-distribution task, Ta-                 To generate table content, we sample terminol-
+ble Lookup, and evaluate on both held-out in-                  ogy from 15 predefined academic domains, in-
+distribution examples and four OOD tasks that test             cluding machine learning, computer vision, natural
+different axes of generalization: scale, query type,           language processing, reinforcement learning, and
+and visual domain. Each test set contains 1K ex-               bioinformatics. For each domain, we define tai-
+amples.                                                        lored vocabularies for column groups (e.g., dataset
+   Table Lookup: Training and In-distribution                  names like ImageNet or COCO), row groups (e.g.,
+Evaluation. We generate small arXiv-style tables               model architectures or size categories), evaluation
+with 5 to 15 rows and columns across 15 academic               metrics, and baseline methods. The cell values
+domains. Queries ask the model to localize row                 are populated using custom generators that simu-
+or column headers, e.g., “Find the column header               late realistic numeric formats, such as percentages,
+‘F1-Score’.” This task serves as both the training             floating-point numbers, and integer scores. We
+distribution and the in-distribution evaluation set-           ensure that every data cell within a single table
+ting.                                                          contains a unique value. This prevents spatial am-
+   OOD-Large Tables: Size Generalization. We                   biguity during evaluation, ensuring there is only
+evaluate on substantially larger tables with 20 to             one correct answer per question.
+50 rows and columns, while preserving the same                    We model four distinct table structures to reflect
+header-localization query format as the training               the layout diversity found in scientific literature:
+task.
+   OOD-Cell Query: Query-Type Generaliza-                  1. Single-level: A basic table with a single row
+tion. We evaluate on small tables but query cell              of column headers and a single column of row
+contents (body text) rather than headers. This tests          headers.
+
+                                                          16
+2. Multi-column: Introduces hierarchical column               chart parameters without any post-hoc image pro-
+   groups, where an overarching category (e.g., a             cessing. Question–answer pairs are synthesized
+   dataset) spans multiple sub-metrics.                       from three types of templated natural language
+                                                              queries, including locating the bar with the largest
+3. Multi-row: Introduces hierarchical groupings               or smallest value and identifying the bar corre-
+   along the vertical axis, categorizing specific             sponding to a named category. The models are
+   methods under broader taxonomies.                          prompted to answer the question by pointing to the
+4. Fully hierarchical: The most complex structure,            exact pixel coordinate within the bounding box that
+   combining multi-level spanning across both rows            defines the target bar.
+   and columns.
+                                                              C.4    Scatter Plot Image Generation
+   The visual rendering of the tables is imple-               Scatter plot generation begins by establishing a con-
+mented programmatically using Python. The out-                tinuous two-dimensional coordinate system. For
+put image dimensions dynamically scale to accom-              each plot, the visible data ranges for the x- and
+modate the generated table layout. During render-             y-axes are determined by randomly cropping sub-
+ing, the absolute pixel coordinates of every individ-         spans from a broader, predefined global value range.
+ual cell, header, and spanning group are recorded.            A variable number of data points are then uniformly
+Leveraging this precise spatial metadata, we synthe-          sampled as integer coordinates within these visible
+size templated natural language question-answer               boundaries.
+pairs that require the model to locate specific ele-             To prevent visual occlusion and spatial ambigu-
+ments, such as pointing to a specific row header, a           ity, we employ a rejection-sampling collision avoid-
+nested column header, or an individual data cell.             ance mechanism. This ensures that every plotted
+                                                              element, both the data points and their correspond-
+C.3    Bar Chart Image Generation
+                                                              ing alphanumeric text labels, occupies a strictly
+We synthesize bar chart instances by independently            unique coordinate pair. If overlaps are detected
+sampling layout parameters for each example.                  between points and labels, the coordinates are iter-
+                                                              atively resampled.
+1. Overall layout: The number of bars is drawn
+   uniformly randomly between 5 and 10 bars. The
+                                                              D     Data for Spatial Navigation Tasks
+   height of the bar chart is randomly drawn be-
+   tween 512 and 768 pixels, and the width is fixed           We directly adopt the training and evaluation setup
+   at a 16:9 aspect ratio relative to the sampled             of FrozenLake from Xu et al. (2026), training on
+   height.                                                    maps with sizes ranging from 3–5 grids and eval-
+                                                              uating on larger maps with sizes of 6–7 grids to
+2. Category labels: X-axis category labels are ran-
+                                                              evaluate generalization. Each map size contains
+   domly sampled from several semantic schemas,
+                                                              250 examples in the evaluation set.
+   including calendar months, weekdays, fiscal
+                                                                 To induce self-reflection behavior through
+   quarters, years, hours, business functions, fruits,
+                                                              Multi-SFT prior to RL training, we do not em-
+   and geographic regions, to ensure labels remain
+                                                              ploy templated reasoning traces as used for visual
+   concise and contextually coherent.
+                                                              grounding tasks, since Xu et al. (2026) show that
+3. Bars: Bar values are sampled i.i.d. from                   such templates are ineffective for training VLMs
+   Uniform(0, 100). Bar colors are assigned by                on this task. Instead, we distill CoT trajectories
+   cycling through a fixed palette of 15 visually             from GPT-5.4 (Singh et al., 2026) that demonstrate
+   distinct hues, with the number of unique colors            corrections of randomly injected errors on the train-
+   clamped to the sampled color count.                        ing maps and use them as self-reflective SFT data.
+                                                              Following Xu et al. (2026), we retain the same
+   Based on the layout above, SVG charts are ren-             prompt format with ‘think’, ‘answer’, and ‘final’
+dered programmatically via a layout engine. Each              tags: when the model generates an answer proposal
+SVG is subsequently rasterized to a PNG at the                in the first turn, it emits an ‘answer’ without justifi-
+target resolution. Because all element positions              cation (thinking). In the subsequent turn, the model
+are determined analytically, pixel-accurate ground-           needs to either finalize the answer with ‘final’ tag
+truth coordinates can be computed directly from the           (no justification needed), or revise with ‘think’ and
+
+                                                         17
+then a new answer proposal with ‘answer.’ This
+scheme preserves the direct answer capabilities of
+the warm-up model in the first turn while still al-
+lowing models to perform reflection and revision.
+We further encourage reflection by prepending an
+instruction that asks the model either to revise its
+previous answer or terminate the trajectory after
+receiving visual feedback.
+
+E   Licenses
+We use the following publicly available datasets
+from prior works with open licenses.
+FrozenLake We access the FrozenLake data via
+Gym (Brockman et al., 2016) that uses the MIT li-
+cense and data is available at: gymnasium.farama.
+org.
+
+F   Output Examples
+We show example outputs from our model on the
+OOD tasks.
+
+
+
+
+                                                       18
+Example: Large Table Question (23 rows, 20 columns)
+Turn 1
+
+
+
+
+[User] Question: Locate “Accuracy” in the “PDB” column group. Return its pixel coordinate in a list
+format [x_coordinate, y_coordinate].
+
+[Assistant]
+```json
+{
+  "think": "I need to locate `Accuracy' in the `PDB' column group. I'll point to its
+location.",
+  "function_call": {
+    "name": "pointing",
+    "arguments": {
+      "points": [
+        {
+          "description": "Accuracy in the PDB column group",
+          "x": 814,
+          "y": 54
+        }
+      ]
+    }
+  }
+}
+```
+
+                          Figure 5: Example output for Large Table question.
+
+
+
+
+                                                 19
+Turn 2
+[User]
+
+
+
+
+[Assistant]
+```json
+{
+  "think": "The pointer is not on `Accuracy' but on `IDDT'. I need to move to the left.",
+  "function_call": {
+    "name": "pointing",
+    "arguments": {
+      "points": [
+        {
+          "description": "Accuracy in the PDB column group",
+          "x": 683,
+          "y": 54
+        }
+      ]
+    }
+  }
+}
+```
+
+Turn 3
+[User]
+
+
+
+
+[Assistant]
+```json
+{
+  "think": "The image confirms that I'm pointing to `Accuracy`. I'll terminate now.",
+  "function_call": {
+    "name": "terminate",
+    "arguments": {
+      "answer": [683, 54]
+    }
+  }
+}
+```
+
+                                  Figure 6: Figure 5 continuation.
+
+
+
+
+                                                20
+Example: Bar Chart Question (7 Bars)
+Turn 1
+
+
+
+
+[User] Question: Locate the bar where the category is “Mango”. Return its pixel coordinate in a list
+format [x_coordinate, y_coordinate].
+
+[Assistant]
+```json
+{
+  "think": "I need to locate the bar for the category 'Mango'. I'll point to its
+location.",
+  "function_call": {
+    "name": "pointing",
+    "arguments": {
+      "points": [
+        {
+          "description": "Mango",
+          "x": 840,
+          "y": 297
+        }
+      ]
+    }
+  }
+}
+```
+
+                           Figure 7: Example output for Bar Chart question.
+
+
+
+
+                                                 21
+Turn 2
+[User]
+
+
+
+
+[Assistant]
+```json
+{
+  "think": "I'm pointing at 'Berry' instead of 'Mango'. Let me move right.",
+  "function_call": {
+    "name": "pointing",
+    "arguments": {
+      "points": [
+        {
+          "description": "Mango",
+          "x": 940,
+          "y": 315
+        }
+      ]
+    }
+  }
+}
+```
+
+Turn 3
+[User]
+
+
+
+
+[Assistant]
+```json
+{
+  "think": "I'm pointing at 'Fig' instead of 'Mango'. Let me move right.",
+  "function_call": {
+    "name": "pointing",
+    "arguments": {
+      "points": [
+        {
+          "description": "Mango",
+          "x": 1007,
+          "y": 334
+        }
+      ]
+    }
+  }
+}
+```
+
+                                  Figure 8: Figure 7 continuation.
+
+
+
+
+                                                22
+Turn 4
+[User]
+
+
+
+
+[Assistant]
+```json
+{
+  "think": "I'm pointing at 'Fig' instead of 'Mango'. Let me move right.",
+  "function_call": {
+    "name": "pointing",
+    "arguments": {
+      "points": [
+        {
+          "description": "Mango",
+          "x": 1080,
+          "y": 352
+        }
+      ]
+    }
+  }
+}
+```
+
+Turn 5
+[User]
+
+
+
+
+[Assistant]
+```json
+{
+  "think": "The crop now correctly shows the bar for the category 'Mango'.",
+  "function_call": {
+    "name": "terminate",
+    "arguments": {
+      "answer": [1080, 352]
+    }
+  }
+}
+```
+
+                                  Figure 9: Figure 8 continuation.
+
+
+
+
+                                                23
+Example: FrozenLake Question (6 × 6 map)
+Turn 1
+
+
+
+
+[User] Question: Generate the shortest action sequence.
+
+[Assistant]
+<answer> left left down </answer>
+
+                         Figure 10: Example output for FrozenLake question.
+
+
+
+
+                                                24
+Turn 2
+[User]
+
+
+
+
+[Assistant]
+<think> In the feedback image, the red path ends on a snow cell directly beneath the elf,
+with the red star sitting on that spot. The first two moves were correct, but the third
+move is the first incorrect step because it goes off the grid. The gift is still in the
+upper-left corner, and the elf is already on a safe snow cell. To fix it, continue along
+the same line toward the gift, then move one cell to the side to reach the gift. </think>
+<answer>left left left down</answer>
+
+Turn 3
+[User]
+
+
+
+
+[Assistant]
+<Final> left left left down </Final>
+
+                                 Figure 11: Figure 10 continuation.
+
+
+
+
+                                                25
+
