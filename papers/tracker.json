@@ -1107,6 +1107,51 @@
         "long-context retrieval"
       ],
       "sourcing_note": "Source-first breakdown built from paper.pdf (12pp) via pdftotext -layout (paper_layout.txt, 752 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 389-410, T2 471-475, T3 509-531, T4 549-557, T5 573-580, T6 735-739). Source-free reconciliation PASSED: all 9 Table-1 Avg cells reproduce from their 6-task commonsense components; Table-2 per-scale deltas recompute (15-16% rel); Table-5 RMSNorm-gamma PPL 59.5 == Table-2 46M HOLA 59.5 and Table-4 beta*||e|| flat-read 70.10 == Table-5 unit-L2 70.10; headline deltas recompute (-16.1% Wiki, +72% FDA, +24% SWDE). Figure-derived values quoted only where prose-confirmed (16k/32k S-NIAH-1 0.58/0.24/0.14 + +0.64@16k from sec 4.4); per-point bar reads not back-filled. 1 inline note: Table-1 Avg is a 6-task mean while sec 4.2 also cites a 9-task accuracy mean (different denominators); effective-logit arithmetic (0.83cos / 11cos) noted as stated heuristic vs head-dim 256. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+    },
+    {
+      "rank": 25,
+      "arxiv_id": "2607.01774",
+      "arxiv_url": "https://arxiv.org/abs/2607.01774",
+      "pdf_url": "https://arxiv.org/pdf/2607.01774",
+      "title": "Subliminal Clocks: Latent Time Modelling in Diffusion Language Models",
+      "authors": [
+        "Maximo Rulli",
+        "Thomas Fontanari",
+        "Simone Petruzzi",
+        "Federico Alvetreti",
+        "Giorgio Strano",
+        "Donato Crisostomi",
+        "Giorgos Nikolaou",
+        "Tommaso Mencattini",
+        "Andrea Santilli",
+        "Emanuele Rodola",
+        "Simone Scardapane",
+        "Alessio Devoto"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "mechanistic interpretability of diffusion language models / latent denoising-timestep modelling via residual-stream probing + mean-activation steering (internal-representation angle on masked DLMs)",
+      "ai_keywords": [
+        "diffusion language models",
+        "masked diffusion",
+        "mechanistic interpretability",
+        "latent timestep",
+        "denoising progress",
+        "activation steering",
+        "mean activation vectors",
+        "MLP probes",
+        "linear probes",
+        "low-dimensional manifold",
+        "PCA geometry",
+        "residual stream",
+        "LLaDA",
+        "Dream",
+        "depth correction",
+        "EOS collapse"
+      ],
+      "abstract": "Diffusion Language Models (DLMs) have recently emerged as a promising alternative to autoregressive models. Unlike standard diffusion-based approaches, DLMs are not explicitly conditioned on a timestep, raising a natural question: do these models internally represent denoising progress, and how is such information used downstream? In this work, we show that DLMs do in fact encode a latent representation related to the diffusion timestep within their residual streams. We find that this signal can be reliably extracted using probes across layers, indicating that denoising progress is decodable from internal activations. We further demonstrate that steering the model along a low-dimensional subspace associated with the inferred timestep allows us to systematically modulate its notion of denoising progress, leading to predictable changes in model confidence and entropy. Finally, we analyse the geometry of the identified representation, showing that it exhibits structured and interpretable properties in activation space, and shedding light on how such a signal is processed by these models.",
+      "sourcing_note": "Source-first breakdown built from paper.pdf (16pp, 2.9MB) via pdftotext -layout (paper_layout.txt, 2133 lines; 1 explicit table + 23 figures). Table 1 (downstream mean-steering, 2 models x 3 datasets x {base, t_hat=1,25,50,75,100}) transcribed verbatim (lines 1174-1183); Figure 2/13/15 probe R^2 per-layer data strips (LLaDA MLP, Dream MLP, both linear) transcribed as figure-printed numeric rows (the figures underlying data, higher confidence than bar-reads). Source-free reconciliation PASSED: 3200/2800 mean vectors = 100 bins x 32/28 layers; probe R^2>0.5 all layers (LLaDA ALL min 0.74, Dream ALL min 0.80); Dream L25 PCA PC1 91.19% + PC2 5.03% = 96.22% in 2D; LLaDA Table-1 robust (max |delta| 6.4), Dream GSM8K t_hat=100 collapse 68.8->23.1 (-45.7) matches prose; random-control KL ~ half of tau-KL. 17/17 distinctive cells grep-confirmed verbatim. NO numeric prose-vs-table contradiction. 3 inline notes: (1) no explicit inference-timestep is the premise not a gap; (2) probe R^2 strips are figure-embedded data not a standalone table; (3) Dream GSM8K EOS-collapse mechanism is qualitative (paper leaves quantitative analysis to future work). Figure axis-tick values (entropy/confidence/KL curves, cosine heatmaps, drift maps) NOT back-filled - only prose-confirmed qualitative trends quoted. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     }
   ],
   "updated_at": "2026-07-04"
