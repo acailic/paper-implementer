@@ -2033,6 +2033,53 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from arXiv 2607.02491 (836KB PDF, 19pp). paper_layout.txt = pdftotext -layout (1088 lines, 5 explicit tables: T1 conflict-count percentiles L419-452, T2 wall-clock L470-506, T3 notation L934-987, T4 CP-SAT configs L998-1003, T5 CP-SAT perf L1030-1043). Source-free reconciliation PASSED: 39/42 Table-2 speedups recompute within +/-0.012 (3 backtracking cells = full-precision-vs-3dp-display rounding, the iter-45/51 display-boundary pattern, NOT transcription errors); abstract headlines 33.3x/1.70x/1.17x/1.02x/0.90x each match a stated speedup; Table-5 C3-vs-C2 83.3% conflict reduction + 1.85x/1.17x/1.20x wall-clock ratios reconcile to paper-stated 83%/1.9x/1.2x/1.2x within rounding; C4 0.0 mean conflicts at 9x9 = 91.1% FSR feasible + repaired. NO numeric prose-vs-table contradiction. Key honest-scope flags: wall-clock EXCLUDES SE-RRM inference time; Sudoku-only; backtracking is custom Python (cross-solver magnitudes not comparable); cadical3 mean slowdown is phase-init overhead artifact not search degradation; FSR non-monotonic (91.1/22.0/51.1%) tracks empty-cell density not grid size. Central citable contribution = two-condition theory (search-dominated + solver-overwrites-hints), isolated by cadical3-vs-glucose4 contrast. NO figure back-fill."
+    },
+    {
+      "rank": 45,
+      "arxiv_id": "2607.01880",
+      "arxiv_url": "https://arxiv.org/abs/2607.01880",
+      "pdf_url": "https://arxiv.org/pdf/2607.01880",
+      "title": "Learning the Supports for Categorical Critic in Reinforcement Learning",
+      "authors": [
+        "Jen-Yen Chang",
+        "Takayuki Osa",
+        "Tatsuya Harada"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "distributional RL / classification-based value learning — Dynamic Support Endpoint Learning (DySEL) for the Gaussian Histogram Loss (HL-Gauss) categorical critic; learns [vmin,vmax] via a constrained min-max Lagrangian instead of pre-specifying it. First repo paper on distributional RL / categorical critics / HL-Gauss.",
+      "ai_keywords": [
+        "distributional reinforcement learning",
+        "categorical critic",
+        "HL-Gauss",
+        "Gaussian histogram loss",
+        "classification-based value learning",
+        "dynamic support learning",
+        "DySEL",
+        "support interval",
+        "min-max optimization",
+        "Lagrangian multiplier",
+        "constrained optimization",
+        "Bellman error upper bound",
+        "TD3",
+        "DeepMind Control Suite",
+        "continuous control",
+        "value function estimation",
+        "truncation bias",
+        "quantisation bias",
+        "non-stationary returns",
+        "IQM"
+      ],
+      "abstract": "Value functions are an essential component in actor-critic based deep reinforcement learning (RL). Conventionally, these functions are trained as a regression task by minimising the mean squared error (MSE) relative to bootstrapped target values. Meanwhile, in distributional RL, a distribution of returns is modelled based on the distributional Bellman operator. This work investigates the Gaussian Histogram Loss (HL-Gauss), a recent approach that reframes value estimation as classification by encoding each scalar Bellman target as a Gaussian-smoothed categorical target. Despite its potential, applying histogram-based losses to RL presents inherent challenges, most notably the requirement to pre-define a fixed support interval, which is often complicated by the non-stationary and stochastic nature of target values typically found in RL tasks. In this work, we propose an approach that dynamically learns the lower and upper bounds of the support instead of assigning them beforehand. We derive an objective that jointly learns these bounds whilst learning the categorical representation of the scalar values, and we show that this objective forms an upper bound on the mean-squared Bellman error. Our theoretical analysis further shows that this bound is tighter than that of non-learned supports of HL-Gauss. Empirically, the proposed objective enables stable adaptation of the support interval and matches HL-Gauss-based actor-critic algorithms on most continuous-control tasks whilst improving on a subset, without requiring a pre-specified support interval.",
+      "popularity": "",
+      "citation_count": "",
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "2026-categorical-critic-learned-supports-hl-gauss",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "sourcing_note": "Source-first breakdown built from paper.pdf (19pp) + paper_layout.txt (pdftotext -layout, 1207 lines). All equations (Eq 1-17) and Table 1 (per-task alpha grid) transcribed verbatim with sourcing line-ranges; setup facts (TD3 base, DM-Control 11 tasks, 10 seeds, 3M steps, k=128, HLG support [-100,100], DySEL init [-10,10], sigma-ratio 0.75, sigma-clip min 0.3, epsilon=0.005, adversary lr 1e-3, Adam lr 3e-4, batch 256, gamma 0.99, tau 0.005) all grep-confirmed. Results are figure-only (Figure 2 IQM curves) -> per-task IQM numbers NOT back-filled, only the prose-confirmed qualitative ranking reported (consistent with the figure-derived-numbers-are-weak rule). Source-free reconciliation: 1/(1-gamma)=100.0 matches the paper's DM-Control return bound; 200/51=3.92 matches the paper's 'nearly 4' bin-width note for k=51; all 11 Table-1 alpha values lie within the stated grid [0.1,0.2,0.3,0.4,0.45,0.5]; Eq-16 Lagrangian structure (alpha*max + (1/alpha)*CE + lambda*((1-Z)-epsilon)) grep-confirmed. 7 inline honest-scope flags: alpha selected on same seeds used to report results (optimistic upper-bound estimate per authors), dual-lr-sensitive saddle stability, near-symmetric learnt support, DM-Control-only evaluation, no IQM table (figure-only), Eq-11/12 leading constants partially garbled in pdftotext, fixed sigma. NO numeric prose-vs-table contradiction."
     }
   ]
 }
