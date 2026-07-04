@@ -1,0 +1,695 @@
+                                                      Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+
+                                                     Vivan Madan∗ 1 Prajwal Singhania∗ 1 Abhinav Bhatele 1 Tom Goldstein 1 Ashwinee Panda 1 2
+                                                      Norm
+                                                                                           Router                        On-Demand Expert Loading
+                                            xl          +        +            Norm                  MoE   +   xl+1
+                                                                                           Top-K
+                                                     Attention           rl
+
+
+                                                                               ql
+                                                                               +             dl
+
+
+
+
+                                                                     Norm + Router Top-K
+                                                                          (layer l+1)
+arXiv:2603.19289v1 [cs.LG] 9 Mar 2026
+
+
+
+
+                                                                                                                         Expert Prefetching
+                                                                      Speculated Experts
+
+
+
+                                        Figure 1. Expert prefetching in a pre-norm MoE block. The
+                                        normalized residual stream sl and default vector dl at layer l
+                                        form the quasi-hidden state ql which is used to predict the next-
+                                        layer’s experts, enabling CPU-GPU memory transfer to overlap
+                                        with computation.
+                                                                                                                                         CPU to GPU Copy                 Compute
+
+                                                                           Abstract
+                                                                                                                         Figure 2. Nsight Systems trace for inference with Qwen-30B-
+                                                 Mixture-of-Experts (MoE) models have gained                             A3B. Compared to on-demand loading of active experts (top), our
+                                                 popularity as a means of scaling the capacity                           expert prefetching approach (bottom) effectively overlaps CPU-
+                                                 of large language models (LLMs) while main-                             GPU memory transfers with GPU computation, reducing transfer
+                                                                                                                         overhead on the critical path.
+                                                 taining sparse activations and reduced per-token
+                                                 compute. However, in memory-constrained infer-                          1. Introduction
+                                                 ence settings, expert weights must be offloaded
+                                                 to CPU, creating a performance bottleneck from                          Mixture-of-Experts (MoE) architectures have emerged as
+                                                 CPU-GPU transfers during decoding. We propose                           an effective approach for scaling large language models
+                                                 an expert prefetching scheme that leverages cur-                        (LLMs) by increasing parameter count without a propor-
+                                                 rently computed internal model representations to                       tional increase in per-token computation. MoEs replace
+                                                 speculate future experts, enabling memory trans-                        dense activations in feed-forward layers with sparsely acti-
+                                                 fers to overlap with computation. Across multiple                       vated experts selected by a learned gating function (Shazeer
+                                                 MoE architectures, we demonstrate that future                           et al., 2017). As a result, MoEs have become the pre-
+                                                 experts can be reliably predicted by these inter-                       dominant architecture for many state-of-the-art LLMs such
+                                                 nal representations. We also demonstrate that                           as Qwen3-MoE, GPT-OSS, and GLM 4.7 (Team, 2025;
+                                                 executing speculated experts generally maintains                        OpenAI, 2025; GLM-4.5 Team, 2025). This sparse acti-
+                                                 downstream task accuracy, thus preserving more                          vation makes MoEs attractive for deployment in resource-
+                                                 effective compute-memory overlap by eliminating                         constrained environments where large dense models may be
+                                                 the need to re-fetch true router-selected experts.                      infeasible due to limited GPU memory. In such settings, the
+                                                 Integrated into an optimized inference engine, our                      majority of expert parameters used in MoEs can be offloaded
+                                                 approach achieves up to 14% reduction in time                           to CPU RAM with only a small subset of these experts be-
+                                                 per output token (TPOT) over on-demand loading                          ing transferred and executed on-device. However, inference
+                                                 of experts from CPU memory. For MoEs where                              often becomes I/O-bound, with CPU-GPU transfer latency
+                                                 speculative execution alone yields suboptimal ac-                       dominating time per output token (TPOT), and significantly
+                                                 curacy, we further examine lightweight estimators                       reducing throughput (Chen et al., 2025; Yu et al., 2025a;
+                                                 that improve expert prediction hit rates, thereby                       Zhang et al., 2025b). For example, for Qwen3-30B-A3B
+                                                 reducing performance degradation. Our code is re-                       on an A6000 GPU, memory transfers from CPU-GPU ac-
+                                                 leased in open-source at https://github.com/axonn-                      count for 84-88% of the TPOT while compute accounts for
+                                                 ai/yalis/tree/offload_prefetch.                                         much less. So, significant gains in TPOT can be achieved
+                                           *
+                                                                                                                         in inference speeds by reducing these expensive memory
+                                             Equal contribution 1 University of Maryland 2 TogetherAI. Cor-              transfers.
+                                        respondence to: Ashwinee Panda <ashwinee@umd.edu>.
+                                                                                                                         Efficient inference of MoEs is important for enabling
+                                        Preprint. March 23, 2026.
+
+                                                                                                                     1
+                              Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+broader access and control over many state-of-the-art open-          cross-layer scheduler to prefetch experts multiple layers in
+source LLMs. In this work, we introduce an inference-time            advance (Yu et al., 2025a). Hwang et al. modify MoEs
+expert prefetching scheme that leverages internal model rep-         with a pre-gate function that decouples expert selection and
+resentations to predict near-future expert selection, operates       execution, enabling one-layer-in-advance prefetching, but
+directly on existing pretrained MoE models, and is ready-to-         requires additional full-model fine-tuning (Hwang et al.,
+use in an open-source inference engine YALIS (Singhania              2024). Yu et al. maintain expert maps that contain input
+et al., 2025). The prefetching scheme transfers future layer         semantic embeddings and expert activation trajectories to
+experts in parallel with computation, leading to improved            predict future expert use (Yu et al., 2025b). Eliseev et al. use
+inference latencies.                                                 LRU-based expert caching and apply the next-layer’s gating
+                                                                     function to the current layer’s hidden states to speculate
+Our contributions are as follows:
+                                                                     future experts (Eliseev & Mazur, 2023). Zhang et al. mod-
+                                                                     ify part of the standard LLM architecture by rerouting the
+   • Parameter-free prefetching. We identify internal
+                                                                     residual stream, allowing current AllReduce communica-
+     model representations that contain signals capable of
+                                                                     tion operations used in tensor parallelism settings to overlap
+     predicting future routing decisions across modern MoE
+                                                                     with subsequent MLP or attention computation (Zhang et al.,
+     architectures with large expert pools.
+                                                                     2025a).
+   • Speculative execution preserving accuracy. We                   Several of these prior approaches leverage internal represen-
+     demonstrate that executing prefetched experts, rather           tations for future expert prediction; however, the predictions
+     than treating mispredictions as cache misses, often             are treated as cache hints, and model execution still follows
+     maintains downstream task accuracy.                             the true expert utilization. As a result, prediction error forces
+   • An optimized inference implementation.           We             re-fetching of missed experts, limiting the extent to which
+     integrate our prefetching scheme into an opti-                  computation and memory transfer can be overlapped. While
+     mized open-source inference engine and demon-                   we do utilize similar internal representations, we further
+     strate a 5-14% reduction in time per output                     enhance them by adding an additional expert-conditioned
+     token (TPOT) over on-demand CPU expert                          signal to improve expert hit rate and study speculative exe-
+     loading across hardware/model configurations                    cution where predicted experts selected by the next layer’s
+     in resource-constrained settings.       Our code is             router are utilized, thus allowing for better preservation of
+     released in open-source at https://github.com/axonn-            compute-memory overlap in modern MoE architectures. We
+     ai/yalis/tree/offload_prefetch.                                 analyze the impact of speculative execution on downstream
+                                                                     accuracy and show that a lightweight estimator can help
+   • Lightweight neural estimators. For architectures                mitigate performance degradation for certain model archi-
+     where the prefetching scheme falls short due to large           tectures and their few high-drift layers where router-based
+     representation drift over certain layers, we introduce          speculation is insufficient.
+     a lightweight neural estimator that substantially im-
+     proves expert prediction hit rates over those layers
+     while requiring only a small number of training tokens.
+                                                                     3. Signals for Expert Prefetching
+                                                                     3.1. Default Vector
+2. Related Work                                                      Panda et al. (2025) introduce the default vector, denoted
+To address the inference bottleneck caused by CPU-GPU                dl,e , that represents the average activation associated with
+transfer latency, many prior works implement expert                  expert e at layer l. These vectors are computed offline by
+caching where popular experts are kept on-device to re-              aggregating the observed activations for each selected expert
+move redundant transfers. Other approaches employ expert             during inference.
+prefetching, in which experts predicted to be used in future         Given a token at layer l, the router selects a subset of experts
+layers are transferred to the GPU and overlapped with the            El (commonly Top-K) and assigns the corresponding gating
+current layer’s computation, masking CPU-GPU transfer                weights Gl = {gl,e }e∈El . We define the layer-level default
+latency. Although effective in reported settings, Zhang et           representation dl as the weighted combination of the default
+al. evaluate on MoE architectures with relatively small rout-        vectors of the selected experts and their assigned weight:
+ing combinatorial spaces, leaving it unclear whether such                                         X
+predictor-based schemes extend to modern MoEs with larger                                  dl =       gl,e dl,e
+expert pools (Zhang et al., 2025b). Chen et al. leverage in-                                     e∈El
+ternal model representations from a draft model to speculate
+experts that may be used in the larger model (Chen et al.,           Effectively, dl captures the expert-conditioned typical con-
+2025). Yu et al. utilize both a layer-wise predictor and a           tribution to the residual stream by an MoE block.
+
+                                                                 2
+                                   Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+3.2. Quasi-Hidden State                                                       representation constructed at layer l and the ground-truth
+                                                                              input sl+1 . Across the GPT-OSS models, the quasi-hidden
+In the pre-norm MoE architectures considered in this work,
+                                                                              states demonstrate higher average cosine similarity than sl ,
+expert routing is computed from a normalized residual
+                                                                              indicating that the inclusion of the default vectors provides
+stream following attention. Abiding by this structure, we
+                                                                              a useful expert-conditioned bias for approximating drift
+define the quasi-hidden state as an approximate to the router
+                                                                              between sl and sl+1 .
+input.
+                                                                              In contrast, for Qwen3-30B-A3B, quasi-hidden states yield
+Specifically, let rl denote the post-attention residual at layer
+                                                                              only negligible improvements over sl . In this model, the
+l, and let dl denote the layer-level default vector. The quasi-
+                                                                              drift between sl and sl+1 is substantially smaller beyond
+hidden state ql is defined as
+                                                                              the early layers, reducing the benefit of incorporating the
+                      ql = LNl+1 (dl + rl )                                   default vector.
+                                                                              In Figure 4, recall@k (where k is the number of active
+where LNl+1 (·) denotes the normalization applied to the                      experts) between the predicted and ground-truth experts
+residual stream prior to expert routing at layer l + 1.                       further supports the hypothesis that improved alignment
+                                                                              with the true routing signal reduces expert selection error. In
+3.3. Prefetching Over Representations                                         particular, representations with higher cosine similarity to
+                                                                              the true router input at layer l + 1 achieve higher recall@k.
+                                                                              For Qwen3-30B-A3B, most of the inter-layer drift occurs
+                                                                              within the first two layers, corresponding to lower recall@k
+                                                                              in this early regime. Beyond these layers, the negligible drift
+                                                                              allows for a much higher recall@k of approximately 90%
+                                                                              on average. For the GPT-OSS models, the quasi-hidden
+                                                                              states improve relative error rate substantially over the base-
+                                                                              line where drift is much more prominent, notably in the
+                                                                              beginning and end layers. All results in this section assume
+                                                                              the router-based prefetching depicted in Figure 1.
+
+Figure 3. Comparison of cosine similarity between the quasi-
+hidden state ql constructed at layer l and the true router input sl+1 .       4. Effectiveness of Prefetched Experts
+                                                                              In prior prefetching approaches, mispredicted experts are
+                                                                              ignored during execution, and router-selected experts that
+                                                                              are absent from GPU memory are loaded on demand as
+                                                                              cache misses (Yu et al., 2025b; Zhang et al., 2025b; Xue
+                                                                              et al., 2025). Although this scheme maintains correctness, it
+                                                                              reduces the degree to which computation can overlap with
+                                                                              expert loading, limiting the practical benefits of prefetching.
+                                                                              In this section, we evaluate the effect of utilizing all
+                                                                              prefetched experts during inference. Specifically, we ex-
+                                                                              ecute predicted experts and their associated routing weights
+                                                                              rather than treating them as cache misses. We demon-
+                                                                              strate that this approach preserves downstream task accuracy
+Figure 4. Per-layer expert prefetch hit rates (recall@k) obtained             across a range of reasoning-heavy benchmarks.
+using the quasi-hidden state ql versus the baseline sl across models.
+
+We evaluate two internal representations as candidate inputs                  4.1. Prefetched Experts on Task Accuracy
+for expert prefetching at layer l + 1: the normalized residual                Table 1 reports these downstream task accuracies for router-
+stream sl and the quasi-hidden state ql .                                     based prefetching (Router-PF) on a variety of benchmarks
+The representation sl corresponds to the normalized residual                  that cover coding, math, and common sense reasoning. For
+stream produced at layer l and directly fed into the router.                  both GPT-OSS models, executing prefetched experts for
+As such, sl serves as a natural baseline, representing the                    layer l + 1 using the quasi-hidden states constructed at layer
+exact signal used for routing in the current layer.                           l preserves performance over most tasks relative to baseline
+                                                                              performance. This suggests that for those architectures,
+We measure the cosine similarity in Figure 3 between each
+
+                                                                          3
+                                 Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+Table 1. Downstream benchmark accuracy ± standard error. Grey shading denotes our proposed expert-prefetching schemes. We bold the
+best and underline the second-best performing variant within each model family.
+
+                                 HumanEval         MBPP+              GSM8k         AIME24         AIME25        StrategyQA    Average
+Qwen3-30B-A3B                    0.939±0.019     0.762±0.022     0.950±0.006       0.800±0.073    0.733±0.081    0.719±0.017    0.817
+Qwen3-30B-A3B + Router-PF        0.860±0.027     0.659±0.024     0.576±0.014       0.467±0.091    0.600±0.089    0.683±0.018    0.641
+Qwen3-30B-A3B + Est-PF           0.915±0.022     0.741±0.023     0.918±0.008       0.667±0.086    0.567±0.090    0.691±0.018    0.750
+Qwen3-30B-A3B + Hybrid-PF        0.909±0.023     0.762±0.022     0.946±0.006       0.700±0.084    0.600±0.089    0.681±0.018    0.766
+GPT-OSS-20B                      0.970±0.013     0.794±0.021     0.942±0.006       0.667±0.086   0.667±0.086     0.753±0.016    0.799
+GPT-OSS-20B + Router-PF          0.933±0.020     0.804±0.020     0.929±0.007       0.667±0.086   0.600±0.089     0.738±0.017    0.779
+GPT-OSS-20B + Est-PF             0.884±0.025     0.751±0.022     0.933±0.007       0.633±0.088   0.533±0.091     0.726±0.017    0.743
+GPT-OSS-20B + Hybrid-PF          0.896±0.024     0.788±0.021     0.936±0.007       0.667±0.086   0.467±0.091     0.725±0.017    0.747
+GPT-OSS-120B                     0.970±0.013     0.815±0.020     0.955±0.006       0.800±0.073    0.767±0.077    0.789±0.016    0.849
+GPT-OSS-120B + Router-PF         0.963±0.015     0.812±0.020     0.958±0.006       0.833±0.068    0.800±0.073    0.776±0.016    0.857
+GPT-OSS-120B + Est-PF            0.951±0.017     0.804±0.020     0.949±0.006       0.700±0.084    0.700±0.084    0.760±0.016    0.811
+GPT-OSS-120B + Hybrid-PF         0.927±0.020     0.802±0.021     0.945±0.006       0.800±0.073    0.800±0.073    0.769±0.016    0.841
+
+
+
+internal representations encode signals that are sufficiently             predicted with high hit rates across most layers. For Qwen3-
+predictive of future expert selection, preserving downstream              30B-A3B, early layers and the final layer have considerably
+task performance.                                                         lower hit rates across all ranks. Low prediction hit rates are
+                                                                          present primarily in lower-ranked experts with small prob-
+Qwen3-30B-A3B exhibits more sensitivity to router-based
+                                                                          ability and weighting mass, and whose contributions have
+speculative execution. In particular, common sense reason-
+                                                                          limited impact on the resulting activation. This preserva-
+ing (StrategyQA) and simple coding tasks (HumanEval)
+                                                                          tion of dominant experts helps to explain why downstream
+incur less drastic performance degradation than math-heavy
+                                                                          task accuracy remains stable despite imperfect routing pre-
+tasks such as AIME24 and GSM8k. This reduced task ac-
+                                                                          dictions and suggests that the quasi-hidden state encodes
+curacy can be attributed to the high representational drift
+                                                                          sufficient information to recover the most influential experts
+observed in the early layers of Qwen3-30B-A3B (Figure 3),
+                                                                          for future layers.
+highlighting their dominant role in shaping representations,
+while the later layers exhibit comparatively limited drift. We            In the next section, we detail how we implement this
+further examine the importance of accurate expert selection               prefetching scheme into an optimized inference engine.
+in these layers in Section 6.                                             Based on this analysis, we report improvements using the
+                                                                          speculated experts and do not re-fetch the true experts.
+
+                                                                          5. Accelerating Inference
+                                                                          Auto-regressive LLM inference has two phases: prefill, fol-
+                                                                          lowed by decode. In prefill, the prompt tokens are processed
+                                                                          in parallel to generate the first output token. In decode, the
+                                                                          model processes the previously generated token to predict
+                                                                          the next token. As models scale, the memory footprint of
+                                                                          parameters, activations, and the KV cache can exceed the
+                                                                          HBM capacity of a single GPU. Having multiple GPUs en-
+                                                                          ables model sharding (Shoeybi et al., 2020; Huang et al.,
+Figure 5. Per-layer expert rank alignment between speculative and         2019); however, our work focuses on resource-constrained
+ground-truth routing. For each layer, we report the proportion for
+which the expert at a given rank (determined by its routing weight)       deployment settings. In such scenarios, parameters or acti-
+matches between prefetched and ground-truth routing.                      vations are often offloaded to CPU memory and transferred
+                                                                          to the GPU on demand, placing CPU→GPU transfers on the
+Expert rank alignment as shown in Figure 5 provides an                    critical path and making them a key performance bottleneck.
+execution-level view of speculative routing and its impli-
+cations for performance stability. We observe that the                    In this section, we analyze the effectiveness of prefetching
+highest-ranked experts, i.e., those receiving the largest rout-           across different inference phases. We demonstrate that it
+ing weights and contributing most to the MoE activation, are              reduces the time per output token compared to on-demand
+                                                                          loading of active experts, owing to the compute-memory
+
+                                                                      4
+                                   Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+Algorithm 1 MoE Block with Expert Prefetching (Decode)                       def wait_and_prefetch(self, layer_idx,
+                                                                                 ids, next_ids):
+Require: Model M; input activations X ∈ RB×H at layer                           compute_stream =
+    l; CPU-resident expert weights {Wl,e }Ee=1 ; GPU expert                         torch.cuda.current_stream()
+    cache/buffers Cl ; (optional) prefetched indices El and
+    gating weights Gl                                                             # Synchronize copy stream at layer 0
+                                                                                  if layer_idx == 0:
+Ensure: Output activations O; prefetched indices El+1 and                            self.copy_stream.wait_stream(
+    mixing weights Gl+1                                                              compute_stream)
+ 1: if l = 0 then
+ 2:    {Cold start: No prefetched experts}                                        # Wait for the current layer experts to
+ 3:    ids, g ← T OP K(G ATEl (X), k)                                                 finish copying
+                                                                                  self.wait_for_layer(layer_idx)
+ 4:     C OPY S YNC(Cl , {Wl,e }e∈ids ) {CPU→GPU block-
+       ing}                                                                       # Load current experts if not resident
+ 5: else                                                                          if layer_idx not in self.layers_on_gpu:
+ 6:    ids, g ← El , Gl                                                              row_ids = ids.cpu()
+ 7: end if                                                                           self.async_copy(layer_idx, row_ids)
+                                                                                     compute_stream.wait_stream(
+ 8: El+1 , Gl+1 ← G ET N EXT E XPERTS(G ATEl (X), l)                                 self.copy_stream)
+ 9: WAITA ND P REFETCH(Cl , Cl+1 , {Wl+1,e }e∈El+1 )
+    {CPU→GPU non-blocking}                                                        # Prefetch experts for the next layer
+10: O ← M O El (X, ids, g, Cl ) {runs on compute stream}                          if layer_idx + 1 < self.num_layers:
+                                                                                     row_ids = next_ids.cpu()
+                                                                                     self.async_copy(layer_idx+1, row_ids)
+overlap.
+                                                                                  # Yield control to overlap with compute
+5.1. Decode Phase Prefetching                                                     yield
+
+Consider inference on a model M with L layers, E experts                          # Offload previous layer
+per MoE layer and k experts per token, given a batch of B                         self.layers_on_gpu.discard(layer_idx-1)
+prompts. We first focus on the decode phase, where one
+                                                                                   Figure 6. Layer-wise wait and prefetch code snippet.
+token is processed per prompt at each generation step. For
+small batch sizes, the number of active experts at layer l sat-              ducing the time on the critical path. This is given by:
+isfies |El | < E. With B=1, as in single-user local inference,
+exactly k experts are active per layer - the minimum that                                    L 
+                                                                                             X
+                                                                                  pf
+must be loaded or prefetched. As B → Ek , the active expert                      Tdecode =          max tattn,l + tgate+top-k,l + texpert,l ,
+set |El | → E, assuming no overlap between active experts                                    l=1
+across tokens. Consequently, prefetching is only non-trivial                                                                                  
+                                                                                                                              tcopy (El+1 )
+with small batch sizes (B ≪ E), requiring careful expert
+selection. We therefore focus on this regime and assume                      Let tcompute,l = tattn,l + tgate+top-k,l + texpert,l . We can as-
+B=1, where expert transfers are minimized.                                   sume that tcopy (El ) = tcopy (El+1 ), as the number of experts
+First, we model a baseline scheme that loads experts on                      copied is the same for both layers. Therefore, the TPOT
+demand, after the routing step. In this case, expert weight                  improvement is given by:
+transfers lie on the critical path of execution, and the decode
+                                                                                                   L
+time or time-per-output-token (TPOT) is given by:                                                  X
+                                                                                         ∆T =            min(tcopy (El ) , tcompute,l )            (1)
+                                                                                                   l=1
+             L 
+                                                                             Therefore, the expected TPOT improvement is bounded by
+             X                                                      
+  ond
+ Tdecode =         tattn,l + tgate+top-k,l + tcopy (El ) + texpert,l ,
+             l=1
+                                                                             the minimum of the total compute time and the CPU→GPU
+                                                                             copy time. The maximum achievable speedup is 2×, when
+                                                                             compute and copy times are equal. In practice, GPUs are
+where tattn,l is the time for attention, tgate+top-k,l is the time           optimized for high compute throughput, and CPU→GPU
+for routing and selecting the top-k experts, tcopy (El ) is the              transfers occur over relatively slower interconnects such as
+time to transfer the active experts to GPU memory, and                       PCIe. As a result, copy time typically dominates (tcopy ≫
+texpert,l is the time to compute the expert FFN.                             tcompute ), limiting the achievable speedup.
+With prefetching, the transfer of next-layer expert weights                  Implementation Details. We implement CPU offloading
+is overlapped with computation from other operations, re-                    with both prefetching and on-demand expert loading in
+
+                                                                         5
+                               Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+YALIS (Singhania et al., 2025), a light-weight research in-           the inference engine. The diverse set of models chosen rep-
+ference engine that supports key optimizations from SOTA              resents the general applicability of our scheme to various
+frameworks such as vLLM (Kwon et al., 2023), including                MoE configurations. All evaluations use bf16 precision.
+torch.compile, CUDA Graphs, and optimized atten-
+                                                                      Method and Baselines We run both prefetching and on-
+tion backends.
+                                                                      demand expert loading with YALIS. For prefetching, we
+Algorithm 1 outlines the MoE block execution with expert              use the router-based scheme described in Section 4. We
+prefetching. For the first layer, no prefetched experts are           offload only the expert weights to CPU memory, keeping
+available, requiring synchronous CPU→GPU copy of the                  the router and attention parameters on the GPU due to their
+active experts after routing and top-k selection (Lines 1-            small memory footprint (Table 2).
+3). For subsequent layers, we directly reuse the prefetched                  Table 3. Hardware configurations used for evaluation.
+expert indices and mixing weights (Lines 4-6). We then
+                                                                       GPU      HBM CPU DRAM CPU↔GPU Link Models Evaluated
+compute the next layer expert indices and mixing weights
+                                                                       A6000    48 GB    128 GB       PCIe 4.0    Qwen3-30B-A3B, GLM-
+using our router-based scheme (Line 7). Thereafter, we                                                            4.7-Flash
+wait for the current layer expert weights to be copied to the          A100  80 GB       256 GB      PCIe 4.0     GPT-OSS-120B
+GPU, and initiate a transfer for the next layer experts (Line          GH200 96 GB       480 GB     NVLink C2C    Qwen3-235B-A22B
+8). Due to hardware constraints, concurrent CPU→GPU
+                                                                      Hardware and Environment. Table 3 describes the hard-
+transfers are serialized to use the same copy engine and
+                                                                      ware configurations used in our evaluation. In all settings,
+cannot be overlapped with each other. However, the asyn-
+                                                                      model parameters exceed available GPU memory, necessitat-
+chronous prefetch of the next layer experts overlaps with
+                                                                      ing CPU offloading. We use PyTorch 2.9 and the FlashAtten-
+the execution of the current layer MoE computation(Line 9).
+                                                                      tion backend (Dao et al., 2022). For performance analysis,
+This wait-and-prefetch logic is implemented as a Python
+                                                                      we collect execution traces using Nsight Systems (NVIDIA,
+context manager, and Figure 6 provides a simplified imple-
+                                                                      2018) and analyze them with Pipit (Bhatele et al., 2023).
+mentation snippet. We use double buffering to alternate
+                                                                      Although our experiments use NVIDIA GPUs, both YALIS
+GPU expert buffers across layers, enabling compute–copy
+                                                                      and our prefetching scheme are portable to AMD, which we
+overlap without additional synchronization.
+                                                                      plan to evaluate in future work.
+The offloaded MoE weights are stored in pinned CPU mem-
+                                                                      Workload and Metrics. With a batch size of one, we
+ory, which cannot be paged out by the operating system and
+                                                                      vary the prompt length over {1024, 4096, 16384, 65536}
+enables faster CPU→GPU transfers than pageable memory.
+                                                                      and generate 32 tokens. We report time-per-output-token
+We offload only the expert weights. Non-expert parameters
+                                                                      (TPOT), defined as the average time to generate each output
+(attention and router) are small enough to remain resident
+                                                                      token after the first. Decode computation scales with con-
+on the GPU, avoiding unnecessary transfers.
+                                                                      text length. Varying the prompt length thus directly controls
+                                                                      the decode compute. The small number of output tokens
+5.1.1. E XPERIMENTAL S ETUP
+                                                                      provides stable averaging without materially changing the
+In this section, we describe the experimental setup used to           per-token compute. We average results over three genera-
+evaluate the performance of decode-phase prefetching.                 tions and three independent trials and report error bars.
+Table 2. MoE model configuration and parameter memory (bf16).
+L = number of layers, E = the number of experts per MoE layer,        5.1.2. O N -D EMAND L OADING P ERFORMANCE
+H = model hidden size, HMoE = expert hidden size. Mexperts                   B REAKDOWN
+and Mother denote the memory footprint of the experts and other
+parameters, respectively.                                             We first examine the breakdown of TPOT under on-demand
+                                                                      expert loading into compute, copy, and idle times (Figure 7).
+ Model               L    E    H    HMoE    Mexperts   Mother
+                                                                      Idle time corresponds to periods when the GPU is not ac-
+ Qwen3-30B-A3B       48 128 2048 768 ∼54 GB ∼3 GB                     tively executing a kernel or a memory copy, and includes
+ GLM-4.7-Flash       47 64 2048 1536 ∼53 GB ∼3 GB
+ GPT-OSS-120B        24 32 2880 2880 ∼213 GB ∼4 GB
+                                                                      launch and synchronization overheads.
+ Qwen3-235B-A22B     94 128 4096 1536 ∼230 GB ∼14 GB                  Focusing on Qwen3-30B-A3B, we observe that copy time
+                                                                      constitutes the primary bottleneck, accounting for ∼84–88%
+Models. Table 2 lists the models used in our evaluation
+                                                                      of TPOT. This trend is consistent across all models studied.
+and their associated parameter memory costs. For GLM-
+                                                                      Compute time accounts for ∼8–13% of the total TPOT,
+4.7-Flash and GPT-OSS-120B, we retain the MoE layer
+                                                                      which forms an upper bound on the achievable improvement
+configurations, but use random expert weights and a simpli-
+                                                                      (Equation 1). In the following section, we demonstrate that
+fied RoPE-based attention mechanism due to limitations in
+                                                                      our implementation achieves this bound.
+YALIS. For GLM-4.7-Flash, we use only the routed experts
+and discard the shared expert due to incompatibility with             Comparing context lengths 1024 and 65536, we observe
+
+                                                                  6
+                                          Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+                        TPOT Breakdown (On-Demand)                             all experts are effectively active at every layer, even when
+            320                                          304.22   305.22
+                            Copy                         18.27    22.92        B = 1. Consequently, any expert prediction or prefetching
+                                                                               strategy trivially reduces to loading all experts during prefill.
+                            Idle
+            240                                                                While prefetching still outperforms on-demand loading by
+                            Compute
+Time (ms)
+
+
+
+
+                                                                               overlapping computation with data transfers, it does not
+                   160.86     169.03
+                                       156.35   160.66                         involve any non-trivial expert selection decisions in this
+            160    12.08      21.75
+                                       11.93    18.36
+                                                         267.23   265.17
+                                                                               regime, as shown in prior work (Zhang et al., 2025b). There-
+                                                                               fore, although we implement this strategy in our prefetching
+             80    142.48     141.41   138.69   136.74
+                                                                               system, we do not analyze the prefill regime further.
+
+
+              0                                                                6. Improving Prefetching Accuracy
+                   1024      65536     1024     65536    1024     65536
+                  Qwen3-30B-A3B        GLM-4.7-Flash Qwen3-235B-A22B
+                     (A6000)             (A6000)        (GH200)                The quasi-hidden state provides a strong predictive signal,
+                                                                               closely aligning with the input anticipated by the learned
+Figure 7. Breakdown of time per output token for on-demand                     router function. For architectures such as GPT-OSS, this
+expert loading across various models and prompt sequence lengths.
+                                                                               alignment is sufficiently strong, enabling accurate expert
+that copy times remain constant, but compute time increases                    speculation throughout the network and preserving down-
+with context length for all models. This trend indicates                       stream task performance.
+that overlapping compute with copy through prefetching                         With Qwen3-30B-A3B, the early layers have higher repre-
+yields greater benefits at longer sequence lengths. Due to                     sentational drift, indicating a regime of increased uncertainty
+the lack of KV-cache offloading support in YALIS, we were                      in the hidden states. In this regime, the mismatch between
+limited by GPU HBM capacity and unable to run even larger                      speculated experts and the router’s ground truth selections
+sequence lengths.                                                              is substantially higher (as seen in Figure 4). Errors in expert
+                                                                               prediction at these earlier layers may perturb downstream
+5.1.3. C OMPARING O N -D EMAND L OADING V S .                                  token representations significantly, resulting in a noticeable
+       P REFETCHING                                                            degradation in task performance. This suggests that improv-
+Figure 8 compares the TPOT of on-demand expert loading                         ing expert prediction hit rate across layers (or specifically
+with our prefetching scheme across different models and                        layers where there is high representational uncertainty) can
+prompt sequence lengths. For Qwen3-30B-A3B, prefetch-                          mitigate the downstream performance loss under speculative
+ing yields a 9–14% reduction in TPOT, with bigger gains at                     execution.
+longer sequence lengths. This behavior is consistent with
+the breakdowns in Figure 7 and indicates that our implemen-                    6.1. Neural Expert Prefetcher
+tation closely approaches the maximum achievable speedup                       Motivated by this, we train a lightweight neural estimator
+for the observed compute–copy time split. Similar trends                       that directly predicts routing decisions from layer-l repre-
+are observed across all evaluated models and architectures.                    sentations. The estimator learns a mapping from the quasi-
+On more powerful GPUs (A100 and GH200; right two                               hidden state ql to the router logits at layer l + 1. The esti-
+plots), the maximum TPOT improvement is limited to 5–8%,                       mator is designed to be shallow to avoid additional serial
+compared to 12–14% on the A6000. This difference is                            bottleneck and incur minimal runtime overhead, making it
+primarily due to the higher compute throughput of these                        suitable as a drop-in replacement for router execution during
+GPUs, indicating that prefetching provides larger gains on                     inference.
+weaker GPUs. Overall, our prefetching approach yields                          Architecturally, it is a feed-forward network with a learned
+performance improvements across diverse MoE models and                         positional embedding to account for layer-specific routing
+hardware configurations. These performance improvements                        behavior (see Appendix A for more information). Train-
+arise from overlapping computation and data transfers on                       ing is performed via distillation, minimizing the Kullback-
+separate CUDA streams, as illustrated by the Nsight Sys-                       Leibler divergence between the estimator’s predicted logits
+tems traces in Figure 2 for the Qwen3-30B-A3B model                            and those produced by the ground-truth router. We train
+(A6000, context length 65536).                                                 estimators with the following parameter counts: 4M for
+                                                                               GPT-OSS-20B, 45M parameters for GPT-OSS-120B, and
+5.2. Prefill Phase Prefetching                                                 17M parameters for Qwen3-30B-A3B.
+We now consider the prefill phase, in which all pi prompt
+tokens (0 ≤ i < B) are processed in parallel. For typical in-
+ference workloads, prompt lengths are sufficiently large that
+
+
+                                                                           7
+                                                            Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+                    Qwen3-30B-A3B (A6000)                                   GLM-4.7-Flash (A6000)                              GPT-OSS-120B (A100)                           Qwen3-235B-A22B (GH200)
+             200          On-Demand            Prefetch            200                                                 350                                               350
+                   158.9      159.7      160.2
+                                                      169.4
+                                                                         155.9      155.5      156.4      159.8        300 281.3266.1 284.0269.0 282.1269.0 283.8268.8   300 291.9277.5 295.7275.4 295.5283.2 299.0276.0
+ TPOT (ms)
+
+                        144.4      145.7      145.7        146.0
+             150                                                   150        139.8      139.7      139.7      139.9
+                                                                                                                       250                                               250
+                                                                                                                       200                                               200
+             100                                                   100
+                                                                                                                       150                                               150
+             50                                                     50                                                 100                                               100
+                                                                                                                        50                                                50
+              0                                                      0                                                   0                                                 0
+                    1024       4096 16384 65536                           1024       4096 16384 65536                       1024 4096 16384 65536                             1024 4096 16384 65536
+                           Sequence Length                                       Sequence Length                                     Sequence Length                                   Sequence Length
+Figure 8. Time per output token (TPOT) for different models, comparing on-demand expert loading and expert prefetching across varying
+sequence lengths.
+
+
+6.2. Training and Hit Rate Improvements
+
+
+
+
+                                                                                                                       Figure 10. Per-layer expert hit rate of model-specific trained esti-
+                                                                                                                       mators measured against ground-truth router-selected experts.
+Figure 9. Validation expert hit rate versus the number of tokens
+used to train the expert estimator.                                                                                    execution already preserves downstream task accuracy for
+                                                                                                                       these architectures. However, for Qwen3-30B-A3B, the Est-
+We find that the estimators achieve high prediction accuracy                                                           PF scheme substantially improves performance across all
+with relatively few training tokens (Figure 9). After 4M                                                               evaluated benchmarks relative to router-based prefetching.
+tokens, the estimator for Qwen3-30B-A3B reaches an av-                                                                 Importantly, the Hybrid-PF strategy recovers most of the
+erage hit rate of approximately 90%. After 5M tokens, the                                                              baseline performance for Qwen3-30B-A3B while applying
+estimators for GPT-OSS-120B and GPT-OSS-20B achieve                                                                    the estimator only where prefetch hit rates were low. Re-
+average hit rates of 83% and 88%, respectively, with addi-                                                             placing expert prediction in early layers alone is sufficient
+tional training yielding diminishing returns.                                                                          to significantly improve downstream task accuracy, most
+Figure 10 reports the per-layer hit rates for the trained esti-                                                        notably on GSM8k, where the hybrid approach recovers ap-
+mators. For Qwen3-30B-A3B, the estimator significantly                                                                 proximately 37% of the accuracy gap to Router-PF, bring-
+improves expert prediction accuracy in the early layers com-                                                           ing performance substantially closer to the baseline. This
+pared to the router-based speculative execution, with a max-                                                           supports the hypothesis that early layer expert mismatch
+imum improvement of approximately 25% over using the                                                                   significantly influenced the degradation in accuracy.
+fixed router.
+                                                                                                                       6.4. Additional Implications
+6.3. Estimator and Hybrid Prefetching
+                                                                                                                       Since the estimator directly predicts the router logits a layer
+We evaluate two estimator-based inference strategies as                                                                in advance, router execution is not strictly required at in-
+noted in Table 1. In the first, denoted Est-PF, the estimator                                                          ference time once the sl representation is available. This
+replaces router-based expert predictions at all layers. In the                                                         provides a router-free inference path where subsequent rout-
+second, denoted Hybrid-PF, the estimator is applied to lay-                                                            ing decisions are produced by the estimator, eliminating
+ers where router-based hit rates are low, while quasi-hidden                                                           repeated router calls and their serial overhead. While our
+state based predictions are used everywhere else.                                                                      experiments focus on Est-PF and Hybrid-PF for accuracy
+                                                                                                                       preservation, this direction may improve parallelism.
+The results in Table 1 show that for the GPT-OSS models,
+estimator-based approaches offer limited additional benefit
+in general. This is expected since router-based speculative
+
+
+                                                                                                                   8
+                             Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+7. Conclusion                                                       moe-based model inference, 2025. URL https://
+                                                                    arxiv.org/abs/2510.10302.
+MoEs enable scaling to hundreds of billions of parame-
+ters via sparse activations (Fedus et al., 2022). Under           Dao, T., Fu, D., Ermon, S., Rudra, A., and Ré, C. Flashat-
+memory-constrained settings that rely on offloading, in-            tention: Fast and memory-efficient exact attention with
+ference becomes I/O-bound due to CPU-GPU expert trans-              io-awareness. Advances in neural information processing
+fers, reducing TPOT. We introduce an inference-time expert          systems, 35:16344–16359, 2022.
+prefetching scheme that speculates future expert selection
+from internal model representations, enabling expert trans-       Eliseev, A. and Mazur, D. Fast inference of mixture-of-
+fers to overlap with computation and improving TPOT. Our            experts language models with offloading, 2023. URL
+parameter-free approach uses the quasi-hidden state to pre-         https://arxiv.org/abs/2312.17238.
+dict next-layer experts over several modern MoE architec-
+tures, while a lightweight estimator selectively improves         Fedus, W., Zoph, B., and Shazeer, N. Switch transformers:
+hit rate over high drift layers. Integrated into the YALIS          Scaling to trillion parameter models with simple and ef-
+inference engine, our approach achieves up to 5-14% TPOT            ficient sparsity, 2022. URL https://arxiv.org/
+improvement over on-demand expert loading while largely             abs/2101.03961.
+preserving downstream task accuracy. By reducing the cost
+                                                                  GLM-4.5 Team. GLM-4.5: Agentic, reasoning, and coding
+incurred by expert offloading, this work makes large open-
+                                                                   (arc) foundation models, 2025. URL https://arxiv.
+source MoE models more practical for local deployment on
+                                                                   org/abs/2508.06471.
+consumer hardware.
+                                                                  Huang, Y., Cheng, Y., Bapna, A., Firat, O., Chen, D., Chen,
+8. Future Work                                                      M., Lee, H., Ngiam, J., Le, Q. V., Wu, Y., et al. Gpipe:
+                                                                    Efficient training of giant neural networks using pipeline
+Our analysis of prefetching focused primarily on CPU-               parallelism. Advances in neural information processing
+GPU expert offloading settings on consumer and single-              systems, 32, 2019.
+GPU datacenter hardware. A natural extension is to study
+more resource-constrained deployments (e.g., smartphones,         Hwang, R., Wei, J., Cao, S., Hwang, C., Tang, X., Cao,
+robotic platforms, and embedded systems), where prefetch-          T., and Yang, M. Pre-gated moe: An algorithm-system
+ing may be applied to offloading involving disk-CPU mem-           co-design for fast and scalable mixture-of-expert in-
+ory transfers. Another direction is further examination of         ference, 2024. URL https://arxiv.org/abs/
+router-free inference: replacing per-layer routing with a          2308.12066.
+single trained estimator, which we have shown enables
+prefetching with minimal quality degradation. Validation          Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu,
+in broader settings should explore tasks beyond reasoning          C. H., Gonzalez, J., Zhang, H., and Stoica, I. Efficient
+and focus on integration into optimized inference paths.           memory management for large language model serving
+Finally, motivated by the representational similarities ob-        with pagedattention. In Proceedings of the 29th sym-
+served across many layers, multi-layer prefetching may fur-        posium on operating systems principles, pp. 611–626,
+ther improve compute-memory overlap in conjunction with            2023.
+on-device expert caching.
+                                                                  NVIDIA. Nvidia nsight systems. https://developer.
+                                                                   nvidia.com/nsight-systems, 2018.
+Impact Statement
+                                                                  OpenAI. gpt-oss-120b and gpt-oss-20b model card, 2025.
+This paper presents work whose goal is to advance the field         URL https://arxiv.org/abs/2508.10925.
+of Machine Learning. There are many potential societal
+consequences of our work, none which we feel must be              Panda, A., Baherwani, V., Sarwar, Z., Therien, B., Sahu,
+specifically highlighted here.                                      S., Goldstein, T., and Chakraborty, S. Dense back-
+                                                                    propagation improves training for sparse mixture-of-
+                                                                    experts, 2025. URL https://arxiv.org/abs/
+References
+                                                                    2504.12463.
+Bhatele, A., Dhakal, R., Movsesyan, A., Ranjan, A. K.,
+  and Cankur, O. Pipit: Scripting the analysis of parallel        Shazeer, N., Mirhoseini, A., Maziarz, K., Davis, A., Le,
+  execution traces, 2023.                                           Q., Hinton, G., and Dean, J. Outrageously large neu-
+                                                                    ral networks: The sparsely-gated mixture-of-experts
+Chen, L., Wen, Z., Wu, T., Zhang, X., and Wu, C. Sp-moe:            layer. 2017. URL https://openreview.net/
+  Speculative decoding and prefetching for accelerating             pdf?id=B1ckMDqlg.
+
+                                                              9
+                            Speculating Experts Accelerates Inference for Mixture-of-Experts
+
+Shoeybi, M., Patwary, M., Puri, R., LeGresley, P., Casper,        A. Estimator Architecture
+  J., and Catanzaro, B. Megatron-lm: Training multi-
+                                                                                                      qℓ ∈ Rd
+  billion parameter language models using model paral-
+  lelism. Technical report, 2020.
+                                                                                                              d
+                                                                                                     A ∈ Rd× m
+
+Singhania, P., Singh, S., Hough, L. D., Srivastava, A.,
+  Menon, H., Jekel, C. F., and Bhatele, A. Llm infer-                                 Pos. Embed         +
+  ence beyond a single node: From bottlenecks to mitiga-
+  tions with fast all-reduce communication. arXiv preprint                                               d    d
+                                                                                                   B ∈ R m × m ·n
+
+  arXiv:2511.09557, 2025.
+                                                                                                       SiLU
+Team, Q. Qwen3 technical report, 2025. URL https:
+  //arxiv.org/abs/2505.09388.                                                                            d
+                                                                                                   C ∈ R m ·n× m
+                                                                                                                  d
+
+
+
+
+Xue, L., Fu, Y., Lu, Z., Mai, L., and Marina, M. Moe-
+                                                                                                         +
+  infinity: Efficient moe inference on personal machines
+ with sparsity-aware expert cache, 2025. URL https:
+ //arxiv.org/abs/2401.14361.                                                                        LayerNorm
+
+
+Yu, E., Zhang, Z., Dong, D., Wu, Y., and Liao, X.                                                             d
+                                                                                                   Whead ∈ R m ×E
+  Prescope: Unleashing the power of prefetching for
+  resource-constrained moe inference, 2025a.  URL                                                     ô ∈ RE
+  https://arxiv.org/abs/2509.23638.
+                                                                  Figure 11. Outline of the neural estimator architecture. m, n > 1
+Yu, H., Cui, X., Zhang, H., Wang, H., and Wang, H. Taming
+  latency-memory trade-off in moe-based llm serving via           Figure 11 illustrates the straight forward architecture of the
+  fine-grained expert offloading, 2025b. URL https:               neural expert estimator. Given the quasi-hidden state ql ∈
+  //arxiv.org/abs/2502.05370.                                     Rd at layer l, the estimator first applies a linear projection
+                                                                             d
+                                                                  A ∈ Rd× m to obtain a reduced latent representation. A
+Zhang, M., Mishra, M., Zhou, Z., Brandon, W., Wang, J.,           learned positional embedding corresponding to layer l is
+  Kim, Y., Ragan-Kelley, J., Song, S. L., Athiwaratkun,           then added to this representation to encode layer-specific
+  B., and Dao, T. Ladder-residual: parallelism-aware ar-          routing behavior. The resulting vector is passed through a
+  chitecture for accelerating large model inference with          feed-forward network consisting of two linear layers B ∈
+  communication overlapping, 2025a. URL https://                     d  d                  d      d
+                                                                  R m × m ·n and C ∈ R m ·n× m with a SiLU non-linearity.
+  arxiv.org/abs/2501.06589.                                       A residual connection skips over the MLP block, and the
+Zhang, Y., Pinkert, G., Yang, N., Li, Y., and Yuan, D.            output is normalized using a LayerNorm. Finally, a linear
+                                                                                    d
+
+  Duoserve-moe: Dual-phase expert prefetch and cache              head Whead ∈ R m ×E produces predicted router logits ô ∈
+  scheduling for efficient moe llm inference, 2025b. URL          R for layer l + 1, where E denotes the number of experts.
+                                                                    E
+
+  https://arxiv.org/abs/2509.07379.
+
+
+
+
+                                                             10
+

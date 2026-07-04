@@ -498,7 +498,7 @@
       "pdf_url": "https://arxiv.org/pdf/2606.28133.pdf",
       "code_url": "",
       "project_page": "https://translation-as-a-bridging-action.github.io/",
-      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a \u03c0_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
+      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a π_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
       "ai_keywords": [
         "bi-manual manipulation",
         "parallel grippers",
@@ -688,7 +688,7 @@
       "pdf_url": "https://arxiv.org/pdf/2604.02869",
       "code_url": "",
       "project_page": "",
-      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) \u2014 with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
+      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) — with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
       "ai_keywords": [
         "reinforcement learning",
         "multi-turn RL",
@@ -710,8 +710,47 @@
       "folder": "papers/2026-multi-turn-rl-tool-calling-iterative-reward-calibration",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; \u00a78.1 LRs vs T6 LRs)."
+      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; §8.1 LRs vs T6 LRs)."
+    },
+    {
+      "title": "Speculating Experts Accelerates Inference for Mixture-of-Experts",
+      "authors": [
+        "Vivan Madan",
+        "Prajwal Singhania",
+        "Abhinav Bhatele",
+        "Tom Goldstein",
+        "Ashwinee Panda"
+      ],
+      "year": "2026",
+      "arxiv_id": "2603.19289",
+      "arxiv_url": "https://arxiv.org/abs/2603.19289",
+      "pdf_url": "https://arxiv.org/pdf/2603.19289",
+      "code_url": "https://github.com/axonn-ai/yalis/tree/offload_prefetch",
+      "project_page": "",
+      "abstract": "Mixture-of-Experts (MoE) models scale LLM capacity via sparse activations, but in memory-constrained inference expert weights must be offloaded to CPU, making CPU-GPU transfers dominate time-per-output-token (TPOT) - for Qwen3-30B-A3B on an A6000, transfers are 84-88% of TPOT. We propose an expert prefetching scheme that uses currently computed internal model representations (a quasi-hidden state combining the post-attention residual with expert-conditioned default vectors) to speculate next-layer expert selection one layer in advance, overlapping CPU-GPU transfer with compute. Unlike cache-hint prefetchers, we execute the speculated experts directly rather than re-fetching true router-selected experts on misprediction, preserving downstream task accuracy across coding, math, and common-sense benchmarks. Integrated into the YALIS inference engine, the approach achieves 5-14% TPOT reduction over on-demand loading (9-14% on Qwen3-30B-A3B/A6000, 5-8% on A100/GH200). For architectures where router-based speculation degrades from early-layer representational drift (Qwen3-30B-A3B), a lightweight 4-45M-parameter neural estimator trained on a few million tokens lifts expert hit rates on high-drift layers, and a Hybrid strategy (estimator only on low-hit-rate layers) recovers most of the lost accuracy.",
+      "ai_keywords": [
+        "mixture-of-experts",
+        "MoE inference",
+        "expert prefetching",
+        "CPU-GPU offloading",
+        "speculative execution",
+        "quasi-hidden state",
+        "default vector",
+        "TPOT reduction",
+        "resource-constrained inference",
+        "neural expert estimator",
+        "YALIS"
+      ],
+      "popularity": null,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2603.19289",
+      "rank": 13,
+      "status": "done",
+      "folder": "papers/2026-speculating-experts-accelerates-moe-inference",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "note": "Added iter 31 (gnhf). Fresh source-first breakdown from arXiv PDF (9pp); all 3 explicit tables (T1 accuracy 12 rows, T2 model config, T3 hardware) verbatim, all 12 Average cells reconcile source-free. New MoE-inference subarea sibling to jetspec (speculation-based). 1 paper-internal inconsistency flagged inline: section 6.3 '37% GSM8k recovery' prose contradicts T1 (Hybrid-PF GSM8k 0.946 vs baseline 0.950 = ~99% gap recovered). Figure 7-8 TPOT bar values are figure-derived; only prose-confirmed ranges stated."
     }
   ],
-  "updated_at": "2026-07-04"
+  "updated_at": "2026-07-04T03:50:00+00:00"
 }

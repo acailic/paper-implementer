@@ -66,8 +66,8 @@
   "hotPaths": [
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 37,
-      "lastAccessed": 1783128914347,
+      "accessCount": 39,
+      "lastAccessed": 1783129356505,
       "type": "file"
     },
     {
@@ -290,6 +290,18 @@
       "path": "papers/2026-multi-turn-rl-tool-calling-iterative-reward-calibration/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783129226544,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-speculating-experts-accelerates-moe-inference/paper_layout.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783129531381,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-speculating-experts-accelerates-moe-inference/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783129773915,
       "type": "file"
     }
   ],
