@@ -1,0 +1,2179 @@
+                                            One More Time: Revisiting Neural Quantum States
+                                               from a Reinforcement Learning Perspective
+
+
+                                            Juan Agustín Duque1,2,∗ Sergio García-Heredia2,∗ Vinicius Hernandes3 Eliška Greplová3
+                                                              Thomas Spriggs3,† Aaron Courville1,4,† Anna Dawid2,†
+                                                           1
+                                                             Mila Quebec AI Institute, Université de Montréal, Montréal, Canada
+                                              2
+                                                Applied Quantum Algorithms ⟨aQaL ⟩, LIACS & LION, Leiden University, Leiden, Netherlands
+                                               3
+                                                 QuTech and Kavli Institute of Nanoscience, Delft University of Technology, Delft, Netherlands
+arXiv:2607.02292v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                                                                     4
+                                                                                       CIFAR AI Chair
+                                                                                juanduquevan@gmail.com
+                                                                              ∗
+                                                                                  Equal contribution. † Equal supervision.
+
+
+
+                                                                                           Abstract
+                                                    Neural quantum states (NQS) provide a flexible and scalable framework for ap-
+                                                    proximating quantum many-body wavefunctions. Among NQS parameterizations,
+                                                    autoregressive models are especially attractive because they enable exact, indepen-
+                                                    dent sampling from the Born distribution, avoiding the autocorrelation and mixing
+                                                    issues of Markov chain methods. Yet their optimization remains comparatively
+                                                    underexplored: Adam is a scalable method but ignores function space geometry,
+                                                    while stochastic reconfiguration is principled but costly and numerically fragile in
+                                                    large models. To address this gap, we show that variational energy minimization
+                                                    can be viewed as an advantage policy-gradient problem over the Born distribution,
+                                                    motivating trust-region optimization for NQS training. We introduce Proximal
+                                                    Wavefunction Optimization (PWO), a principled trust-region algorithm that clips
+                                                    probability-ratio changes in the amplitude channel and phase increments in the
+                                                    phase channel. PWO avoids explicit matrix inversion, reuses samples across multi-
+                                                    ple updates, and combines the scalability of first-order optimization with theoretical
+                                                    guarantees. Across Ising and frustrated J1 –J2 one- and two-dimensional spin sys-
+                                                    tems, PWO improves stability and wall-clock convergence over Adam, minSR, and
+                                                    SPRING. Finally, we fine-tune a 1.5B-parameter RWKV-7 model, demonstrating
+                                                    NQS optimization at a scale over three orders of magnitude beyond prior work.
+
+                                        1     Introduction
+                                        Quantum physics seeks to predict and understand the behavior of many interacting quantum particles.
+                                        However, determining the exact ground (lowest-energy) state of a system of N quantum bits generally
+                                        requires diagonalizing a 2N × 2N Hamiltonian matrix, quickly rendering exact methods intractable
+                                        at scale. Variational approaches address this exponential complexity by optimizing a parameterized
+                                        wavefunction ansatz to approximate the ground state. Neural quantum states (NQS) [Carleo and
+                                        Troyer, 2017, Lange et al., 2024] build upon this by using neural networks as expressive wavefunction
+                                        representations, capable of capturing complex correlations [Nomura and Imada, 2021] and high
+                                        entanglement [Gauvin-Ndiaye et al., 2025], as well as scaling to high-dimensional systems [Pescia
+                                        et al., 2024], where traditional methods struggle.
+                                        The practical success of NQS depends not only on expressivity but also on the ability to sample
+                                        from and optimize the variational distribution. State-of-the-art NQS methods [Wu et al., 2024]
+                                        primarily rely on Markov Chain Monte Carlo (MCMC) to estimate energies and gradients, which
+                                        can introduce autocorrelation, slow mixing, and unreliable exploration in difficult regimes [Wolff,
+                                        1990, Del Debbio et al., 2004]. Autoregressive NQS remove this sampling bottleneck by factorizing
+                                        the Born distribution and enabling exact, independent sampling [Sharir et al., 2020, Hibat-Allah
+
+                                        Preprint.
+et al., 2020, Moss et al., 2025]. As a result, they provide a clean setting for variational optimization:
+samples can be drawn directly from the current wavefunction, and training dynamics are no longer
+confounded by Markov chain limitations. Despite these advantages, their adoption remains limited,
+as stable optimization is a central bottleneck for training accurate autoregressive models.
+Existing optimization methods expose a sharp trade-off. First-order optimizers such as Adam [Kingma
+and Ba, 2014] are computationally efficient and scale naturally to large neural networks, but they
+ignore the geometry of the variational wavefunction and can converge unstably or inaccurately in
+NQS applications [Pfau et al., 2020, Liu et al., 2025]. Stochastic reconfiguration (SR), and scalable
+variants such as minSR [Chen and Heyl, 2024], are more geometrically principled because they
+approximate natural-gradient descent in wavefunction space. However, they require solving large
+and often ill-conditioned linear systems, with costs that become prohibitive for large networks or
+large sample regimes. Thus, autoregressive NQS resolve an important sampling problem, but stable
+first-order optimization of large autoregressive wavefunction models remains a central obstacle,
+which has been approached recently with transfer learning [Merali et al., 2026].
+Contributions. This gap points to a missing optimization principle in NQS. In this work, we observe
+that the variational objective in NQS is mathematically equivalent to a policy-gradient objective in
+reinforcement learning (RL) under certain assumptions. While this connection has been implicitly
+present since early work [Carleo and Troyer, 2017], it has not been formalized or leveraged to design
+modern optimizers. In this work, we show that the RL-style trust-region optimization improves NQS
+training scalability and stability. Our contributions are as follows:
+       • We formally connect variational energy minimization and policy-gradient RL, showing that
+         the NQS gradient admits an advantage-weighted form over the Born distribution.
+       • We introduce Proximal Wavefunction Optimization (PWO), an algorithm for NQS training
+         inspired by Proximal Policy Optimization (PPO) [Schulman et al., 2017], and prove that the
+         PWO surrogate satisfies a trust-region improvement bound, allowing sample reuse.
+       • We show that PWO improves the stability and convergence speed of autoregressive NQS
+         compared to Adam and minSR on standard benchmarks (1D, 2D Ising and J1 –J2 ).
+       • Finally, we demonstrate the scalability of PWO by fine-tuning a 1.5 billion parameter
+         RWKV-7 LLM [Peng et al., 2025] on the 1-D Ising model.
+
+2    Background
+2.1 Reinforcement Learning
+Reinforcement Learning (RL) is a machine learning paradigm in which an agent learns to make
+decisions by interacting with an environment. At each time step t, the agent observes a state st ,
+selects an action at , and then receives a reward rt+1 and a new state st+1 from the transition function
+P (·|st , at ). The goal of the agent is to learn a policy that maximizes the expected return over
+time. Let πθ denote a policy parameterized by θ. Formally, the return is defined over a trajectory
+τ := (s0 , a0 , r1 , s1 , a1 , r2 , . . . ), which is a sequence of states, actions, and rewards generated by the
+agent-environment interaction. Following the notation of Agarwal et al. [2021], the probability of a
+trajectory τ under πθ is given by
+                     Pθ (τ ) = µ(s0 )πθ (a0 |s0 )P (s1 |s0 , a0 )πθ (a1 |s1 )P (s2 |s1 , a1 ) . . . ,         (1)
+where µ(s0 ) denotes the initial distribution over states. The objective of RL is to find a policy that
+maximizes the expected discounted return, which is captured by the state-value and action-value
+functions of a policy πθ :
+                      "∞                  #                      "∞                           #
+                        X                                          X
+        πθ                   t                   πθ                      t
+      V (s) := Eπθ         γ rt s0 = s , Q (s, a) := Eπθ               γ rt s0 = s, a0 = a , (2)
+                          t=0                                            t=0
+respectively. In policy optimization, an agent maximizes its expected return by performing gradient
+ascent with a policy gradient estimator [Williams, 1992] of the form:
+                                          "∞                                     #
+                                            X
+                         πθ                      t πθ
+                    ∇θ V (µ) = Eτ ∼Pθ           γ A (st , at )∇θ log πθ (at |st ) .             (3)
+                                                t=0
+Here Aπθ (s, a) := Qπθ (s, a) − V πθ (s) denotes the advantage of taking action a while in state s, i.e.,
+the expected return of taking action a relative to the policy average while in state s.
+
+
+                                                       2
+2.2 Neural Quantum States
+One of the key tasks in theoretical quantum many-body physics is to approximate the ground-state
+wavefunction of a system with many interacting particles. For a system of N spin-1/2 particles, a
+configuration is a binary vector s ∈ {±1}N , and the wavefunction can be viewed as a complex vector
+|ψ⟩ in a Hilbert space H (see Appendix A) indexed by all 2N configurations. Equivalently, it defines
+a function s 7→ ψ(s), where ψ(s) ∈ C is the amplitude assigned to configuration s:
+                                               X
+                                      |ψ⟩ =           ψ(s) |s⟩ ,                                 (4)
+                                                  s∈{±1}N
+
+where we use the Dirac, bra-ket, notation (see Appendix A). The exponential size of this vector
+makes explicit representations intractable for large N . Neural quantum states (NQS) address this by
+parameterizing the amplitude function with a neural network, fθ , so that fθ (s) provides a compact
+approximation to ψ(s) [Carleo and Troyer, 2017, Dawid et al., 2025]. In practice, NQS models
+output the logarithm of the complex amplitude,
+                          fθ (s) = log ψθ (s) = log |ψθ (s)| + i arg ψθ (s),                         (5)
+which separates the wavefunction into a log-modulus and a phase, usually handled by separate
+networks (channels). This representation is numerically convenient because amplitudes can vary over
+many orders of magnitude. By the Born rule, normalized wavefunctions induce a probability distribu-
+                                           2
+tion over configurations, Pθ (s) ∝ |ψθ (s)| . In this work, we focus on autoregressive NQS, which
+explicitly factorize Pθ and enable exact independent sampling from the Born distribution.
+2.3   Finding the Ground State
+The Hamiltonian Ĥ is the energy operator of a quantum system: it encodes the interactions, external
+fields, and kinetic terms that determine which wavefunctions have low or high energy. A popular
+application of the NQS framework is to find the ground state of quantum systems. Given a description
+of a physics system within a Hamiltonian, Ĥ, the ground state is the eigenstate |ψ0 ⟩ corresponding to
+the lowest eigenvalue E0 . This can be cast as a minimization problem:
+                                                   ⟨ψ|Ĥ|ψ⟩
+                               E0 ≤ E[ψ] =                  ,      ∀ |ψ⟩ ∈ H,                        (6)
+                                                    ⟨ψ|ψ⟩
+where the equality holds if and only if |ψ⟩ belongs to the ground-state eigenspace – this is known as
+the variational principle. Taking this variational formulation of the ground state as the starting point,
+so-called variational methods define a parametric family of states |ψθ ⟩ and approximate the ground
+state by solving
+                                                              ⟨ψθ |Ĥ|ψθ ⟩
+                             θ ∗ = argmin E[ψθ ] = argmin                  .                         (7)
+                                      θ                  θ      ⟨ψθ |ψθ ⟩
+In the case of NQS, this family of functions is given by a neural network, as already discussed.
+2.4 Variational Monte Carlo
+To efficiently compute a minimizer of Eq. (7), NQS uses Monte Carlo estimates. This approach is
+known as variational Monte Carlo (VMC). In particular, the energy can be written as
+                             ⟨ψθ |Ĥ|ψθ ⟩ X
+                                             Pθ (s) Eθloc (s) = Es∼Pθ Eθloc (s) ,
+                                                                              
+                  E[ψθ ] =               =                                                           (8)
+                              ⟨ψθ |ψθ ⟩    s
+
+where we define
+                                         2                         X ψθ (s′ )
+                                 |ψθ (s)|
+                    Pθ (s) = P               2,     Eθloc (s) :=                  ⟨s|Ĥ|s′ ⟩ .       (9)
+                                          ′
+                                 s′ |ψθ (s )|
+                                                                         ψθ (s)
+                                                                    s′
+
+With this formulation, NQS estimates the loss function by sampling a set of spin configurations
+{si }M                                                                            loc
+     i=1 from the parameterized distribution Pθ and computing the sample mean of Eθ (si ):
+
+                                                            M
+                                                       1 X loc
+                                  L(θ) ≈ Ēθloc ≡           E (si ).                                (10)
+                                                       M i=1 θ
+
+
+                                                      3
+Algorithm 1: Proximal Wavefunction Optimization (PWO)
+Input: Hamiltonian Ĥ, NQS ψθ , batch size M , inner epochs K, amplitude clip ϵ, phase clip δ
+Initialize θ
+while not converged do
+     θ old ← θ
+     sample {si }Mi=1 ∼ Pθ old
+     Cache reference log-probabilities, log Pθold (si ); phases, arg ψθold (si ); and normalized real
+     and imaginary advantages, AR                    I                                 M
+                                    θ old (si ) and Aθ old (si ) respectively, of {si }i=1 .
+     for k = 1, . . . , K do
+          Compute current log-probabilities log Pθ (si ) and phases arg ψθ (si ) for {si }M    i=1
+          ri ← exp(log Pθ (si ) − log Pθold (si ))                                                     
+          ϕi ← 2 · atan2 sin(arg ψθ (si ) − arg ψθold (si )), cos(arg     ψθ (si ) − arg ψθold (si ))
+          ℓR               R                                     R
+           i ← max ri Aθ old (si ), clip(ri , 1 − ϵ, 1 + ϵ)Aθ old (si )                 
+          ℓi ← stop_gradient(ri ) · max ϕi Aθold (si ), clip(ϕi , −δ, δ)AIθold (si )
+           I                                      I
+
+                           1
+                             PM       R       I
+                                                
+          θ ← θ − η∇θ M        i=1 ℓi + ℓi .
+
+
+
+
+By differentiating Eq. (8) (see Appendix B.2) it is possible to show that its gradient with respect to θ
+can be expressed as an expected value over Pθ and estimated using either MCMC sampling or direct
+sampling of autoregressive models:
+                  ∂θi L(θ) = Es∼Pθ 2 Re Eθloc (s) − Es∼Pθ [Eθloc (s)] Oi (s)∗ ,
+                                                                                 
+                                                                                                    (11)
+for i = 1, . . . , P , where Oi (s) = ∂θi log ψθ are the so-called score functions.
+2.5 Stochastic Reconfiguration
+Stochastic Gradient Descent (SGD) [Robbins and Monro, 1951] is a simple and effective optimization
+method in many scenarios. However, in the context of VMC, it can suffer from slow convergence and
+instability due to the complex geometry of the parameter space. The key issue is that small changes in
+the parameters, θ, do not necessarily correspond to small changes in the quantum state |ψθ ⟩.
+Stochastic reconfiguration (SR) [Sorella, 1998], which generalizes natural gradient descent [Amari,
+1998] to VMC, preconditions the gradient ∇θ L(θ) to ensure that the distance between |ψθ ⟩ at one
+training iteration and the next is small. This distance is given by the infidelity between the two states
+and approximated to second order by the Fubini-Study metric,
+                      Sij = Re {Covs∼Pθ [Oi∗ (s), Oj (s)]} ,         i, j = 1, . . . , P,                  (12)
+which encodes the local geometry of the Hilbert space at the current parameter configuration. In
+mathematical terms, SR modifies the update rule in the following way:
+                                        θ ← θ − ηS−1 ∇θ L(θ),                                              (13)
+where η ∈ R is the learning rate. We discuss the high computational costs of SR and its more recent
+improvements in Appendix C.1, motivating the use of first-order optimization methods.
+
+3    Proximal Wavefunction Optimization
+Here, we introduce a new optimization procedure for training NQS. We first draw an equivalence
+between the current NQS optimization paradigm and the policy gradient update in RL, and then use
+this to motivate applying Proximal Policy Optimization to NQS.
+
+Proposition 3.1 (Policy-gradient form of variational energy minimization). Assume the Hamiltonian
+is stoquastic, i.e. its matrix representation in a chosen computational basis has non-positive off-
+diagonal elements. Then we can assume fθ = log ψθ = log |ψθ |, and the gradient of the variational
+energy can be written in policy-gradient form as
+                  ∇θ E[ψθ ] = Es∼Pθ Eθloc (s) − Es∼Pθ [Eθloc (s)] ∇θ log Pθ (s) .
+                                                                              
+                                                                                              (14)
+In particular, variational energy minimization is equivalent to an advantage policy-gradient update
+over configurations. For a proof, see Appendix B.1.
+
+
+                                                     4
+       Reinforcement Learning                              Variational Monte Carlo
+Policy                 πθ (a | s)          Born distribution               Pθ (s) ∝ |ψθ (s)|2
+Advantage             Aπθ (st , at )       Centered local energy       ∆E(s) = Eθloc (s) − E[ψθ ]
+Policy gradient      Aπθ ∇θ log πθ         VMC force                   2 Re[∆E(s)∇θ log ψθ∗ (s)]
+KL trust region      DKL (πθold ∥πθ )      Infidelity                        I(ψθ , ψθ+δθ )
+Fisher matrix              F               Fubini–Study metric                     S
+   Table 1: Correspondence between RL policy-gradient methods and VMC methods for NQS.
+
+This proposition establishes a direct link between the NQS and RL frameworks (see also Tab. 1)
+by relating Eqs. (11) and (14) which motivates our algorithm, Proximal Wavefunction Optimization
+(PWO). The key observation is that the SR gradient is the result of solving the approximate constraint
+optimization problem of minimizing the expected energy while keeping the change in infidelity
+smaller than some quantity, δ. An analogous problem has been studied in the RL literature for a long
+time, but referred to as trust region optimization [Kakade and Langford, 2002, Schulman et al., 2015,
+2017]. The fundamental idea is similar to that of SR: maximizing the expected reward while keeping
+the change in the total variation distance smaller than some quantity, δ.
+Proximal Policy Optimization (PPO) [Schulman et al., 2017], introduces a simple heuristic that
+empirically shows monotonic improvements by constraining updates to keep the updated policy close
+to the previous one. Applied to NQS, PPO would minimize the following surrogate loss:
+          Lclip                            R                                    R
+                                                                                        
+            mod (θ) = Es∼Pθold max rθ (s)Aθ old (s), clip(rθ (s), 1 − ϵ, 1 + ϵ)Aθ old (s) ,  (15)
+where rθ = Pθ /Pθold is the importance sampling ratio between the updated and previous distribu-
+tions, ϵ is the amplitude clip, the max comes from solving a minimization problem, and
+                      AR
+                                        loc                   loc        
+                        θ old (s) := Re Eθ old (s) − Es∼Pθold Re Eθ old (s)   ,             (16)
+is the equivalent of the advantage estimate, yielding the local energy of configuration s relative to
+the expected energy under the current NQS. In the case of RL, clipping ensures that policy updates
+remain conservative, thereby maintaining stability during optimization.
+While PPO is a natural fit for the amplitude channel, it does not by itself account for the full VMC
+gradient. As shown in Appendix B.3, the variational gradient also contains an imaginary component,
+which governs how the phase of the wavefunction should evolve. We, therefore, introduce a second
+proximal objective that controls phase updates directly by constraining the wrapped phase increment
+between the current and reference models. Concretely, letting ϕθ (s) denote the wrapped phase
+difference (see Appendix B.4), we minimize the clipped phase surrogate loss
+      Lclip                                          I
+                                                                              I       
+       arg (θ) = Es∼Pθold sg rθ (s) max ϕθ (s)Aθ old (s), clip ϕθ (s), −δ, δ Aθ old (s) ,         (17)
+where sg(·) denotes the stop-gradient operator (see Theorem B.5), and
+                    AIθold (s) := Im Eθloc   (s) − Es∼Pθold Im Eθloc
+                                                                        
+                                         old                        old
+                                                                        (s) .                      (18)
+The imaginary part of the local energy has zero expectation, so the centering is retained only to mirror
+the RL advantage. Equation (17) is the phase analog of PPO: instead of clipping a probability ratio, it
+clips the phase increment itself, preventing abrupt rotations of the wavefunction while still following
+the imaginary part of the VMC gradient. Using the phase increment instead of the ratio of phases
+ensures that the gradient of the combined loss (Eqs. (15)+(17)) matches the original one (Eq. (11))
+when we are on-policy, i.e., when the importance sampling ratio rθ is one (no sample reuse).
+PWO combines the amplitude and phase losses into an efficient (see Appendix C.2) first-order
+optimization procedure. For the amplitude channel, Proposition 3.1 shows that, when the phase is
+fixed, variational energy minimization takes the form of an advantage-weighted policy-gradient update
+over configurations, which naturally motivates a PPO-style clipped surrogate based on importance
+ratios. For the phase channel, Appendix B.6 shows that the imaginary part of the VMC gradient can
+be conservatively optimized through a surrogate that constrains the phase increment. In practice,
+PWO performs K inner updates on a frozen batch of configurations sampled from the reference
+Born distribution Pθold , clipping probability-ratio changes for the amplitude and wrapped phase
+increments for the phase. Because the same batch is reused across inner steps, the phase objective
+includes detached importance weights to correct for the mismatch between the reference and current
+sampling distributions (see Theorem B.5). Algorithm 1 summarizes the resulting procedure.
+
+
+                                                   5
+                 old
+             wavefunction
+                ψθold
+                                                                         surrogate
+                                                                           loss
+
+                                             inside ∇L(θ) ≈ ∇L(θold )
+                          trust
+                         region                                                      true
+                                                                                     loss
+
+                                              current                    outside ∇L(θ) ̸= ∇L(θold )
+                                            wavefunction
+                                                 ψθ
+
+
+
+Figure 1: Trust-region intuition for PWO. Inside the trust region, the surrogate landscape gives a
+reliable local improvement direction; outside the trust region, the surrogate and true landscapes may
+disagree substantially.
+
+
+4   Theoretical Analysis
+The theoretical justification for PWO parallels monotonic-improvement analyses in policy optimiza-
+tion. In CPI [Kakade and Langford, 2002] and TRPO [Schulman et al., 2015], the true return change
+is controlled by a surrogate objective under a reference policy plus a penalty for moving too far from
+it. PWO follows the same principle with the return replaced by negative variational energy, probability
+ratios controlling the amplitude channel, and phase increments controlling the phase channel. Figure 1
+illustrates this principle: trust regions make sample reuse possible by keeping optimization close
+enough to the reference wavefunction ψθold so that the surrogate loss function evaluated on old
+samples remains a controlled approximation to the current energy landscape. Theorem 4.1 shows that
+this proximal construction preserves the exact local VMC direction.
+Theorem 4.1 (First-order consistency of PWO). Let |ψθ ⟩ be differentiable at θ old , and assume
+common support. For ϵ, δ > 0,
+                                              
+                   ∇θ Lclipmod (θ) + L clip
+                                       arg  (θ)     = ∇θ E[ψθ ]|θ=θold .                    (19)
+                                                    θ=θ old
+For a proof see Appendix B.6.
+Thus, the first PWO inner update exactly matches the VMC gradient; the surrogate only controls how
+far this direction is followed while reusing samples. For finite updates, local agreement is not enough.
+Let rθ = Pθ /Pθold and αθ be the wrapped phase increment and define
+                                              √
+                                                 rθ cos αθ AR                 I
+                                                                                    
+                      Aθold (θ) := 2Es∼Pθold                  θ old + sin αθ Aθ old    ,            (20)
+
+Theorem 4.2 (Infidelity energy bound). Let |ψθold ⟩ and |ψθ ⟩ be normalized wavefunctions with
+common support. Then
+                                                                                  
+    E[ψθ ] − E[ψθold ] ≤ Aθold (θ) + 2 Ĥ − E[ψθold ]1
+                                                                 p
+                                                             1 − 1 − I(ψθold , ψθ ) .     (21)
+                                                              ∞
+For a proof see Appendix B.4.
+This bound is independent of clipping and holds for any finite update. The clipped PWO certificate
+follows by adding the stronger requirement that the realized update satisfies the amplitude and phase
+trust regions globally, not only on the sampled batch (which is encouraged by the method but not
+guaranteed, see Appendix B.7).
+
+
+
+                                                   6
+                 10−1                                                                       100
+
+                                                                                           10−1
+
+Relative Error
+                      −3
+                 10                                                                        10−2
+
+
+
+
+                                                                                 V-score
+                                                                                           10−3
+                 10−5
+                                                                                           10−4
+
+                                                                                           10−5
+                 10−7
+                                                                                           10−6
+
+                           0    5       10       15       20      25    30                        0     5          10       15       20      25    30
+                                     Relative Time (Wall) [min]                                                 Relative Time (Wall) [min]
+                               PWO       adam        minSR        SPRING                               PWO          adam        minSR        SPRING
+
+
+
+Figure 2: Comparison of PWO, Adam, minSR, and SPRING on the transverse-field Ising model over
+10 random seeds. All methods were run with 1024 samples on a single NVIDIA L40S GPU.
+
+
+Corollary 4.3 (Clipped PWO improvement certificate). Assume the conditions of Theorem 4.2,
+bounded centered local energies, and global constraints rθ (s) ∈ [1 − ϵ, 1 + ϵ] and |αθ (s)| ≤ δ for
+all s, with 0 ≤ ϵ ≤ 1 and 0 ≤ δ ≤ π. Then there exists Cθold < ∞ such that
+                                                                    √                !
+                                                               1 +    1 −  ϵ 2       δ
+                            clip
+      E[ψθ ] − E[ψθold ] ≤ Lmod (θ) + Lclip
+                                       arg (θ) + 2Cθ old  1−                   cos2       .     (22)
+                                                                     2               2
+For a proof see Appendix B.7.
+The final term is the trust-region penalty. It vanishes as ϵ, δ → 0 and grows as either clipping range is
+relaxed. Hence, if the clipped surrogate is minimized until the right-hand side of Eq. (22) is negative,
+the updated wavefunction is guaranteed to have lower energy. Together, the results show that PWO
+follows the exact local VMC direction, while finite-update errors are controlled generally by infidelity
+and, under global clipping, by explicit amplitude and phase trust-regions.
+
+5                     Experiments
+5.1 Spin-chain benchmarks
+We evaluate PWO for 1.5M-parameter autoregressive NQS on three different spin systems. Each
+systems consists of a one-dimensional spin-1/2 chain of N = 12 sites with periodic boundary
+conditions, so that site indices are understood modulo N . Let σ̂iα , α ∈ {x, y, z}, denote the
+Pauli operator on site i, and let Ŝi = 1/2(σ̂ix , σ̂iy , σ̂iz ). For each Hamiltonian, we minimize the
+variational energy E[ψθ ] and report the relative error with respect to the exact ground-state energy
+E0 , ϵrel = (E[ψθ ] − E0 )/E0 , which can be computed for these relatively small systems. We
+also report the V-score [Wu et al., 2024], a scale-invariant convergence metric based on the energy
+variance that vanishes for exact eigenstates. The two Hamiltonians chosen offer increasing difficulty,
+as the underlying physics requires more complicated functions to represent. We use the same NQS
+architecture and the same number of Monte Carlo samples for all optimizers, so differences in
+performance reflect optimization rather than model capacity. For details about the hyperparameter
+search and the used architecture, see Appendices D.1 and D.2.
+Transverse Field Ising Model.
+                                                                       N
+                                                                       X                              N
+                                                                                                      X
+                                                      ĤIsing = −J           σ̂iz σ̂i+1
+                                                                                    z
+                                                                                        −h                  σ̂ix .                                (23)
+                                                                       i=1                            i=1
+Here, J = 1 is the ferromagnetic coupling strength and h = 1 is the transverse-field strength. This
+Hamiltonian is a standard sign-problem-free benchmark: the diagonal interaction term favors aligned
+spin configurations, while the transverse field introduces quantum fluctuations by flipping individual
+spins. Therefore, Proposition 3.1 holds exactly.
+Heisenberg J1 –J2 Chain.
+                                                    N
+                                                    X                        N
+                                                                             X
+                                    ĤJ1 –J2 = J1         Ŝi · Ŝi+1 + J2            Ŝi · Ŝi+2 ,             J1 > 0, J2 > 0.                   (24)
+                                                    i=1                      i=1
+
+
+                                                                             7
+                                                                                           102
+
+                      −1
+                 10
+                                                                                           100
+
+Relative Error   10   −3
+
+
+
+
+                                                                                V-score
+                                                                                          10−2
+
+                 10−5
+                                                                                          10−4
+
+                 10−7
+                                                                                          10−6
+
+                           0    5       10       15       20      25   30                        0    5       10       15       20      25   30
+                                     Relative Time (Wall) [min]                                            Relative Time (Wall) [min]
+                               PWO       adam        minSR        SPRING                             PWO       adam        minSR        SPRING
+
+
+
+Figure 3: Comparison of PWO, Adam, minSR, and SPRING on the Heisenberg J1 –J2 chain over 10
+random seeds. MinSR is highly unstable on this Hamiltonian, with 6 out of 10 runs producing NaNs.
+All methods were run with 1024 samples on a single NVIDIA L40S GPU.
+
+
+We set J1 = 1 and J2 = 0.5, i.e., J2 /J1 = 0.5. At this ratio the next-nearest-neighbor interaction
+maximally frustrates the nearest-neighbor antiferromagnetic coupling, placing the system at the
+Majumdar–Ghosh point, where a highly entangled ground state with a complex sign structure makes
+both variational optimization and Monte Carlo sampling particularly challenging [Sorella, 1998].
+Unlike ĤIsing , the Hamiltonian ĤJ1 –J2 requires a nontrivial sign structure in the computational basis;
+we use a complex-valued parameterization so that PWO can learn this structure through its phase
+channel. This setting evaluates whether the clipped phase surrogate (Eq. (17)) remains a useful
+practical heuristic. We make an analogous study for J1 = 0.25 and J2 = 0 (the so-called Heisenberg
+chain) in Appendix E.1.
+All results are computed over 10 random seeds. Since several runs reach high-precision errors,
+numerical instabilities can produce extreme outliers. Mean-and-standard-deviation summaries are
+therefore poorly suited to this regime, as a single unstable run can distort both the central estimate and
+the uncertainty band. Following Agarwal et al. [2022], we instead report interquartile statistics: at
+each evaluation time, curves show the interquartile mean (IQM), computed by averaging the middle
+50% of seeds after discarding the lowest and highest quartiles. Shaded regions denote the interquartile
+range, from the 25th to the 75th percentile. This provides robust central estimates while still showing
+run-to-run variability. The figures with all individual seeds plotted are shown in Appendices E.1-E.3.
+We discuss limitations of our approach in Appendix C.4.
+
+5.2                    Convergence and Stability Results
+Figure 2 shows that PWO converges the fastest of the four optimizers on the 1D Ising model, reaching
+relative error 10−7 in approximately 5 minutes, while minSR requires approximately 30 minutes
+to reach the same accuracy. The V-score follows the same trend: PWO rapidly suppresses energy
+fluctuations, indicating that the proximal objective is not merely improving the energy estimate, but
+driving the state toward an eigenstate. Adam and SPRING also make steady progress, but require
+more wall-clock time to reach the same accuracy. minSR is stable on this easier Hamiltonian, but its
+per-step cost makes it substantially slower in wall-clock time.
+On the J1 –J2 Hamiltonian in Figure 3, PWO reaches relative error 10−7 in approximately 15 minutes
+while maintaining a steadily decreasing V-score, showing that the learned state is converging in both
+energy and variance. In contrast, Adam plateaus several orders of magnitude above PWO due to
+outliers. Also, the PWO contrast with minSR and SPRING is sharper than in the Ising case: minSR
+is numerically unstable, with 6 out of 10 runs producing NaNs, and both remain at a relative error of
+10−1 after 30 minutes. Despite using curvature-inspired updates, these methods struggle to make
+progress and exhibit numerical instability. This is the strongest empirical evidence for the central
+claim of the paper: a PPO-style proximal objective can retain the low wall-clock cost of first-order
+optimization while providing the stability needed to train expressive NQS on difficult quantum
+Hamiltonians. Experiments on the Heisenberg chain in Appendix E.1 offer the same conclusion. We
+also plot all individual seed curves without aggregation or filtering for greater clarity and visibility in
+Appendix E.1.
+
+
+                                                                            8
+                         200                                                                             102
+
+
+Mean Real Energy         100
+
+
+
+
+                                                                                              V-score
+                                                                                                         101
+
+                           0
+                                                                                                         100
+                   −100
+
+                                                                                                        10−1
+                   −200
+                                0        5      10       15       20      25        30                         0        5      10       15       20      25      30
+                                             Relative Time (Wall) [min]                                                     Relative Time (Wall) [min]
+                                       PWO                                     adam                                 PWO                                       adam
+
+
+Figure 4: Two-dimensional frustrated J1 –J2 Heisenberg model on the 10 × 10 lattice. Left: mean
+real energy. Right: V-score. PWO reaches lower energies faster than Adam and maintains a lower
+variance-based error signal over the same wall-clock budget.
+
+
+5.3 Two-dimensional J1 –J2 model on the square lattice
+We next test whether PWO remains effective beyond one-dimensional chains on a frustrated square-
+lattice J1 –J2 Heisenberg model with periodic boundary conditions and system size of 10 × 10. We
+use a complex patch-autoregressive transformer with two-dimensional RoPE and enforce the zero-
+magnetization sector. Since exact diagonalization is intractable at this size, we compare optimizers
+using the mean real energy and the V-score. As shown in Fig. 4, PWO decreases the energy faster
+than Adam and reaches a lower-energy regime within the same wall-clock budget. The V-score
+follows the same trend, indicating that the proximal objective also improves stability on this frustrated
+two-dimensional benchmark. Individual seed runs are shown in Appendix E.1.
+5.4                        Scalability Experiments
+
+                         10−1
+
+                         10−2
+
+                         10−3
+        Relative Error
+
+
+
+
+                         10−4
+
+                         10−5
+
+                         10−6
+
+                         10−7
+
+                         10−8
+
+                         10−9
+                                    30 min   1h          2h   4h           30 min        1h              2h        4h           30 min    1h       2h     4h
+
+                                                  tiny                                        small                                        medium
+                                                                               minSR                    adam        PWO
+
+
+Figure 5: Wall-clock scaling comparison across model sizes and optimization methods. Boxplots
+show the interquartile mean relative error over seeds, with boxes indicating the interquartile range
+and lines indicating the min and max. Results are grouped by model size and wall-clock time, and
+run on a single NVIDIA A100 GPU.
+
+Figure 5 compares the scaling behavior of PWO, Adam, and minSR for increasing NQS model sizes
+on the Heisenberg J1 –J2 chain (see Appendix D.7 for details). PWO exhibits consistent stability and
+monotonic energy improvement as NQS size grows, reaching near-final energies within the first 30
+minutes. In contrast, minSR is both unstable and never reaches competitive energy values. Adam
+performs best for the tiny network, but degrades in stability and efficiency for small and medium
+NQS, where PWO is both faster and more reliable. In particular, achieving comparable energy scales
+with the medium NQS requires roughly 4× more time with Adam than with PWO. In Appendix C.2,
+we show that PWO converges faster than other optimizers because it does more optimization steps per
+unit of time. Although Adam attains lower energies after extended training of 4 hours, the observed
+scaling trend suggests that this advantage may diminish for yet larger networks. In Appendix E.2 we
+perform additional scaling experiments on the number of samples and system size.
+
+
+                                                                                         9
+5.5                 NQS Fine-tuning of Large Language Models
+                                                                                         100
+                 10−1
+
+                                                                                        10−1
+                 10−2
+Relative Error
+
+
+
+                                                                                        10−2
+
+
+
+
+                                                                              V-score
+                 10−3
+
+                                                                                        10−3
+                 10−4
+
+                 10−5                                                                   10−4
+
+
+                 10−6                                                                   10−5
+                        0   50      100      150      200      250      300                    0   50      100      150      200      250      300
+                                  Relative Time (Wall) [min]                                             Relative Time (Wall) [min]
+                            PWO                                      adam                          PWO                                      adam
+
+
+
+                    Figure 6: Fine-tuning curves of a 1.5B-parameter RWKV7LLM on the 1-D Ising Model.
+
+Figure 6 shows fine-tuning results for a 1.5B-parameter RWKV-7 model on the transverse-field Ising
+chain. PWO achieves a lower final relative error and V-score than Adam, while maintaining stable
+training across the full wall-clock budget. This improvement is not meant to establish that LLMs or
+large networks [Moss et al., 2026] are the right inductive bias for one-dimensional Hamiltonians;
+rather, it shows that the proximal objective is effective when the ansatz is scaled by more than three
+orders of magnitude beyond existing NQS in the literature [Rende et al., 2025].
+
+6                  Related Work
+Reinforcement Learning and Ground State Search. Ground state search has been treated as an
+optimal control problem via Feynman-Kac representations [Barr et al., 2020], and RL frameworks
+have been developed for lattice models by treating stoquastic Hamiltonians as reward functions
+[Gispen and Lamacraft, 2022]. Recent meta-learning approaches [Jae et al., 2025] leverage RL
+to optimize the quantum state learning process itself. However, these works apply RL by either
+reformulating the problem theoretically or optimizing the learning procedure. We instead use RL as
+the primary optimization framework applying it directly on the NQS ansatz.
+Importance Sampling and Trust Regions. Sample reuse and proximal objectives have been previ-
+ously explored for non-autoregressive NQS optimization. Yang et al. [2020] introduced importance
+sampling gradient optimization (ISGO), which reuses Markov chain samples across multiple gradient
+updates by reweighting local energies with the probability ratio between the current and reference
+wavefunctions. Building on this, Chen et al. [2022] introduced a PPO-inspired a cosine penalty on
+phase variation. Our work formalizes the analogy with RL in Proposition 3.1, uses a different clipping
+objective directly on the imaginary gradient instead of a penalty, and makes the policy-gradient
+correspondence exact, allowing stable training of billion-parameter models for the first time.
+
+7                  Conclusion
+We introduced Proximal Wavefunction Optimization (PWO), a scalable first-order optimizer for neural
+quantum states (NQS) derived from an explicit connection between variational Monte Carlo and
+reinforcement learning (RL). In the fixed-phase stoquastic setting, we showed that variational energy
+minimization can be written as an advantage policy-gradient objective over the Born distribution,
+where spin configurations play the role of actions and centered local energies act as advantages.
+This reformulates NQS optimization into a trust-region policy-optimization problem, motivating
+a PPO-style algorithm that clips probability-ratio changes in the amplitude channel and extends
+naturally to complex wavefunctions through a clipped phase-increment surrogate. Across spin-chain
+benchmarks, PWO improves wall-clock convergence and stability over Adam, minSR, and SPRING,
+with the largest gains in frustrated regimes where optimization is most fragile. Finally, by fine-
+tuning a 1.5B-parameter RWKV-7 model as an autoregressive NQS, we bring NQS training into the
+regime of modern large-scale sequence modeling. More broadly, our results bridge the RL and NQS
+communities, enabling further mutual inspiration. By unlocking large autoregressive NQS, PWO
+opens the door to studying whether scale alone, in the spirit of the “bitter lesson”, can overcome
+current barriers in quantum many-body simulation.
+
+
+                                                                            10
+Reproducibility Statement
+Code for reproducing our experiments is available at https://github.com/jduquevan/
+hyperscalenqs. Full experimental details, including hyperparameter searches, model architectures,
+optimizer settings, sample budgets, and scaling configurations, are provided in Appendix D.
+
+Acknowledgements
+This work was supported by the Netherlands Organization for Scientific Research (NWO/OCW),
+as part of Quantum Limits (project number SUMMIT.1.1016). This publication is also part of the
+project Optimal Digital-Analog Quantum Circuits with File No. NGF.1582.22.026 of the research
+programme NGF Quantum Delta NL 2022, which is (partly) financed by the Dutch Research Council
+(NWO) and the Dutch National Growth Fund initiative Quantum Delta NL. Juan Agustín Duque
+is supported by the St-Pierre-Larochelle Scholarship at the University of Montreal and by Aaron
+Courville’s CIFAR AI Chair in Representations that Generalize Systematically.
+
+References
+Alekh Agarwal, Nan Jiang, Sham Kakade, and Wen Sun. Reinforcement Learning: Theory and
+  Algorithms. Draft/Preprint, 2021. URL https://rltheorybook.github.io/.
+Rishabh Agarwal, Max Schwarzer, Pablo Samuel Castro, Aaron Courville, and Marc G. Belle-
+  mare. Deep reinforcement learning at the edge of the statistical precipice. arXiv preprint
+  arXiv:2108.13264, 2022. doi: 10.48550/arXiv.2108.13264. URL https://arxiv.org/abs/
+  2108.13264.
+Shun-ichi Amari. Natural gradient works efficiently in learning. Neural Computation, 10(2):
+  251–276, 1998. doi: 10.1162/089976698300017746. URL https://doi.org/10.1162/
+  089976698300017746.
+Ariel Barr, Willem Gispen, and Austen Lamacraft. Quantum ground states from reinforcement
+  learning. In Proceedings of the First Mathematical and Scientific Machine Learning Conference,
+  volume 107 of Proceedings of Machine Learning Research, pages 635–653, 2020. URL https:
+  //proceedings.mlr.press/v107/barr20a.html.
+Giuseppe Carleo and Matthias Troyer. Solving the quantum many-body problem with artificial
+  neural networks. Science, 355(6325):602–606, 2017. doi: 10.1126/science.aag2302. URL
+  https://doi.org/10.1126/science.aag2302.
+Ao Chen and Markus Heyl. Empowering deep neural quantum states through efficient optimization.
+ Nature Physics, 20(9):1476–1481, 2024. doi: 10.1038/s41567-024-02566-1. URL https:
+ //doi.org/10.1038/s41567-024-02566-1.
+Hongwei Chen, Douglas Gerard Hendry, Phillip E. Weinberg, and Adrian Feiguin. Systematic
+  improvement of neural network quantum states using Lanczos. In Advances in Neural Information
+ Processing Systems, 2022. URL https://openreview.net/forum?id=qZUHvvtbzy.
+Kenny Choo, Antonio Mezzacapo, and Giuseppe Carleo. Fermionic neural-network states for
+  ab-initio electronic structure. Nature Communications, 11(1):2368, 2020. doi: 10.1038/
+  s41467-020-15724-9. URL https://doi.org/10.1038/s41467-020-15724-9.
+Anna Dawid, Julian Arnold, Borja Requena, Alexander Gresch, Marcin Płodzień, Kaelan Donatella,
+  Kim A. Nicoli, Paolo Stornati, Rouven Koch, Miriam Büttner, Robert Okuła, Gorka Muñoz Gil,
+  Rodrigo A. Vargas-Hernández, Alba Cervera-Lierta, Juan Carrasquilla, Vedran Dunjko, Marylou
+  Gabrié, Patrick Huembeli, Evert van Nieuwenburg, Filippo Vicentini, Lei Wang, Sebastian J.
+ Wetzel, Giuseppe Carleo, Eliška Greplová, Roman Krems, Florian Marquardt, Michał Tomza,
+  Maciej Lewenstein, and Alexandre Dauphin. Machine Learning in Quantum Sciences. Cambridge
+  University Press, 2025. ISBN 9781009504935. doi: 10.1017/9781009504942. URL https:
+ //doi.org/10.1017/9781009504942.
+Luigi Del Debbio, Gian Mario Manca, and Ettore Vicari. Critical slowing down of topological
+  modes. Physics Letters B, 594(3–4):315–323, 2004. doi: 10.1016/j.physletb.2004.05.038. URL
+  https://doi.org/10.1016/j.physletb.2004.05.038.
+
+
+                                               11
+Mehdi Drissi, James W. T. Keeble, Javier Rozalén Sarmiento, and Arnau Rios. Second-order
+ optimization strategies for neural network quantum states. Philosophical Transactions of the Royal
+ Society A, 382(2275):20240057, 2024. doi: 10.1098/rsta.2024.0057. URL https://doi.org/
+ 10.1098/rsta.2024.0057.
+
+Chloé Gauvin-Ndiaye, Joseph Tindall, Javier Robledo Moreno, and Antoine Georges. Mott transition
+  and volume law entanglement with neural quantum states. Physical Review Letters, 134(7):
+  076502, 2025. doi: 10.1103/PhysRevLett.134.076502. URL https://doi.org/10.1103/
+  PhysRevLett.134.076502.
+
+Willem Gispen and Austen Lamacraft. Ground states of quantum many body lattice models via
+ reinforcement learning. In Proceedings of the 2nd Mathematical and Scientific Machine Learning
+ Conference, volume 145 of Proceedings of Machine Learning Research, pages 369–385, 2022.
+ URL https://proceedings.mlr.press/v145/gispen22a.html.
+
+Gil Goldshlager, Nilin Abrahamsen, and Lin Lin. A Kaczmarz-inspired approach to accelerate
+  the optimization of neural network wavefunctions. Journal of Computational Physics, 516:
+  113351, 2024. doi: 10.1016/j.jcp.2024.113351. URL https://doi.org/10.1016/j.jcp.
+  2024.113351.
+
+Jan Hermann, Zeno Schätzle, and Frank Noé. Deep-neural-network solution of the electronic
+  Schrödinger equation. Nature Chemistry, 12(10):891–897, 2020. doi: 10.1038/s41557-020-0544-y.
+  URL https://doi.org/10.1038/s41557-020-0544-y.
+
+Mohamed Hibat-Allah, Martin Ganahl, Lauren E. Hayward, Roger G. Melko, and Juan Carrasquilla.
+ Recurrent neural network wave functions. Physical Review Research, 2(2):023358, 2020. doi:
+ 10.1103/PhysRevResearch.2.023358. URL https://doi.org/10.1103/PhysRevResearch.
+ 2.023358.
+
+Roger A. Horn and Charles R. Johnson. Matrix Analysis. Cambridge University Press, Cambridge,
+  2 edition, 2012. ISBN 9780521839402. doi: 10.1017/CBO9780511810817. URL https:
+  //doi.org/10.1017/CBO9780511810817.
+
+Jeongwoo Jae, Jeonghoon Hong, Jinho Choo, and Yeong-Dae Kwon. Reinforcement learning to learn
+  quantum states for Heisenberg scaling accuracy. Advanced Quantum Technologies, 8(10), 2025.
+  doi: 10.1002/qute.202500206. URL https://doi.org/10.1002/qute.202500206.
+
+Sham Kakade and John Langford. Approximately optimal approximate reinforcement learning. In
+  Proceedings of the Nineteenth International Conference on Machine Learning, pages 267–274,
+  2002. URL https://dl.acm.org/doi/10.5555/645531.656005.
+
+Diederik P. Kingma and Jimmy Ba. Adam: A method for stochastic optimization. arXiv preprint
+  arXiv:1412.6980, 2014. doi: 10.48550/arXiv.1412.6980. URL https://arxiv.org/abs/1412.
+  6980.
+
+Hannah Lange, Anka Van de Walle, Atiye Abedinnia, and Annabelle Bohrdt. From architectures
+  to applications: A review of neural quantum states. arXiv preprint arXiv:2402.09402, 2024. doi:
+ 10.48550/arXiv.2402.09402. URL https://arxiv.org/abs/2402.09402.
+
+Jing Liu, Ying Tang, and Pan Zhang. Efficient optimization of variational autoregressive networks with
+   natural gradient. Physical Review E, 111(2):025304, 2025. doi: 10.1103/PhysRevE.111.025304.
+   URL https://doi.org/10.1103/PhysRevE.111.025304.
+
+James Martens and Roger Grosse. Optimizing neural networks with Kronecker-factored approximate
+  curvature. In Proceedings of the 32nd International Conference on Machine Learning, pages
+  2408–2417, 2015. URL https://proceedings.mlr.press/v37/martens15.html.
+
+Ejaaz Merali, Mohamed Hibat-Allah, Mohammad Kohandel, Richard T. Scalettar, and Ehsan Khatami.
+  Parallel scan recurrent neural quantum states for scalable variational monte carlo, 2026. URL
+  https://arxiv.org/abs/2605.13807.
+
+
+                                                 12
+M. Schuyler Moss, Roeland Wiersema, Mohamed Hibat-Allah, Juan Carrasquilla, and Roger G.
+ Melko. Leveraging recurrence in neural network wavefunctions for large-scale simulations of
+ Heisenberg antiferromagnets on the square lattice. Physical Review B, 112(13):134450, 2025.
+ ISSN 2469-9950. doi: 10.1103/6ccd-wzhz.
+M. Schuyler Moss, Alev Orfi, Christopher Roth, Anirvan M. Sengupta, Antoine Georges, Dries Sels,
+ Anna Dawid, and Agnes Valenti. Double descent: When do neural quantum states generalize?
+ Physical Review E, 113(4):045303, 2026. ISSN 2470-0045. doi: 10.1103/cwmj-fxr4. URL
+ https://link.aps.org/doi/10.1103/cwmj-fxr4.
+Yusuke Nomura and Masatoshi Imada. Dirac-type nodal spin liquid revealed by refined quantum
+  many-body solver using neural-network wave function, correlation ratio, and level spectroscopy.
+  Physical Review X, 11(3):031034, 2021. doi: 10.1103/PhysRevX.11.031034. URL https:
+  //doi.org/10.1103/PhysRevX.11.031034.
+Jannes Nys, Gabriel Pescia, Alessandro Sinibaldi, and Giuseppe Carleo. Ab-initio variational wave
+  functions for the time-dependent many-electron Schrödinger equation. Nature Communications,
+  15(1):9404, 2024. doi: 10.1038/s41467-024-53672-w. URL https://doi.org/10.1038/
+  s41467-024-53672-w.
+Bo Peng, Ruichong Zhang, Daniel Goldstein, Eric Alcaide, Xingjian Du, Haowen Hou, Jiaju Lin,
+  Jiaxing Liu, Janna Lu, William Merrill, Guangyu Song, Kaifeng Tan, Saiteja Utpala, Nathan Wilce,
+  Johan S. Wind, Tianyi Wu, Daniel Wuttke, and Christian Zhou-Zheng. RWKV-7 “goose” with
+  expressive dynamic state evolution. arXiv preprint arXiv:2503.14456, 2025. doi: 10.48550/arXiv.
+  2503.14456. URL https://arxiv.org/abs/2503.14456.
+Gabriel Pescia, Jannes Nys, Jane Kim, Alessandro Lovato, and Giuseppe Carleo. Message-passing
+  neural quantum states for the homogeneous electron gas. Physical Review B, 110(3):035108,
+  2024. doi: 10.1103/PhysRevB.110.035108. URL https://doi.org/10.1103/PhysRevB.110.
+  035108.
+David Pfau, James S. Spencer, Alexander G. D. G. Matthews, and W. M. C. Foulkes. Ab initio
+  solution of the many-electron Schrödinger equation with deep neural networks. Physical Review
+  Research, 2(3):033429, 2020. doi: 10.1103/PhysRevResearch.2.033429. URL https://doi.
+  org/10.1103/PhysRevResearch.2.033429.
+Yi Ren and Donald Goldfarb. Efficient subsampled Gauss-Newton and natural gradient methods for
+  training neural networks. arXiv preprint arXiv:1906.02353, 2019. doi: 10.48550/arXiv.1906.02353.
+  URL https://arxiv.org/abs/1906.02353.
+Riccardo Rende, Luciano Loris Viteritti, Lorenzo Bardone, Federico Becca, and Sebastian Goldt. A
+  simple linear algebra identity to optimize large-scale neural network quantum states. Com-
+  munications Physics, 7(1):260, 2024. doi: 10.1038/s42005-024-01732-4. URL https:
+  //doi.org/10.1038/s42005-024-01732-4.
+Riccardo Rende, Luciano Loris Viteritti, Federico Becca, Antonello Scardicchio, Alessandro Laio,
+  and Giuseppe Carleo. Foundation neural-networks quantum states as a unified ansatz for multiple
+  hamiltonians. Nature Communications, 16(1):7213, 2025. doi: 10.1038/s41467-025-62098-x.
+Herbert Robbins and Sutton Monro. A stochastic approximation method. The Annals of Mathematical
+  Statistics, 22(3):400–407, 1951. doi: 10.1214/aoms/1177729586. URL https://doi.org/10.
+  1214/aoms/1177729586.
+Bidipta Sarkar, Mattie Fellows, Juan Agustin Duque, Alistair Letcher, Antonio León Villares,
+  Anya Sims, Clarisse Wibault, Dmitry Samsonov, Dylan Cope, Jarek Liesen, Kang Li, Lukas
+  Seier, Theo Wolf, Uljad Berdica, Valentin Mohl, Alexander David Goldie, Aaron Courville,
+  Karin Sevegnani, Shimon Whiteson, and Jakob Nicolaus Foerster. Evolution strategies at the
+  hyperscale. arXiv preprint arXiv:2511.16652, 2026. doi: 10.48550/arXiv.2511.16652. URL
+  https://arxiv.org/abs/2511.16652.
+John Schulman, Sergey Levine, Philipp Moritz, Michael I. Jordan, and Pieter Abbeel. Trust region
+  policy optimization. arXiv preprint arXiv:1502.05477, 2015. doi: 10.48550/arXiv.1502.05477.
+  URL https://arxiv.org/abs/1502.05477.
+
+
+                                               13
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy
+  optimization algorithms. arXiv preprint arXiv:1707.06347, 2017. doi: 10.48550/arXiv.1707.06347.
+  URL https://arxiv.org/abs/1707.06347.
+Kristof T. Schütt, Huziel E. Sauceda, Pieter-Jan Kindermans, Alexandre Tkatchenko, and Klaus-
+  Robert Müller. Schnet—a deep learning architecture for molecules and materials. The Journal of
+  Chemical Physics, 148(24):241722, 2018. doi: 10.1063/1.5019779. URL https://doi.org/10.
+  1063/1.5019779.
+Or Sharir, Yoav Levine, Noam Wies, Giuseppe Carleo, and Amnon Shashua. Deep autoregressive
+  models for the efficient variational simulation of many-body quantum systems. Physical Review
+  Letters, 124(2):020503, 2020. doi: 10.1103/PhysRevLett.124.020503. URL https://doi.org/
+  10.1103/PhysRevLett.124.020503.
+Ahmedeo Shokry, Alessandro Santini, and Filippo Vicentini. When less is more: Approximating
+  the quantum geometric tensor with block structures. arXiv preprint arXiv:2510.08430, 2025. doi:
+ 10.48550/arXiv.2510.08430. URL https://arxiv.org/abs/2510.08430.
+Leslie N. Smith and Nicholay Topin. Super-convergence: Very fast training of neural networks using
+  large learning rates. arXiv preprint arXiv:1708.07120, 2018. doi: 10.48550/arXiv.1708.07120.
+  URL https://arxiv.org/abs/1708.07120.
+Sandro Sorella. Green function Monte Carlo with stochastic reconfiguration. Physical Review
+  Letters, 80(20):4558–4561, 1998. doi: 10.1103/PhysRevLett.80.4558. URL https://doi.org/
+  10.1103/PhysRevLett.80.4558.
+Ingrid von Glehn, James S. Spencer, and David Pfau. A self-attention ansatz for ab-initio quantum
+  chemistry. In International Conference on Learning Representations, 2023. URL https://
+  openreview.net/forum?id=xveTeHVlF7j.
+Jia-Qi Wang, Rong-Qiang He, and Zhong-Yi Lu. Generalized Lanczos method for systematic
+   optimization of neural-network quantum states. Physical Review B, 113(8):085120, 2026. doi:
+   10.1103/PhysRevB.113.085120. URL https://doi.org/10.1103/PhysRevB.113.085120.
+Ronald J. Williams. Simple statistical gradient-following algorithms for connectionist reinforcement
+  learning. Machine Learning, 8(3–4):229–256, 1992. doi: 10.1007/BF00992696. URL https:
+  //doi.org/10.1007/BF00992696.
+Ulli Wolff. Critical slowing down. Nuclear Physics B - Proceedings Supplements, 17:93–102,
+  1990. doi: 10.1016/0920-5632(90)90224-I. URL https://doi.org/10.1016/0920-5632(90)
+  90224-I.
+Dian Wu, Riccardo Rossi, Filippo Vicentini, Nikita Astrakhantsev, Federico Becca, Xiaodong Cao,
+  Juan Carrasquilla, Francesco Ferrari, Antoine Georges, Mohamed Hibat-Allah, Masatoshi Imada,
+  Andreas M. Läuchli, Guglielmo Mazzola, Antonio Mezzacapo, Andrew Millis, Javier Robledo
+  Moreno, Titus Neupert, Yusuke Nomura, Jannes Nys, Olivier Parcollet, Rico Pohle, Imelda
+  Romero, Michael Schmid, J. Maxwell Silvester, Sandro Sorella, Luca F. Tocchio, Lei Wang,
+  Steven R. White, Alexander Wietek, Qi Yang, Yiqi Yang, Shiwei Zhang, and Giuseppe Carleo.
+  Variational benchmarks for quantum many-body problems. Science, 386(6719):296–301, 2024.
+  doi: 10.1126/science.adg9774. URL https://doi.org/10.1126/science.adg9774.
+Li Yang, Zhaoqi Leng, Guangyuan Yu, Ankit Patel, Wen-Jun Hu, and Han Pu. Deep learning-
+  enhanced variational Monte Carlo method for quantum many-body physics. Physical Review
+  Research, 2(1):012039, 2020. doi: 10.1103/PhysRevResearch.2.012039. URL https://doi.
+  org/10.1103/PhysRevResearch.2.012039.
+
+
+
+
+                                                14
+Appendix
+Table of Contents
+   A Dirac Notation                                                                             16
+
+   B Mathematical Statements                                                                    17
+     B.1 Proof of Proposition 3.1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   17
+     B.2 Variational Gradient Derivation . . . . . . . . . . . . . . . . . . . . . . . . . .    18
+     B.3 Variational Gradient Decomposition . . . . . . . . . . . . . . . . . . . . . . . .     19
+     B.4 Exact Complex-Amplitude Decomposition . . . . . . . . . . . . . . . . . . . .          19
+     B.5 Amplitude and Phase Trust Regions Control Infidelity . . . . . . . . . . . . . .       21
+     B.6 PWO Surrogate Upper Bound and First-Order Consistency . . . . . . . . . . . .          21
+     B.7 Clipped PWO Improvement Certificate . . . . . . . . . . . . . . . . . . . . . .        23
+
+   C Additional Sections                                                                        25
+     C.1 Numerical Cost of Stochastic Reconfiguration and Improvements . . . . . . . .          25
+     C.2 Relative Speed of PWO per Iteration . . . . . . . . . . . . . . . . . . . . . . .      25
+     C.3 Why RWKV? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        26
+     C.4 Limitations of PWO . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     26
+
+   D Experimental Details                                                                       27
+     D.1 Hyperparameter search . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      27
+     D.2 Neural Quantum State Architecture . . . . . . . . . . . . . . . . . . . . . . . .      27
+     D.3 Ising Model . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    28
+     D.4 Heisenberg Chain . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     28
+     D.5 Heisenberg J1 –J2 Chain . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      29
+     D.6 Two-dimensional J1 –J2 square-lattice experiment . . . . . . . . . . . . . . . .       29
+     D.7 Scaling Experiment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     30
+     D.8 RWKV-7 on Ising Model . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        31
+
+   E Additional Figures                                                                         32
+     E.1 Individual Seed Plots for All Hamiltonias . . . . . . . . . . . . . . . . . . . . .    32
+     E.2 Scaling Samples and System Sizes . . . . . . . . . . . . . . . . . . . . . . . .       33
+     E.3 Individual Seed Plots for RWKV7 Fine-tuning . . . . . . . . . . . . . . . . . .        34
+
+
+
+
+                                                 15
+A    Dirac Notation
+This appendix provides a self-contained introduction to the Dirac (bra-ket) notation used throughout
+the paper.
+Hilbert space. A quantum state lives in a complex vector space H called a Hilbert space, equipped
+with an inner product. For a system of N spin-1/2 particles, the Hilbert space is H = (C2 )⊗N , which
+has dimension 2N . A natural orthonormal basis is the computational (spin) basis, whose elements |s⟩
+are indexed by binary spin configurations s ∈ {±1}N .
+Ket vectors. A quantum state is written as a ket |ψ⟩, which is simply a column vector in H. Any
+state can be expanded in the computational basis,
+                                             X
+                                    |ψ⟩ =          ψ(s) |s⟩ ,                               (25)
+                                             s∈{±1}N
+
+where each coefficient ψ(s) ∈ C is the amplitude of configuration s. The vector |ψ⟩ is therefore com-
+pletely specified by the mapping s 7→ ψ(s), which NQS parameterize with a neural network.
+Bra vectors and inner product. The bra ⟨ψ| is the conjugate transpose (Hermitian adjoint) of
+|ψ⟩,
+                                                         †
+                                              ⟨ψ| = |ψ⟩ .                                       (26)
+The  inner  product   of  two states  is written    ⟨ϕ|ψ⟩,  which evaluates  to the complex  number
+         ∗                                                                        2
+P                                                                      P
+  s ϕ(s) ψ(s). When ϕ = ψ this gives the squared norm ⟨ψ|ψ⟩ =             s |ψ(s)| ≥ 0, with equality
+only for the zero vector. The basis states are orthonormal:
+                                             ⟨s|s′ ⟩ = δs,s′ ,                                  (27)
+where δs,s′ is the Kronecker delta.
+Completeness relation. The basis states form a complete set, meaning the identity operator 1 can be
+resolved as
+                                             |s⟩ ⟨s| = 1.
+                                         X
+                                                                                               (28)
+                                             s
+This is used repeatedly in derivations (e.g. Appendix B.2) to insert a basis expansion and convert
+abstract operator equations into sums over spin configurations.
+Operators and matrix elements. A quantum operator Â is a linear map H → H, represented
+as a 2N × 2N matrix in the computational basis. The entry at row s and column s′ is the matrix
+element                                               
+                              ⟨s|Â|s′ ⟩ = ⟨s| Â |s′ ⟩ = (A)s,s′ .                       (29)
+An operator is Hermitian (or self-adjoint) if Â = Â† , which implies real eigenvalues. The Hamiltonian
+Ĥ is always Hermitian because energy is a real-valued observable.
+Expectation value. The expected value of an observable Â in state |ψ⟩ is
+                                                    ⟨ψ|Â|ψ⟩
+                                         ⟨Â⟩ψ :=            .                                     (30)
+                                                     ⟨ψ|ψ⟩
+For the Hamiltonian, this gives the variational energy E[ψ] = ⟨ψ|Ĥ|ψ⟩ / ⟨ψ|ψ⟩ that NQS minimizes.
+When |ψ⟩ is normalized (⟨ψ|ψ⟩ = 1), the denominator can be dropped.
+Summary table.
+     Dirac symbol      Linear-algebra equivalent       Meaning in this paper
+                                             N
+     |ψ⟩               column vector in C2             quantum state / wavefunction
+     ⟨ψ|               conjugate row vector            dual / adjoint state
+     ⟨ϕ|ψ⟩             ϕ† ψ (dot product)              inner product; overlap of two states
+     ⟨ψ|ψ⟩             ∥ψ∥2                            squared norm; = 1 for normalized states
+     |s⟩               standard basis vector es        spin-configuration basis state
+      ⟨s|Ĥ|s′ ⟩       (H)s,s′ matrix entry            Hamiltonian matrix element
+      ⟨ψ|Ĥ|ψ⟩         ψ † Hψ (quadratic form)         (unnormalized) variational energy
+                       12N (identity matrix)
+     P
+        s |s⟩ ⟨s|                                      completeness / resolution of identity
+
+
+                                                  16
+B      Mathematical Statements
+B.1 Proof of Proposition 3.1
+Proposition 3.1 (Policy-gradient form of variational energy minimization). Assume the Hamiltonian
+is stoquastic, i.e. its matrix representation in a chosen computational basis has non-positive off-
+diagonal elements. Then we can assume fθ = log ψθ = log |ψθ |, and the gradient of the variational
+energy can be written in policy-gradient form as
+                  ∇θ E[ψθ ] = Es∼Pθ Eθloc (s) − Es∼Pθ [Eθloc (s)] ∇θ log Pθ (s) .
+                                                                              
+                                                                                              (14)
+In particular, variational energy minimization is equivalent to an advantage policy-gradient update
+over configurations. For a proof, see Appendix B.1.
+
+Proof. We follow the proof strategy of the policy gradient theorem [Agarwal et al., 2021] to connect
+the standard NQS/VMC gradient estimator with REINFORCE-style updates when the probability
+distribution is parameterized autoregressively.
+Differentiating gives
+                                  X
+               ∇θ E[ψθ ] = ∇θ          Pθ (s) Eθloc (s)                                          (31)
+                                   s
+                              X                            X
+                          =       ∇θ Pθ (s) Eθloc (s) +        Pθ (s) ∇θ Eθloc (s)               (32)
+                              s                            s
+                              X                                      X
+                          =       Pθ (s) Eθloc (s)∇θ log Pθ (s) +         Pθ (s) ∇θ Eθloc (s)    (33)
+                              s                                       s
+                          = Es∼Pθ Eθloc (s) ∇θ log Pθ (s) + Es∼Pθ ∇θ Eθloc (s) .
+                                                                           
+                                                                                                 (34)
+We now analyze the second term. Define the log-derivative observable
+                                         O(s) := ∇θ log ψθ (s),
+then
+                                  "                                #
+                                        X ψθ (s′ )
+       Es∼Pθ ∇θ Eθloc (s) = Es∼Pθ ∇θ                     ⟨s|Ĥ|s′ ⟩
+                        
+                                                                                                 (35)
+                                            ′
+                                                ψθ (s)
+                                          s
+                                  "                                                        #
+                                                                        ′              ′
+                                                   ′ (ψθ (s)∇θ ψθ (s ) − ∇θ ψθ (s)ψθ (s ))
+                                    X
+                           = Es∼Pθ      ⟨s|Ĥ|s ⟩                                                (36)
+                                                                        ψθ (s)2
+                                     s′
+                                  "                                             #
+                                                              ′
+                                                   ′ ψθ (s )
+                                    X
+                                                                     ′
+                           = Es∼Pθ      ⟨s|Ĥ|s ⟩               (O(s ) − O(s))                   (37)
+                                                       ψθ (s)
+                                     s′
+                             X          X            ψθ (s′ )
+                           =    Pθ (s)        Ĥs,s′          (O(s′ ) − O(s)),                   (38)
+                              s          ′
+                                                     ψ θ (s)
+                                            s
+
+where Ĥs,s′ = ⟨s|Ĥ|s′ ⟩, which gives the double-sum form
+                                          1 X
+                Es∼Pθ ∇θ Eθloc (s) =            ψθ (s)ψθ (s′ ) Ĥs,s′ (O(s′ ) − O(s)).
+                                   
+                                                                                                 (39)
+                                         Zθ ′
+                                                s,s
+
+At this point, the only remaining question is whether the second term in (39) vanishes. This happens
+when the Hamiltonian is stoquastic in the chosen basis. In that case, its matrix elements are real and
+Hermiticity implies Ĥs,s′ = Ĥs′ ,s . Moreover, according to Perron-Frobenius [Horn and Johnson,
+2012], all the components of the ground state wavefunction of a stoquastic Hamiltonian are real and
+strictly positive, so ψθ (s) = |ψθ (s)| and the log-derivative observable O(s) is real-valued.
+Under this assumption, the factor ψθ (s)ψθ (s′ )Ĥs,s′ in (39) is symmetric under exchanging s and
+s′ , whereas the difference O(s′ ) − O(s) is antisymmetric. Therefore, each term in the double sum
+cancels with the term obtained by swapping s and s′ , and the whole sum is zero. Hence,
+                                      Es∼Pθ ∇θ Eθloc (s) = 0.
+                                                         
+                                                                                               (40)
+
+
+                                                      17
+Substituting back into (34) yields the pure score-function (policy-gradient) estimator:
+                            ∇θ E[ψθ ] = Es∼Pθ Eθloc (s) ∇θ log Pθ (s) .
+                                                                      
+                                                                                                             (41)
+
+Moreover, for any constant c that doesn’t depend on s,
+                                                   X
+                       Es∼Pθ[c∇θ log Pθ (s)] = c       Pθ (s)∇θ log Pθ (s)                                   (42)
+                                                         s
+                                                         X
+                                                  =c              ∇θ Pθ (s)                                  (43)
+                                                         s
+                                                              X
+                                                  = c∇θ                 Pθ (s)                               (44)
+                                                                  s
+                                                  = c∇θ 1 = 0.                                               (45)
+So we may subtract any constant baseline without bias [Agarwal et al., 2021]. Choosing the baseline
+as the global energy E[ψθ ] = Es∼Pθ [Eθloc (s)] gives the form
+
+                 ∇θ E[ψθ ] = Es∼Pθ Eθloc (s) − Es∼Pθ [Eθloc (s)] ∇θ log Pθ (s) ,
+                                                                              
+                                                                                               (46)
+which is analogous to the Advantage form of the REINFORCE estimator [Agarwal et al., 2021].
+
+B.2 Variational Gradient Derivation
+In this section, we show how to derive the well known VMC-gradient in Eq. (11) [Carleo and Troyer,
+2017] from Eq. (8). We start from the general expression for the energy, valid for any (not necessarily
+normalized) state |ψθ ⟩:
+                                                 ⟨ψθ |Ĥ|ψθ ⟩
+                                       E[ψθ ] =               .                                   (47)
+                                                   ⟨ψθ |ψθ ⟩
+Differentiating with respect to θk using the quotient rule and the Hermiticity of Ĥ gives:
+                                 n                  o
+                            2 Re (∂θk ⟨ψθ |)Ĥ|ψθ ⟩              2 Re {(∂θk ⟨ψθ |)|ψθ ⟩}
+              ∂θk E[ψθ ] =                             − E[ψθ ]                          .                   (48)
+                                     ⟨ψθ |ψθ ⟩                          ⟨ψθ |ψθ ⟩
+Since the final result is norm-invariant, we now choose the convenient normalization ⟨ψθ |ψθ ⟩ = 1,
+which simplifies the expression to:
+                                           n                            o
+                          ∂θk E[ψθ ] = 2 Re (∂θk ⟨ψθ |) Ĥ − E[ψθ ] |ψθ ⟩ .                    (49)
+
+We insert the completeness relation s |s⟩⟨s| = 1 twice and use Pθ (s) = |ψθ (s)|2 :
+                                    P
+
+                                    X                               
+     (∂θk ⟨ψθ |) Ĥ − E[ψθ ] |ψθ ⟩ =   (∂θk ⟨ψθ |)|s⟩ ⟨s| Ĥ − E[ψθ ] |ψθ ⟩                                  (50)
+                                       s
+                                                                                                         !
+                                       X                 X
+                                   =       ∂θk ψθ∗ (s)                      ′    ′
+                                                                   ⟨s|Ĥ|s ⟩⟨s |ψθ ⟩ − E[ψθ ] ψθ (s)         (51)
+                                       s                     s′
+                                                                                                         !
+                                       X                          X
+                                   =       ψθ∗ (s)Ok∗ (s)                            ′
+                                                                        Ĥs,s′ ψθ (s ) − E[ψθ ] ψθ (s)       (52)
+                                       s                           s′
+                                       X
+                                           |ψθ (s)|2 Ok∗ (s) Eθloc (s) − E[ψθ ]
+                                                                               
+                                   =                                                                         (53)
+                                       s
+                                          h                                    i
+                                   = Es∼Pθ Ok∗ (s) Eθloc (s) − Es∼Pθ [Eθloc (s)] ,                           (54)
+                                                                                                             (55)
+
+where in the last step we used that E[ψθ ] = Es∼Pθ [Eθloc (s)]. Therefore,
+                                   n       h                                 io
+                ∂θk E[ψθ ] = 2 Re Es∼Pθ Ok∗ (s) Eθloc (s) − Es∼Pθ [Eθloc (s)]     .                          (56)
+
+
+                                                   18
+B.3 Variational Gradient Decomposition
+For the development of a practical algorithm we can decompose the VMC gradient into its probability
+and phase components as follows. Starting from the standard VMC/NQS gradient estimator we can
+write
+                ∇θ E[ψθ ] = 2 Re Es∼Pθ Eθloc (s) − Es∼Pθ [Eθloc (s)] O(s)∗ .
+                                                                          
+                                                                                              (57)
+Recall that ∗ is the complex conjugate, and
+     Eθloc (s) = Re Eθloc (s) + i · Im Eθloc (s) , O(s) = Re {O(s)} + i · Im {O(s)}.
+                                      
+                                                                                     (58)
+                                         loc                loc
+For convenience, we denote ER := Re Eθ (s) and EI := Im Eθ (s) (analogously for O(s)).
+We can now write
+     ∇θ E[ψθ ] = 2 Re Es∼Pθ (ER − Es∼Pθ [Eθloc (s)]) + iEI (OR − iOI )
+                                                                        
+                                                                                     (59)
+                 = 2 Re{Es∼Pθ [(ER − Es∼Pθ [Eθloc (s)])OR                                         (60)
+                   − i(ER − Es∼Pθ [Eθloc (s)])OI + iEI OR + EI OI ]}                              (61)
+                 = 2 Re Es∼Pθ (ER − Es∼Pθ [Eθloc (s)])OR + 2 Re {Es∼Pθ [EI OI ]},
+                                                        
+                                                                                                  (62)
+which shows exactly how to update our model, when we parameterize the real and imaginary parts of
+the amplitude separately. Moreover, we can subtract a constant baseline, c, from the second term
+(corresponding to the imaginary parts of our parameterization) to reduce the variance:
+           2 Re {Es∼Pθ [EI (OI − c)]} = 2 Re {Es∼Pθ [EI OI ]} − 2 Re {Es∼Pθ [EI c]}               (63)
+                                      = 2 Re {Es∼Pθ [EI OI ]} − 2c Re {Es∼Pθ [EI ]}               (64)
+                                      = 2 Re {Es∼Pθ [EI OI ]},                                    (65)
+where line 65 comes from the reality of expected values under Hermitian operators. So like before,
+we may subtract a baseline to reduce variance.
+To find the variance-minimizing constant, consider the one-sample estimator for the imaginary
+contribution to the gradient
+                               gI (s; c) := 2 EI (s)(OI (s) − c).                        (66)
+Since Es∼Pθ [EI (s)] = 0, subtracting any constant c leaves the estimator unbiased:
+                                  E[gI (s; c)] = 2 E[EI (s) OI (s)] .                             (67)
+Therefore, the optimal constant is the one that minimizes V(gI (s; c)), or equivalently its second
+moment:                                   h                   i
+                                                            2
+                               argmin E EI (s)2 (OI (s) − c) .                                 (68)
+                                     c
+Differentiating with respect to c and setting the derivative to zero gives
+                                        ∂ h                        2
+                                                                     i
+                                   0=      E EI (s)2 (OI (s) − c)                                 (69)
+                                       ∂c 
+                                    = −2 E EI (s)2 (OI (s) − c) ,
+                                                                   
+                                                                                                  (70)
+hence the variance-minimizing baseline is
+                                                             
+                                          ⋆  E EI (s)2 OI (s)
+                                         c =                    .                                 (71)
+                                                E [EI (s)2 ]
+If OI (s) is vector-valued, this formula is applied coordinate-wise. We tried using this minimizer
+in practice, but its implementation requires adding an extra forward and backward pass, making it
+significantly slower than the vanilla gradient expression.
+B.4 Exact Complex-Amplitude Decomposition
+We now derive an exact decomposition of the energy difference between two normalized complex
+wavefunctions. Let |ψθ ⟩ be the reference state and |ψθ′ ⟩ be the candidate state. We choose the global
+phase of |ψθ′ ⟩ so that                                p
+                            ⟨ψθ |ψθ′ ⟩ = |⟨ψθ |ψθ′ ⟩| = 1 − I(ψθ , ψθ′ ).                          (72)
+
+
+                                                   19
+Define
+                                             Pθ′ (s)                           ψθ′ (s)
+                             rθ′ ;θ (s) :=           ,         zθ′ ;θ (s) :=           .            (73)
+                                             Pθ (s)                            ψθ (s)
+Writing                                             q
+                                     zθ′ ;θ (s) =    rθ′ ;θ (s)eiαθ′ ;θ (s) ,
+we take the wrapped phase difference
+           αθ′ ;θ (s) = atan2 (sin (arg ψθ′ (s) − arg ψθ (s)) , cos (arg ψθ′ (s) − arg ψθ (s))) .   (74)
+For later use, define the PWO phase increment
+                                             ϕθ′ ;θ (s) := 2αθ′ ;θ (s).                             (75)
+
+The factor of two appears because the VMC phase gradient in Eq. (62) contains 2AIθ ∇ arg ψθ .
+
+Theorem B.1 (Exact complex-amplitude decomposition). Let
+
+                            K̂θ := Ĥ − E[ψθ ]1,               |η⟩ := |ψθ′ ⟩ − |ψθ ⟩ ,
+and let
+                                 ∆Eθloc := Eθloc − E[ψθ ] = AR     I
+                                                             θ + iAθ .
+Then
+                  E[ψθ′ ] − E[ψθ ] = 2 Re Es∼Pθ zθ′ ;θ (s)∗ ∆Eθloc (s) + ⟨η|K̂θ |η⟩ .
+                                                                     
+                                                                                                    (76)
+Consequently,
+                                                r cos αAR              r sin αAIθ
+                                                   √              √            
+                 E[ψθ′ ] − E[ψθ ] ≤ 2Es∼Pθ              θ + 2Es∼Pθ                                  (77)
+                                                                               
+                                      + 2 Ĥ − E[ψθ ]1
+                                                               p
+                                                            1 − 1 − I(ψθ , ψθ′ ) ,                  (78)
+                                                                 ∞
+
+where, for readability, we have suppressed the (θ ′ ; θ) subscripts on r and α.
+
+Proof. Since ⟨ψθ |K̂θ |ψθ ⟩ = 0, expanding around the reference state gives
+
+                           E[ψθ′ ] − E[ψθ ] = ⟨ψθ′ |K̂θ |ψθ′ ⟩                                      (79)
+                                                = 2 Re ⟨η|K̂θ |ψθ ⟩ + ⟨η|K̂θ |η⟩ .                  (80)
+Moreover, η(s) = (zθ′ ;θ (s) − 1)ψθ (s), and
+
+                                     ⟨s|K̂θ |ψθ ⟩ = ψθ (s)∆Eθloc (s).
+Therefore,
+                                                 zθ′ ;θ (s)∗ − 1 ∆Eθloc (s)
+                                                                          
+                           ⟨η|K̂θ |ψθ ⟩ = Es∼Pθ                                                     (81)
+                                        = Es∼Pθ zθ′ ;θ (s)∗ ∆Eθloc (s) ,
+                                                                     
+                                                                                                    (82)
+
+because Es∼Pθ [∆Eθloc (s)] = 0. The residual satisfies
+                                                                                   2
+                                ⟨η|K̂θ |η⟩ ≤ ⟨η|K̂θ |η⟩ ≤ K̂θ                  ∥η∥ .                (83)
+                                                                           ∞
+
+By the phase convention in Eq. (72),
+                                                                        
+                          2
+                                                        p
+                       ∥η∥ = 2 − 2 Re ⟨ψθ |ψθ′ ⟩ = 2 1 − 1 − I(ψθ , ψθ′ ) .                         (84)
+
+Finally,                                   √
+                             Re z ∗ ∆Eθloc = r cos α AR          I
+                                                                  
+                                                      θ + sin α Aθ ,                                (85)
+which proves the result.
+
+
+                                                          20
+B.5 Amplitude and Phase Trust Regions Control Infidelity
+The bound above, in the Conservative Policy Iteration (CPI) style, depends on the infidelity between
+the current and candidate wavefunctions. We now show that separate trust regions on the Born
+distribution and the phase imply such an infidelity trust region.
+Lemma B.2 (Amplitude and phase trust regions imply an infidelity trust region). Let 0 ≤ ϵ < 1 and
+0 ≤ δ ≤ π/2. Assume that we have no measure zero events and that for every configuration with
+Pθ (s) > 0,
+                                       1 − ϵ ≤ rθ′ ;θ (s) ≤ 1 + ϵ,                            (86)
+and that the phases satisfy, up to a global phase,
+                                            αθ′ ;θ (s) ≤ δ/2.                                      (87)
+Then                                                        √
+                                                       δ 1 + 1 − ϵ2
+                                                       
+                                                      2
+                               I(ψθ , ψθ′ ) ≤ 1 − cos               .                              (88)
+                                                       2     2
+
+Proof. The overlap satisfies
+                         Xp                                    q                      
+           ⟨ψθ′ |ψθ ⟩ =      Pθ (s)Pθ′ (s)eiαθ′ ;θ (s) = Es∼Pθ   rθ′ ;θ (s)eiαθ′ ;θ (s) .          (89)
+                           s
+
+Since |αθ′ ;θ (s)| ≤ δ/2 ≤ π/4,
+                           | ⟨ψθ′ |ψθ ⟩ | ≥ Re ⟨ψθ′ |ψθ ⟩                                          (90)
+                                                   q                          
+                                          = Es∼Pθ      rθ ;θ (s) cos αθ ;θ (s)
+                                                          ′              ′                         (91)
+                                                            q           
+                                                 δ
+                                          ≥ cos      Es∼Pθ        rθ ;θ (s) .
+                                                                    ′                              (92)
+                                                 2
+It remains
+     √     to lower bound the amplitude factor. Set a0 = 1−ϵ and b0 = 1+ϵ. Since rθ′ ;θ (s) ∈ [a0 , b0 ]
+and x is concave, it lies above its chord on [a0 , b0 ]:
+                       q              b0 − rθ′ ;θ (s) √      rθ′ ;θ (s) − a0 p
+                         rθ′ ;θ (s) ≥                   a0 +                  b0 .                (93)
+                                         b0 − a 0               b0 − a 0
+Taking expectations, using linearity of expectation and
+                                                     X
+                                Es∼Pθ [rθ′ ;θ (s)] =    Pθ′ (s) = 1,                               (94)
+                                                          s
+
+gives               q                                            √        √
+                                    b0 − 1 √       1 − a0 p           1−ϵ+ 1+ϵ
+            Es∼Pθ     rθ′ ;θ (s) ≥           a0 +            b0 =                   .      (95)
+                                   b0 − a0         b0 − a 0               2
+Combining Eqs. (92) and (95), then squaring, gives Eq. (88). The compact form follows from
+                              √         √      2          √
+                                 1−ϵ+ 1+ϵ              1 + 1 − ϵ2
+                                                    =               .
+                                       2                     2
+                                                                                  √
+The small-trust-region expansion follows from cos2 δ = 1 − δ 2 + O(δ 4 ) and (1 + 1 − ϵ2 )/2 =
+1 − ϵ2 /4 + O(ϵ4 ).
+
+B.6 PWO Surrogate Upper Bound and First-Order Consistency
+We now relate the exact complex-amplitude√decomposition√ to the practical PWO surrogate. The exact
+decomposition contains the coefficients 2 r cos α and 2 r sin α, whereas PWO uses the simpler
+first-order surrogates r and rϕ = 2rα. The following lemma controls the phase approximation error.
+
+Lemma B.3 (Quadratic error of the PWO phase coefficient). For every t ≥ 0 and α ∈ [−π, π],
+                                                                       2
+                                  2t sin α − 2t2 α ≤ 4π 2 teiα − 1 .                               (96)
+
+
+                                                    21
+Proof. Set
+                       d(t, α) := |teiα − 1|2 = (t − 1)2 + 2t(1 − cos α).                      (97)
+We consider three ranges of t. If 0 ≤ t ≤ 1/2, then d(t, α) ≥ (1 − t)2 ≥ 1/4, while
+                                                             π
+                     |2t sin α − 2t2 α| ≤ 2t + 2πt2 ≤ 1 + ≤ 4π 2 d(t, α).                      (98)
+                                                             2
+If t ≥ 2, then d(t, α) ≥ (t − 1)2 ≥ t2 /4, and
+                            |2t sin α − 2t2 α| ≤ 2t + 2πt2 ≤ 4π 2 d(t, α).                     (99)
+It remains to consider 1/2 ≤ t ≤ 2. We write
+                           2t sin α − 2t2 α = 2t(sin α − α) + 2tα(1 − t),                     (100)
+and use the bounds, derived from the Taylor expansions, | sin α−α| ≤ α2 /2 and 1−cos α ≥ 2α2 /π 2
+on [−π, π]. Thus
+                                                            4tα2
+                                     d(t, α) ≥ (t − 1)2 + 2 .                               (101)
+                                                             π
+                                                                                         √
+The term tα2 is bounded by (π 2 /4)d(t, α). For the mixed term, let x = |1 − t| and y = 2 t|α|/π.
+Then d(t, α) ≥ x2 + y 2 and
+                                                  √                  √
+                                      √         π t 2         2     π 2
+                     2t|α||1 − t| = π t xy ≤         (x + y ) ≤          d(t, α).           (102)
+                                                  2                  2
+Combining these bounds gives
+                                                    √ !
+                                   2         π2    π 2
+                     |2t sin α − 2t α| ≤        +          d(t, α) ≤ 4π 2 d(t, α).          (103)
+                                             4      2
+
+
+
+Define the unclipped PWO surrogates
+                          Smod (θ ′ ; θ) := Es∼Pθ rθ′ ;θ (s)AR
+                                                                    
+                                                              θ (s) ,                         (104)
+                           Sarg (θ ′ ; θ) := Es∼Pθ rθ′ ;θ (s)ϕθ′ ;θ (s)AIθ (s) .
+                                                                             
+                                                                                              (105)
+
+Theorem B.4 (PWO modulus–phase surrogate upper bound). Assume AR                  I
+                                                                       θ and Aθ are bounded.
+Then
+                                                                                  
+     E[ψθ′ ] − E[ψθ ] ≤ Smod (θ ′ ; θ) + Sarg (θ ′ ; θ) + 2Cθ 1 − 1 − I(ψθ , ψθ′ ) ,
+                                                                 p
+                                                                                       (106)
+
+where one may take
+
+                        Cθ = Ĥ − E[ψθ ]1            + AR       2 I
+                                                        θ ∞ + 4π Aθ ∞ .                       (107)
+                                                 ∞
+In particular,
+                 E[ψθ′ ] − E[ψθ ] ≤ Smod (θ ′ ; θ) + Sarg (θ ′ ; θ) + 2Cθ I(ψθ , ψθ′ ).       (108)
+                                                                           √
+Proof. For readability, write r = rθ′ ;θ , α = αθ′ ;θ , ϕ = 2α, and z =        reiα . Since
+                                                           √
+                                   |z − 1|2 = 1 + r − 2 r cos α,
+and Es∼Pθ [AR
+            θ ] = 0, we have
+                           √
+                     2EPθ [ r cos α AR            R                 2 R
+                                     θ ] = EPθ [rAθ ] − EPθ [|z − 1| Aθ ]                     (109)
+                                          ≤ Smod +           AR               2
+                                                              θ ∞ EPθ [|z − 1| ].             (110)
+                                               √
+For the phase term, apply Lemma B.3 with t = r:
+                       √                                      √
+                 2EPθ [ r sin α AIθ ] = EPθ [rϕAIθ ] + EPθ [(2 r sin α − 2rα)AIθ ]            (111)
+                                                      2
+                                       ≤ Sarg + 4π        AIθ ∞ EPθ [|z − 1|2 ].              (112)
+
+
+                                                     22
+Finally,
+                                                              2
+                            EPθ [|z − 1|2 ] = ∥ψθ′ − ψθ ∥                                     (113)
+                                                   p               
+                                            = 2 1 − 1 − I(ψθ , ψθ′ ) ,                        (114)
+
+where we used the global-phase convention Eq. (72). Combining
+                                                      √       Eqs. (78), (110), and (112) proves
+Eq. (106). The linear-infidelity form follows from 1 − 1 − x ≤ x.
+
+Theorem B.5 (First-order consistency of the PWO surrogate). Assume that ψθ is differentiable in
+a neighborhood of the reference parameters. For the phase surrogate, detach the importance ratio
+from the gradient computation:
+                      Sarg (θ ′ ; θ) = Es∼Pθ sg rθ′ ;θ (s) ϕθ′ ;θ (s)AIθ (s) .
+                                                                          
+
+Then
+                        ∇θ′ Smod (θ ′ ; θ) + Sarg (θ ′ ; θ) θ′ =θ = ∇θ E[ψθ ].
+                                                          
+                                                                                              (115)
+The same derivative is obtained from the clipped objectives at the reference point, since r = 1 and
+ϕ = 0 lie in the interior of the clipping intervals.
+
+Proof. At θ ′ = θ,
+                       ∇θ′ rθ′ ;θ (s) θ′ =θ = ∇θ log Pθ (s) = 2∇θ log |ψθ (s)|,               (116)
+                       ∇θ′ ϕθ′ ;θ (s) θ′ =θ = 2∇θ arg ψθ (s).                                 (117)
+
+Therefore the gradient of Smod recovers the 2AR  θ ∇ log |ψθ | term in Eq. (62), while the detached
+phase surrogate recovers the 2AIθ ∇ arg ψθ term. Thus the sum of the two surrogate gradients equals
+the VMC gradient.
+
+Theorem 4.1 (First-order consistency of PWO). Let |ψθ ⟩ be differentiable at θ old , and assume
+common support. For ϵ, δ > 0,
+                                              
+                   ∇θ Lclipmod (θ) + L clip
+                                       arg  (θ)     = ∇θ E[ψθ ]|θ=θold .                    (19)
+                                                    θ=θ old
+
+For a proof see Appendix B.6.
+
+Proof. Since clipping is inactive to first order at r = 1 and ϕ = 0, the clipped objectives have the
+same derivative at the reference point and the proof of Theorem B.5 still applies.
+
+B.7 Clipped PWO Improvement Certificate
+We finally combine the PWO surrogate bound with the amplitude–phase infidelity control. This gives
+the deterministic population-level certificate corresponding to the clipped PWO objective.
+Define the clipped losses
+                            ′
+                     Lclip                       R                       R
+                                                                          
+                      mod (θ ; θ) := EPθ max rAθ , clip(r, 1 − ϵ, 1 + ϵ)Aθ    ,               (118)
+                       clip ′                          I                 I
+                                                                          
+                     Larg (θ ; θ) := EPθ sg(r) max ϕAθ , clip(ϕ, −δ, δ)Aθ ,                   (119)
+where, as above, r = rθ′ ;θ and ϕ = ϕθ′ ;θ = 2α.
+
+Corollary 4.3 (Clipped PWO improvement certificate). Assume the conditions of Theorem 4.2,
+bounded centered local energies, and global constraints rθ (s) ∈ [1 − ϵ, 1 + ϵ] and |αθ (s)| ≤ δ for
+all s, with 0 ≤ ϵ ≤ 1 and 0 ≤ δ ≤ π. Then there exists Cθold < ∞ such that
+                                                                    √              !
+                            clip       clip                    1 + 1 − ϵ2        2 δ
+      E[ψθ ] − E[ψθold ] ≤ Lmod (θ) + Larg (θ) + 2Cθold 1 −                  cos          .     (22)
+                                                                     2              2
+
+For a proof see Appendix B.7.
+
+
+                                                   23
+Proof of Corollary 4.3. The clipped energy bound first follows from the linear-infidelity bound (108)
+and the pointwise inequalities
+                      Lclip
+                       mod (θ) ≥ Smod (θ; θ old ),        Lclip
+                                                           arg (θ) ≥ Sarg (θ; θ old ),                 (120)
+which hold because each clipped objective takes the maximum of the unclipped term and its clipped
+counterpart, and sg(r) has the same forward value as r. Thus
+
+                  E[ψθ ] − E[ψθold ] ≤ Lclip       clip
+                                        mod (θ) + Larg (θ) + 2Cθ old I(ψθ old , ψθ ).                  (121)
+By Lemma B.2, the assumptions rθ ∈ [1 − ϵ, 1 + ϵ] and |ϕθ | ≤ δ imply
+                                                 √
+                                             1 + 1 − ϵ2
+                                                                  
+                                                                  δ
+                       I(ψθold , ψθ ) ≤ 1 −                 cos2     ,                                 (122)
+                                                   2              2
+because the wrapped phase itself is ϕθ /2. Substituting this estimate into the previous display gives
+Eq. (22).
+
+PWO only encourages, but does not guarantee, the global trust-region conditions required by the
+certificate. First, the initial step is always taken from the unclipped objective, since clipping is inactive
+at (θ = θ old ). Second, even after clipping activates on a sampled configuration, an update driven
+by other unclipped configurations can still change its amplitude or phase because all configurations
+share parameters. Thus, clipping controls the empirical surrogate on the sampled batch, but does not
+impose pointwise bounds globally. The certificate should therefore be read as a conditional guarantee
+for realized updates that satisfy the amplitude and phase trust regions over the full support.
+
+
+
+
+                                                     24
+C                          Additional Sections
+C.1                         Numerical Cost of Stochastic Reconfiguration and Improvements
+A significant bottleneck arises when using the original SR formulation for optimization. The vanilla
+implementation involves inverting a P × P matrix, where P denotes the number of parameters.
+Alternatively, Chen and Heyl [2024] showed that this inversion problem can be recast into one
+that inverts a matrix of size M × M , where M is the number of samples used per iteration in the
+Monte Carlo estimation – this goes by the name of minSR and builds upon ideas from the machine
+learning optimization literature [Ren and Goldfarb, 2019]. The required operations for minSR are
+O(M 2 P ) + O(M 3 ) instead of O(P 3 ), and the memory usage is only O(M P ) instead of O(P 2 ). It
+was used to train a Vision Transformer with around 3 × 105 parameters, giving the lowest energy
+so far for the difficult benchmark of the Majumdar–Ghosh point of the 10 × 10 J1-J2 Heisenberg
+system [Rende et al., 2024].
+Despite the improvements brought by minSR, several implementations of NQS optimization, espe-
+cially for electronic structure problems, employ KFAC [Martens and Grosse, 2015] instead of SR. The
+O(M 3 ) cost can still be prohibitive when training networks for problems that require a large number
+of samples; KFAC provides a practical compromise: it avoids explicit matrix inversion through
+block-diagonal approximation, offering scalability at the potential cost of missing information about
+the geometry of the Hilbert space. KFAC is commonly used for applications to fermionic systems
+[Choo et al., 2020], where NQS achieved remarkable results, including architectures like FermiNet
+[Pfau et al., 2020], SchNet [Schütt et al., 2018], PauliNet [Hermann et al., 2020], and more recent
+transformer-based approaches [von Glehn et al., 2023].
+Recent advances have aimed to improve upon both approaches. These include SPRING, which
+combines minSR and KFAC to avoid explicit inversion [Goldshlager et al., 2024], methods that
+exploit block-diagonal structure in the quantum geometric tensor to improve conditioning and
+scalability [Nys et al., 2024, Shokry et al., 2025], and variational Lanczos techniques that accelerate
+convergence by extracting information across multiple eigenstates [Wang et al., 2026]. For a more
+detailed analysis of improvements in second-order optimization of NQS, the reader can refer to Drissi
+et al. [2024].
+
+C.2                         Relative Speed of PWO per Iteration
+
+                         0.40
+                                                                                                  16                                     15.397
+                         0.35                            0.339    0.341
+Time per Iteration [s]
+
+
+
+
+                                                                                                  14
+                                                                               Normalized Speed
+
+
+
+
+                         0.30
+                                                                                                  12
+                         0.25
+                                                                                                  10
+                         0.20
+                                                                                                  8
+                         0.15
+                                                                                                  6                              5.081
+                         0.10                                                                     4
+                                            0.067
+                         0.05    0.022                                                            2     1.000   1.006
+
+                         0.00                                                                     0
+                                 PWO       Adam          MinSR   SPRING                                SPRING   MinSR        Adam        PWO
+                                                    Method                                                              Method
+
+
+                          (a) Wall-clock time per optimizer iteration.         (b) Normalized iteration speed relative to SPRING.
+Figure 7: Per-iteration computational cost and normalized iteration speed for PWO and the baseline
+optimizers on the Heisenberg J1 –J2 chain with the default architecture D.2. Both measurements are
+obtained on a single NVIDIA L40S GPU. Normalized speed is reported as the number of optimizer
+iterations per unit time relative to SPRING, so higher is faster.
+
+Beyond convergence in wall-clock time, it is useful to isolate the computational cost of each opti-
+mization update. Figure 7b compares the normalized iteration speed (optimization steps per unit
+of time) of PWO against the baselines. The speed advantage over minSR is expected: PWO is a
+first-order method and does not require constructing or inverting the stochastic-reconfiguration matrix.
+In contrast, minSR replaces the original P × P SR solve by an M × M solve, where M is the number
+
+
+                                                                          25
+of samples, but it still requires expensive Jacobian contractions and a matrix inversion or linear solve.
+PWO avoids this curvature computation entirely.
+The comparison with Adam is more subtle. A single PWO update has additional bookkeeping relative
+to Adam, including probability ratios, clipping terms, and wrapped phase increments. However, in
+VMC the dominant cost is often not the optimizer algebra itself, but sampling configurations and
+evaluating the corresponding local energies. PWO computes local energies and advantages once
+for a sampled batch and then reuses that batch across multiple proximal inner epochs. Adam, in
+contrast, performs a single update per sampled batch, so the local-energy overhead is paid again for
+each parameter update. Thus, PWO can amortize the expensive energy computation across several
+optimization steps, making its effective per-update cost competitive with Adam despite the more
+structured surrogate objective.
+C.3 Why RWKV?
+RWKV is a particularly natural architecture for large-scale autoregressive NQS because it combines
+the expressivity of sequence models with recurrent inference. Unlike Transformer-based autoregres-
+sive models, RWKV does not require a growing key-value cache, so its per-token inference cost and
+memory footprint remain constant in the sequence length [Peng et al., 2025]. This is well aligned with
+autoregressive VMC, where spin configurations are generated sequentially and model evaluations
+are repeatedly invoked during Monte Carlo optimization. Recurrent architectures have also been
+successful in autoregressive NQS more broadly, where they provide exact independent sampling from
+the Born distribution while avoiding Markov-chain mixing issues [Hibat-Allah et al., 2020, Merali
+et al., 2026]. Finally, recent hyperscale RWKV fine-tuning work provides a practical implementation
+foundation for adapting billion-parameter recurrent models to nonstandard optimization objectives
+[Sarkar et al., 2026]. For these reasons, RWKV is a useful stress test for whether PWO can scale
+beyond conventional NQS architectures.
+C.4 Limitations of PWO
+Although PWO is supported by a first-order consistency result and a clipped improvement bound, the
+theory remains local and conservative: it relies on common-support and boundedness assumptions and
+does not imply global convergence for neural-network training. Empirically, our results include one-
+dimensional chains, a frustrated two-dimensional square lattice, and a large-scale RWKV fine-tuning
+experiment, but they are still not a comprehensive NQS benchmark across Hamiltonian families. In
+particular, broader validation on larger two-dimensional systems, fermionic models, and electronic-
+structure problems remains open. Finally, PWO introduces additional optimization hyperparameters,
+such as amplitude and phase clipping thresholds and the number of inner epochs, whose optimal
+values may depend on the Hamiltonian, ansatz, system size, and sample budget.
+
+
+
+
+                                                  26
+D     Experimental Details
+D.1   Hyperparameter search
+For each method, we perform a small hyperparameter search over the learning rate using a grid sweep
+and select the configuration with the best validation performance. For PWO, we additionally tune
+the clipping parameters that control the amplitude and phase surrogate objectives. Specifically, after
+selecting an initial learning rate, we independently grid search each clipping parameter while holding
+the best values found so far fixed. This sequential procedure provides a simple and computationally
+tractable way to tune the additional PWO-specific hyperparameters without requiring an exhaustive
+joint sweep over all combinations.
+For Adam-based methods, including PWO, we use a cosine one-cycle learning-rate schedule [Smith
+and Topin, 2018]. The learning rate is first increased to a peak value during a short warmup phase and
+is then annealed smoothly to a small final value by cosine decay. The peak learning rate is selected
+by the grid search above, while the other schedule parameters are fixed across runs. For PWO, which
+performs multiple optimization epochs per sampled batch, we scale the transition horizon by the
+number of PPO epochs so that the schedule evolves on a comparable outer-iteration timescale. For
+minSR and SPRING, a constant learning rate performed better than scheduled variants.
+Because the Heisenberg and J1–J2 chains are more challenging optimization problems than the
+transverse-field Ising model, we use longer learning-rate schedules for these settings (compare
+Appendices D.3-D.5). In particular, we allocate more transition steps to the Heisenberg chain
+than to Ising, and more transition steps to J1–J2 than to Heisenberg. This gives the optimizer a
+longer annealing horizon on the harder Hamiltonians, while keeping the schedule structure fixed
+across problems. To improve readability, we report the method-specific hyper-parameters for each
+Hamiltonian separately. The Ising configuration is shown first, followed by the Heisenberg and J1–J2
+settings in the subsequent subsections.
+
+D.2   Neural Quantum State Architecture
+Across experiments, we use the same autoregressive recurrent neural network for PWO and minSR,
+ensuring that performance differences arise from the optimizer rather than the parametrization. Given
+a spin configuration s ∈ {±1}N , we map spins to binary tokens, prepend a beginning-of-sequence
+token, and embed the resulting sequence with learned token embeddings of dimension 32 and learned
+positional embeddings. The embedded inputs are projected to dimension 256, followed by a tanh
+nonlinearity and layer normalization. The backbone consists of GRU layers with residual connections
+between recurrent blocks. From the shared recurrent representation, we use two separate two-layer
+MLP heads and GELU activations: an amplitude head, which outputs conditional log-probabilities
+via a log-softmax, and a phase head, which outputs bounded phases through a tanh nonlinearity
+scaled by π. The model has 1.4M parameters. Unless otherwise stated, all methods and Hamiltonians
+use the same architecture. The shared hyperparameters are summarized in Table 2.
+
+                         Architecture hyperparameter            Value
+                         Token embedding dimension                32
+                         Site embeddings                      Learned
+                         Backbone input dimension                256
+                         Backbone nonlinearity                  tanh
+                         Backbone normalization          Layer normalization
+                         Recurrent backbone                     GRU
+                         Number of GRU layers                      3
+                         GRU hidden dimension                    256
+                         Amplitude head                     2-layer MLP
+                         Phase head                         2-layer MLP
+                         Head hidden dimension                   256
+                         Head activation                       GELU
+                         Phase output                        π tanh(·)
+                         Phase scale                              π
+Table 2: Shared NQS architecture used across all Hamiltonians and optimization methods. The same
+autoregressive GRU-based parameterization is used for Adam, PWO, minSR, and SPRING.
+
+
+
+                                                 27
+D.3   Ising Model
+
+           Hyperparameter                   Adam         PWO         minSR     SPRING
+           Optimizer / method               Adam       Adam + PWO    minSR     SPRING
+           Learning rate                    10−5          10−5       10−2       10−2
+           Peak learning rate               10−4          10−4         –          –
+           Transition steps                 5,000        20,000        –          –
+           PPO epochs                         –             4          –          –
+           PPO clip ϵ                         –           10−3         –          –
+           Advantage normalization            –            Yes         –          –
+           Phase loss                         –          ∆ϕ clip       –         –
+           Phase coefficient                  –           1.0          –         –
+           Phase clip                         –           0.3          –         –
+           Center imaginary advantage         –           Yes          –         –
+           Normalize imaginary advantage      –           Yes          –         –
+           Phase Jacobian baseline            –           Yes          –         –
+           SR diagonal shift                  –            –         10−2       10−2
+           NTK / minSR mode                   –            –          Yes        Yes
+           On-the-fly SR                      –            –          Yes        Yes
+           SPRING momentum                    –            –           –         0.8
+
+Table 3: Hyperparameters used for the Ising experiments. All methods use N = 12, periodic
+boundary conditions, J = 1, h = 1, complex-valued neural quantum states, 1024 training samples,
+exact diagonalization for evaluation, and evaluation every 200 iterations. Adam and PWO use the
+cosine one-cycle schedule.
+
+
+D.4   Heisenberg Chain
+
+          Hyperparameter                    Adam           PWO        minSR     SPRING
+          Optimizer / method                 Adam       Adam + PWO    minSR     SPRING
+          LR parameter / constant LR         10−5          10−5       10−3       10−3
+          Peak learning rate               3 × 10−4        10−4         –          –
+          Transition steps                  10,000        40,000        –          –
+          PPO epochs                           –             4          –          –
+          PPO clip ϵ                           –           10−3         –          –
+          Advantage normalization              –            Yes         –          –
+          Phase loss                          –           ∆ϕ clip          –         –
+          Phase coefficient                   –            1.0             –         –
+          Phase clip                          –            0.3             –         –
+          Center imaginary advantage          –            Yes             –         –
+          Normalize imaginary advantage       –            Yes             –         –
+          Phase Jacobian baseline             –            Yes             –         –
+          SR diagonal shift                   –                –      10−2       10−2
+          NTK / minSR mode                    –                –       Yes        Yes
+          On-the-fly SR                       –                –       Yes        Yes
+          SPRING momentum                     –                –        –         0.8
+Table 4: Hyperparameters for the Heisenberg-chain experiments. All methods use N = 12, periodic
+boundary conditions, coupling J = 0.25, no sign rule, complex-valued neural quantum states, 1024
+training samples, exact evaluation, and evaluation every 200 iterations. Adam and PWO use a cosine
+one-cycle learning-rate schedule; minSR and SPRING use a constant learning rate.
+
+
+
+
+                                                  28
+D.5   Heisenberg J1 –J2 Chain
+
+           Hyperparameter                     Adam            PWO        minSR      SPRING
+           Optimizer / method                 Adam          Adam + PWO   minSR      SPRING
+           LR parameter / constant LR         10−5             10−5      10−3        10−3
+           Peak learning rate               3 × 10−4           10−4        –           –
+           Transition steps                  10,000           40,000       –           –
+           PPO epochs                           –                4         –           –
+           PPO clip ϵ                           –              10−3        –           –
+           Advantage normalization              –               Yes        –           –
+           Phase loss                              –          ∆ϕ clip       –          –
+           Phase coefficient                       –           1.0          –          –
+           Phase clip                              –           0.3          –          –
+           Center imaginary advantage              –           Yes          –          –
+           Normalize imaginary advantage           –           Yes          –          –
+           Phase Jacobian baseline                 –           Yes          –          –
+           SR diagonal shift                       –             –        10−2       10−2
+           NTK / minSR mode                        –             –         Yes        Yes
+           On-the-fly SR                           –             –         Yes        Yes
+           SPRING momentum                         –             –          –         0.8
+Table 5: Hyperparameters for the frustrated Heisenberg J1 –J2 experiments. All methods use N = 12,
+periodic boundary conditions, couplings J1 = 1 and J2 = 0.5, no sign rule, complex-valued neural
+quantum states, 1024 training samples, exact evaluation, and evaluation every 200 iterations. Adam
+and PWO use a cosine one-cycle learning-rate schedule; minSR and SPRING use a constant learning
+rate.
+
+
+D.6 Two-dimensional J1 –J2 square-lattice experiment
+Using the same method hyper-parameters as above, we evaluate PWO on the frustrated spin-1/2
+J1 –J2 Heisenberg model on a two-dimensional square lattice,
+                                         X                X
+                          ĤJ2D
+                              1 –J2
+                                    = J1   Ŝi · Ŝj + J2    Ŝi · Ŝj ,              (123)
+                                           ⟨i,j⟩               ⟨⟨i,j⟩⟩
+
+where ⟨i, j⟩ and ⟨⟨i, j⟩⟩ denote nearest- and next-nearest-neighbor pairs, respectively. We use an
+L × L square lattice with L = 10, periodic boundary conditions, J1 = 1, and J2 = 0.5. All runs are
+                                              z
+restricted to the zero-magnetization sector, Stot = 0, by masking infeasible autoregressive choices
+during sampling and evaluation.
+For this experiment we use a complex-valued patch-autoregressive transformer designed for two-
+dimensional lattices. Instead of generating spins one at a time, the model partitions the 10 × 10 lattice
+into non-overlapping 2 × 2 patches. Each patch is represented as a categorical token with vocabulary
+size 24 = 16, so the full configuration is generated as a sequence of
+                                                 2
+                                                  L
+                                           T =          = 25                                       (124)
+                                                  2
+autoregressive tokens. The wavefunction is factorized over patch tokens as
+                                    T                                         
+                                   X    1
+                      log ψθ (s) =        log pθ (at | a<t ) + i ϕθ (at | a<t ) ,                  (125)
+                                   t=1
+                                        2
+
+where the factor 1/2 corresponds to the Born-rule convention Pθ (s) = |ψθ (s)|2 .
+The model prepends a beginning-of-sequence token and embeds patch tokens with learned token
+embeddings of dimension 64. We also use learned site embeddings and prefix-count features
+that encode the partial magnetization constraint. These embeddings are projected to width 96,
+normalized with layer normalization, and passed through an 8-layer causal transformer backbone.
+Each transformer block uses 6 attention heads, two-dimensional axial RoPE with base 100, residual
+connections, and a feedforward width of 4 × 96 = 384.
+
+
+                                                       29
+From the final transformer representation, the model uses separate amplitude and phase heads. Both
+heads are two-layer MLPs with hidden dimension 192 and GELU activations. The amplitude head
+outputs masked conditional log-probabilities through a log-softmax, ensuring exact normalization
+over feasible patch choices. The phase head outputs centered phase increments using a π tanh(·)
+parameterization, with small initialization scale 10−3 . This gives an exactly sampleable complex
+autoregressive neural quantum state adapted to the two-dimensional square lattice.
+While the aim of this experiment is to compare optimizers and not to achieve the state-of-the-art
+variational energy (around -199.0536 [Rende et al., 2024]), we note that the energy of the PWO-
+trained autoregressive transformer of 1.5M parameters is −185 after 30 mins, reaches −195.6 after
+24 hours, and keeps decreasing. The run is on a single GPU and imposes no symmetries, except for
+zero-magnetization sampling.
+
+                       Hyperparameter                              Value
+                       Lattice size                             10 × 10
+                       Number of spins                            100
+                       Boundary conditions                      Periodic
+                       Hamiltonian couplings                J1 = 1, J2 = 0.5
+                                                                 z
+                       Magnetization sector                     Stot =0
+                       Patch size                                 2×2
+                       Patch vocabulary size                        16
+                       Autoregressive tokens                        25
+                       Token embedding dimension                    64
+                       Transformer width                            96
+                       Transformer depth                             8
+                       Attention heads                               6
+                       Transformer MLP hidden dimension            384
+                       RoPE type                              2D axial RoPE
+                       RoPE base                                   100
+                       Amplitude head                         2-layer MLP
+                       Phase head                             2-layer MLP
+                       Head hidden dimension                       192
+                       Phase parameterization                  π tanh(·)
+                       Phase initialization std.                  10−3
+                       Prefix-count features                       Yes
+                       Learned site embeddings                     Yes
+Table 6: Architecture used for the two-dimensional frustrated J1 –J2 square-lattice experiment. The
+model is a complex patch-autoregressive transformer over 2 × 2 spin patches, with two-dimensional
+axial RoPE and an exact zero-magnetization constraint enforced through autoregressive masking.
+
+
+D.7   Scaling Experiment
+To study how performance scales with model capacity, we train three model sizes on the frustrated
+Heisenberg J1 –J2 chain (N = 12, J1 = 1, J2 = 0.5, periodic boundary conditions) using PWO,
+Adam, and minSR. All three sizes share the same autoregressive GRU architecture described in
+Appendix D.2; they differ only in the number of recurrent layers and hidden dimensions. Table 7
+summarises the sizes and the corresponding total parameter counts.
+
+                Size       GRU layers     RNN hidden      Head hidden      Parameters
+                Tiny            1              64            64              44,452
+                Small           2              128           128            269,156
+                Medium          3              256           256           1,456,356
+Table 7: Model sizes used in the scaling experiment. All models use an embedding dimension of 32
+and are evaluated on the frustrated Heisenberg J1 –J2 chain with N = 12 sites. Parameter counts
+include all weights and biases of the full autoregressive network (embedding, recurrent backbone,
+amplitude head, and phase head).
+
+
+
+                                                   30
+The hyperparameters used for each optimization method in the scaling experiment are listed in
+Table 8. The schedule and clipping parameters are identical to those of the main J1 –J2 experiments
+(see Tables 5 and 2); only the number of transition steps differs to account for the change in model
+size.
+
+                Hyperparameter                     Adam          PWO         minSR
+                Optimizer / method                  Adam       Adam + PWO    minSR
+                Learning rate                       10−5          10−5       10−3
+                Peak learning rate                3 × 10−4        10−4         –
+                Transition steps                   40,000        40,000        –
+                PPO epochs                            –             4          –
+                PPO clip ϵ                            –           10−3         –
+                Advantage normalization               –            Yes         –
+                Phase loss                             –         ∆ϕ clip       –
+                Phase coefficient                      –          1.0          –
+                Phase clip                             –          0.3          –
+                Center imaginary advantage             –          Yes          –
+                Normalize imaginary advantage          –          Yes          –
+                Phase Jacobian baseline                –          Yes          –
+                SR diagonal shift                      –           –         10−2
+                NTK / minSR mode                       –           –          Yes
+                On-the-fly SR                          –           –          Yes
+                Training samples                                 2,048
+                Seeds                                             10
+Table 8: Hyperparameters for the scaling experiment on the frustrated Heisenberg J1 –J2 chain
+(N = 12, J1 = 1, J2 = 0.5, periodic boundary conditions). All methods and sizes use the same
+optimization hyperparameters; only the model architecture varies across runs (see Table 7). Adam
+and PWO use a cosine one-cycle learning-rate schedule; minSR uses a constant learning rate.
+
+
+D.8   RWKV-7 on Ising Model
+
+                        Hyperparameter                 Adam        PWO
+                        Optimizer / method          Adam        Adam + PWO
+                        Model                      RWKV-7         RWKV-7
+                        Model size                  1.5B           1.5B
+                        Learning rate               10−5           10−5
+                        Transition steps            1,200          4,800
+                        Decay rate                   0.5            0.5
+                        PPO epochs                    –              4
+                        PPO clip ϵ                    –            10−3
+                        Advantage normalization       –             Yes
+                        Batch size                     150          150
+                        Machine power                   2            2
+                        Evaluation samples             4,096       4,096
+                        Evaluation batch size           128         128
+                        Exact diagonalization           Yes         Yes
+Table 9: Hyperparameters for the RWKV-7 fine-tuning experiments on the transverse-field Ising
+model. Both methods use an autoregressive RWKV-7 model with 1.5B parameters, N = 12, periodic
+boundary conditions, J = 1, h = 1, exact diagonalization for evaluation, and samples drawn exactly
+from the autoregressive Born distribution. Adam corresponds to the single-epoch first-order baseline,
+while PWO performs four proximal inner epochs per sampled batch.
+
+
+
+
+                                                  31
+E                       Additional Figures
+E.1                         Individual Seed Plots for All Hamiltonias
+                                                                               Ising model
+                       100                                                                                 101
+
+                           −2
+                      10
+Eval Relative Error
+
+
+
+
+                                                                                                          10−1
+
+
+
+
+                                                                                           Eval V-score
+                      10−4
+
+                      10−6                                                                                10−3
+
+                      10−8
+                                                                                                          10−5
+                      10−10
+
+                                0    5     10       15      20          25       30                              0    5       10       15       20      25      30
+                                        Relative Time (Wall) [min]                                                         Relative Time (Wall) [min]
+                                    PWO      adam       minSR           SPRING                                       PWO       adam        minSR        SPRING
+
+                                                                             Heisenberg chain
+                       100                                                                                 104
+                      10−1
+Eval Relative Error
+
+
+
+
+                                                                                                           102
+
+
+
+
+                                                                                           Eval V-score
+                      10−2
+
+                      10−3                                                                                 100
+
+                      10−4                                                                                10−2
+
+                      10−5
+                                                                                                          10−4
+                      10−6
+
+                                0    5       10       15       20       25       30                              0    5       10       15       20      25      30
+                                          Relative Time (Wall) [min]                                                       Relative Time (Wall) [min]
+                                    PWO       adam        minSR         SPRING                                       PWO       adam        minSR        SPRING
+
+                                                                       J1 –J2 Heisenberg model
+                       100                                                                                 102
+Eval Relative Error
+
+
+
+
+                      10−2                                                                                 100
+                                                                                           Eval V-score
+
+
+
+
+                           −4
+                      10
+                                                                                                          10−2
+                      10−6
+                                                                                                          10−4
+                      10−8
+                                                                                                          10−6
+                      10−10
+
+                                0    5     10       15      20          25       30                              0    5       10       15       20      25      30
+                                        Relative Time (Wall) [min]                                                         Relative Time (Wall) [min]
+                                    PWO      adam       minSR           SPRING                                       PWO       adam        minSR        SPRING
+
+                                                            Square-lattice J1 –J2 Heisenberg model
+                                                                                                           106
+
+                       200                                                                                 105
+Mean Real Energy
+
+
+
+
+                                                                                                           104
+                       100                                                                                 103
+                                                                                           V-score
+
+
+
+
+                                                                                                           102
+                           0
+                                                                                                           101
+
+                      −100                                                                                 100
+                                                                                                          10−1
+                      −200
+                                0    5       10       15       20       25       30                              0    5       10       15       20      25      30
+                                          Relative Time (Wall) [min]                                                       Relative Time (Wall) [min]
+                                    PWO                                      Adam                                    PWO                                     Adam
+
+Figure 8: Individual-seed learning curves for all Hamiltonians. Each row corresponds to one Hamiltonian, and
+the right column reports the V-score.
+
+
+
+
+                                                                                      32
+ E.2                             Scaling Samples and System Sizes
+
+
+                              10−2
+Energy relative error
+
+
+                              10−4
+
+
+                              10−6
+
+
+                              10−8
+
+
+                          10−10
+                                     30 min   1h     2h     4h   30 min    1h     2h     4h     30 min    1h     2h     4h
+                                              512 samples                 1024 samples                   2048 samples
+                                                                    minSR        Adam     PWO
+
+
+ Figure 9: Wall-clock scaling comparison across number of samples and optimization methods.
+ Boxplots show the interquartile mean relative error over seeds, with boxes indicating the interquartile
+ range and lines indicating the min and max. Results are grouped by model size and wall-clock time,
+ and run on a single NVIDIA A100 GPU.
+
+
+                              10−1
+
+                              10−2
+      Energy relative error
+
+
+
+
+                              10−3
+
+                              10−4
+
+                              10−5
+
+                              10−6
+
+                              10−7
+
+                              10−8
+
+                              10−9
+                                     30 min   1h     2h     4h   30 min    1h     2h     4h     30 min    1h     2h     4h
+                                                8 spins                     12 spins                       16 spins
+                                                                    minSR        Adam     PWO
+
+
+ Figure 10: Wall-clock scaling comparison across system size and optimization methods. Boxplots
+ show the interquartile mean relative error over seeds, with boxes indicating the interquartile range
+ and lines indicating the min and max. Results are grouped by model size and wall-clock time, and
+ run on a single NVIDIA A100 GPU.
+
+
+
+
+                                                                            33
+E.3                        Individual Seed Plots for RWKV7 Fine-tuning
+                                                                                             100
+                 10−1
+
+                 10−2                                                                       10−1
+Relative Error
+
+                      −3
+                 10
+                                                                                            10−2
+
+
+
+
+                                                                                  V-score
+                 10−4
+                                                                                            10−3
+                 10−5
+
+                 10−6                                                                       10−4
+
+                 10−7
+                                                                                            10−5
+                           0    50      100      150      200      250      300                    0   50      100      150      200      250      300
+                                      Relative Time (Wall) [min]                                             Relative Time (Wall) [min]
+                                PWO                                      adam                          PWO                                      adam
+
+
+Figure 11: Individual-seed fine-tuning curves for the 1.5B-parameter RWKV-7 neural quantum state
+on the transverse-field Ising model. Each curve corresponds to one random seed, with relative error
+shown on the left and V-score on the right. PWO consistently remains stable across seeds and reaches
+lower final error and variance than the Adam baseline, indicating that the proximal objective improves
+robustness even in the billion-parameter regime.
+
+
+
+
+                                                                                34
+
