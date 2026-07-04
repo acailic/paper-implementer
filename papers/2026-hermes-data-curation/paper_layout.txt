@@ -1,0 +1,1216 @@
+                                        HERMES: A Multi-Granularity Labeling Substrate for Pre-training Data
+                                                                   Mixtures
+                                                           Ziyun Qiao1,2,*,†        Yue Min1,*       Ruining Chen3           Yujun Li1,†
+                                             1
+                                                 Wizard Quant, Beijing, China 2 Peking University, Beijing, China 3 University of
+                                                                 Science and Technology of China, Hefei, China
+                                                                              *
+                                                                                Equal contribution.
+                                                   †
+                                                     Correspondence to: qiaozy@stu.pku.edu.cn, liyujun@wizardquant.com
+
+                                                               Abstract
+                                            Most data-mixing methods assume the corpus
+arXiv:2607.02266v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                            has already been partitioned into groups, and
+                                            the choice of those groups determines what
+                                            a mixer can express. Existing labels (prove-
+                                            nance, topic or format taxonomies, flat em-
+                                            bedding clusters) commit to one semantic axis
+                                            at one granularity; changing the resolution re-
+                                            builds the labels. We argue the bottleneck is
+                                            the label system, not the mixer, and provide a
+                                            hierarchical one. HERMES is a data-derived
+                                            labeling substrate: a Learned Semantic Trans-
+                                            form followed by 3-stage residual vector quan-
+                                            tization annotates each document once into a
+                                            coarse-to-fine code whose prefix length con-
+                                            trols granularity up to ∼130k cells. At coarse
+                                            granularity HERMES sits at a plateau with                Figure 1: Three corpus-control paradigms. Top: fixed
+                                            KMeans-family methods on standard cluster-               taxonomies (source, topic, format) scale but fix one se-
+                                            ing metrics, so the contribution is the substrate,       mantic axis at one granularity. Bottom: per-sample
+                                            not the clusterer. On 1B-parameter, 25B-token            selection (DSIR, MATES, LESS) reaches the docu-
+                                            pre-training, the hierarchy exposes an interac-          ment at per-document compute. Middle: HERMES
+                                            tion fixed-granularity pipelines cannot test: at         exposes a data-derived hierarchy whose prefix reads
+                                            one prefix length, a combined Stage-2 rule               (L1 , L12 , L123 ) deliver multiple granularities from one
+                                            contrast (equal-subbucket coverage vs. size-             offline annotation, with no re-clustering.
+                                            proportional within-bucket quality top-30%)
+                                            lifts a 16-task capability macro-average by
+                                            +0.0253; at the next finer level, the same rule          granularity, and flat clusterings require recomputa-
+                                            loses its measurable edge as candidate pools
+                                                                                                     tion to change K. We address this with HERMES
+                                            contract ∼5×. HERMES reframes data mix-
+                                            ture design from choosing among fixed label              (Hierarchical Embedding-based RVQ for Mixture
+                                            sets to navigating a reusable, data-derived gran-        Selection), a one-shot hierarchical residual vec-
+                                            ularity hierarchy.                                       tor quantizer that annotates each document with a
+                                                                                                     coarse-to-fine code (c1 , c2 , c3 ) and exposes gran-
+                                        1   Introduction                                             ularity as a prefix length on a single trained RVQ
+                                        Data curation has become a decisive factor in LLM            codebook stack (Figure 1). The detailed compar-
+                                        pre-training (Penedo et al., 2023, 2024), shifting           ison to existing provenance, distilled-taxonomy,
+                                        attention from parameter scaling alone toward the            and embedding-cluster label families is deferred to
+                                        mixing of heterogeneous sources. Pre-training data           Section 2.
+                                        mixing has two separable layers: a label system                 At the K = 256–130k label scale, regression-
+                                        that partitions the corpus, and a mixer or sam-              style mixture optimizers (RegMix (Liu et al.,
+                                        pler that consumes those labels. What has con-               2025b), Data Mixing Laws (Ye et al., 2025)) sit out-
+                                        strained group-level pipelines is the label layer,           side the proxy budget, since their fitting bases scale
+                                        not the mixer machinery: provenance is coarse,               at least linearly in cell count; we therefore instan-
+                                        taxonomies commit to a single semantic axis and              tiate only O(1)-proxy outer weights, Uniform and
+
+                                                                                                 1
+DoReMi. Per-sample selectors that avoid labels pay           axes jointly (sub-bucket mass and per-document
+per-document compute at web scale (Section 4.3).             eligibility) and is read as a combined Stage-2 rule
+   HERMES meets these constraints. A Learned                 effect. (iii) A candidate-competition diagnostic:
+Semantic Transform, in the spirit of optimized prod-         holding DoReMi-L1 outer weights fixed and com-
+uct quantization (Ge et al., 2013), feeds a 3-stage          paring the same two rules in their quota-preserving
+residual vector quantizer (Liu et al., 2015; Huijben         forms, the L12 advantage (+0.0253) collapses to
+et al., 2024); the prefix length on the resulting code       +0.0002 at L123 (0.3988 vs. 0.3986 per-L1 local
+defines granularity over a single trained RVQ code-          random coverage), consistent with median pool
+book stack: L1 = c1 gives 256 buckets, L12 gives             shrinkage from 2,271 to 429 documents (Finding
+∼65k, L123 gives ∼130k observed. HERMES                      B, Section 5.3).
+does not aim to be a better clustering algorithm:
+at K = 256 it sits on a plateau with four standard           2   Related Work
+256-way clusterers on compactness/mass-balance
+metrics (Table 2), and is downstream-matched to              Corpus label systems. The label system used to
+KMeans within 0.0002 Avg. (Section 5.1). Its                 partition a corpus is a design choice independent
+value is that one annotation supports an entire              of the mixer that consumes it. Prior work falls into
+granularity sweep with no re-clustering between              three families. Provenance labels use the source do-
+K = 256 and K = 130k.                                        main or web shard a document originated from (Xie
+   HERMES exposes two interactions invisible                 et al., 2023a), easy to obtain but committed to a sin-
+to fixed-granularity pipelines, on a 1B/25B-token            gle coarse axis. Distilled taxonomies build human-
+training regime evaluated by a 16-task capabil-              or LLM-defined category sets at a fixed granular-
+ity macro-mean (Avg.). First, at fixed L12 gran-             ity: WebOrganizer (Wettig et al., 2025) releases
+ularity under DoReMi-L1, switching the Stage-                topic and format taxonomies trained on LLM anno-
+2 sampler from max-entropy coverage (equal                   tations, and Topic-over-Source (Peng et al., 2025)
+sub-bucket mass, all docs) to quality top-30%                derives topic labels via clustering, LLM summa-
+(size-proportional mass, within-bucket top-30%;              rization, and classifier distillation, at a single fixed
+corrected FineWeb-Edu reader) raises Avg. by                 topical resolution. Embedding clusters are unsu-
++0.0253 (z +2.09) at fixed corpus, model, code-              pervised and data-derived: KMeans variants, plain
+book, and outer weight (Section 5.2). Second, the            RVQ (Liu et al., 2015), and CLIMB’s ∼20 flat
+same Stage-2 advantage does not persist at L123 :            cells (Diao et al., 2025). These three families differ
+under the quota-preserving pair (per-L1 L123 local           along prior structure, semantics, and granularity.
+random coverage vs. L123 quality top-30%), the               Topic-over-Source shares the data-derived prior but
+two rules sit at 0.3986 and 0.3988 (∆ = +0.0002,             yields a single fixed topic level via an LLM-in-the-
+numerically tied under single-seed evaluation; Sec-          loop pipeline; HERMES exposes granularity as a
+tion 5.3). This collapse is consistent with candidate        prefix length on one quantizer pass, with no LLM
+competition: the median candidate pool contracts             in the loop.
+5.3× from L12 (2,271) to L123 (429), a regime                   Mixers and samplers that consume labels.
+in which within-sub-bucket ranking is no longer a            Given a label system, several outer-weight fam-
+stable proxy for global ranking over coverage. To-           ilies decide how much sampling probability each
+gether these show that granularity and the Stage-2           cell receives. DoReMi (Xie et al., 2023a) runs
+sampler are jointly determined on the substrate; a           group-DRO on a small reference model. Data Mix-
+paired Uniform vs. DoReMi L1 characterisation is             ing Laws (Ye et al., 2025) and RegMix (Liu et al.,
+in Appendix L.                                               2025b) fit regression proxies whose bases scale
+   Contributions. (i) HERMES, a one-shot hierar-             linearly in cell count and are typically reported
+chical RVQ substrate that exposes granularity as a           with ≤20 groups. CLIMB (Diao et al., 2025) cou-
+prefix length on a trained codebook stack, annotat-          ples clustering and weight search in a joint loop.
+ing ∼50M documents into up to ∼130k cells. (ii) A            Chameleon (Xie et al., 2025) computes leverage-
+controlled Stage-2 sampler study at fixed codebook,          score weights over a learned domain-affinity ma-
+corpus, model, budget, and granularity (L12 under            trix. None of these works treat the label system
+DoReMi-L1): switching from max-entropy cover-                as a separately tunable axis: label resolution is a
+age to quality top-30% (corrected reader) yields             property of the labeling step they presuppose, not
++0.0253 Avg. (Finding A); the contrast moves two             a dial they sweep. HERMES is complementary: it
+
+                                                         2
+                                                                                                                                                                    Hierarchical Codes ( )
+                        Learned Semantic Transform (LST)
+                                                                                                  Residual Vector Quantization (RVQ)
+
+
+
+
+                                                                                                        Stage 1
+                                                                                                       (Coarse)
+                                                                                                                             Stage 2
+                                                                                                                         (Intermediate)
+                                                                                                                                                    Stage 3
+                                                                                                                                                     (Fine)
+                                                                                                                                                                                        ⋮
+    Input Data
+                                                                                                    Codebook           Codebook             Codebook
+
+                                                   W                            Transformed
+                                                                                Embeddings
+                                                                                                                                                                    Reusable Semantic Buckets
+
+                                                                                                                                                                     Level 1 Prefix:
+                                                                                                  select              select               select                    (Coarse)
+                                                                                                               ...                  ...                       ...                                             ...
+                                                                                                                                                                                      Prefix counts:
+
+
+                                                                                 Structured
+                                                                                                                                                                     Level 2 Prefix:
+      Frozen encoder                                                              sematic                                                                            (Intermediate)
+    sample embeddings                                                              tokens
+                                                                                                                                                                                                              ...
+                         LST Loss                                                                                                                                                     Prefix counts:
+
+
+                                                                                                                                                                     Level 3 Leaf:
+                               Preserves semantic neighborhoods                                                                                                      (Fine)
+
+
+                               Quantization friendliness                                                   Reconstruction:          Hierarchical codes:                                                       ...
+                                                                                                                                                                                      Leaf counts:
+                              Near-orthogonal transform                                                                                                              ▮▮   Prefix counts: number of items
+                                                                                                                                                                     ▮▮   Leaf counts: number of leaves
+                              Structure-preserving &                                                                                                                 ▦    Density: data mass / bucket
+                          ✓
+                              quantization-friendly near-orthogonal transform                                                                                        σ    Quality prior: recon. error stats
+
+
+
+
+Figure 2: HERMES annotation pipeline. A frozen encoder produces document embeddings (left); the Learned
+Semantic Transform rotates them into a quantization-friendly geometry under structure-preservation, reconstruction,
+and orthogonality losses (centre-left). Three cascaded RVQ stages then encode each rotated embedding into a
+hierarchical code (centre-right). Reading the code at different prefix lengths (right) exposes ∼256, ∼65k, and
+∼130k buckets, reused across samplers without re-clustering. Sections 3.2–3.3.
+
+
+provides the label substrate, and any of these outer-                                              annotator with K = 256 throughout,
+weight families can in principle consume it at a
+                                                                                                               LST                                   RVQ
+chosen prefix length, subject to their proxy budget.                                                 ei −−−→ hi ∈ Rd −−−−→ (c1 , c2 , c3 ) ∈ [K]3 ,
+In this paper we plug in two O(1)-proxy families
+compatible with K = 256–130k cells: Uniform                                                        a Learned Semantic Transform (LST) rotates the
+and DoReMi. Per-sample selectors instead score                                                     embedding into a quantization-friendly hi and a
+documents individually (Section 4.3).                                                              3-stage Residual Vector Quantizer (RVQ) emits a
+   Vector quantization machinery. HERMES                                                           hierarchical code. We write the bucket id at prefix
+borrows the rotate-then-quantize machinery of op-                                                  length ℓ as bℓ (xi ) = (c1 , . . . , cℓ ), so b1 is an ances-
+timized product quantization (Ge et al., 2013),                                                    tor of b2 which is an ancestor of b3 . We refer to the
+improved RVQ (Liu et al., 2015), and VQ-VAE                                                        three prefix granularities as L1, L12, and L123 and
+(van den Oord et al., 2017), all of which optimize                                                 use prefix length as the granularity dial. Codes are
+reconstruction. We reuse it for labeling: the code                                                 produced once, so any difference across samplers
+is consumed by samplers rather than a decoder,                                                     cannot be attributed to a different grouping.
+judged by the data-mixing interactions it exposes;
+                                                                                                   3.2         Learned Semantic Transform (LST)
+see Chen et al. (2026) for the broader static-vs-
+dynamic landscape.                                                                                LST is a single linear-plus-normalize layer hi =
+                                                                                                  normalize(W ei +b) with W ∈ Rd×d initialized to
+                                                                                                  the identity. It is trained jointly with the RVQ code-
+3       Method
+                                                                                                  books under three named losses (pairwise struc-
+                                                                                                  ture preservation, quantization-aware reconstruc-
+3.1       Notation and overview
+                                                                                                  tion, and orthogonality), following the rotate-then-
+HERMES is designed for the middle of the cost-                                                    quantize lineage of Ge et al. (2013); full equa-
+resolution spectrum: one annotation per docu-                                                     tions and the per-stage commitment loss are in
+ment, computed offline against frozen embeddings,                                                 Appendix D. Optimizer and schedule are also in
+that supports a prefix-length granularity dial up                                                 Appendix D.
+to ∼130k cells without re-clustering. Let D =
+{xi }N                                                                                             3.3         Residual Vector Quantization
+     i=1 with each document mapped to a fixed em-
+bedding ei ∈ Rd by a frozen encoder (d = 1024,                                                     Residual vector quantization (RVQ) is a workhorse
+N ≈ 5 × 107 ); embeddings are computed once                                                        for hierarchical discrete representations across
+and never updated. HERMES is a two-stage offline                                                   audio coding (Zeghidour et al., 2022; Défossez
+
+                                                                                              3
+Table 1: Three granularities defined by code prefix.            Stage 1: L1 outer weight. Each of the 256 L1
+L123 is naturally sparse: only ∼0.77% of nominal                buckets receives a non-negative weight summing
+triples are populated, as the stage-3 residuals concen-
+                                                                to 1. Uniform: equal-per-bucket, the max-entropy
+trate on a thin manifold of the joint code space (Ap-
+pendix B).                                                      choice on L1 and the canonical no-outer-learning
+                                                                baseline. DoReMi: weights from group-DRO at
+ Granularity      Code                Nominal    Observed       g = L1 on a 120M-parameter / 2.5B-token proxy
+ L1               c1                       256        256       (Xie et al., 2023a; Sagawa et al., 2020), learned
+ L12              (c1 , c2 )            65,536     65,408       once at L1 and reused without further learning in
+ L123             (c1 , c2 , c3 )   1.677×107     129,955       every non-Uniform HERMES experiment. We-
+                                                                bOrganizer rows under DoReMi use group-DRO
+                                                                computed natively on the WO Topic/Format labels.
+et al., 2023), approximate nearest-neighbour search             These are the only two O(1)-proxy outer-weight
+(Jégou et al., 2011; Ge et al., 2013; Liu et al.,               families tractable at K = 256 (Section 1). We eval-
+2015), and generative modelling (van den Oord                   uate both at L1 as a sanity audit; the paired char-
+et al., 2017; Lee et al., 2022); we repurpose                   acterisation is reported in Appendix L. Our main
+it here as a grouping substrate for pre-training                granularity claim is conditioned on fixed DoReMi
+data. The transformed vector hi is encoded by                   outer weights, not on DoReMi being optimal.
+L cascaded vector quantizers, each with code-
+book e(k) ∈ RK×d . Writing r1 = hi , stage                      Stage 2: Per-granularity sub-bucket sampler.
+                                        (k)
+k picks ck = arg maxj∈[K] cos(rk , ej ), emits                  Stage 2 decides which sub-buckets inside each
+        (k)                                                     L1 ancestor are eligible and how documents are
+qk = eck , and passes residual rk+1 = rkP− qk to
+                                                                drawn inside them; it does not re-distribute Stage-1
+the next stage. The reconstruction ĥi = L       k=1 qk         L1 weights. Samplers differ along two axes: sub-
+enters only Lquant ; the downstream label is the
+                                                                bucket mass is size-proportional or max-entropy
+code (c1 , . . . , cL ), and prefix lengths ℓ < L name
+                                                                (equal regardless of size); per-document eligibility
+strictly coarser partitions. Codebooks are updated
+                                                                is all or top-30% by FineWeb-Edu quality score
+by EMA with k-means initialization and a per-stage
+                                                                within that sub-bucket. Concretely, letting Cℓ (b1 )
+stop-gradient commitment term (full form in Ap-
+                                                                denote the L1 ancestor’s active level-ℓ children,
+pendix D). We set L = 3 and K = 256 in the
+                                                                max-entropy samplers set
+main experiments; the L1 capacity ablation (Ap-
+pendix A) varies K. After training, encoding is                                     1
+                                                                      πb1 (B) = |Cℓ (b     ,              1
+                                                                                                ρB (x) = |B| ,
+                                                                                      1 )|
+a deterministic argmax against frozen codebooks.
+Hierarchy depth L and per-stage codebook size K                 and quality top-30% samplers set
+are themselves design axes; their useful settings
+                                                                                                            B}
+are corpus-bounded by candidate competition (Sec-                   πb1 (B) ∝ |B|,         ρB (x) = 1{q(x)≥τ
+                                                                                                        ZB     ,
+tion 5.3), and we discuss this in Limitations.
+                                                                where q(·) is the FineWeb-Edu quality score, τB is
+3.4   The sampling taxonomy                                     the within-sub-bucket 70th-percentile, and ZB nor-
+                                                                malises within B. We use four main Stage-2 sam-
+A sampler is the composition of two stages. For                 plers on the HERMES substrate: L1 max-entropy
+a target granularity level ℓ and a document x with              (no sub-bucket structure below L1); L12 max-
+prefix codes b≤ℓ (x) = (b1 , . . . , bℓ ), the sampling         entropy (within each L1 ancestor, equal-weight
+probability factorises as                                       its L12 children); L12 quality top-30% (corrected
+                                                               reader); and L123 quality top-30% (corrected
+ P (x | sampler) = wb1 · πb1 b≤ℓ · ρb≤ℓ (x),                    reader). Diagnostic variants (L1-local quality
+                                                                top-30% for the granularity arc) and L123 side-
+where wb1 is the Stage-1 outer weight on the L1                 references (per-L1 L123 local random coverage,
+ancestor, πb1 (·) a Stage-2 distribution over that an-          the quota-preserving coverage row for Finding B,
+cestor’s active level-ℓ descendants, and ρB (x) a               and quota-flattening global L123 max-entropy) are
+per-document rule inside leaf sub-bucket B. We                  defined in Appendix G; they appear in the leader-
+separate the two stages so the trade-offs between               board (Appendix C).
+outer-weight family (w) and per-granularity sub-                   A configuration is (L1 outer family) × (Stage-
+bucket rule (π, ρ) are unambiguous.                             2 sampler). All controlled experiments share
+
+                                                            4
+the same HERMES-2563 codebook. The within-                    4.3    Baselines
+sub-bucket quality samplers read the FineWeb-                 Learned groupings at L1 =256. KMeans-256,
+Edu quality score via a per-key bounded heap; a               MiniBatchKMeans-256, BisectingKMeans-256
+corrected-reader specification and a 70th-percentile          (all from scikit-learn (Pedregosa et al., 2011; Lloyd,
+sanity number are in Appendix H. All quality top-             1982; Sculley, 2010; Steinbach et al., 2000)), Plain
+30% rows we discuss in Findings A and B use the               RVQ-2563 (RVQ without LST), and HERMES-
+corrected reader.                                             2563 (ours). All non-HERMES learned group-
+4     Experimental Setup                                      ings share an identical annotation pipeline (fit on
+                                                              a 1.16M-document subsample at K = 256 with
+4.1    Pre-training                                           cosine assignment, then deterministic full-corpus
+We train a 1B-parameter LLaMA-style decoder                   labeling) so that only the clustering objective dif-
+(Touvron et al., 2023) for 25B tokens on each sam-            fers across baselines; full details in Appendix E.
+pler configuration. All runs share the same archi-            Heuristic groupings. We apply the published We-
+tecture, optimizer, learning-rate schedule, context           bOrganizer Topic and Format taxonomies (Wettig
+length, tokenizer, and token budget; only the up-             et al., 2025) to our corpus at their native granulari-
+stream sampler varies. The pre-training corpus is             ties. For every grouping, sampler axes are varied
+an internal ∼50M-document collection pre-filtered             as in Section 3.4. Sample-wise selectors are out of
+with public quality classifiers; we treat it as a fixed       scope for this baseline set; see Appendix E for the
+source distribution and study how to sample from              scope statement.
+it, not how to clean it. Sampling is with replace-
+ment, so the realised sampled set can exceed the              5     Results
+source corpus (see Appendix F). Embeddings used               We use the Results section to rule out two sim-
+by HERMES are produced once by the same frozen                pler explanations for HERMES’s gain. The gain
+encoder for every document and are never updated.             is not because HERMES is a better L1 grouping
+We report 20 ranked 1B/25B checkpoints (14 main               method: five 256-way methods sit at a plateau on
+rows + 6 HERMES capacity-ablation rows) in Ap-                standard compactness/mass-balance metrics and
+pendix C, spanning granularity, Stage-2 sampler,              the two we have paired downstream are numerically
+L1-outer-weight, and grouping-method axes; the                tied (Section 5.1). It is not because finer granular-
+full leaderboard is sorted by Avg.                            ity is universally better: at L123 , the within-bucket
+4.2    Downstream evaluation                                  quality top-30% rule’s L12 advantage over quota-
+                                                              preserving coverage shrinks to a gap too small to
+We evaluate on 16 capability sub-tasks listed in Ap-          interpret under single-seed evaluation, consistent
+pendix I, grouped into four ability families: Basic           with candidate competition (Section 5.3). The re-
+Skills (6 probe sub-tasks, from Gu et al., 2025), Sci-        liable positive result is conditional: within a fixed
+ence QA (5; ARC, SciQ, PIQA, LAB-Bench (Clark                 DoReMi outer-weight family at granularity L12 ,
+et al., 2018; Welbl et al., 2017; Bisk et al., 2020;          switching the Stage-2 sampler from max-entropy
+Laurent et al., 2024)), Language Modeling (Hel-               coverage to (corrected-reader) quality top-30% im-
+laSwag (Zellers et al., 2019)), and Others (Com-              proves Avg. by +0.0253 (z +2.09; Section 5.2).
+monsenseQA (Talmor et al., 2019), Jeopardy, Nat-              The broader outer-weight choice at this rule re-
+uralQuestions (Kwiatkowski et al., 2019), Social              mains open: we report the highest-scoring config-
+IQA (Sap et al., 2019)). Our headline number is               uration in our sweep in Section 5.4, but we have
+Avg., the family-equal macro-mean accuracy                    not measured the Uniform + L12 quality top-30%
+                            X                                 counterpart and therefore cannot claim DoReMi
+                Avg. = 41      accg ,
+                                                              is necessary for this gain. A paired Uniform vs.
+                             g
+                                                              DoReMi L1 characterisation is reported as an audit
+which prevents the six Basic Skills sub-tasks from            in Appendix L.
+dominating. A secondary z-score column standard-
+ises each sub-task across the 20 ranked checkpoints           5.1    At L1 =256, grouping choice is not the
+and averages within each family. The z column is a                   source of gains
+unit conversion for legibility, not a separate metric;        Before attributing any gain to HERMES, we first
+Avg. and z are reported together throughout.                  ask whether the gains are simply due to a better
+
+                                                          5
+256-way clustering. The answer is no: at L1 =256
+the grouping axis sits on a plateau on selected
+compactness/mass-balance metrics (Avg cosine,
+Neff , entropy), and the two grouping families we
+have paired downstream are numerically tied.
+
+Intrinsic clustering metrics. Five 256-bucket
+grouping methods evaluated on the same 1.16M-
+row fit set and 221k-row validation shard (Ap-
+pendix E); the baselines use the raw 1024-dim
+embeddings while HERMES applies its Learned
+Semantic Transform first. They sit tightly together          Figure 3: Granularity arc under fixed HERMES code-
+(Table 2): mean cosine to centroid varies by less            book and DoReMi-L1 outer weights. Solid: quota-
+than 0.003, effective cluster counts span 236–247,           preserving coverage. Dashed: corrected-reader quality
+and entropies fall in [5.46, 5.51]. Standard clus-           top-30%. Open diamond: global L123 max-entropy
+tering criteria do not distinguish these methods at          side-reference (quota-flattening). The L12 quality gain
+L1 =256.                                                     collapses at L123 , consistent with candidate competition
+                                                             (Section 5.3).
+
+Paired downstream training. Two of the five
+have been paired against identical Uniform + L1              5.2   Finding A: Stage-2 rule choice matters at
+max-entropy: Uniform · HERMES-2563 (Avg.                           L12
+0.4155, z +1.048) and Uniform · KMeans-256                   With the L1 clustering explanation ruled out (Sec-
+(Avg. 0.4153, z +1.059). They differ by 0.0002 on            tion 5.1), we next isolate the Stage-2 sampler
+Avg., numerically tied; the other three are an empir-        axis at a fixed granularity. Holding the L1 outer
+ical question. With the L1 grouping axis ruled out,          at DoReMi and the granularity at L12 , switch-
+the remaining design axes are where HERMES’s                 ing the Stage-2 sampler from max-entropy cov-
+contribution must come from.                                 erage to quality top-30% (under the corrected
+                                                             FineWeb-Edu quality reader; Appendix H) raises
+Auxiliary label-system diagnostics. HERMES                   Avg. by +0.0253 (z +2.09). Only the Stage-2 rule
+labels are moderately but not redundantly related            changes between rows; the L1 weights, the granu-
+to the WebOrganizer Topic, WebOrganizer Format,              larity, and the HERMES-2563 codebook are held
+and Topic-over-Source taxonomies on a 259,255-               fixed. The L12 point is the peak of the granularity
+document intersection; finer HERMES granular-                arc in Figure 3 (solid = quota-preserving cover-
+ity produces buckets that align more tightly with            age; dashed = quality top-30%; both evaluated at
+each reference family while remaining a distinct             DoReMi-L1 outer weights). The open diamond
+label basis (Appendix M). Qualitative inspection             at L123 = 0.4061 is the global L123 max-entropy
+on a 4.8M-document sample confirms this: all                 side-reference, which is a quota-flattening variant
+256 L1 buckets are populated, and distinctive n-             and not a quota-preserving Stage-2 contrast.
+grams recover coherent topical or stylistic regions             Quality top-30% is a within-sub-bucket selec-
+(e.g., books and publishing, music releases, recipes,        tion rule: inside each L12 ancestor, the sampler
+video games, biomedicine, ophthalmology, astron-             concentrates draws on the top-30% of documents
+omy), with L12 children refining each L1 region              ranked by the FineWeb-Edu quality score, on size-
+into narrower sub-regions (e.g., a Music parent              proportional sub-bucket mass. Max-entropy is a
+splits into classic rock, music videos, MP3 pages,           coverage rule: each sub-bucket is equalised re-
+hip-hop, and gospel; Appendix N). A sparsity au-             gardless of natural size, with all documents inside
+dit on the full 227M-document annotated corpus               eligible. The two rules therefore differ on two
+separately rules out third-stage codebook collapse,          axes simultaneously, sub-bucket mass distribution
+verifies that every L1 cell refines into a multi-child       (equal vs. size-proportional) and per-document eli-
+L12 subtree, and shows that L12 → L123 refinement            gibility (all docs vs. within-sub-bucket top-30%),
+is concentrated in the higher-mass tail of L12 cells         so +0.0253 is a combined Stage-2 rule contrast
+(Appendix F, extended discussion).                           rather than a pure quality-ranking ablation; we do
+
+                                                         6
+Table 2: Intrinsic plateau: five learned grouping methods at L1 =256 are mutually indistinguishable on standard
+        P metrics. Effective cluster count is the perplexity of the bucket-mass distribution, Neff = exp(H) with
+clustering
+H = − k pk ln pk and pk the fraction of documents in bucket k.
+
+ Method                                                     Eff. clusters   Entropy   Avg cos→centroid   Recall@10
+ KMeans (sklearn)                                                240.98       5.485             0.8740        0.356
+ MiniBatchKMeans                                                 238.55       5.475             0.8731        0.345
+ BisectingKMeans                                                 247.13       5.510             0.8709        0.285
+ Plain RVQ (c1 )                                                 235.99       5.464             0.8719        0.348
+ HERMES (c1 , ours)                                              240.46       5.483             0.8739        0.355
+
+
+Table 3: At fixed L12 granularity under DoReMi L1
+outer weights, switching the Stage-2 sampler from
+max-entropy coverage to quality top-30% (corrected
+FineWeb-Edu reader) raises Avg. by +0.0253 (z +2.09).
+Each row is a single 1B/25B training seed; we discuss
+the single-seed limitation in Section 7.
+
+ Stage-2 sampler (DoReMi; granu-     Avg.          z
+ larity L12 )
+ L12 max-entropy coverage          0.3969   −0.458
+ L12 quality top-30% (corrected    0.4222   +1.628
+ reader)
+
+
+                                                            Figure 4: Cumulative distribution of bucket sizes (log-
+not attempt to isolate the two axes here. At L12 ,          scale x-axis) on the realised L12 and L123 selection sets.
+sub-buckets are large enough (median pool 2,271             Refining to L123 shifts the CDF leftward: the median
+documents; Figure 4) that the within-bucket qual-           pool falls from 2,271 to 429 documents, and 36% of
+ity ranking is comparatively stable, so the quality         L123 buckets contain fewer than 30 documents.
+top-30% configuration extracts a meaningful signal
+that the coverage configuration misses. Whether
+                                                            should diminish.
+the same Stage-2 advantage survives at finer granu-
+                                                               The leaderboard supplies a direct test. Hold-
+larities is the question Section 5.3 addresses.
+                                                            ing DoReMi-L1 outer weights fixed and pair-
+                                                            ing both Stage-2 rules in their quota-preserving
+5.3   Finding B: the L12 advantage collapses at
+                                                            forms (Stage-1 L1 weights preserved exactly),
+      L123
+                                                            the +0.0253 L12 advantage of quality top-30%
+HERMES exposes a boundary on the granularity                over coverage collapses at L123 : quality top-30%
+axis we call candidate competition: as sub-buckets          reaches 0.3988 and per-L1 L123 local random cov-
+shrink, the within-bucket pool contracts, and per-          erage reaches 0.3986, a ∆ = +0.0002 that is
+bucket top-k is no longer a stable proxy for the            too small to interpret under single-seed evalua-
+global top-k it is meant to approximate. We mea-            tion. The L12 Stage-2 advantage of quality top-
+sure this contraction directly on the sampler’s re-         30% over coverage thus loses its measurable edge
+alised selection set.                                       at L123 , consistent with the candidate-competition
+   The median candidate pool contracts 5.3× from            account in which within-bucket quality ranking is
+L12 (2,271) to L123 (429), and the contraction is           no longer measurable over coverage once median
+robust across percentiles (Figure 4; full statistics        pools contract to ∼429 documents. A separate
+in Appendix F). At this scale a per-sub-bucket              quota-flattening variant (global L123 max-entropy,
+top-30% rule reduces to ranking inside pools of             0.4061) is a side-reference (Appendix C) that dif-
+∼429 documents, a regime in which the within-               fers from L123 quality top-30% on both the Stage-2
+sub-bucket score is a less reliable proxy for the           rule and quota preservation, so we do not read it as
+global ranking. Max-entropy at L123 has no such             a fair Stage-2 contrast. We frame this as evidence
+dependency. The mechanism is therefore consistent           consistent with candidate competition rather than
+with: at fine granularity, the L12 Stage-2 advantage        causal isolation; the full Stage-2 rule × granular-
+of quality top-30% over quota-preserving coverage           ity table is in Appendix K, and “only-large-sub-
+
+                                                        7
+buckets”/“synthetic-shrinkage” controls are noted           document scoring) into a continuous granularity
+in Section 7.                                               dial the practitioner sets by prefix length, paying
+                                                            per-document annotation cost once and trading res-
+5.4    Synthesis: the rank-1 configuration is L12           olution at sample time.
+       quality top-30% under DoReMi-L1
+We report the highest-scoring configuration in our
+                                                            7   Conclusion
+sweep alongside its closest neighbours (full leader-        HERMES is a data-derived multi-granularity
+board in Table 4, Appendix C); we do not claim to           corpus-labeling substrate built from a Learned Se-
+have identified the optimal configuration across the        mantic Transform and a 3-stage RVQ: one anno-
+full design space.                                          tation, prefix-readable granularity from L1 =256
+   Rank 1 (HERMES + DoReMi-L1 + L12 quality                 to L123 ∼130k. At L1 =256, HERMES sits at a
+top-30% under the corrected reader, Avg. 0.4222)            plateau with the KMeans family on standard clus-
+applies the DoReMi L1 weights and then, within              tering metrics and is downstream-matched within
+each L12 sub-bucket, concentrates draws on the              0.0002 Avg., so the contribution is the substrate,
+top-30% of documents ranked by the FineWeb-Edu              not the clusterer. At L12 under DoReMi-L1, switch-
+quality score: the DoReMi L1 quota is preserved,            ing the Stage-2 sampler from max-entropy cover-
+and within-bucket selection extracts a meaning-             age to corrected-reader quality top-30% raises Avg.
+ful quality signal at a granularity where pools are         by +0.0253 (z +2.09; Finding A). The advantage
+still large enough for the ranking to be stable (Sec-       collapses at L123 (quality vs. per-L1 local random
+tion 5.3). Ranks 2–4 sit at the L1 =256 plateau:            coverage: 0.3988 vs. 0.3986; Finding B), consis-
+HERMES, KMeans, and WebOrganizer-Format un-                 tent with candidate competition: a 5.3× median
+der Uniform + L1 max-entropy land within ∼0.002             pool contraction (2,271 → 429) leaves the within-
+Avg. of one another, consistent with Section 5.1.           bucket ranking signal no longer measurable over
+What we do not claim. We have not run a Uni-                coverage. Pre-training data design becomes a label-
+form + L12 quality top-30% configuration under              system question: granularity and the Stage-2 sam-
+the corrected reader, so the outer-weight choice at         pler are jointly determined axes on the substrate,
+the rank-1 Stage-2 rule cannot be adjudicated from          not independent hyperparameters. Promising next
+the leaderboard alone; in particular, we cannot con-        directions are (a) deeper or wider RVQ hierarchies
+clude that DoReMi is necessary for the rank-1 Avg.          as corpus size grows, with the useful depth bounded
+The paired Uniform vs. DoReMi L1 characterisa-              by candidate competition; (b) jointly learned outer
+tion (Appendix L) shows that the choice between             weights at multiple prefix lengths; and (c) soft
+our two O(1)-proxy outer weights is not free at             within-bucket coverage signals, including intrinsic
+L1 , but a fair comparison at L12 quality top-30%           per-bucket priors such as the RVQ reconstruction
+would require an additional 1B/25B run.                     error already produced by the substrate, as an alter-
+                                                            native to hard top-k selection on external scorers.
+6     Discussion
+                                                            Limitations
+The contribution is the substrate, not the clustering
+algorithm: HERMES sits at a plateau with four 256-          Scale. All conclusions are at 1B parameters and
+bucket clusterers on standard compactness/mass-             25B tokens on one internal corpus; whether the
+balance metrics and is downstream-matched to                interaction persists at 7B/300B is not validated here.
+KMeans within 0.0002 Avg. (Section 5.1). What               Sub-bucket-size shrinkage is a structural property
+HERMES adds is a single offline annotation in               of residual quantization rather than a small-scale
+which granularity becomes a free variable, exposed          artefact, so we expect the qualitative direction to
+as a prefix length. In a flat KMeans pipeline a gran-       survive, but the granularity at which the candidate
+ularity sweep is a sequence of independent clus-            pool collapses may shift with scale (Kaplan et al.,
+terings; in HERMES the same hierarchy is read               2020).
+at different prefix lengths, which is what makes               Encoder. A single frozen encoder produces the
+the granularity-by-sampler interaction (Section 5.3)        input geometry; different encoders may shift the
+cleanly measurable. More structurally, HERMES               realised L123 cardinality and the threshold at which
+turns the corpus-labeling axis (previously a bi-            candidate competition becomes dominant.
+nary choice between coarse fixed labels and per-               Outer-weight axis is under-sampled. Ap-
+
+                                                        8
+pendix L pairs Uniform vs DoReMi at L1 +                     before this floor is hit. The framework’s extensi-
+L1 max-entropy only; our DoReMi weights are                  bility via RVQ-style codebook design, including
+learned once at L1 and reused at L12 and L123                deeper hierarchies (larger L) and non-uniform per-
+without re-learning (the proxy budget makes na-              stage K, is, we argue, a positive selling point of the
+tively training DoReMi proxies at finer granularity          substrate rather than a caveat. Systematic depth-by-
+impractical, and regression-style alternatives are           corpus-size sweeps are left to future work.
+infeasible at K = 256–130k). Whether learned
+outer weights at the granularity actually used by            Artifact Release
+Stage-2 close or invert the gap is open.
+                                                             We release the source code implementing the HER-
+   Outer weight at rank-1 Stage-2 rule is under-
+                                                             MES annotation pipeline (LST training, RVQ train-
+tested. Our highest-scoring configuration (Sec-
+                                                             ing, and inference). An anonymized artifact sub-
+tion 5.4) uses DoReMi outer weights with L12
+                                                             mission accompanies this paper.
+quality top-30% under the corrected reader, but
+we did not run the parallel Uniform + L12 quality            Ethical Considerations
+top-30%. Without this counterfactual, we cannot
+claim DoReMi is necessary for the rank-1 Avg.,               The pre-training corpus is an internal ∼50M-
+nor that DoReMi is the optimal outer-weight fam-             document collection that has been pre-filtered with
+ily for this Stage-2 rule. The Stage-2 contrast we           public quality classifiers; we treat it as a fixed
+report (Section 5.2, within DoReMi) is a controlled          source distribution and study sampling, not cura-
+within-slice comparison and is not affected by this          tion. No additional PII filtering is performed by
+gap.                                                         our work: we inherit the upstream classifier’s cov-
+   Within-sub-bucket scoring function. The qual-             erage. The 20 ranked 1B/25B runs reported here
+ity samplers use the FineWeb-Edu quality score               total approximately 100 GPU-days on 8 GPUs at
+field released with the FineWeb corpus (Penedo               FP32; we did not run extra ablations beyond what
+et al., 2024). Whether the sign of Finding A and the         is reported. The corpus and encoder are internal,
+advantage collapse at L123 in Finding B hold under           which limits direct reproduction; the source code
+perplexity-based or other classifier-based scoring           release described above allows others to apply the
+families is a direct follow-up; scores whose distri-         pipeline to their own corpus and encoder.
+bution differs sharply from FineWeb-Edu’s right
+tail may interact with the small-pool regime differ-
+ently.                                                       References
+   Mechanism evidence strength. The 5.3× me-                 Yonatan Bisk, Rowan Zellers, Jianfeng Gao, and Yejin
+dian sub-bucket shrinkage is a direct measurement,             Choi. 2020. PIQA: Reasoning about physical com-
+                                                               monsense in natural language. In Proceedings of
+and the L12 advantage collapse at L123 under the
+                                                               the AAAI Conference on Artificial Intelligence, pages
+quota-preserving pair (Section 5.3) is a paired train-         7432–7439.
+ing contrast in the direction consistent with the
+candidate-competition account. We treat this as              Zhuo Chen, Yuxuan Miao, Supryadi, and Deyi Xiong.
+                                                               2026. Data mixing for large language models pre-
+evidence consistent with the mechanism rather
+                                                               training: A survey and outlook. arXiv preprint
+than causal isolation. Two controls that would                 arXiv:2604.16380.
+tighten the claim, the “only-large-sub-buckets” and
+“synthetic-shrinkage” variants, are future work.             Peter Clark, Isaac Cowhey, Oren Etzioni, Tushar Khot,
+                                                               Ashish Sabharwal, Carissa Schoenick, and Oyvind
+   Hierarchy depth and codebook size. We
+                                                               Tafjord. 2018. Think you have solved question an-
+sweep granularity by prefix length on a single                 swering? try ARC, the AI2 reasoning challenge.
+L = 3, K = 256 codebook chosen for the ∼50M-                   arXiv preprint arXiv:1803.05457.
+document corpus. Deeper hierarchies (larger
+                                                             Alexandre Défossez, Jade Copet, Gabriel Synnaeve, and
+L) or wider codebooks (larger K, possibly non-                 Yossi Adi. 2023. High fidelity neural audio compres-
+uniform across stages) are natural extensions. The             sion. Transactions on Machine Learning Research.
+candidate-competition account suggests diminish-
+ing returns once deeper prefixes push the median             Shizhe Diao, Yu Yang, Yonggan Fu, Xin Dong, Dan
+                                                               Su, Markus Kliegl, Zijia Chen, Peter Belcak, Yoshi
+sub-bucket below the regime where within-bucket                Suhara, Hongxu Yin, Mostofa Patwary, Yingyan Ce-
+ranking is stable (∼429 documents at L123 here);               line Lin, Jan Kautz, and Pavlo Molchanov. 2025.
+larger corpora should support deeper hierarchies               Nemotron-CLIMB: CLustering-based Iterative data
+
+
+                                                         9
+  Mixture Bootstrapping for language model pre-                 Qian Liu, Xiaosen Zheng, Niklas Muennighoff, Guang-
+  training. In Advances in Neural Information Pro-                tao Zeng, Longxu Dou, Tianyu Pang, Jing Jiang, and
+  cessing Systems.                                                Min Lin. 2025b. RegMix: Data mixture as regression
+                                                                  for language model pre-training. In International
+Tiezheng Ge, Kaiming He, Qifa Ke, and Jian Sun. 2013.             Conference on Learning Representations.
+   Optimized product quantization for approximate near-
+   est neighbor search. In Proceedings of the IEEE Con-         Shicong Liu, Hongtao Lu, and Junru Shao. 2015.
+   ference on Computer Vision and Pattern Recognition,            Improved residual vector quantization for high-
+   pages 2946–2953.                                               dimensional approximate nearest neighbor search.
+                                                                  arXiv preprint arXiv:1509.05195.
+Yuling Gu, Oyvind Tafjord, Bailey Kuehl, Dany Had-
+  dad, Jesse Dodge, and Hannaneh Hajishirzi. 2025.
+  OLMES: A standard for language model evaluations.             Stuart P. Lloyd. 1982. Least squares quantization in
+  In Findings of the Association for Computational                PCM. IEEE Transactions on Information Theory,
+  Linguistics: NAACL 2025.                                        28(2):129–137.
+
+Iris A. M. Huijben, Matthijs Douze, Matthew J. Muck-            Fabian Pedregosa, Gaël Varoquaux, Alexandre Gram-
+   ley, Ruud J. G. van Sloun, and Jakob Verbeek. 2024.            fort, Vincent Michel, Bertrand Thirion, Olivier Grisel,
+   Residual quantization with implicit neural codebooks.          Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vin-
+   In International Conference on Machine Learning.               cent Dubourg, Jake VanderPlas, Alexandre Passos,
+                                                                  David Cournapeau, Matthieu Brucher, Matthieu Per-
+Hervé Jégou, Matthijs Douze, and Cordelia Schmid.                 rot, and Édouard Duchesnay. 2011. Scikit-learn: Ma-
+  2011. Product quantization for nearest neighbor                 chine learning in Python. Journal of Machine Learn-
+  search. IEEE Transactions on Pattern Analysis and               ing Research, 12:2825–2830.
+  Machine Intelligence, 33(1):117–128.
+                                                                Guilherme Penedo, Hynek Kydlíček, Loubna Ben Al-
+Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B.
+                                                                  lal, Anton Lozhkov, Margaret Mitchell, Colin Raffel,
+   Brown, Benjamin Chess, Rewon Child, Scott Gray,
+                                                                  Leandro von Werra, and Thomas Wolf. 2024. The
+   Alec Radford, Jeffrey Wu, and Dario Amodei. 2020.
+                                                                  FineWeb datasets: Decanting the web for the finest
+   Scaling laws for neural language models. arXiv
+                                                                  text data at scale. In Advances in Neural Information
+   preprint arXiv:2001.08361.
+                                                                  Processing Systems.
+Tom Kwiatkowski, Jennimaria Palomaki, Olivia Red-
+  field, Michael Collins, Ankur Parikh, Chris Alberti,          Guilherme Penedo, Quentin Malartic, Daniel Hesslow,
+  Danielle Epstein, Illia Polosukhin, Jacob Devlin, Ken-          Ruxandra Cojocaru, Alessandro Cappelli, Hamza
+  ton Lee, Kristina Toutanova, Llion Jones, Matthew               Alobeidli, Baptiste Pannier, Ebtesam Almazrouei,
+  Kelcey, Ming-Wei Chang, Andrew M. Dai, Jakob                    and Julien Launay. 2023. The RefinedWeb dataset
+  Uszkoreit, Quoc Le, and Slav Petrov. 2019. Natu-                for Falcon LLM: Outperforming curated corpora with
+  ral questions: A benchmark for question answering               web data, and web data only. In Advances in Neural
+  research. Transactions of the Association for Compu-            Information Processing Systems.
+  tational Linguistics, 7:453–466.
+                                                                Jiahui Peng, Xinlin Zhuang, Jiantao Qiu, Ren Ma, Jing
+Yongchan Kwon, Eric Wu, Kevin Wu, and James Zou.                   Yu, He Zhu, and Conghui He. 2025. Topic over
+  2024. DataInf: Efficiently estimating data influence             source: The key to effective data mixing for lan-
+  in LoRA-tuned LLMs and diffusion models. In Inter-               guage models pre-training. arXiv preprint. Preprint,
+  national Conference on Learning Representations.                 arXiv:2502.16802.
+Jon M. Laurent, Joseph D. Janizek, Michael Ruzo,                Shiori Sagawa, Pang Wei Koh, Tatsunori B. Hashimoto,
+  Michaela M. Hinks, Michael J. Hammerling, Sid-                  and Percy Liang. 2020. Distributionally robust neu-
+  dharth Narayanan, Manvitha Ponnapati, Andrew D.                 ral networks for group shifts: On the importance of
+  White, and Samuel G. Rodriques. 2024. LAB-Bench:                regularization for worst-case generalization. In Inter-
+  Measuring capabilities of language models for biol-             national Conference on Learning Representations.
+  ogy research. arXiv preprint arXiv:2407.10362.
+Doyup Lee, Chiheon Kim, Saehoon Kim, Minsu Cho,                 Maarten Sap, Hannah Rashkin, Derek Chen, Ronan
+  and Wook-Shin Han. 2022. Autoregressive image                  LeBras, and Yejin Choi. 2019. SocialIQA: Com-
+  generation using residual quantization. In Proceed-            monsense reasoning about social interactions. In
+  ings of the IEEE/CVF Conference on Computer Vi-                Proceedings of EMNLP, pages 4463–4473.
+  sion and Pattern Recognition, pages 11513–11522.
+                                                                David Sculley. 2010. Web-scale k-means clustering. In
+Fengze Liu, Weidong Zhou, Binbin Liu, Zhimiao Yu,                 Proceedings of the 19th International Conference on
+  Yifan Zhang, Haobin Lin, Yifeng Yu, Bingni Zhang,               World Wide Web, pages 1177–1178.
+  Xiaohuan Zhou, Taifeng Wang, and Yong Cao. 2025a.
+  QuaDMix: Quality-diversity balanced data selec-               Michael Steinbach, George Karypis, and Vipin Kumar.
+  tion for efficient LLM pretraining. arXiv preprint              2000. A comparison of document clustering tech-
+  arXiv:2504.16511.                                               niques. In KDD Workshop on Text Mining.
+
+
+                                                           10
+Alon Talmor, Jonathan Herzig, Nicholas Lourie, and               Wanyun Xie, Francesco Tonin, and Volkan Cevher.
+  Jonathan Berant. 2019. CommonsenseQA: A ques-                   2025. Chameleon: A flexible data-mixing frame-
+  tion answering challenge targeting commonsense                  work for language model pretraining and finetuning.
+  knowledge. In Proceedings of NAACL, pages 4149–                 In International Conference on Machine Learning.
+  4158.
+                                                                 Jiasheng Ye, Peiju Liu, Tianxiang Sun, Jun Zhan, Yun-
+Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier               hua Zhou, and Xipeng Qiu. 2025. Data mixing laws:
+  Martinet, Marie-Anne Lachaux, Timothée Lacroix,                   Optimizing data mixtures by predicting language
+  Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal                modeling performance. In International Conference
+  Azhar, Aurelien Rodriguez, Armand Joulin, Edouard                 on Learning Representations.
+  Grave, and Guillaume Lample. 2023. LLaMA: Open
+  and efficient foundation language models. arXiv                Zichun Yu, Spandan Das, and Chenyan Xiong. 2024.
+  preprint arXiv:2302.13971.                                       MATES: Model-aware data selection for efficient
+                                                                   pretraining with data influence models. In Advances
+Aaron van den Oord, Oriol Vinyals, and Koray                       in Neural Information Processing Systems.
+  Kavukcuoglu. 2017. Neural discrete representation
+  learning. In Advances in Neural Information Pro-               Neil Zeghidour, Alejandro Luebs, Ahmed Omran,
+  cessing Systems.                                                 Jan Skoglund, and Marco Tagliasacchi. 2022.
+                                                                   SoundStream: An end-to-end neural audio codec.
+Phil Wang. 2021.        vector-quantize-pytorch.                   IEEE/ACM Transactions on Audio, Speech, and Lan-
+  https://github.com/lucidrains/                                   guage Processing, 30:495–507.
+  vector-quantize-pytorch. Software.
+                                                                 Rowan Zellers, Ari Holtzman, Yonatan Bisk, Ali
+Johannes Welbl, Nelson F. Liu, and Matt Gardner. 2017.             Farhadi, and Yejin Choi. 2019. HellaSwag: Can
+  Crowdsourcing multiple choice science questions.                 a machine really finish your sentence? In Proceed-
+  In Proceedings of the 3rd Workshop on Noisy User-                ings of the 57th Annual Meeting of the Association
+  generated Text, pages 94–106.                                    for Computational Linguistics, pages 4791–4800.
+
+Alexander Wettig, Aatmik Gupta, Saumya Malik, and
+  Danqi Chen. 2024. QuRating: Selecting high-quality
+  data for training language models. In Proceedings of
+  the 41st International Conference on Machine Learn-
+  ing.
+
+Alexander Wettig, Kyle Lo, Sewon Min, Hannaneh
+  Hajishirzi, Danqi Chen, and Luca Soldaini. 2025.
+  Organize the web: Constructing domains enhances
+  pre-training data curation. In Proceedings of the
+  42nd International Conference on Machine Learn-
+  ing, volume 267 of Proceedings of Machine Learning
+  Research, pages 66678–66705. PMLR.
+
+Xiangyu Xi, Deyang Kong, Jian Yang, Jiawei Yang,
+  Zhengyu Chen, Wei Wang, Jingang Wang, Xun-
+  liang Cai, Shikun Zhang, and Wei Ye. 2025. Sam-
+  pleMix: A sample-wise pre-training data mixing
+  strategy by coordinating data quality and diversity.
+  arXiv preprint arXiv:2503.01506.
+
+Mengzhou Xia, Sadhika Malladi, Suchin Gururangan,
+ Sanjeev Arora, and Danqi Chen. 2024. LESS: Select-
+ ing influential data for targeted instruction tuning. In
+ International Conference on Machine Learning.
+
+Sang Michael Xie, Hieu Pham, Xuanyi Dong, Nan Du,
+  Hanxiao Liu, Yifeng Lu, Percy Liang, Quoc V. Le,
+  Tengyu Ma, and Adams Wei Yu. 2023a. DoReMi:
+  Optimizing data mixtures speeds up language model
+  pretraining. In Advances in Neural Information Pro-
+  cessing Systems.
+
+Sang Michael Xie, Shibani Santurkar, Tengyu Ma, and
+  Percy Liang. 2023b. Data selection for language
+  models via importance resampling. In Advances in
+  Neural Information Processing Systems.
+
+
+                                                            11
+A    Capacity Ablation: L1 Codebook Size
+To isolate the role of the coarsest stage, we hold
+stages 2 and 3 at K = 256 and vary the L1 code-
+book size K ∈ {32, 64, 128, 256}. All four runs
+share the same encoder, training recipe, and Uni-
+form + L1 max-entropy sampler.
+   We read this through L1’s role as a capacity gate.
+Below the gate (K = 32, 64), L1 under-resolves
+the corpus; stages 2–3 absorb dimensions of varia-
+tion L1 should have captured, so each L1 bucket is
+internally heterogeneous and the sampler falls back          Figure 5: HERMES L1 capacity ablation. Holding
+to a near-uniform draw. At the trough (K = 128),             stages 2–3 fixed, the L1 capacity sweep of 16-task Avg.
+L1 acts non-trivially but is mis-aligned with corpus         accuracy is non-monotone: K = 128 is the trough,
+structure; the sampler can no longer fall back to            while K = 256 is the best L1 setting in this study. X-
+a uniform draw, but its reweighting points in the            axis tick labels show both the nominal codebook size
+                                                             K and the realised effective cluster count Neff at that
+wrong direction. At K = 256, the effective cluster
+                                                             K (saturating near 240 at K = 256; see Table 2 for the
+count saturates near nominal (240/256), L1 alone             Neff definition).
+carries the partition, and Avg. jumps. The shape is
+not “more buckets is always better”; it is “L1 must
+be large enough that bucket-level reweighting and            ing plateau (Section 5.1) and the outer-weight
+corpus structure are aligned.” This ablation is a            paired plateau (Appendix L): HERMES, KMeans,
+capacity dimension within a single grouping family           and WebOrganizer-Format under Uniform + L1
+and does not contradict the L1 =256 plateau across           max-entropy are within roughly 0.002 Avg. of one
+grouping methods (Section 5.1).                              another (ranks 2–4); the same grouping families
+                                                             under DoReMi land 0.9–2.1 z lower (ranks 9, 10,
+B   Operational Definitions of Granularity                   17), with the WO-Topic pair (ranks 5, 6) being
+We use three granularity levels, each defined by             the one too small to interpret under single-seed
+a prefix of the HERMES code (c1 , c2 , c3 ). L1              evaluation. The bottom tier is populated by L123 -
+saturates its nominal capacity. L12 is essentially           granularity rows under DoReMi (ranks 13, 14, 15,
+fully populated (99.8% of nominal 2562 joint codes           which sit within 0.002 of one another and below the
+are observed). L123 deviates substantially: only             L1 plateau) and capacity-starved HERMES vari-
+129,955 of 2563 ≈ 16.8M nominal joint codes are              ants under both Uniform (ranks 11, 12, 16) and
+realized, a roughly two-orders-of-magnitude gap.             DoReMi (ranks 18, 19, 20). The L12 quality top-
+We attribute this to natural sparsity of stage-3 RVQ         30% advantage at rank 1 collapses to noise at L123
+residuals on this corpus: once the first two stages          (rank 13 quality top-30% Avg. 0.3988 vs. rank 14
+have absorbed the dominant directions of variation,          per-L1 L123 local random coverage Avg. 0.3986),
+the third-stage residuals concentrate on a thin man-         consistent with the candidate-competition account
+ifold of the joint code space. L123 is operationally         in Section 5.3.
+defined as “the prefix length that realizes approxi-
+                                                             D    HERMES Training Details
+mately 130k buckets,” and it is in this regime that
+candidate competition takes hold.                            Encoder. An internally trained 1024-dim
+                                                             sentence-level encoder, kept frozen throughout
+C    Full Leaderboard                                        HERMES training. Embeddings are read once per
+The top of the table is occupied by mechanism-               document; no fine-tuning at this stage.
+aligned configurations: at fixed DoReMi L1 outer             Optimizer and schedule. AdamW, learning rate
+weights, L12 quality top-30% under the corrected             3 × 10−4 , weight decay 1 × 10−4 , 10 epochs, 8-
+reader (rank 1), and the Uniform + L1 max-entropy            GPU distributed data-parallel (DDP), batch size
+family (ranks 2–4). WO-Topic under both outer-               1024, single-precision (FP32) throughout.
+weight families (ranks 5, 6) and global L123 max-
+entropy coverage (rank 7) sit just below. The mid-           Codebook initialization and EMA. EMA code-
+dle tier corresponds jointly to the L1 =256 group-           book updates with dead-code threshold 2 and k-
+
+                                                        12
+Table 4: Full leaderboard sorted by Avg. (descending), with z standardised across all 20 ranked 1B/25B checkpoints
+(14 main rows + 6 HERMES capacity-ablation rows). All rows use a single training seed. “Corrected” marks runs
+that use the corrected FineWeb-Edu quality reader (Appendix H).
+
+ Rank    Configuration                             L1 outer                Stage-2 sampler              Avg.              z
+     1   HERMES + L12 quality top-30% (cor-        DoReMi                  L12 quality top-30%        0.4222         +1.628
+         rected)
+     2   HERMES-2563 + L1 max-entropy (ours)       Uniform                 L1 max-entropy             0.4155         +1.048
+     3   KMeans-256 + L1 max-entropy               Uniform                 L1 max-entropy             0.4153         +1.059
+     4   WebOrganizer-Format                       Uniform on Format       random within Format       0.4134         +0.949
+     5   WebOrganizer-Topic + Topic DRO            DoReMi on Topic         random within Topic        0.4082         +0.508
+     6   WebOrganizer-Topic + Topic max-           Uniform on Topic        random within Topic        0.4079         +0.469
+         entropy
+     7   HERMES + global L123 max-entropy          DoReMi                  global L123 max-entropy    0.4061         +0.317
+         coverage
+     8   HERMES + L1-local quality top-30%         DoReMi                  L1-local quality top-30%   0.4045         +0.114
+         (corrected)
+     9   WebOrganizer-Format + Format DRO          DoReMi on Format        random within Format       0.4029         +0.128
+    10   HERMES-2563 + L1 max-entropy (ours)       DoReMi                  L1 max-entropy             0.4028         +0.048
+    11   HERMES cap-32 + L1 max-entropy            Uniform                 L1 max-entropy             0.3994         −0.312
+    12   HERMES cap-64 + L1 max-entropy            Uniform                 L1 max-entropy             0.3992         −0.362
+    13   HERMES + L123 quality top-30% (cor-       DoReMi                  L123 quality top-30%       0.3988         −0.294
+         rected)
+    14   HERMES + per-L1 L123 local random         DoReMi                  per-L1 L123 local random   0.3986         −0.302
+         coverage
+    15   HERMES + L12 max-entropy coverage         DoReMi                  L12 max-entropy            0.3969         −0.458
+    16   HERMES cap-128 + L1 max-entropy           Uniform                 L1 max-entropy             0.3934         −0.747
+    17   KMeans-256 + L1 max-entropy               DoReMi                  L1 max-entropy             0.3889         −1.147
+    18   HERMES cap-64 + L1 max-entropy            DoReMi                  L1 max-entropy             0.3887         −1.163
+    19   HERMES cap-128 + L1 max-entropy           DoReMi                  L1 max-entropy             0.3886         −1.181
+    20   HERMES cap-32 + L1 max-entropy            DoReMi                  L1 max-entropy             0.3798         −1.885
+
+
+
+means initialization (10 iterations); stage k’s code-             LST objective is
+book is learned in the residual space left by stages
+                                                                           L = λstruct Lstruct + λquant Lquant
+1, . . . , k − 1, so prefix codes form a strict hierarchy.
+                                                                                 + λortho Lortho + Lcommit ,
+LST loss equations. LST is trained jointly with
+                                                                  with λstruct = λquant = 1.0 and λortho = 0.1. The
+the RVQ codebooks under three named losses, fol-
+                                                                  per-stage commitment term is
+lowing the rotate-then-quantize lineage of Ge et al.
+(2013). Pairwise structure preservation keeps co-                                       L
+                                                                                                               2
+                                                                                        X
+sine geometry between raw and transformed em-                             Lcommit = β         sg(qk ) − rk     2
+                                                                                                                 ,
+beddings; over M = 2048 random pairs (i, j) per                                         k=1
+
+minibatch,                                                        with β = 0.25 and sg(·) the stop-gradient operator.
+             1
+   Lstruct = M
+               X                                 2
+                    cos(ei , ej ) − cos(hi , hj ) .               Inference. Implementation builds on the open-
+                                                                  source vector-quantize-pytorch library (Wang,
+                 (i,j)
+                                                                  2021); we annotate the entire ∼50M-document cor-
+                                                                  pus once and reuse the same annotation across all
+Quantization-aware reconstruction P couples LST
+to the codebooks. Letting ĥi = 3k=1 qk (hi ) de-                 sampler experiments.
+note the RVQ reconstruction (projected to the unit
+sphere), over a minibatch of size B,
+                                                                  E   Annotation Pipeline for Unsupervised
+                                                                      Clustering Baselines
+                           B
+                           X                                      All unsupervised clustering baselines reported in
+             Lquant = B1         ∥ĥi − hi ∥22 .
+                                                                  Section 5.1 and Table 2 (KMeans, MiniBatchK-
+                           i=1
+                                                                  Means, BisectingKMeans, Plain RVQ) share an
+Orthogonality prevents representation collapse:                   identical two-stage annotation procedure that dif-
+Lortho = ∥W ⊤ W − I∥2F , combined with a per-                     fers from HERMES only in the clustering objec-
+step SVD projection onto the orthogonal manifold                  tive; HERMES’s own training is described in Ap-
+(writing W = U ΣV ⊤ , set W ← U V ⊤ ). The total                  pendix D.
+
+                                                             13
+Inputs. The same ∼50M-document corpus as                     Table 5: Per-granularity bucket statistics on realised
+HERMES, with the same precomputed 1024-dim                   selection sets. The L12 → L123 median shrinks 5.3×.
+sentence-level embeddings ei . No embedding is
+                                                              Granularity    Active buckets   Median    Documents
+recomputed.
+                                                              L1                       256        n/a      ∼50M
+Stage 1: Centroid fitting on a held-out sub-                  L12                   65,408     2,271       ∼68M
+                                                              L123                 129,955       429       ∼68M
+sample. All baselines fit on a fixed subsample
+of 1,158,563 embeddings (the same set across
+methods); a separate 221,476-embedding valida-
+                                                             interface that a granularity-aware sampler could
+tion shard reports intrinsic metrics for Table 2.
+                                                             plug into. A head-to-head against per-sample se-
+Shared settings: K = 256 centroids, embeddings
+                                                             lectors at smaller regimes is a natural follow-up.
+un-normalised at fit time and L2-normalised at as-
+signment, a fixed random seed, and up to 100 up-             F   Sampling Diagnostics
+date iterations. KMeans, MiniBatchKMeans, and
+BisectingKMeans all use scikit-learn’s default ini-          We summarise the bucket-size statistics that un-
+tialisation and restart policies for each algorithm;         derpin the candidate-competition diagnostic. Per-
+the only non-default we set is MiniBatchKMeans’s             granularity statistics are computed on the actual
+minibatch size at 8192. Plain RVQ uses EMA code-             sampled set used by each sampler (∼68M selected
+book updates on the same 1.16M-row sample, with-             documents under DoReMi outer weights for the
+out the Learned Semantic Transform; this is what             L12 and L123 samplers; sampling is with replace-
+“plain” means in our naming.                                 ment, so the sampled set exceeds the ∼50M source
+                                                             corpus), not on the raw 50M-document corpus,
+Stage 2: Full-corpus annotation. Saved cen-
+                                                             so they reflect the candidate pool that within-sub-
+troids are L2-normalised once and applied to every
+                                                             bucket selection sees.
+document in the full corpus by cosine assignment,
+                                                                Full bucket-size distributions on log scale show
+arg maxk ẽ⊤i c̃k (argmin Euclidean is supported but
+                                                             the L12 → L123 bulk shifting roughly an order
+not used). Annotation runs once per method and is
+                                                             of magnitude leftward, with the L123 lower tail
+reused across every sampler ablation in this paper,
+                                                             developing a heavy concentration of sub-buckets
+mirroring HERMES’s reuse (Appendix D).
+                                                             containing only a handful of documents: the regime
+Why this licenses the plateau claim. The                     in which any within-sub-bucket ranking criterion
+1.16M-row fit set, 1024-dim raw embedding, K =               reduces to a near-uniform draw. “Active buckets”
+256, normalisation convention, iteration budget,             counts sub-buckets receiving at least one document;
+and random seed are identical across KMeans,                 for L123 this is 129,955 out of nominal 2563 .
+MiniBatchKMeans, BisectingKMeans, and Plain
+RVQ; the only thing that differs is the clustering           Further sparsity statistics on the full annotated
+objective. This is what licenses the Section 5.1             corpus. On the full 227,447,180-document an-
+claim that intrinsic Avg. cosine spreads by less than        notated set, we additionally compute the effective
+0.003 across all five 256-bucket methods (KMeans             cell count Neff = exp(H), the Gini coefficient
+0.8740, MiniBatchKMeans 0.8731, BisectingK-                  over per-cell document counts, the top-k for 50%
+Means 0.8709, Plain RVQ-c1 0.8719, HERMES-c1                 cumulative mass, and per-cell P10/P90 (Table 6).
+0.8739): they are not measured on different corpora          We also compute, for every parent at L1 and L12 ,
+or under different normalisation conventions.                whether a single child carries more than 90% of
+                                                             the parent’s mass. Per-cell medians are reported in
+Sample-wise selectors are out of scope for this              Table 5 above (and Figure 4); we do not duplicate
+baseline set. DSIR (Xie et al., 2023b), QuRating             them here.
+(Wettig et al., 2024), MATES (Yu et al., 2024),
+LESS (Xia et al., 2024), DataInf (Kwon et al.,               What this rules out. Effective cell count rises
+2024), SampleMix (Xi et al., 2025), and QuaD-                monotonically (240.5 → 40,693 → 46,007):
+Mix (Liu et al., 2025a) score documents individu-            the third RVQ stage adds effective discrimination
+ally rather than reweighting groups. At the 50M-             above L12 even though only 0.77% of nominal
+document × 1B-parameter × 25B-token scale we                 L123 cells are populated. The Gini coefficient rises
+target they are costly to score, tune, and validate,         with granularity (0.20 → 0.52 → 0.73): mass be-
+and most do not expose an explicit mixture-control           comes Zipfian as a fixed corpus is distributed over
+
+                                                        14
+Table 6: Per-prefix sparsity statistics on the full 227M-        H    Quality Field Sanity
+document annotated corpus, complementing Table 5.
+                                                                 (a) Field presence. On a 2,000-row sanity scan
+Statistic                  L1            L12       L123          of the corpus metadata, the nested path containing
+Nominal cells            256       65,536 1.68×107               the FineWeb-Edu quality score was populated in
+Neff = exp(H)          240.5       40,693    46,007              2000/2000 rows, while a top-level fallback field
+Gini over cell mass      0.20        0.52      0.73
+Top-k for 50% mass         95      11,215    12,268
+                                                                 was populated in 0/2000. The corrected reader
+P10 per cell            534k          433         2              prefers the nested path and falls back to the top-
+P90 per cell          1.27M         7,798     5,017              level only for forward compatibility. All quality
+>90%-dominant parents 0/256 57,718/65,408        —
+                                                                 top-30% rows discussed in Findings A and B (Sec-
+                                                                 tions 5.2, 5.3) and listed in the leaderboard (Ap-
+more cells, but no cell at any level carries more                pendix C) use the corrected reader.
+than ∼1% of the corpus.                                             (b) Threshold sanity number. A dry run of
+                                                                 the corrected reader over 556,976 quality values
+Parent-child refinement. Zero of the 256 L1                      yields a global 70th-percentile τglobal = 1.374, sta-
+cells have a single L12 child carrying more than                 tistically indistinguishable from the nested-only
+90% of the parent’s mass: every L1 cell refines                  p70 = 1.380 measured directly on the sanity scan.
+into a genuine multi-child subtree. At L12 → L123 ,              τglobal is a sanity number only; the within-sub-
+57,718 of 65,408 L12 cells (88%) have a dominant                 bucket quality samplers compute their thresholds
+(>90%) L123 child. This is expected given that                   per sub-bucket via a bounded heap that keeps the
+the median L12 bucket carries only 2,271 docu-                   local top-30% within each sub-bucket, so the actual
+ments (Table 5): most L12 cells do not have enough               threshold τB varies with B and is, on heavy-tailed
+mass to populate multiple L123 children with mean-               sub-buckets, very different from τglobal .
+ingful weight. The remaining ∼7,700 L12 cells
+(the higher-mass tail) account for the bulk of L123              I   Capability Sub-task List
+refinement; this pattern supports the Section 5.3
+                                                                 We evaluate on 16 capability sub-tasks grouped into
+regime, in which sub-buckets containing meaning-
+                                                                 four ability families. The six Basic Skills probes
+ful refinement coexist with low-mass tails.
+                                                                 are taken from the OLMES capability suite (Gu
+                                                                 et al., 2025); the remaining ten are standard public
+G     Diagnostic and Side-Reference Stage-2
+                                                                 benchmarks.
+      Samplers
+                                                                    Basic Skills (6 tasks): surface-level reasoning
+Beyond the four main Stage-2 samplers defined in                 and string manipulation probes from OLMES (Gu
+Section 3.4, we use one diagnostic and two side-                 et al., 2025): arithmetic, coding, common knowl-
+reference variants on the HERMES substrate. L1-                  edge, logical reasoning, pattern recognition, and
+local quality top-30% (diagnostic) selects, within               string operations.
+each L1 ancestor, the top-30% by FineWeb-Edu                        Science QA (5 tasks): factual/scientific knowl-
+quality on size-proportional L12 mass; this row                  edge: ARC-Easy and ARC-Challenge (Clark et al.,
+anchors the L1 point of the granularity arc (Ap-                 2018), SciQ (Welbl et al., 2017), PIQA (Bisk et al.,
+pendix J). Per-L1 L123 local random coverage                     2020), and the DB-QA subset of LAB-Bench (Lau-
+(side-reference, quota-preserving) draws L123 sub-               rent et al., 2024).
+buckets uniformly within each L1 ancestor, preserv-                 Language Modeling (1 task): sentence-level
+ing the Stage-1 L1 quota exactly; this is the cov-               commonsense continuation: HellaSwag (Zellers
+erage row that pairs with L123 quality top-30% in                et al., 2019).
+Finding B (Section 5.3). Global L123 max-entropy                    Others (4 tasks): open-domain and social
+(side-reference, quota-flattening) flattens all ∼130k            knowledge: CommonsenseQA (Talmor et al.,
+L123 sub-buckets corpus-wide; it inadvertently re-               2019), Jeopardy (a quiz-show open-domain task),
+shapes the L1 mass towards L1 cells that split into              Natural Questions (Kwiatkowski et al., 2019), and
+many L123 children, so it is not a quota-preserving              Social IQA (Sap et al., 2019).
+Stage-2 contrast. All three variants appear in the                  All sub-tasks are run in their standard pretrain
+leaderboard (Appendix C); only the per-L1 local                  configuration; per-task metric is accuracy. Avg.
+random row is used as the coverage end of the                    is the family-equal macro-mean defined in Sec-
+quota-preserving Finding B pair.                                 tion 4.2.
+
+                                                            15
+Table 7: Granularity arc under DoReMi-L1 outer                    Four grouping families have been paired at L1 +
+weights and within-sub-bucket quality top-30% (cor-            L1 max-entropy, varying only whether the 256 L1
+rected FineWeb-Edu reader). The arc peaks at L12 ;
+                                                               weights come from Uniform or DoReMi.
+the L12 → L123 drop is consistent with the candidate-
+competition account in Section 5.3.                               In three of four paired contrasts, replacing Uni-
+                                                               form with DoReMi at L1 reduces Avg. by 0.010–
+    Granularity (DoReMi; quality top-    Avg.         z        0.026 accuracy points (z swing −0.82 to −2.21);
+    30% Stage-2, corrected)                                    WebOrganizer-Topic is numerically tied. We do
+    L1 (L1-local quality top-30%)       0.4045   +0.114        not read this as a structural claim about DoReMi-
+    L12 (∼65k buckets)                  0.4222   +1.628        style optimisers in general: this comparison is on
+    L123 (∼130k buckets)                0.3988   −0.294
+                                                               a different axis from granularity, and the matched
+                                                               counterparts for L12 quality top-30% (the rank-1
+J      Granularity Arc Under Quality                           row) have not been run.
+       Top-30%                                                 Why DoReMi might underperform Uniform
+The candidate-competition mechanism makes a                    at L1 . One natural reading is that group-DRO
+directional suggestion along the granularity axis              worst-group loss is misaligned with capability
+when Stage-2 is held at per-sub-bucket FineWeb-                Avg.: DoReMi up-weights groups whose proxy-
+Edu quality top-30% under DoReMi-L1 outer                      model loss is high, which at this scale tend to be
+weights: the arc should peak at the intermediate               format-heavy clusters (OCR fragments, code tem-
+granularity where buckets are large enough for the             plates) that contribute little to the 16-task capabil-
+within-bucket quality ranking to be stable, with               ity suite; geometric cluster groupings like KMeans
+the L12 → L123 leg falling once the sub-bucket                 amplify the misalignment (the largest ∆ in the ta-
+pool contracts. The three corrected-reader rows we             ble). Whether this underperformance reverses at
+have are consistent with this picture: the arc rises           finer granularities or under different Stage-2 rules
+from L1 to L12 , then falls back to ∼0.399 at L123 ,           is open.
+where it converges with the quota-preserving L123
+                                                               M    Label-System Relationship
+per-L1 local random coverage row (0.3986; Ap-
+pendix C). The candidate-competition account is                We audit how HERMES labels relate to three ref-
+therefore supported by the L12 → L123 drop in the              erence label families on the intersection of docu-
+quality top-30% line, not by a quality-vs-coverage             ments annotated by all four systems (n = 259,255):
+sign flip at L123 .                                            WebOrganizer Topic, WebOrganizer Format, and
+   The peak at L12 and the drop at L123 are con-               Topic-over-Source (Peng et al., 2025). Each ref-
+sistent with the candidate-competition account: at             erence family has 24 classes, so the maximum
+L123 , the median candidate pool is 429 documents              reference entropy is log2 24 ≈ 4.58 bits. For
+(Appendix F), below the regime where within-sub-               each (HERMES prefix, reference label) pair we
+bucket ranking is stable. A non-decreasing arc, or a           report arithmetic-mean normalised mutual infor-
+coarse-end collapse, would have been inconsistent              mation (NMI), the median per-bucket purity (max-
+with the account; neither is observed.                         class fraction over the reference label, computed
+                                                               per HERMES bucket and aggregated by median
+K       Detailed Finding B Numbers                             across HERMES buckets), and conditional entropy
+                                                               H(reference | HERMES) in bits.
+L      Outer-Weight Characterisation at L1
+                                                               HERMES is not a clone of any reference family.
+We report the paired L1 comparison between our
+                                                               The highest NMI in Table 10 is 0.40 (HERMES
+two O(1)-proxy outer-weight families (Uniform
+                                                               L1 vs. WO Topic), which is moderate, not identity.
+and DoReMi; Section 3.4) as a sanity audit, not as
+                                                               NMI with WO Format is the lowest (0.13 at L1 ,
+a structural finding. The paper’s main granularity
+                                                               0.24 at L12 /L123 ); ToS sits in between (0.33 across
+claim (Finding A, Section 5.2) is conditioned on
+                                                               all granularities). HERMES therefore captures a
+fixed DoReMi outer weights; the comparison below
+                                                               topical-leaning signal that overlaps but is not co-
+characterises the cost of that choice at L1 , where
+                                                               extensive with any of the three reference families.
+we have the matched runs. We do not project these
+results to L123 , where the Uniform counterpart has            Finer granularity sharpens topical alignment.
+not been run (see Section 5.4 and Limitations).                Median per-bucket purity climbs monotonically
+
+                                                          16
+Table 8: Stage-2 rule × granularity under fixed DoReMi-L1 outer weights and HERMES-2563 codebook, with
+both rules in their quota-preserving forms (Stage-1 L1 weights preserved exactly). At L12 (median pool 2,271
+docs), quality top-30% outperforms coverage by ∆ = +0.0253 (Finding A). At L123 (median pool 429 docs),
+the L12 advantage collapses: quality top-30% and per-L1 L123 local random coverage are numerically tied (∆ =
++0.0002, too small to interpret under single-seed evaluation), consistent with the candidate-competition mechanism
+(Section 5.3). The global L123 max-entropy row (0.4061) is a quota-flattening side-reference (Appendix C), not a
+quota-preserving Stage-2 contrast, and is not included here. All quality rows use the corrected FineWeb-Edu reader;
+single 1B/25B training seed per cell.
+
+ Granularity   Stage-2 rule                         Mass dist.             Per-doc eligibility                  Avg.
+ L12           max-entropy (per-L1)                 equal sub-bucket       all docs                           0.3969
+ L12           quality top-30%                      size-proportional      top-30% by quality                 0.4222
+ L123          per-L1 local random                  equal sub-bucket       all docs                           0.3986
+ L123          quality top-30%                      size-proportional      top-30% by quality                 0.3988
+
+Table 9: Paired Uniform vs. DoReMi at L1 + L1 max-entropy across four grouping families. We report the
+comparison descriptively; the sign at finer granularities is not directly testable from this table.
+
+ Grouping family                                            Uniform (Avg / z)   DoReMi (Avg / z)     ∆ Avg       ∆z
+ HERMES-2563 (c1 , ours)                                     0.4155 / +1.048      0.4028 / +0.048   −0.0127   −1.000
+ KMeans-256                                                  0.4153 / +1.059      0.3889 / −1.147   −0.0264   −2.206
+ WebOrganizer-Format                                         0.4134 / +0.949      0.4029 / +0.128   −0.0105   −0.821
+ WebOrganizer-Topic                                          0.4079 / +0.469      0.4082 / +0.508   +0.0003   +0.039
+
+
+Table 10: HERMES label system vs. three reference                extent than at L1 .
+families on a 259,255-document shared intersection.
+Each reference family has 24 classes. Purity is the me-          The format axis is comparatively under-
+dian across HERMES buckets of the max-class fraction             resolved. Even at L123 , median purity under WO
+over the reference label; H(· | ·) is in bits, against a
+                                                                 Format is only 0.53. HERMES’s geometry-derived
+4.58-bit reference-label prior. The shared intersection
+populates 52,536 L12 and 57,512 L123 HERMES buck-
+                                                                 hierarchy captures topical content better than docu-
+ets, fewer than the full-corpus totals (Table 5), because        ment format, consistent with the input embedding
+of the smaller document sample.                                  being a sentence-level semantic encoder rather than
+                                                                 a layout/format model. A format-aware encoder is
+HERMES Reference         NMI Purity H(ref|HERMES)                a natural future direction.
+           WO Topic  0.400       0.63               1.94
+L1         WO Format 0.128       0.28               3.10         What this licenses. HERMES at L12 and L123
+           ToS       0.334       0.53               2.29         can be read as a higher-resolution topical label-
+           WO Topic  0.358       0.83               0.90         ing, with the resolution exposed as a prefix length
+L12        WO Format 0.235       0.50               1.62         rather than rebuilt as a new clustering or taxon-
+           ToS       0.329       0.71               1.14
+                                                                 omy. Importantly, the moderate NMI with each of
+           WO Topic  0.360       0.89               0.87
+L123       WO Format 0.240       0.53               1.57
+                                                                 WO Topic, WO Format, and ToS at L1 shows that
+           ToS       0.331       0.75               1.09         HERMES does not duplicate any one reference tax-
+                                                                 onomy; the hierarchy adds resolution rather than
+                                                                 re-deriving a fixed label system.
+
+with HERMES granularity against every reference                  N    Qualitative Label Inspection
+family: WO Topic 0.63 → 0.83 → 0.89, ToS
+0.53 → 0.71 → 0.75, WO Format 0.28 →                             This appendix complements the quantitative label-
+0.50 → 0.53. Conditional entropy of WO Topic                     relationship analysis (Appendix M) and the sparsity
+given HERMES drops from 1.94 bits at L1 to 0.87                  audit (Appendix F) with qualitative evidence that
+bits at L123 , an 80% reduction relative to the 4.58-            HERMES codes carry interpretable semantic con-
+bit prior. At L12 /L123 a HERMES bucket there-                   tent at every prefix level. All n-gram signatures
+fore behaves as a refined topical cluster: it does not           below come from a uniformly spaced sample of
+name a single human-readable topic, but the docu-                4,800,000 documents (160 aligned text/annotation
+ments inside it share one to a substantially greater             shards × 30,000 rows per shard); full-corpus doc-
+
+                                                            17
+ument counts come from the full 227M-document
+annotation audit. For each L1 bucket, distinctive
+unigrams and bigrams were computed by ranking
+corpus-internal frequency against the corpus back-
+ground. All 256 L1 buckets are populated in the
+sample (per-bucket sample size 3,481 to 52,912,
+median 18,160).
+
+N.1   Representative L1 buckets
+N.2   Prefix hierarchy examples
+To check that prefix length acts as a semantic gran-
+ularity control rather than a numeric handle, we
+selected four high-population L1 parents and in-
+spected their largest L12 children, then drilled into
+selected L123 descendants. Parent and child sum-
+maries are author-assigned from the n-gram signa-
+tures.
+L123 drill-down. A selected L123 inspection is
+consistent with the sparsity audit (Appendix F):
+where the third RVQ stage is populated, it sur-
+faces local refinements rather than a dense third-
+level tree. For example, the hip-hop / pop-artist
+sub-cluster 24_12 splits into 24_12_250 (popcaan,
+drizzy, drake, ras cal) and 24_12_95 (cudi, chioma,
+quavo, archuleta), and the art-education sub-cluster
+218_199 splits into 218_199_127 (art students, art
+academy, teaching art) and 218_199_16 (art stu-
+dents, art teachers, scholastic art).
+Scope and caveat. These examples are qualita-
+tive and selected for readability; they support the in-
+terpretation of HERMES codes as a prefix-readable
+hierarchical label substrate, and are consistent with
+the quantitative purity climb (Appendix M) and
+the parent-child refinement statistics (Appendix F).
+They are not a downstream-performance result, and
+not every bucket is equally clean: e.g., L1 buckets
+sitting near format/quality boundaries (OCR frag-
+ments, navigation pages) are not represented in this
+selection but appear in the full 256-row table.
+
+
+
+
+                                                          18
+Table 11: Representative HERMES L1 bucket signatures from a 4.8M-document sample. The full 256-row table
+is released in the supplementary material. The examples show that the learned labels recover coherent topical
+and stylistic regions without using hand-written taxonomies; per-bucket interpretable labels are author-assigned
+summaries of the n-gram signatures, not learned outputs.
+
+L1 cell     Interpretable label               Full-corpus docs      Sample docs       Distinctive n-grams (top 6)
+   179      Books, publishing, fiction                 2,525,694            52,912    contemporary romance, cover reveal, netgalley,
+                                                                                      urban fantasy, debut novel, hardcover
+                                                                                      paperback
+    24      Music releases and reviews                 2,102,386            45,359    album review, second album, progressive rock,
+                                                                                      released album, title track, debut single
+   218      Visual art and exhibitions                 1,797,386            37,901    solo exhibition, museum contemporary, artist
+                                                                                      statement, painting sculpture, art practice, art
+                                                                                      fair
+    11      Software and developer tooling             1,725,904            28,991    version control, sqlite, dbforge, configuration
+                                                                                      file, unit tests, jdbc
+     6      Recipes and cooking                        1,280,176            26,562    marinade, cook minutes, finely chopped,
+                                                                                      pepper taste, cloves garlic, saute
+     4      Biomedicine, molecular biology             1,255,632            25,967    gene expression, assays, crispr, gene therapy,
+                                                                                      kinase, neuronal
+     8      Video games and RPGs                       1,050,568            21,781    azeroth, guild wars, npcs, edh, pve, clash
+                                                                                      royale
+   116      Astronomy and space science                 890,156             17,993    astronomers, nasa’s, hubble, space agency,
+                                                                                      black holes, cassini
+    10      Macroeconomics and markets                  885,835             19,210    gdp growth, bernanke, bull market, yellen,
+                                                                                      yield curve, fomc
+    97      Wine and winemaking                         617,996             12,830    winemaker, winemaking, cabernet sauvignon,
+                                                                                      tannins, sauvignon blanc, riesling
+    76      Eye care and ophthalmology                  431,300              9,033    lasik, cornea, optometry, macular, contact lens,
+                                                                                      cataracts
+   254      North Korea / geopolitics                   157,314              3,481    pyongyang, kim jong, korean peninsula,
+                                                                                      jong-un, kim jong-un, korean leader
+
+
+Table 12: Representative HERMES prefix hierarchy. For each of four high-population L1 parents we show its five
+largest L12 children. “Active L12” counts L12 sub-buckets that received any documents under the parent; child
+summaries are author-assigned from n-gram signatures on the 4.8M-document sample.
+
+L1 parent                     Full docs   Active L12    L12 child       Summary
+                                                        179_97          writing/novel advice
+                                                        179_176         children’s books
+179: Books / publishing      2,525,694          256     179_255         romance
+                                                        179_148         sci-fi/fantasy
+                                                        179_133         classic/animal literature
+                                                        24_18           classic rock
+                                                        24_65           music videos
+24: Music                    2,102,386          256     24_150          MP3/download pages
+                                                        24_12           hip-hop / pop artists
+                                                        24_183          Christian / gospel music
+                                                        218_9           general art discourse
+                                                        218_199         art education
+218: Visual art              1,797,386          255     218_18          modern artists
+                                                        218_243         Renaissance / Italian art
+                                                        218_120         Islamic / Middle Eastern art
+                                                        11_235          Azure / ASP.NET / API docs
+                                                        11_150          file/PDF tooling
+11: Software / dev tools     1,725,904          256     11_226          data/table tooling
+                                                        11_123          algebra/math software
+                                                        11_142          unit and functional testing
+
+
+
+                                                                   19
+
