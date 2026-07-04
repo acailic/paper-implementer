@@ -1,0 +1,1555 @@
+                                        MARVEL: Margin-Aware Robust von Mises-Fischer
+                                        Expert Learning for Long-Tailed Out-of-Distribution
+                                        Detection
+                                        A.S. Anudeep, Vaanathi Sundaresan
+                                        Department of Computational and Data Sciences, Indian Institute of Science
+                                        archakams@iisc.ac.in, vaanathi@iisc.ac.in
+                                        July 3, 2026
+
+
+
+                                        Abstract
+                                        For clinical deployment, it is essential that automated diagnostic systems remain reliable when confronted
+                                        with previously unseen cases, yet deep models routinely misclassify out-of-distribution (OOD) inputs with
+arXiv:2607.02435v1 [cs.CV] 2 Jul 2026
+
+
+
+
+                                        high confidence, underscoring the need for more robust OOD detection methods. Although substantial
+                                        effort has been devoted to improving model robustness, most of the existing literature assumes balanced
+                                        datasets, evaluates OOD detection on coarse or non-clinical OOD sources, or lacks comprehensive as-
+                                        sessment across diverse OOD scenarios. To address the gaps, we propose a novel methodology trained
+                                        on diverse and imbalanced medical datasets and evaluated across a clinically reflective OOD spectrum.
+                                        Our framework comprises three key components: (1) a Nonlinear von Mises-Fisher (NvMF) classifier
+                                        capable of learning non-linear decision boundaries, with theoretical proof of its asymptotic connection
+                                        to cosine classifiers; (2) a multi-expert framework in which margin-aware NvMF classifiers specialise
+                                        in different regions of label distribution to better handle imbalance; and (3) an outlier expert trained
+                                        explicitly to distinguish inlier from outlier data, thereby strengthening OOD detection. Evaluation on
+                                        RFMiD, ISIC2019, and NCTCRC datasets demonstrates consistent improvements over state-of-the-art
+                                        methods, achieving mean FPR95 reductions of 8.45%, 13.02%, and 36.90% respectively. These gains are
+                                        further supported by comprehensive ablations that validated the contributions of each component. This
+                                        enables reliable identification of unfamiliar cases for deferral to clinicians, supporting safer AI-assisted
+                                        diagnosis in real-world workflows. Our code is available at https://github.com/redboxup/MARVEL.
+                                        Keywords: Long-Tailed, Out-of-Distribution Detection, Multi-Expert Models
+
+                                        1.   Introduction                                           roneous predictions on these OOD samples, by as-
+                                                                                                    signing incorrect ID labels, and often with an un-
+                                                                                                    justifiably high softmax probability [75, 73]. This
+                                        Deep neural networks (DNNs) have demonstrated
+                                                                                                    poses significant safety and reliability risks, mak-
+                                        promising performance across a wide range of med-
+                                                                                                    ing the vulnerability of DNNs to OOD data one
+                                        ical imaging applications including disease classifi-
+                                                                                                    of their main limitations. Adding to this challenge
+                                        cation and region-of-interest detection. DNNs have
+                                                                                                    is the class imbalance, often prevalent in real-world
+                                        often achieved performance on par to or at times
+                                                                                                    medical datasets, where a few common classes dom-
+                                        even exceeding clinicians on standard benchmarks
+                                                                                                    inate the dataset while numerous rare classes form
+                                        [39, 80, 12]. However, a typical in-distribution
+                                                                                                    a long tail [9, 35]. The frequent classes are typi-
+                                        (ID) classification task using DNN assume a closed
+                                                                                                    cally referred to as head classes, whereas the rare
+                                        and balanced label space, whereas real-world data,
+                                                                                                    classes are known as tail classes. Long-tailed distri-
+                                        especially in medical imaging, follows a long-tail
+                                                                                                    butions bias learning towards head classes, affecting
+                                        distribution with many rare, atypical, or previ-
+                                                                                                    representation learning for infrequent classes, caus-
+                                        ously unseen cases. Out-of-distribution (OOD)
+                                                                                                    ing their features to be poorly separated and closer
+                                        data refers to inputs whose underlying distribution
+                                                                                                    to decision boundaries [4, 45]. This leads to the
+                                        deviates from that of those seen in the training set.
+                                                                                                    model being unable to distinguish tail data classes
+                                        For example, for a DNN trained to classify patholo-
+                                                                                                    from the true OOD data, causing frequent misclas-
+                                        gies in frontal chest X-rays, unseen/OOD cases in-
+                                                                                                    sifications of rare cases as OOD and vice versa.
+                                        clude lateral views or X-rays from entirely different
+                                        anatomical regions or even images that are not ra-              To address this particular limitation, there has
+                                        diographs at all. In the above case, lateral views          been growing interest in studying OOD detec-
+                                        constitute the nearOOD data (same modality with             tion under long-tailed distributions. Recent meth-
+                                        relatively smaller shift from training distribution),       ods introduce tailored contrastive objectives [67,
+                                        while non-radiographic images form the farOOD               17], logit-adjusted calibration [46, 71], multi-outlier
+                                        data. DNN models often produce overconfident er-            modelling [16, 71], hyperspherical embedding regu-
+
+
+                                                                                                1
+larization [17, 40], and distribution-aware reweight-       ios; and (2) natural image benchmarks frequently
+ing schemes [71, 17, 46], combined with auxil-              rely on coarse-grained OOD datasets like SVHN
+iary OOD data [67, 46, 71, 17], to jointly im-              [49], LSUN [77], and INAT [8], which fail to reflect
+prove tail recognition and OOD robustness. To               the complexity, variability, and multimodal nature
+assess the effectiveness of these approaches, exist-        of OOD data from medical imaging. To address
+ing efforts construct long-tailed variants of stan-         these limitations, we assemble a diverse collection of
+dard ID datasets and evaluate against a fixed set           OOD datasets spanning novel classes, corruption-
+of OOD benchmarks. While this strategy has con-             based shifts, and farOOD natural images, establish-
+tributed valuable insights, it has primarily focused        ing one of the first benchmarks that systematically
+on natural-image settings. As a consequence, the            evaluates medical-imaging models across both near
+selected OOD datasets do not reflect the diverse            and broad distribution shifts.
+challenges present in medical imaging, where distri-            In summary, our work contributes both method-
+bution shifts may arise from multiple causes includ-        ological advances and comprehensive evaluation
+ing modality differences, variations in acquisition         framework for medical imaging OOD detection as
+protocol, institutional heterogeneity, demographic          follows:
+diversity, the presence of rare or novel pathologies.
+    Motivated by these gaps, we propose a method               • Nonlinear vMF classifier: By leverag-
+for medical imaging ID classification with OOD                   ing the exponential family structure of the
+detection, under long-tailed class distributions,                vMF distribution, we derive a novel Nonlin-
+MARVEL (Margin-Aware Robust von Mises–Fisher                     ear vMF-based classifier that admits a more
+Expert Learning). At the core of MARVEL is a Non-                adaptive and complex decision boundaries
+linear von Mises–Fisher (NvMF) classifier that gen-              in hyperspherical representation spaces, and
+eralises conventional vMF-likelihood formulations.               theoretically show that it converges to a co-
+Prior work typically treats the vMF distribution                 sine classifier in the asymptotic regime.
+as a class-conditional density and reduces its log-
+its to scaled cosine similarities, which limits the            • Margin-aware multi-expert learning
+decision boundary flexibility and prevents mod-                  strategy: We develop a multi-expert ensem-
+elling of complex, heterogeneous class geometries.               ble composed of margin-aware NvMF classi-
+In contrast, we reinterpret the vMF distribution                 fiers that specialise across different regions of
+through its exponential-family structure and de-                 the label frequency distribution.
+fine logits using changes in the log-partition func-
+tion. This perspective yields a principled formula-            • Dedicated outlier expert for explicit
+tion that induces non-linear decision boundaries,                OOD modelling: We design a dedicated
+enabling richer and more flexible separation be-                 outlier expert that is trained to explicitly
+tween classes. However, enhancing decision bound-                separate OOD samples from ID inputs, en-
+aries alone does not fully mitigate the difficulties             hancing robustness to unseen and anomalous
+imposed by long-tailed imbalance. Even with non-                 cases.
+linear boundaries, rare classes continue to suffer
+                                                               • Clinically realistic OOD evaluation:
+from overlapping feature clusters and insufficient
+                                                                 We introduce an OOD evaluation framework
+decision margins. To counter this, we introduce
+                                                                 for medical imaging that captures both se-
+a margin-aware multi-expert architecture compris-
+                                                                 mantic and domain-level shifts, going beyond
+ing three variants (experts) of our proposed classi-
+                                                                 prior benchmarks that rely on artificially con-
+fier, each trained under distinct prior assumptions:
+                                                                 structed OOD datasets (not representative of
+head-biased, balanced, and tail-biased. Each ex-
+                                                                 real-world OOD cases), to reflect clinically
+pert specialises in a different region of the label
+                                                                 relevant failure modes.
+distribution, effectively capturing the heterogene-
+ity induced by severe imbalance. In addition, to               • Evaluation on diverse medical datasets:
+explicitly model abnormal, unseen, or clinically ir-             We conduct extensive experiments on multi-
+relevant inputs, we incorporate a dedicated outlier              modal and multi-organ datasets including
+expert trained solely to discriminate OOD from ID                NCTCRC for histopathology, ISIC2019 for
+samples.                                                         dermatology, and RFMiD for retinal imaging.
+    Beyond architectural improvements, we also re-
+examine how OOD detection is evaluated in med-                 • Comprehensive empirical validation:
+ical imaging. Existing benchmarks often suffer                   We conduct ablation studies on the proposed
+from two key limitations: (1) medical imaging                    methodology, complemented by calibration,
+datasets typically restrict evaluation to nearOOD                risk-coverage, and qualitative analyses, to rig-
+scopes, such as only holding out novel classes,                  orously substantiate the effectiveness and ro-
+which overlooks broader distribution-shift scenar-               bustness of the proposed method.
+
+
+                                                        2
+2.     Related Work                                           activations to suppress spurious high responses.
+                                                              Similarly, DICE [61] and SCALE [74] selectively
+OOD detection has been so far explored in generic             retain or rescale salient activations, leading to im-
+computer vision and machine learning, spanning                proved discrimination without retraining. These
+diverse assumptions, methodologies, and evalua-               methods are lightweight and model-agnostic, mak-
+tion protocols. However, relatively little attention          ing them attractive for practical deployment.
+has been paid to identifying approaches that re-                  Another class of post-hoc methods are distance-
+main effective in long-tailed medical imaging set-            based detectors, which leverage feature embeddings
+tings. To provide a coherent context for our frame-           extracted from the penultimate layer of deep en-
+work, we first summarise the core developments                coders. These methods assume that the learned
+in classification-based OOD detection (the setting            embedding space exhibits sufficient structure to
+most directly aligned with our problem formula-               separate ID and OOD samples. Under this assump-
+tion) before discussing recent efforts that explic-           tion, Mahalanobis Distance (MD) based detector
+itly address distribution imbalance and long-tailed           [31, 58], models class-conditional feature distribu-
+regimes.                                                      tions as Gaussians and computes the Mahalanobis
+    It is important to note that OOD detection also           distance between a test sample and the estimated
+encompasses several specialised techniques, includ-           distribution, treating samples that lie far from all
+ing generative-model-based approaches for detect-             class centres as potential OOD inputs. Similarly, k-
+ing pixel-level anomalies or spatially localised irreg-       th nearest-neighbour based method [62] measures
+ularities, as well as methods tailored for object de-         the distance between a test sample and its k-th
+tection or segmentation pipelines. While effective            nearest neighbour in the feature space, assuming
+in their respective applications, such approaches             that ID samples will lie close to previously observed
+target different problem formulations from the                representations while OOD samples will be more
+image-level classification setting considered here,           isolated. Hybrid approaches such as NN-Guide [55]
+and are therefore excluded from our review.                   combine the classifier scores and feature distances
+                                                              to try and improve both near- and farOOD detec-
+2.1.    Out-of-Distribution Detection                         tion.
+Existing approaches can be broadly categorised                    Training-time Methods: In contrast to post-
+into post-hoc methods, which operate on pretrained            hoc approaches, training-time methods aim to learn
+models at inference, and training-time methods,               representations that are inherently more amenable
+which explicitly shape representations or decision            to OOD detection.
+boundaries during learning.                                       A prominent class of these methods lever-
+    Post-hoc Methods: Post-hoc approaches de-                 ages contrastive learning to enforce structured fea-
+rive OOD scores from a fixed pretrained model                 ture spaces. SSD [58] employs supervised con-
+without modifying its parameters. A large class               trastive objectives to promote intra-class compact-
+of methods relies on classifier outputs to estimate           ness and inter-class separation, improving down-
+confidence. Early work such as Maximum Softmax                stream distance-based detection. CIDER [48] ex-
+Probability (MSP) [18] uses the maximum softmax               tends this idea by modelling normalised features
+score as a proxy for confidence, while Maximum                on a hypersphere using the vMF distribution, en-
+Logits Score (MLS) [65] operates directly on raw              couraging concentration around class-specific direc-
+logits to provide a more stable signal. Energy-based          tions. Building further, PALM [41] relaxes the
+methods [37] further improve this by using expo-              single-prototype assumption by learning multiple
+nentiated logits, summed across classes, to cap-              prototypes per class, enabling better modelling of
+ture the overall evidence distribution. Subsequent            intra-class variability while preserving discrimina-
+works enhance score-based methods via calibration             tive boundaries. Another widely explored direction
+and perturbation strategies. For instance, ODIN               incorporates auxiliary outlier data during training.
+[32] introduces temperature scaling and input per-            Outlier Exposure (OE) [19] trains models to as-
+turbations to amplify the separation between ID               sign low confidence to samples drawn from external
+and OOD samples, while its generalised variant G-             datasets, with the expectation that this behaviour
+ODIN [21] extend this idea to broader settings.               generalises to unseen OOD inputs. Several methods
+Further, methods such as ViM [66] augment the                 have adopted this principle, incorporating auxiliary
+logit space with a virtual OOD component derived              outlier data into the training process to enhance
+from feature residuals, bridging output-based and             OOD detection [73, 79, 76, 47]. Another line of
+feature-based perspectives. Beyond output scores,             work extends this idea by synthesising outliers dur-
+another line of work focuses on modifying interme-            ing training. For example, methods such as VOS
+diate activations to improve OOD separability. Ac-            [11] and NPOS [63] generate virtual outliers to im-
+tivation shaping methods such as REACT [60] trun-             prove robustness without requiring curated exter-
+cate overly large activations, while ASH [10] prune           nal data. Collectively, these approaches promote
+
+
+                                                          3
+structured and discriminative feature representa-            anced settings. PASCL [67] improves tail represen-
+tions, which in turn improve the OOD discrimina-             tation learning by modifying the SupCon [25] loss
+tion of post-hoc detectors.                                  to operate selectively on tail classes and auxiliary
+    Despite their effectiveness, existing post-hoc           OOD samples, encouraging better separation for
+and training-time approaches exhibit fundamental             underrepresented classes. A different perspective
+limitations in long-tailed settings due to inherent          is taken by COCL [46], which reformulates OOD
+biases in both representation learning and deci-             detection as a classification task by introducing a
+sion mechanisms. Confidence-based methods suf-               dedicated outlier class and coupling it with logit
+fer from skewed classifier outputs, where models             adjustment to handle class imbalance. Extending
+trained on imbalanced data tend to be overcon-               this formulation, EAT [71] models OOD data us-
+fident on head classes while producing unreliable            ing multiple outlier classes and leverages ensem-
+scores for tail classes, often causing tail samples to       ble training to capture diverse outlier patterns. In
+be misidentified as OOD. Activation shaping meth-            contrast, PATT [17] focuses on modelling feature
+ods, while effective in suppressing spurious high ac-        distributions, augmented with tail-aware attention
+tivations, rely on global heuristics that are agnostic       and feature calibration to improve the separation
+to class structure, and may inadvertently remove             between ID and OOD samples.
+informative but low-magnitude signals from under-                Despite recent progress, existing methods re-
+represented classes, thereby degrading discrimina-           main limited both in design and evaluation.
+tion for tail samples. Distance-based approaches             Methodologically, many approaches rely on simple
+face a more structural issue, as tail class represen-        linear classifiers that are misaligned with the com-
+tations are typically sparse, anisotropic, and biased        plex geometry of learned feature spaces, while a
+toward head-class directions, making distance esti-          single shared model must simultaneously capture
+mates unstable and less discriminative. Although             dense head classes and sparse tail classes, leading to
+contrastive learning methods improve global fea-             head-dominated representations and underfitting of
+ture separability, they are driven by the empiri-            tail regions. Moreover, OOD detection is often im-
+cal data distribution and thus disproportionately            plicitly coupled with classification, confusing true
+favour head classes, failing to enforce balanced rep-        distributional uncertainty with data scarcity and
+resentation quality across the label space. Simi-            resulting in ambiguous decision boundaries where
+larly, outlier exposure introduces competing objec-          tail samples resemble OOD. From an evaluation
+tives that can divert model capacity toward sepa-            standpoint, these methods are predominantly val-
+rating ID from OOD at the expense of refining fine-          idated on natural image benchmarks such as CI-
+grained boundaries for underrepresented classes.             FAR [28] and ImageNet [57], which differ signif-
+More broadly, these methods treat OOD detection              icantly from medical imaging in structure and ac-
+and class imbalance as independent challenges, this          quisition. In addition, commonly used OOD bench-
+mismatch highlights the need for approaches that             marks, including SVHN [49], LSUN [77], and INAT
+explicitly account for the interplay between imbal-          [8], are relatively coarse-grained and fail to re-
+ance and distributional uncertainty.                         flect the complexity and heterogeneity of real-world
+                                                             medical data distributions.
+                                                                 Motivated by these gaps, we propose a frame-
+2.2.   Long-Tailed Out-of-Distribution Detection
+                                                             work that generalises long-tailed OOD detection
+An early step toward long-tailed OOD detection is            to complex, domain-specific distributions in med-
+Open Long Tail Recognition (OLTR) [40], which                ical imaging. We introduce a novel classifier capa-
+employs a meta-embedding framework to model                  ble of modelling heterogeneous class structures in
+tail-class prototypes and reject samples that devi-          hyperspherical feature spaces. To mitigate head-
+ate from them. The Hierarchical Outlier Detec-               class-dominated representations, we further adopt
+tion (HOD) loss [16], in contrast, treats tail classes       a multi-expert framework that captures diverse la-
+as surrogate outliers to enforce inlier–outlier sep-         bel distribution regimes. Finally, we decouple OOD
+aration. Similarly, Mehta et al. [43] address long-          detection from classification through a dedicated
+tailed and fine-grained OOD detection using a com-           outlier expert, enabling explicit modelling of in-
+bination of mixup strategies and prototype learning          lier–outlier separation. To ground our approach,
+within a skin-lesion setting. Consequently, all ap-          we first formalise the problem setup and notation.
+proaches reduce OOD detection to a form of novel-
+class recognition, limiting their ability to capture         3.     Preliminaries
+broader range of distributional shifts.
+    Addressing both long-tailed recognition and              3.1.    Problem Setup
+broader distributional shifts, recent methods com-
+monly incorporate auxiliary datasets and adapted             Let X ⊂ Rv denote the image space of dimen-
+outlier exposure mechanisms tailored for imbal-              sion v and Y in := 1, 2, . . . , K be the number of
+
+                                                         4
+ID classes, denoted by set K. The training dataset                In prior work, vMF distributions have been re-
+Dtrain = {(xi , yi )}N
+                     i=1 consists of independent sam-         stricted mainly to this formulation for construct-
+ples (xi , yi ) drawn from the joint ID distribution          ing classifiers, where each ID class c with a single
+PX Y in . Class probabilities follow a long-tailed            mean direction µc on the hypersphere and com-
+prior, P (Y = k) ∝ k −α for some α > 0.                       puting class posteriors via a softmax over the cor-
+    In addition to the ID dataset, we assume access           responding log-densities [48, 41]. Under this formu-
+to an auxiliary outlier dataset Daux = {x̃i }N
+                                             i=1 , con-       lation, classification reduces to comparing the an-
+sisting of images that do not belong to the ID image          gular similarity between an input embedding and
+space. These samples are randomly collected and               class prototypes, yielding the following posterior:
+incorporated during training as additional targets
+in the loss function. A detailed description of the                                     exp(κµ⊤c x)
+                                                                      P (y = c | x) = PK              .       (3)
+auxiliary dataset is provided in Section 5.2.1.                                                   ⊤
+                                                                                       j=1 exp(κµj x)
+    Objective: During inference, the model should
+perform two tasks: (1) binary OOD detection             When optimised via maximum likelihood, the re-
+and (2) label prediction for samples deemed ID.         sulting logit for class c simplifies to a scaled co-
+The OOD detection is performed by the func-             sine similarity, ℓc (x) = κµ⊤ c x. As a consequence,
+tion SOOD (x),which assigns a scalar-value indicat-     conventional vMF-based classifiers are functionally
+ing how likely x is to be OOD. A decision threshold     equivalent to cosine classifiers, differing primarily in
+λ is then applied ot determine whether a sample is      their probabilistic interpretation rather than their
+classified ID or OOD. For samples classified as ID,     decision geometry. While this formulation provides
+the predicted label is determined by selecting the      a principled directional model and naturally accom-
+ID class with highest predicted probability value.      modates normalised embeddings, it also inherits the
+                                                        limitations of cosine classifiers: decision boundaries
+3.2. von Mises-Fisher (vMF) distribution                remain linear in angular space, and each class is
+                                                        represented by a single mode. These assumptions
+In long-tailed classification settings, learned feature can be overly restrictive in practice, particularly in
+norms often correlate with class frequency, caus- long-tailed and open-set settings where classes ex-
+ing classifiers that depend on vector magnitude to hibit heterogeneous intra-class variability and com-
+favour head classes [45]. A common mitigation plex feature distributions.
+strategy is to normalise embeddings onto a unit             Our work, on the other hand, builds upon this
+hypersphere, thereby enforcing emphasis on angu- widely adopted vMF classifier formulation and ex-
+lar discrimination. In this normalised regime, the tends it beyond this linear-boundary regime. The
+vMF distribution provides a well-suited probabilis- proposed adaptation of the NvMF classifier is intro-
+tic model for class-conditional densities defined on duced in Section 4.1, where we describe how richer
+the hypersphere.                                        class representations and improved OOD separa-
+    The vMF distribution is defined over the unit tion are achieved.
+hypersphere Sd−1 = {x ∈ Rd : ∥x∥2 = 1}, where d
+denotes the dimensionality of the embedding space
+produced by the encoder f (·). Its probability den- 4. Methodology
+sity function is given by
+                                                        Our proposed framework MARVEL, the illustrated in
+                                         ⊤
+                                                    (1) figure 1, consists of two components: (1) a shared
+                                            
+          p(x | µ, κ) = Cd (κ) exp κµ x ,
+                                                        feature extractor f : X 7→ Rd that maps input
+where µ ∈ S      d−1
+                     is the mean direction, κ ≥ 0 x ∈ X to high dimensional feature embedding f (x);
+is a concentration parameter controlling dispersion (2) an ensemble of experts E. Each expert g ∈ E
+around µ, and Cd (κ) is a normalization constant operates on the shared representation f (x).
+(which ensures that the density integrates to 1 over        The ensemble E is composed of two categories
+the hypersphere) given by,                              of experts. The first category consists of our pro-
+                                                        posed NvMF classifiers with margin awareness, de-
+                             κd/2−1                     noted by gτN vM F : Rd 7→ RK+1 , where τ ∈ {0, 1, 2}
+              Cd (κ) =                              (2)
+                        (2π)d/2 Id/2−1 (κ)              is the margin strength parameter (explained in Sec-
+                                                        tion 4.2), that specifies the subset of classes empha-
+Cd (κ) involves the modified Bessel function of the sised by the expert. The second category is a ded-
+first kind Iν (·), where ν = d/2 − 1 is the order of icated outlier expert, denoted by g out : Rd 7→ R2 ,
+the Bessel function, which arises from integrating implemented as a fully connected layer trained for
+the exponential term over the spherical manifold. binary classification. Unlike the K + 1 classifiers
+This dependence reflects the geometry of the hy- in the first category, this expert does not model
+persphere and distinguishes the vMF distribution fine-grained ID classes, but focuses solely on the
+from Gaussian densities defined in Euclidean space. ID/OOD decision.
+
+
+                                                          5
+    During training, mini-batches are constructed        c, with µc ∈ Sd−1 and κc > 0. Each class-
+by sampling from both Dtrain and Daux equally. For       conditional component belongs to the exponential
+the NvMF experts, samples from Dtrain retain their       family and can be written in the canonical form,
+original class labels y ∈ {1, . . . , K}, while samples  p(x|c) = exp(η ⊤c x − A(η c )).
+from Daux are assigned to the additional (K + 1)th           Since each class is modelled as a probability dis-
+class. For the outlier expert, samples from Dtrain       tribution p(x|c), the log-partition function A(η c )
+are assigned the label 0 (ID), irrespective of their     serves as the necessary normalization term that
+class identity, whereas samples from Daux are as-        scales the density to a valid probability. We can
+signed the label 1 (OOD). Given these label as-          therefore interpret the classification task as evalu-
+signments, each expert optimises its corresponding       ating how much this normalization constant must
+task-specific objective. The NvMF classifiers are        change to accommodate a new observation. If a
+trained using losses LτNvMF , while the outlier expert   point x aligns well with a class, the ”cost” of in-
+is trained with Lout. The overall training objective     cluding it in that distribution p(x|c) is low. Thus,
+jointly minimises the sum of these components:           for any class c, we define the score ℓc = −∆A(x) =
+                      X                                  A(η c ) − A(η c + x), which measures how the log-
+          Ltotal =          LτN vM F + Lout         (4)  partition function of the c-th component would
+                    τ ={0,1,2}                           change if x were attributed to that class.
+                                                             Although the log-partition function acts as
+4.1. Nonlinear von Mises-Fisher (NvMF) Clas- a global normalisation term, its class-conditional
+       sifier                                            increments provide class-dependent compatibility
+                                                         scores on the hypersphere, inducing non-linear deci-
+In MARVEL, the three experts in the ensemble are
+                                                         sion boundaries in the embedding space. We there-
+implemented as novel Nonlinear vMF classifiers
+                                                         fore use the collection of scores {lc }K+1
+                                                                                                c=1 as logits in
+(NvMF). This design choice is motivated by the
+                                                         a discriminative classifier, defined as:
+limitations of conventional hyperspherical classi-
+fiers. Cosine classifiers [15] only encode the mean                                   Cd (∥κc µc + x∥)
+                                                              ℓc = −∆A(x) = − log                         .   (6)
+direction of each class and ignore the variability or                                      Cd (κc )
+concentration around it. Prior work remedies this            In Theorem 1, we provide a theoretical justifi-
+by modelling class-conditional densities using vMF cation for the proposed formulation by analysing
+distributions, as summarised in the preliminaries. the asymptotic regime of the vMF concentration
+However, because these models optimise the likeli- parameter κ. Specifically, as κ → ∞, the logits in-
+hood of a vMF density, the resulting logits reduce duced by our exponential-family construction con-
+to scaled cosine similarity, meaning that their deci- verge to those used in existing vMF and cosine-
+sion boundaries remain linear and inherit the same based classifiers as proven in Theorem 1.
+limitations as cosine classifiers.
+                                                                                       d−1
+    Our approach takes a fundamentally different Theorem 1. Let x, µ ∈ S . The vMF logit is
+perspective: rather than treating the vMF distri- defined as
+bution purely as a likelihood model, we exploit its                                    Cd ∥κµ + x∥
+                                                                                                     
+exponential-family structure to construct class log-               ℓ(x; κ, µ) = − log                  .      (7)
+                                                                                           Cd (κ)
+its. This reinterpretation yields a classifier, capa-
+ble of inducing non-linear decision boundaries on As κ → ∞, it converges to µ⊤ x + O κ−1 .
+                                                                                                       
+
+the hypersphere, allowing it to better model het-
+                                                         Proof. We analyse the asymptotic behaviour of the
+erogeneous cluster shapes and imbalanced embed-
+                                                         vMF logit as the concentration parameter κ → ∞.
+ding geometries. To make this connection precise,
+                                                         The normalization constant Cd (κ) depends on the
+recall that the vMF distribution can be expressed
+                                                         modified Bessel function of the first kind Iν (κ) with
+as a member of the exponential family [2, Sec-
+                                                         ν = d/2 − 1 (refer to (2)). Using its standard
+tion2.4], with a sufficient statistic T(x) = x, a nat-
+                                                         asymptotic expansion [51],
+ural parameter η = κµ, and a log-partition func-
+tion A(η) = − log Cd (κ).                                             κ
+                                                                                4ν 2 − 1
+                                                                                                   
+    We model the distribution of normalised em- Iν (κ) ∼ √e                 1−                  −2
+                                                                                         + O(κ ) , κ → ∞,
+beddings x as a mixture of class-conditional vMF                     2πκ           8κ
+components. Specifically, for a (K + 1)-class prob-                                                           (8)
+lem:                                                         Taking  logarithms  on  both sides  of (2)  and sub-
+                                                         stituting the asymptotic expansion of Iν (κ) from
+        K+1
+         X                                               (8) yields
+p(x) =        wc p(x|c), p(x|c) = Cd (κc ) exp(κc µ⊤
+                                                   c xc ),
+        c=1
+                                               (5) log Cd (κ) = −κ+ d−1 log κ+a0 + a1 +O(κ−2 ), (9)
+                                                                         2            κ
+where wc is the mixture weight, and (µc , κc ) de-
+note the mean direction and concentration of class for constants a0 , a1 depending only on d.
+
+
+                                                          6
+Figure 1: Overview of the proposed long-tailed OOD detection framework. (a) Schematic of the possible
+data distributions defining ID and OOD samples at training and test time. (b) High-level overview of
+the proposed framework: a shared encoder maps inputs to a normalised feature space, followed by spe-
+cialised experts for head, mid, tail and outlier samples. (c) Feature extraction from the shared encoder,
+highlighting the inference path within the ID classification branch. (d) vMF classifier with a memory
+bank that maintains class-wise concentration parameters and normalization terms for logit computation.
+(e) Margin-aware mechanism controlled by parameter τ , where different values of τ bias the decision
+boundary, enabling the classifier to specialise as a head-, mid-, or tail-class expert.
+
+
+
+
+                                                   7
+    Next, letting ρ = µ⊤ x, we expand the term ∆yc modifies the pairwise logit difference between
+∥κµ + x∥ from (7),                                 the ground-truth class y and competing classes c.
+                                                   Thus, our loss function LN vM F after introducing
+                                                   the objective becomes:
+             p                     1 − ρ2
+∥κµ+x∥ = κ2 + 2κρ + 1 = κ+ρ+              +O(κ−2 )
+                                     2κ                                             K+1
+                                              (10)  L∆       = −(ℓ   + ∆    ) + log
+                                                                                    X
+                                                                                        exp(ℓc + ∆yc )
+                                                      N vM F       y     yy
+    We now evaluate the asymptotic form of                                          c=1
+log Cd (r) at r = ∥κµ+x∥ by substituting the above                                                  
+                                                                          K+1
+expansion in (9) and collecting terms up to order                          X
+                                                             = log 1 +           exp(ℓc − ℓy + ∆yc )
+κ−2 , yielding
+                                                                                    c=1,c̸=y
+                                                                                                                 (14)
+                      2
+                                              −2
+log Cd (r) = −κ−ρ− 1−ρ  d−1      d−1 ρ
+                    2κ + 2 log κ+ 2 κ +a0 +O(κ   )
+                                                  (11)      Following Menon et al. [45], these margins can
+     Finally, to obtain (7), we subtract (11) from (9)  be parametrised     as ∆yc = τ log πc /πy where πy , πc
+                                                        are the empirical class priorsP computed from the
+                                                        training set, i.e., πy = ny / k nk , where ny repre-
+ℓ(x; κ, µ) = log Cd (κ) − log Cd (r)                    sents the number of training samples belonging to
+                    1
+                        − 1 + ρ2 + (d − 1)ρ + O(κ−2 ). the class y, and τ ≥ 0 is the margin strength param-
+                                           
+           =ρ−
+                   2κ                                   eter that controls margin’s intensity. This formu-
+                                                  (12) lation is inherently asymmetric, i.e., ∆yc ̸= ∆cy .
+                                                        For instance, if y is a head class and c is a tail
+     Thus, in (12), as κ → ∞, the second term be- class, then π /π < 1, implying log(π /π ) < 0,
+                                                                      c    y                       c  y
+comes 0, leaving the leading-order term ρ, which is and thus ∆ < 0 assuming τ > 0. As a result,
+  ⊤                                                                  yc
+µ x (defined earlier), showing that the vMF logit when comparing a head class against a tail class,
+converges to cosine similarity as κ → ∞.                ∆yc < 0, yielding a negative margin that penalises
+     This shows that the proposed vMF-based clas- the head class. Conversely, when comparing a tail
+sifier recovers cosine-similarity–based classifiers as class y against a head class c, πc /πy > 1, imply-
+a limiting special case. Consequently, this formu- ing log(πc /πy ) > 0 and hence ∆yc > 0, yielding a
+lation constitutes a principled generalisation of ex- positive margin that increases the tail class logit.
+isting hyperspherical classifiers. While the large- Ultimately, this pairwise asymmetry shifts the de-
+κ regime yields linear decision boundaries on the cision boundaries towards under-represented class,
+sphere, smaller values of κ induce non-linear deci- thereby ameliorating the impact of imbalance.
+sion boundaries. The classifier is trained by apply-        The role of the margin strength parameter τ
+ing the softmax over the logits ℓc and minimising can be understood as follows. When τ = 0,
+the cross-entropy loss with respect to the ground ∆cc′ = 0, as illustrated in Fig. 1b(i), effectively
+truth class y:                                          applying no margin at all. Thus, the classifier re-
+                                                        duces to the default head-biased classifier. As τ
+                                             K+1
+                       exp ℓy                X          increases, ∆cc′ increases correspondingly, resulting
+LN vM F = − log PK+1             = −ℓy +log      exp ℓc in progressively stronger margins that favour tail
+                      c=1 exp ℓc             c=1        classes (see Fig. 1b(ii)–(iii)). Thus, by incorporat-
+                                                  (13)
+                                                        ing ∆yc = τ log(πc /πy ), the resulting loss becomes:
+
+4.2.   Margin-aware ensemble of experts                                                                            
+                                                                                    X                           π c
+With our proposed NvMF formulation, which can                 LτN vM F = log 1 +          exp(ℓτc − ℓτy + τ log )
+                                                                                                                πy
+effectively capture non-linear decision boundaries,                                 c̸=y
+we aim to overcome the effect of class imbalance in                                                          (15)
+data that tend to overfit to head classes while sys-         where ℓτc denotes the logit for class c, with super-
+tematically underperforming on rare ones. A key              script τ indexing the expert.
+contributing factor is that decision boundaries are              The proposed ensemble utilises τ ∈ {0, 1, 2} to
+often placed too close to tail-class samples, making         integrate three specialised regimes: a head-biased
+them vulnerable to misclassification. One natural            expert (τ = 0) for standard accuracy, a balanced
+way to alleviate this issue is to enforce large inter-       expert (τ = 1) for moderate rebalancing, and a tail-
+class margins, requiring the classifier to shift the         biased expert (τ = 2) for aggressive minority-class
+decision boundaries towards head class and offer             protection. By combining these complementary be-
+greater protection to tail class [4, 45]. We can en-         haviours, MARVEL maintains high performance on
+force these margins by introducing pairwise margin           majority classes while significantly improving ro-
+objectives in the loss function, where a margin term         bustness across mid- and tail-categories.
+
+
+                                                         8
+4.3.   Outlier Expert                                      4.4.2.   OOD Detection
+While the NvMF experts model both ID classes               To perform OOD detection, we leverage two com-
+and an additional OOD class, the resulting deci-           plementary signals: (i) the probability of a sample
+sion boundaries are inherently tied to multi-class         being assigned to (K + 1)-th class by NvMF ex-
+discrimination. As a result, OOD separation is in-         perts, and (ii) the OOD probability predicted by
+fluenced by inter-class competition among ID cat-          the dedicated Outlier Expert.
+egories. To provide a more direct supervision sig-             For each NvMF expert τ ∈ {0, 1, 2}, we first
+nal for OOD detection, we introduce a dedicated            compute the probability assigned to the (K + 1)-th
+outlier expert g out : Rd → R2 , trained to perform        class as, sτNvMF = softmax(ℓτ )K+1 . We then aggre-
+binary ID versus OOD classification on the shared          gate the predictions across all experts to obtain a
+representation f (x). This expert complements the          unified NvMF-based score:
+NvMF ensemble by learning global decision bound-
+                                                                                       2
+ary that explicitly separates ID and OOD samples.                                   1X τ
+                                                                         sNvMF =          s     .         (18)
+    Given the balanced presence of ID and OOD                                       3 τ =0 NvMF
+samples in each training batch, the binary classifi-
+cation task is well-conditioned and does not require       In parallel, the Outlier Expert produces an ex-
+complex decision boundaries. Accordingly, the out-         plicit estimate of OOD likelihood, given by: sood =
+lier expert is implemented as a simple fully con-          softmax(ℓood )1 . Finally, we combine these two sig-
+nected layer [29]. A standard cross-entropy loss is        nals to obtain:
+used for training over, where ℓood
+                                c  denotes the logit
+corresponding to class c ∈ {0, 1}, and y ∈ {0, 1} is                            1
+                                                                       SOOD =     (sNvMF + sood ) .       (19)
+the ground truth label.                                                         2
+                                                         where, higher values of SOOD (x) indicate greater
+                                          
+                             X
+    LOOD = −ℓood     + log       exp ℓood     (16)     likelihood of the sample being OOD. This formu-
+                y                      c
+                              c∈{0,1}                    lation leverages the complementary strengths of
+                                                         (i) class-aware NvMF classifiers that contextualise
+                                                         OODness relative to ID decision boundaries, and
+4.4. Inference
+                                                         (ii) a binary expert specialised in learning coarse
+Given an input sample, a forward pass through the ID/OOD separation. Together, they yield robust
+proposed model produces the following logits. The OOD scoring under both balanced and long-tailed
+NvMF experts output a set of three logit vectors settings.
+{ℓτ }2τ =0 , where each ℓτ ∈ RK+1 corresponds to the
+logits for K + 1 classes. In addition, the outlier 5. Experimental Setup
+expert produces ℓood ∈ R2 , representing the ID,
+OOD classes. These logits are used differently for 5.1. Dataset details
+ID classification and OOD detection, as detailed in
+the following subsections.                               To comprehensively evaluate the proposed frame-
+                                                         work under realistic and challenging conditions, we
+4.4.1. ID Classification                                 adopt an extensive evaluation protocol that com-
+                                                         bines long-tailed ID datasets with carefully curated
+To perform ID classification, we utilise the predic- OOD datasets. For each ID dataset, we consider
+tions from the NvMF experts only. Although each multiple OOD datasets that span a spectrum of se-
+expert produces predictions over K + 1 classes, we mantic difficulty, ranging from nearOOD (hard) to
+restrict our attention to the first K logits. For each farOOD (easy), enabling a fine-grained analysis of
+expert τ ∈ {0, 1, 2}, we compute the class probabili- OOD detection performance. Figure 2 provides an
+ties over the ID classes as, pτc = softmax(ℓτ1:K )c. We overview of the dataset composition and evaluation
+then aggregate the predictions across all experts to setting, illustrating representative ID samples, their
+obtain the final class probabilities:                    corresponding near- and farOOD counterparts, as
+                                                         well as the long-tailed label distributions of the ID
+                               2
+                           1X τ                          datasets.
+                     pc =        p .                (17)
+                           3 τ =0 c
+                                                      5.1.1. ID Dataset Details
+The predicted class label is given by arg maxc , pc .
+This aggregation leverages the complementary We evaluate the proposed method on three publicly
+strengths of the experts, each capturing different available medical imaging datasets: (i) the Retinal
+aspects of the label distribution.                    Fundus Multi-Disease Image Dataset (RFMiD)1
+  1 https://riadd.grand-challenge.org/download-all-classes/
+
+
+
+
+                                                       9
+[53], (ii) the International Skin Imaging Collabo-                                          Summary of Datasets
+
+ration 2019 (ISIC2019) dataset2 [7] and (iii) NCT              Dataset       Train   Val   Test    #Novel   NearOOD1   NearOOD2
+                                                               A. Dataset splits & statistics
+Colorectal Caner (NCTCRC) dataset3 [22].                        RFMiD        846     368    2810     113       256       968
+                                                                ISIC2019     6585 3531 2396         3822      2657      2298
+                                                                NCT-CRC 15555 7262 20748            9252      1695      49260
+     ISIC2019 comprises dermatoscopic images of           B. ID/OOD class labels
+pigmented skin lesions spanning eight diagnostic            RFMiD      ID: Macular Hole (MH), Diabetic Retinopa-
+                                                                       thy (DR), Optic Disc Cupping (ODC), Drusen
+categories, and was curated primarily to support                       (DN), Age-related Macular Degeneration (ARMD),
+automated skin lesion analysis and melanoma clas-                      Branch Retinal Vein Occlusion (BRVO), Optic Disc
+                                                                       Edema (ODE), Myopia (MYA), Retinitis (RS),
+sification. NCTCRC is a histopathological im-                          Central Serous Retinopathy (CSR), Central Reti-
+age dataset for nine-class tissue classification, cre-                 nal Vein Occlusion (CRVO), Optic Disc Pit (ODP),
+                                                                       Retinal Tear (RT), Epiretinal Membrane (EDN),
+ated to facilitate the development of computational                    Macular Hole with Lamellar features (MHL), Mac-
+models for colorectal cancer tissue characterization                   ular Scar (MS)
+                                                                       OOD: Tessellated Fundus (TSLN), Lens Sublux-
+from hematoxylin and eosin (H&E) stained whole-                        ation (LS), Strabismus (ST), Retinitis Pigmen-
+                                                                       tosa (RP), Cotton Wool Spots (CWS), Choroidal
+slide images. Finally, RFMiD consists of retinal                       Bands (CB), Optic Disc Pit Maculopathy (ODPM),
+fundus images annotated by experts for 46 ocular                       Preretinal Hemorrhage (PRH), Myelinated Nerve
+                                                                       Fibers (MNF), Hypertensive Retinopathy (HR),
+conditions, and was introduced to benchmark au-                        Central Retinal Artery Occlusion (CRAO), Tilted
+tomated screening and diagnosis of a broad spec-                       Disc (TD), Cystoid Macular Edema (CME),
+                                                                       Post-traumatic Chorioretinopathy (PTCR), Chori-
+trum of retinal diseases, including rare pathologies,                  oretinal Fold (CF), Vitreous Hemorrhage (VH),
+thereby forming a challenging long-tailed bench-                       Macroaneurysm (MCA), Vascular Sheathing (VS),
+                                                                       Branch Retinal Artery Occlusion (BRAO), Plaque
+mark. For RFMiD, to conform to a strictly multi-                       (PLQ), Hemorrhagic PED (HPED), Choroiditis
+                                                                       Lesion (CL), Tortuous Vessels (TV), Papilledema
+class single-label classification setting (the scope of                (PT)
+this study), we retain only samples with a single           ISIC2019   ID: Melanoma (MEL), Basal Cell Carcinoma
+                                                                       (BCC), Benign Keratosis (BKL), Actinic Kerato-
+annotation and discard those with multiple labels.                     sis (AK), Dermatofibroma (DF), Vascular Lesion
+To enable systematic evaluation of OOD detec-                          (VASC)
+                                                                       OOD: Melanocytic Nevus (NV), Melanoma (MEL)
+tion, each dataset is partitioned at the class level,       NCT-CRC ID: Tumor Epithelium (TUM), Muscle (MUS),
+with a subset of semantic categories withheld from                     Lymphocytes (LYM), Stroma (STR), Adipose Tis-
+                                                                       sue (ADI), Mucus (MUC)
+training and treated as OOD at test time. For                          OOD: Background (BACK), Debris (DEB), Nor-
+                                                                       mal Colon Mucosa (NORM)
+all datasets, the train/test split and the ID/OOD
+classes are summarised in Table 1. We use the stan-
+dard dataset splits defined in the original bench- 5.1.2. OOD Dataset Details
+marks and adopted in prior work, ensuring that no
+data leakage occurs between the training and eval- For OOD detection, we evaluate along a spectrum
+uation sets.                                            of OOD scenarios that range from challenging nea-
+                                                        rOOD cases to relatively easier farOOD cases as
+                                                        described below:
+     To reflect the severe class imbalance encoun-
+tered in real-world medical imaging scenarios, we            At the most challenging end of the spectrum are
+intentionally reshape the class distribution of the     novel-classes,     where test samples originate from the
+training data to follow a long-tailed regime. Con-      same     underlying      data distribution as the training
+cretely, we model this imbalance using a Pareto         set  but   belong    to  semantic classes that are entirely
+distribution [1], which provides a principled and       unseen     during    training.      To simulate this scenario,
+widely used approximation of long-tailed class fre-     we   withhold      a  subset     of  classes from the training
+quencies. We set the imbalance ratio ρ = 50, corre-     data    and  treat   samples       from   these classes as OOD
+sponding to a 50:1 ratio between the sample counts      at  evaluation     time.
+of the most frequent (head) and least frequent (tail)        The next level considers corruption-based OOD
+classes. The resulting label distributions for all      settings,    where test images are generated by ap-
+datasets are illustrated in Fig. 2(b).                  plying    synthetic     acquisition and processing degra-
+                                                        dations to in-distribution samples. Specifically,
+                                                        we simulate common real-world corruptions using
+                                                        the Albumentations library [3], including Gaussian
+                                                        (σ ∈ [0.2, 0.3]) and ISO noise (color shift ∈ [0.1,
+                                                        0.5], intensity ∈ [1.0, 2.0]), motion (kernel size
+                                                        ≤ 121 pixels) and zoom blur (magnification fac-
+Table 1: Summary of datasets used in this study. tor ≤ 5), illumination artifacts through Random
+(A) Dataset statistics and OOD evaluation splits. Sun Flare (source radius = 500 pixels), compres-
+(B) ID and novel OOD class labels.                      sion artifacts (quality ∈ [1, 10]), resolution degrada-
+                                                        tion (scale ∈ [0.02, 0.10]), and structural perturba-
+  2 https://challenge.isic-archive.com/data
+  3 https://zenodo.org/records/1214456
+  4 Provided in https://github.com/redboxup/MARVEL.
+
+
+
+
+                                                          10
+tions such as pixel (pixel dropout = 50%) and grid     dataset, enabling systematic benchmarking of ro-
+dropout (grid ratio = 0.75). All corruption pro-       bustness and generalisation of the proposed method
+cedures are implemented in a reproducible script       across medical imaging domains.
+released as part of our codebase.4
+    At the third level, we consider distribution-      5.2.   Implementation Details
+shifted OOD settings, where OOD samples arise
+from changes in imaging modality, acquisition      All models are implemented in PyTorch and trained
+setup, or anatomical focus. For each ID dataset, weon NVIDIA A6000 GPUs using a ResNet-18 back-
+select external datasets that induce progressively bone pretrained on ImageNet. We use the Adam
+stronger distribution shifts, denoted as NearOOD1  optimizer with a cosine learning-rate schedule (no
+and NearOOD2:                                      warmup) and train all models for 75 epochs with
+                                                   an initial learning rate of 1 × 10−4 . All reported
+  1. For ISIC2019, PAD-UFES [54] comprises results are averaged over seven independent ran-
+     skin lesion images captured using smartphone dom seeds. For the state-of-the-art comparison, for
+     cameras, while DFU [6] consists of images of other methods, we keep the optimizer, number of
+     diabetic foot ulcers. We treat PAD-UFES epochs, learning rate, and batch size identical to our
+     as NearOOD1, representing a moderate dis- training protocol whenever applicable. For these
+     tribution shift due to the change in acquisi- methods, hyperparameters are adopted as specified
+     tion device while retaining similar skin can- in the original publications (or tuned to achieve bet-
+     cer pathologies, whereas DFU is designated ter performance for a fair comparison).
+     as NearOOD2, reflecting a more substantial
+     shift that involves both a different anatomi-
+     cal region and distinct semantic categories.  5.2.1. Auxiliary Dataset for OOD detection training
+
+  2. For NCTCRC, the MIHIC [68] dataset                We use ImageNet-100 [57], a curated subset of
+     comprises multiplex immunohistochemically         the ImageNet dataset containing 100 classes sam-
+     (IHC) stained histological image patches from     pled from the original 1,000-class hierarchy. The
+     lung cancer tissue. In contrast, the cer-         dataset encompasses diverse natural images span-
+     vical cytology dataset [56] consists of Pap       ning a wide range of objects and scenes, providing
+     smear slide images for precancerous and can-      a broad and semantically distinct set of samples
+     cerous stages. We treat MIHIC as Nea-             that do not overlap with the medical ID datasets.
+     rOOD1, representing a moderate distribution       Its balanced class composition and high variability
+     shift due to the use of IHC staining as op-       make it suitable for training the outlier expert to
+     posed to standard H&E staining while retain-      recognise generic OOD features without biasing ID
+     ing histopathological tissue structure. The       classification.
+     Pap cytology dataset is designated as Nea-
+     rOOD2, reflecting a more substantial shift        5.3.   Evaluation Metrics
+     both in tissue type and imaging modality.
+                                                       To assess the performance of models for ID classi-
+  3. For RFMiD, DeepDRiD [36] comprises ultra-         fication, we report both the standard accuracy and
+     wide-field fundus images, while OCT [24] con-     balanced accuracy. Standard accuracy is defined as
+     sists of cross-sectional optical coherence to-    the fraction of correctly classified samples,
+     mography images of the retina. We treat
+     DeepDRiD as NearOOD1, representing a                                          K
+                                                                             1 X
+     moderate distribution shift due to the change                     Acc =       TPc                (20)
+                                                                             N c=1
+     in imaging modality, whereas OCT is desig-
+     nated as NearOOD2, reflecting a more sub-         where K is the number of classes and N is the to-
+     stantial shift arising from a fundamentally       tal number of samples. While standard accuracy
+     different imaging technique.                      measures the overall proportion of correctly classi-
+    Finally, at the fourth level, we consider farOOD   fied samples, it can be biased towards the major-
+samples drawn from the MS-COCO-5k [33] dataset,        ity (head) classes in long-tailed datasets. Balanced
+which comprises natural images of everyday objects     accuracy mitigates this bias by averaging per-class
+and scenes. These images are visually and semanti-     recall,
+                                                                                 K
+cally distant from the medical domains considered                             1 X       TPc
+in our study, making MS-COCO-5k a challenging                       BAcc =                             (21)
+                                                                             K c=1 TPc + FNc
+farOOD benchmark.
+    Together with corruptions, domain-shifted and Additionally, we report accuracy for head, mid, and
+farOOD settings, these configurations establish a tail classes individually to provide a detailed view
+structured and graded OOD spectrum for each of model behaviour across the label distribution.
+
+
+                                                  11
+Figure 2: Dataset composition and evaluation setup for long-tailed OOD detection. (a) Shows represen-
+tative samples from the ID datasets together with their corresponding nearOOD and farOOD evaluation
+data. (b) Presents the class label distributions of the ID datasets.
+
+
+
+
+                                                 12
+    For OOD detection, we evaluate the model’s            methods. We consider the evaluation metrics speci-
+ability to distinguish ID from OOD samples using          ficed in Section 5.3, including balanced accuracy
+three standard uncertainty-based metrics: (i) the         and individual accuracies for head, mid, and tail
+Area Under the Receiver Operating Characteris-            classes to characterise the consistency of classifi-
+tic curve (AUROC) quantifies the model’s discrim-         cation performance across different class-frequency
+ination capability across all possible thresholds, re-    regimes.
+flecting how well ID and OOD samples can be sep-
+arated, (ii) the Area Under the Precision-Recall          5.4.3.   Ablation study I: Impact of the choice of the
+curve (AUPR) complements AUROC by focusing                         classifier
+on the trade-off between precision and recall, which
+is particularly informative for imbalanced OOD sce-       We investigate the effect of classifier design on both
+narios, and (iii) the False Positive Rate at 95%          ID classification and OOD detection within the
+True Positive Rate (FPR95) measures the rate at           MARVEL framework. We compare our NvMF classi-
+which OOD samples are incorrectly classified as           fier, capable of learning non-linear decision bound-
+ID when the model correctly identifies 95% of the         aries, against commonly used baseline classifiers,
+ID samples, providing an interpretable measure of         including fully connected (FC), cosine and simple
+OOD misclassification under high-confidence con-          vMF classifiers. For OOD prediction, we consider
+ditions. For statistical comparison, we perform a         the same set of classifier variants and additionally
+paired two-tailed t-test across the 7 runs between        evaluate a setting in which no dedicated outlier ex-
+our method and the strongest baseline using iden-         pert is employed.
+tical seeds, ensuring paired observations.
+                                                          5.4.4.   Ablation study II: Effect of the number of ex-
+5.4.     Experiments                                               perts within the ensemble
+
+5.4.1.    Comparison of the proposed OOD detection    In this experiment, we investigate the effect of vary-
+          with state-of-the-art methods               ing the number of experts within the ensemble and
+                                                      assess the contribution of the dedicated outlier ex-
+We compare the OOD detection performance of the pert. We construct models with one, two, three,
+proposed MARVEL framework with state-of-the-art and four experts to study how ensemble size in-
+methods. To reflect current research trends, we fluences both ID classification and OOD detection
+consider long-tailed recognition methods proposed performance.
+in recent years, focusing primarily on work publised
+since 2022. Earlier methods such as OLTR and
+                                                      5.4.5. Confidence calibration analysis
+HODL are not included, as more recent approaches
+offer improved formulations for handling class im- In addition to accuracy and detection performance,
+balance and are more representative of the present we evaluate the confidence calibration of different
+state of the field. The selected baselines consist of methods, which is critical for reliable deployment in
+PASCL, COCL, EAT, and PATT, which are widely medical OOD detection settings. Well-calibrated
+used recent methods that address OOD detection models produce confidence scores that accurately
+under long-tailed distributions and capture diverse reflect their empirical correctness, enabling more
+modelling strategies in this setting. In addition, we trustworthy decision-making under uncertainty.
+include OE as a reference baseline that leverages
+auxiliary outlier data to enhance OOD detection 5.4.6. Risk-Coverage analysis
+performance, although it is not specifically designed
+to handle long-tailed data. The evaluation consid- To evaluate model prediction reliability under un-
+ers multiple OOD scenarios that span a spectrum certainty, we analyse the risk-coverage trade-off
+of distributional shifts, ranging from FarOOD sam- for RFMiD, ISIC2019, and NCTCRC datasets for
+ples to more challenging nearOOD settings, as de- OOD detection. Risk-coverage curves show how
+scribed in Section 5.1.2 using the metrics described prediction error (risk ) varies with coverage, which
+in Section 5.3. This experimental design enables a is the retained ID sample proportion, obtained by
+systematic assessment of each method’s ability to rejecting low-confidence predictions. To construct
+distinguish ID samples from a broad range of OOD these curves, the ID and OOD samples are equally
+data encountered in medical settings.                 sampled (to match the size of the OOD samples
+                                                      or the split size of the ID test, whichever is lower,
+5.4.2. Comparison of the proposed ID classification in Table 1), so the 0.5 coverage considers all ID
+         with state-of-the-art methods                samples for a robust model. Here, coverage is the
+                                                      fraction of samples for which the model makes a
+We compare the ID classification performance of prediction (ID classification), while risk is the error
+MARVEL framework against those of state-of-the-art rate on these retained samples. A risk of zero up to
+
+
+                                                     13
+0.5 coverage indicates perfect separation, with all             Notably, MARVEL performs perfectly on the Fa-
+ID samples correctly retained and OOD samples                   rOOD setting across all datasets (except NCTCRC,
+rejected. For lower coverage, as the model discards             still achieving AUROC > 99.00), achieving near-
+low-confidence predictions and retains reliable ones,           saturated AUROC and AUPR values with essen-
+risk is lower. As coverage exceeds 0.5, OOD sam-                tially zero FPR95. This strong performance can
+ples are included, thus increasing the risk. This               be attributed to the dedicated inlier–outlier expert
+analysis shows the model’s ability to maintain low              detector, which strongly separates farOOD samples
+error rates under high-confidence regimes, crucial              from the ID data. In contrast, open-set detection
+in safety-critical medical applications.                        remains the most challenging scenario across meth-
+                                                                ods. While MARVEL still achieves the best results
+5.4.7.   Effect of the choice of the OOD detector               in this setting, the AUROC values remain compar-
+                                                                atively lower with performance consistently lower
+Finally, this study evaluates the framework under               than 85% AUROC, whereas the remaining OOD
+a range of OOD detection heads and scoring mech-                categories (NearOOD and Corruptions) largely sur-
+anisms, including logit-based (MSP, MLS), energy-               pass this threshold.
+based (EBO), distance-based detectors (KNN, MD)                      From Table 2, MARVEL achieves the best over-
+and hybrid approaches (NN-Guide). This evalua-                  all performance with a significantly higher aver-
+tion examines the compatibility of the framework                age AUROC, AUPR and FPR95, outperforming
+with different detection criteria and provides a ba-            all baseline methods. COCL provides the second-
+sis for selecting an appropriate scoring mechanism              best average AUROC of 87.38, largely driven by
+in settings with distinct operational requirements.             its near-saturated results on NearOOD2 (99.99 AU-
+                                                                ROC) and FarOOD (100.00 AUROC), which allows
+5.4.8.   Qualitative analysis of learned representations        it to remain relatively close to MARVEL in terms of
+                                                                average performance. However, COCL performs
+To gain further insight into the learned represen-
+                                                                noticeably worse on other parts of the OOD spec-
+tation by the proposed framework, we perform a
+                                                                trum, particularly in the NearOOD1 and Corrup-
+qualitative analysis using t-SNE visualizations of
+                                                                tion settings where it achieves significantly less (p-
+the learned feature space on the NCTCRC dataset
+                                                                value < 0.01) AUROC with a differences of 7.07%
+(since it comprises sufficient samples in the tail
+                                                                and 7.27% respectively, compared to MARVEL. For
+classes to appreciate the separability). We com-
+                                                                open-set detection, while MARVEL still achieves the
+pare three settings: (a) a baseline model trained
+                                                                best AUROC, the second-best result is obtained by
+with a vMF classifier, (b) the proposed NvMF clas-
+                                                                EAT.
+sifier, and (c) the margin-aware NvMF multi-expert
+framework. The embeddings are obtained from the                      From Table 3, MARVEL achieves the best over-
+penultimate feature layer and projected into two di-            all performance compared to the second strongest
+mensions for visualization. This analysis provides              baseline COCL (with 4.92% less AUROC). How-
+an intuitive understanding of how the margin-aware              ever, unlike MARVEL which maintains strong per-
+experts contribute to improved discrimination for               formance across the entire OOD spectrum, other
+ID classification.                                              methods tend to perform well only in specific set-
+                                                                tings. For example, PASCL achieves the second-
+                                                                best performance in the NearOOD settings (with
+6.     Results                                                  AUROC 4.77%↓ in NearOOD1 and 2.95%↓ in
+                                                                NearOOD2 than MARVEL), while COCL performs
+6.1.     Comparison of the proposed OOD detec-                  strongly on Corruptions (with AUROC 4.89%↓
+         tion with state-of-the-art methods                     than MARVEL). For open-set detection, MARVEL still
+Tables 2, 3 and 4 summarise the results of com-                 achieves the best performance, while the second-
+parison of MARVEL with the recent state-of-the-                 best result is obtained by PATT.
+art methods. Across all three datasets, the pro-                     MARVEL achieves the best overall performance
+posed MARVEL consistently achieves the strongest                on the NCTCRC dataset, as reported in Table 4,
+overall performance. In particular, MARVEL ob-                  with EAT being the second-best baseline (with
+tains the best average AUROC, AUPR and FPR95                    average AUROC 7% lower than MARVEL). MARVEL
+on RFMiD, ISIC2019, and NCTCRC, significantly                   shows significant improvements in the Open-Set,
+higher than other baselines (with p-value < 0.01)               NearOOD1, and Corruption settings (with p-values
+demonstrating that the proposed framework gen-                  < 0.01 for all metrics except AUPR in NearOOD1).
+eralises well across different medical imaging do-              On NearOOD2 and FarOOD, MARVEL provides on-
+mains and OOD scenarios. Among the compet-                      par performance compared to baselines (with all
+ing methods, COCL emerges as the second-best                    performances close to saturation value of 100.00,
+baseline on RFMiD and ISIC2019, while EAT                       making the difference practically negligible). How-
+achieves the second-best performance on NCTCRC.                 ever, MARVEL still achieves a lower FPR95 in this
+
+                                                           14
+Table 2: Comparison of OOD detection results of our method with those of state-of-the-art methods on
+the RFMiD dataset (mean ± standard deviation). The compared methods include OE [19], PASCL [67],
+EAT [71], PATT [17], COCL [46]. Performance is measured using AUROC, AUPR, and FPR95, higher
+AUROC and AUPR, and lower FPR95 indicate superior performance. The best results are highlighted
+in bold, while the second-best results are underlined. [‡] p < 0.01, [†] p < 0.05; paired t-test with respect
+to the top baseline result.
+
+                                                                RFMiD
+Method
+             Open Set          NearOOD1            NearOOD2             Corruptions          FarOOD               Average
+         AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95
+OE     53.60   79.33 95.28 49.82   66.95 100.00 88.97  86.83 66.91 68.77   53.81 71.93  92.67  57.07 34.90  70.77 68.80 73.80
+       ±1.15   ±0.32 ±1.35 ±14.05 ±13.77 ±0.00 ±7.26 ±8.61 ±33.09 ±10.87 ±13.75 ±19.10 ±0.60 ±8.30 ±3.88 ±3.25 ±3.66 ±9.23
+PASCL  54.83   80.52 93.81 80.90   87.72 88.02  94.30  91.68 31.78 66.80   49.84 76.46  98.60  95.82  2.37  79.09 81.12 58.49
+       ±2.37   ±1.85 ±0.88 ±5.96 ±6.04 ±5.92 ±2.49 ±5.23 ±18.33 ±2.70 ±2.15 ±14.46 ±1.83 ±1.52 ±2.16 ±0.87 ±0.93 ±0.94
+EAT    58.67   80.95 91.15 82.99   90.01 80.60  74.54  76.37 98.38 76.98   56.23 47.24  67.77  57.95 99.13  72.19 72.30 83.30
+       ±0.54   ±1.26 ±1.53 ±5.59 ±3.36 ±14.63 ±9.63 ±9.14 ±1.71 ±3.60 ±4.46 ±14.43 ±9.59 ±12.74 ±1.38 ±4.46 ±4.38 ±2.34
+PATT   50.05   77.56 92.04 80.59   88.13 83.85  80.12  79.43 63.50 71.95   67.62 79.17  95.35  89.15 31.97  75.61 80.38 70.10
+       ±4.52   ±1.86 ±2.65 ±7.83 ±4.80 ±11.17 ±23.12 ±24.10 ±54.44 ±16.43 ±18.52 ±23.98 ±7.24 ±13.23 ±51.36 ±1.51 ±3.10 ±12.39
+COCL   53.23   80.17 94.40 96.16   97.63 22.27  99.99  99.99 0.00  87.51  74.95 31.15 100.00 99.98 0.00     87.38 90.54 29.56
+       ±4.88   ±3.29 ±2.23 ±5.22 ±3.22 ±33.15 ±0.01 ±0.02 ±0.00 ±2.96 ±6.55 ±4.46 ±0.00 ±0.03 ±0.00 ±0.42 ±0.92 ±6.30
+MARVEL 59.85   81.55 91.15 99.85‡ 99.91† 0.52‡ 100.00 100.00 0.00 95.75‡ 90.94‡ 13.85‡ 100.00 100.00 0.00 91.09‡ 94.48‡ 21.11‡
+       ±0.51   ±0.25 ±1.77 ±0.14 ±0.08 ±0.60 ±0.00 ±0.00 ±0.00 ±0.76 ±1.62 ±0.55 ±0.00 ±0.00 ±0.00 ±0.25 ±0.29 ±0.37
+
+
+
+Table 3: Comparison of OOD detection results of our method with those of state-of-the-art methods on
+the ISIC2019 dataset (mean ± standard deviation). The compared methods are same as those listed
+in table 2. Performance is measured using AUROC, AUPR, and FPR95, higher AUROC and AUPR,
+and lower FPR95 indicate superior performance. The best results are highlighted in bold, while the
+second-best results are underlined. [‡] p < 0.01, [†] p < 0.05; paired t-test with respect to the top baseline
+result.
+
+                                                              ISIC 2019
+             Open Set          NearOOD1            NearOOD2             Corruptions          FarOOD               Average
+Method
+         AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95
+OE     44.81   55.97 96.44 80.38   89.35 77.43  74.50  86.11 79.08   84.27  78.65 61.00   55.39  62.17 96.66 67.87  74.45 82.12
+       ±1.83   ±0.76 ±1.15 ±0.50 ±0.42 ±2.56 ±2.73 ±1.60 ±6.14 ±5.95 ±7.04 ±13.50 ±12.44 ±11.37 ±2.69 ±3.61 ±3.37 ±2.29
+PASCL  44.69   55.08 95.38 94.01   96.27 19.68  84.00  91.42 57.98   83.43  74.44 52.56   98.59  99.13  1.08 80.94  83.27 45.34
+       ±0.49   ±0.22 ±0.35 ±1.26 ±0.80 ±8.73 ±2.57 ±1.57 ±10.08 ±1.52 ±1.08 ±15.31 ±0.70 ±0.45 ±1.21 ±0.71 ±0.51 ±6.58
+EAT    47.81   59.40 95.72 87.77   93.09 47.41  75.69  87.10 77.89   90.70  85.95 39.99   94.63  96.96 58.43 79.32  84.50 63.89
+       ±0.32   ±0.39 ±0.17 ±5.37 ±3.26 ±11.78 ±3.61 ±1.99 ±5.36 ±1.07 ±0.97 ±9.25 ±1.45 ±0.78 ±35.31 ±1.84 ±1.05 ±7.99
+PATT   53.35   62.35 95.78 62.18   80.32 97.24  74.55  84.95 81.56   53.98  52.06 99.66   85.37  91.42 93.40 66.09  74.82 93.53
+       ±4.75   ±4.79 ±1.28 ±6.33 ±3.24 ±1.55 ±0.91 ±0.90 ±2.16 ±11.33 ±10.20 ±0.09 ±10.44 ±6.28 ±11.33 ±5.21 ±3.88 ±1.75
+COCL   49.18   58.67 94.83 91.21   95.22 40.28  79.68  87.59 59.27   91.50  86.72 34.98 100.00 100.00 0.00   82.31  85.64 45.87
+       ±1.19   ±1.41 ±0.05 ±1.94 ±1.13 ±6.86 ±1.29 ±1.80 ±3.35 ±1.76 ±1.76 ±13.46 ±0.00 ±0.00 ±0.00 ±0.45 ±0.50 ±3.11
+MARVEL 54.04   63.49 94.68 98.78‡ 99.06‡ 3.45‡ 86.95† 92.82‡ 49.78‡ 96.39‡ 93.57‡ 16.33‡ 100.00 100.00 0.00 87.23‡ 89.79‡ 32.85‡
+       ±0.82   ±1.10 ±0.20 ±0.67 ±0.55 ±1.63 ±0.17 ±0.39 ±1.21 ±0.18 ±0.34 ±2.53 ±0.00 ±0.00 ±0.00 ±0.19 ±0.21 ±0.98
+
+
+
+
+setting, indicating better control of false positives   lines. Similarly in ISIC2019, MARVEL provides
+despite the small AUROC gap. For open-set de-           2.21% and 0.99% improvements, and in NCTCRC,
+tection, MARVEL achieves 13% higher AUROC over          5.27% and 5.02% improvements in Accuracy and
+PATT.                                                   balanced accuracy respectively. Overall, these re-
+                                                        sults demonstrate that high accuracy alone can be
+                                                        misleading in long-tailed settings, as it may arise
+6.2. Comparison of the proposed ID classifica- from overfitting to head classes, whereas MARVEL
+      tion with state-of-the-art methods                consistently improves both accuracy and balanced
+Table 5 summarises ID classification performance accuracy.
+across all three datasets. MARVEL consistently
+achieves the highest accuracy and balanced accu-
+racy (significantly higher than baselines with p-
+value < 0.01), indicating strong overall perfor-
+mance. On RFMiD, while baseline methods show
+heavy disparity between Accuracy and balanced ac-
+curacy, reflecting strong performance on frequent
+head classes but poor recognition of rare tail classes.
+In contrast, MARVEL simultaneously improves both
+accuracies, reducing the disparity of performance
+in head and tail classes. Specifically, for RFMiD,
+MARVEL improves accuracy by 6.19% and balanced
+accuracy by 6.58% compared to second-best base-
+
+
+                                                             15
+Table 4: Comparison of OOD detection results of our method with those of state-of-the-art methods on
+the NCTCRC dataset (mean ± standard deviation). The compared methods are same as those listed
+in table 2. Performance is measured using AUROC, AUPR, and FPR95, higher AUROC and AUPR,
+and lower FPR95 indicate superior performance. The best results are highlighted in bold, while the
+second-best results are underlined. [‡] p < 0.01, [†] p < 0.05; paired t-test with respect to the top baseline
+result.
+
+                                                               NCTCRC
+Method
+             Open Set          NearOOD1             NearOOD2             Corruptions        FarOOD              Average
+         AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95 AUROC AUPR FPR95
+OE      61.02  83.77 91.55  80.51   98.61 79.72   83.54  77.46 55.84  69.48  70.19 80.23  67.64 92.78 86.84 72.44  84.56 78.84
+       ±3.74 ±2.49 ±1.10 ±6.34      ±0.63 ±15.35 ±10.87 ±14.20 ±32.42 ±4.07 ±3.45 ±6.13 ±10.55 ±2.92 ±9.48 ±0.58 ±1.42 ±6.45
+PASCL   53.58  80.06 91.24  93.01   99.56 39.39   83.64  78.26 56.84  79.44  81.28 71.88  98.34 99.75 10.65 81.60  87.78 54.00
+       ±2.84 ±1.31 ±5.02 ±5.36      ±0.36 ±27.80 ±6.56 ±7.03 ±19.95 ±5.26 ±3.16 ±20.16 ±2.37 ±0.36 ±16.73 ±1.81 ±1.26 ±12.45
+EAT     62.49  84.49 91.59  94.90   99.71 44.46 93.08 93.07 56.47     75.39  71.60 77.91  89.64 98.42 96.51 83.10  89.46 73.39
+       ±1.87 ±0.45 ±1.96 ±1.48      ±0.08 ±24.60 ±0.30 ±0.60 ±12.49 ±2.81 ±5.05 ±6.73 ±1.34 ±0.20 ±4.87 ±1.25 ±1.00 ±7.63
+PATT    55.81  82.78 98.89  81.98   98.91 97.29   74.32  79.98 99.06  62.82  69.88 99.21  81.02 96.91 96.54 71.19  85.69 98.20
+       ±1.04 ±1.47 ±1.52 ±6.88      ±0.44 ±4.70 ±5.03 ±2.77 ±0.84 ±3.02 ±1.86 ±1.07 ±9.83 ±1.67 ±5.99 ±4.61 ±1.00 ±2.77
+COCL    52.39  79.67 92.21  91.77   99.46 42.93   84.95  82.06 64.96  81.87  80.66 60.03 99.98 100.00 0.09  82.19  88.37 52.05
+       ±4.79 ±1.98 ±5.22 ±4.01      ±0.26 ±22.07 ±6.98 ±9.93 ±12.21 ±1.26 ±1.39 ±12.50 ±0.03 ±0.00 ±0.13 ±2.60 ±2.21 ±7.69
+MARVEL 69.18 87.20 83.93 97.07‡
+             ‡      ‡     ‡
+                                    99.84 18.90 ‡
+                                                  92.58                    ‡      ‡
+                                                        92.40 56.09 94.77 93.96 22.55   ‡
+                                                                                          99.86 99.98 0.00 90.49 94.67‡ 36.49‡
+                                                                                                                 ‡
+
+       ±3.67 ±2.25 ±0.18 ±0.93      ±0.05 ±14.27 ±2.61 ±3.67 ±5.47 ±0.87 ±1.83 ±2.45 ±0.11 ±0.02 ±0.00 ±1.28 ±1.53 ±3.25
+
+
+
+Table 5: Comparison of the ID classification performance of our method with those of state-of-the-art
+methods on all three datasets (mean ± standard deviation). The compared methods are same as those
+listed in table 2. Results are reported in terms of Accuracy and Balanced Accuracy, with higher values
+indicating better performance. The best results are highlighted in bold, and the second-best results are
+underlined. [‡] p < 0.01, [†] p < 0.05; paired t-test with respect to the top baseline result.
+
+                          RFMiD                               ISIC2019                              NCT-CRC
+ Method
+                   Acc           BAcc                    Acc           BAcc                    Acc           BAcc
+ OE            36.30 ± 3.03   19.65± 1.02            61.62± 3.41    43.69± 4.75            32.52± 10.97  40.38± 11.08
+ PASCL         48.52± 1.60    21.28± 2.04            70.67± 2.32    50.68± 3.06            68.30± 1.45    64.43± 1.26
+ EAT           32.11± 3.27    13.68± 0.85            46.12± 5.13    44.92± 2.29           51.99± 11.03   47.67± 14.07
+ PATT          60.30± 1.24    41.54± 3.54            60.04± 4.55    62.36± 4.21            71.75± 1.46    84.36± 3.51
+ COCL          58.03± 5.52    43.94± 2.78            63.09± 3.96    66.19± 1.17            68.27± 1.53    81.66± 2.14
+ MARVEL       66.49± 0.45‡ 50.52± 2.00‡             72.88± 0.85‡ 67.18± 0.77†             77.02± 0.46‡ 89.38± 0.41‡
+
+
+Figure 3: Head, mid, tail class accuracy comparison               not from improved head-class fitting alone, but
+across NCTCRC, ISIC2019, and RFMiD datasets.                      from substantially enhanced recognition of under-
+Bars show mean accuracy and standard deviation                    represented classes, which is critical for robust per-
+over three runs.                                                  formance in long-tailed medical classification.
+
+    Figure 3 breaks down ID classification per-                   6.3.    Ablation study I: Impact of the choice of
+formance on RFMiD, ISIC2019 and NCTCRC                                    the classifier
+datasets across head, mid, and tail classes, provid-
+ing a fine-grained view of model behaviour under                  Table 6 analyses the impact of classifier design
+long-tailed distributions. Across all datasets, most              within MARVEL on both its ID classification and
+methods achieve relatively strong head-class accu-                OOD detection performances. For ID classifiers
+racy, with modest differences between approaches,                 (A), we observe a consistent performance hierar-
+indicating that frequent classes are generally easy               chy across all datasets: while FC and cosine classi-
+to classify. In contrast, performance gaps widen                  fiers provide modest gains (e.g., RFMiD ACC im-
+substantially for mid and tail classes, where imbal-              proves marginally from 48.16 to 50.26), the adop-
+ance effects are most pronounced. In particular,                  tion of a vMF-based classifier leads to a substan-
+several baselines that perform well on head classes               tial jump in both ID accuracy and OOD detec-
+exhibit a sharp degradation on tail classes, for ex-              tion. Incorporating the proposed NvMF classi-
+ample, OE and PASCL show almost 0 tail accu-                      fier yields the strongest improvements, boosting ac-
+racies on RFMiD, highlighting overfitting to dom-                 curacy (RFMiD: 7.33%↑, ISIC2019: 2.59%↑ and
+inant classes. MARVEL consistently mitigates this                 NCTCRC: 1.03%↑) and AUROC (RFMiD: 8.40%↑,
+effect, achieving the highest mid- and tail-class ac-             ISIC2019: 4.3%↑ and NCTCRC: 0.24%↑) relative
+curacies across all datasets, on NCTCRC the tail                  to vMF. This demonstrates the benefit of mod-
+accuracy approaches 95%. These improvements                       elling class-conditional angular distributions with
+align with the balanced accuracy trends observed                  greater flexibility. For OOD classifiers (B), remov-
+in Table 5, confirming that MARVEL’s gains stem                   ing the outlier expert results in a marked degrada-
+
+
+                                                             16
+tion in OOD detection (e.g., AUROC drops to 79.63
+on RFMiD), showing its contribution. While FC-
+based OOD experts achieve strong performance,
+the NvMF classifier remains competitive and con-
+sistently balances ID accuracy and OOD detection
+across datasets, indicating that angularly struc-
+tured decision boundaries are well suited for both
+ID discrimination and outlier separation within
+MARVEL.
+
+
+                                                              Figure 4: Effect of expert ensembling on perfor-
+                                                              mance across datasets. Accuracy (ACC, left) and
+Table 6: Ablation study on the effect of classifier
+                                                              AUROC (right) are reported for 1 to 4 experts.
+design for ID and OOD prediction across datasets.
+                                                              Performance improves with more experts, with the
+Results are reported in terms of classification accu-
+                                                              ensemble of three experts achieving the best over-
+racy (ACC) and OOD detection performance (AU-
+                                                              all results across RFMID, ISIC2019, and NCTCRC
+ROC) on RFMiD, ISIC2019, and NCTCRC, com-
+                                                              datasets.
+pared with FC [29], Cosine [15], vMF [48]
+              RFMiD        ISIC2019        NCTCRC
+  Setting   ACC AUROC ACC AUROC ACC AUROC
+  A. ID Classifiers
+   FC     48.16 78.30    62.56   73.35   73.71   85.61
+   Cosine 50.26 79.05    62.40   72.73   74.51   86.89
+   vMF 58.63 82.96       69.66   81.64   76.46   88.89        6.5.   Confidence calibration analysis
+   NvMF 65.96 91.36      72.25   85.94   77.49   89.13
+  B. OOD Classifiers
+    None 58.63 79.63     65.09   74.81   67.77   80.28
+    Cosine 64.13 84.24   71.17   82.43   75.26   90.48
+    vMF 62.04 85.35      71.36   81.64   74.96   89.16
+    NvMF 65.44 88.53     71.40   83.18   74.51   90.66
+    FC     66.75 88.70   72.54   85.71   76.30   91.11
+
+
+
+
+6.4.   Ablation study II: Effect of the number of
+       experts within the ensemble
+
+Figure 4 shows the impact of number of experts
+within the ensemble on ID classification and OOD
+detection across the three datasets. Increasing
+the number of experts yields consistent perfor-
+mance gains up to 3 experts. For ID classifica-
+tion (left), moving from a single expert to three
+experts improves accuracy on RFMiD (≈65% →
+67.5%), ISIC2019 (≈67.5% → 73%), and NCTCRC
+(≈73% → 77%). Similar trends are observed for
+OOD detection (right), where AUROC improves on
+RFMiD (≈86 → 91), ISIC2019 (≈80 → 88) and
+NCTCRC (≈89 → 92) when increasing to three
+experts. Adding a fourth expert does not pro-
+vide further improvement and, in most cases, leads
+to a slight degradation in OOD performance, with
+AUROC dropping by ≈ 2% on RFMiD, ≈ 5% on
+ISIC2019, and ≈ 4% on NCTCRC. Based on these
+trends, an ensemble of three experts offers the best
+trade-off between performance and complexity and
+is therefore used as the default setting in all subse-
+quent experiments.
+
+
+                                                         17
+Figure 5: Reliability diagrams comparing con- 6.6.             Risk-Coverage analysis
+fidence calibration across different methods on
+(left to right) RFMID, ISIC2019, and NCTCRC
+datasets: (top to bottom) (a) OE, (b) PASCL, (c)
+EAT, (d) PATT, (e) COCL, and (f) MARVEL (pro-
+posed). The blue bars indicate the empirical accu-
+racy within each confidence bin, while the dashed
+diagonal denotes perfect calibration. The shaded
+red region highlights calibration error.
+
+
+
+
+                                                     Figure 6: Risk-coverage curves for OOD detection
+                                                     across RFMiD, ISIC2019, and NCTCRC datasets.
+                                                     The x-axis represents coverage and the y-axis de-
+                                                     notes risk and the individual legends show the
+    Figure 5 presents reliability diagrams compar- AURC (area under the risk-coverage curve) values
+ing the calibration behaviour of the evaluated meth- in the corresponding plot colours.
+ods including the proposed MARVEL on the eval-
+uation datasets. Each plot depicts the empiri-
+cal accuracy within the confidence bins against          Across datasets, RFMiD demonstrates the most
+the predicted confidence values, where the diago- favorable behaviour. FarOOD, NearOOD1, and
+nal line corresponds to perfect calibration. Devi- NearOOD2 curves largely overlap and maintain
+ations from this diagonal indicate miscalibration, near-zero risk up to approximately 0.5 coverage,
+with the shaded area highlighting the magnitude indicating strong separation between ID and these
+of calibration error. Across the baseline meth- OOD samples. Open-set and corruption scenarios
+ods, we observe varying degrees of miscalibration. are comparatively more challenging; however, they
+In particular, PASCL, PATT, and COCL tend to still achieve near-zero risk up to around 0.3 cover-
+produce overconfident predictions, where the pre- age, followed by a steady increase. On ISIC2019,
+dicted confidence exceeds the empirical accuracy, performance degrades notably for Open-set and
+while OE and EAT exhibit under-confident be- NearOOD2 scenarios, which exhibit higher risk
+haviour, where the predicted confidence underes- across coverage levels. Corruptions also show in-
+timates the true accuracy. In contrast, MARVEL creased difficulty, though risk remains low below 0.5
+demonstrates more consistent alignment between coverage. In contrast, NearOOD1 performs well,
+confidence and empirical accuracy, indicating im- and FarOOD achieves near-perfect behaviour with
+proved calibration. These observations remain con- minimal risk up to 0.5 coverage. For NCTCRC,
+sistent across the NCTCRC, ISIC2019, and RFMiD Open-set remains the most challenging setting,
+datasets. Specifically, the overconfidence gap in exhibiting consistently higher risk. Corruptions
+methods such as PASCL and PATT persists regard- and NearOOD2 maintain low risk up to approxi-
+less of the underlying data distribution. Further- mately 0.4 coverage, after which risk increases more
+more, while EAT exhibits more pronounced under- sharply, with NearOOD2 showing a slightly steeper
+confidence on the NCTCRC dataset compared to rise. FarOOD and NearOOD1 again demonstrate
+the other two benchmarks, MARVEL consistently near-ideal behaviour, maintaining very low risk
+minimises these deviations and maintains a tight over a substantial coverage range.
+alignment with the diagonal. This improvement
+can be attributed to the proposed expert-based
+architecture, where the ensemble of NvMF classi-        6.7.   Effect of the choice of the OOD detector
+fiers produces more reliable confidence estimates by
+aggregating diverse predictions. Such aggregation
+mitigates overconfident errors from individual ex-      Table 7: Ablation study on different OOD detec-
+perts and leads to smoother, better-calibrated de-      tor types across the three datasets. The compared
+cision boundaries, while maintaining strong ID clas-    methods include KNN [62], MD [31], NN-guide [55],
+sification and OOD detection performance.               MLS [65], EBO [37], MSP [18]
+
+
+                                                   18
+                                                                   nificant variability and lower performance across
+                 RFMiD          ISIC2019        NCTCRC
+                                                                   datasets and OOD regimes. For instance, EAT per-
+ Detector     AUROC   FPR95   AUROC   FPR95   AUROC   FPR95
+                                                                   forms competitively on Open-Set but degrades to
+ KNN          69.82   85.11   69.90   91.15   72.27   72.05
+ MD           71.50   81.30   68.20   94.35   73.08   79.56        the worst performance on FarOOD for the RFMiD
+ NN-guide     76.55   57.33   77.29   71.13   80.08   56.58        dataset (Table 2), PATT ranks second on Open-
+ MLS          86.89   26.71   81.64   34.69   84.62   78.70
+ EBO          88.13   24.66   83.01   34.05   85.10   73.93        Set yet performs the worst under corruption-based
+ MSP (Ours)   90.87   21.47   85.16   31.34   91.68   41.44        shifts on ISIC2019 (Table 3), and COCL achieves
+                                                                   the best results on FarOOD but the worst on Open-
+    Table 7 evaluates the effect of different OOD                  Set OOD (Table 4). This inconsistency suggests
+scoring mechanisms within the MARVEL frame-                        that many prior methods are implicitly tailored to
+work. Overall, logit-based detectors consistently                  specific assumptions about OOD data. For exam-
+outperform distance-based alternatives across all                  ple, COCL formulates OOD detection as a classi-
+datasets, both in terms of AUROC and FPR95.                        fication problem using a single outlier class, which
+Among the detectors, MSP consistently achieves                     can lead to overfitting to the auxiliary OOD dis-
+the highest AUROC across all datasets (RFMiD:                      tribution seen during training and limits generali-
+90.87, ISIC2019: 85.16, and NCTCRC: 91.68).                        sation to unseen OOD types. Similarly, EAT re-
+EBO achieves the second-best performance, with                     lies on augmentation-driven diversity and multiple
+AUROC values consistently lower by approxi-                        synthetic outlier classes, which are effective when
+mately 2.74% (RFMiD), 2.15% (ISIC2019), and                        OOD samples resemble these generated variations
+6.58% (NCTCRC) compared to MSP. In contrast,                       but fail under structurally different farOOD sce-
+distance-based approaches such as KNN and MD                       narios. As a result, these methods lack robust-
+perform poorly, with AUROC dropping by approx-                     ness across heterogeneous distribution shifts. In
+imately 20% on RFMiD, 15% on ISIC2019, and                         contrast, MARVEL maintains stable performance by
+18% on NCTCRC compared to MSP. NN-guided                           combining specialised experts for different regions
+detectors provide moderate improvements over                       of the label distribution with an explicit outlier
+purely distance-based methods but still lags behind                expert, enabling it to handle both feature imbal-
+classifier-based detectors (MSP, MLS, EBO).                        ance and distributional uncertainty in an integrated
+                                                                   manner. Notably, Open-Set detection remains the
+6.8.    Qualitative analysis of learned representa-                most challenging scenario, as evidenced by com-
+        tions                                                      paratively lower AUROC values across all meth-
+Figure 7 illustrates the progressive improvement in                ods. This is expected, as Open-Set samples often lie
+feature separability across the three settings. Com-               close to the ID manifold and share semantic or vi-
+pared to the baseline (a), the NvMF classifier (b)                 sual similarities with tail classes, making them dif-
+produces more compact and better-defined clus-                     ficult to distinguish. Even though MARVEL achieves
+ters, as evident in classes such as LYM, with re-                  the best performance in this setting, this is the only
+duced overlap also observed for MUC and STR. The                   scenario where AUROC falls below 85%, highlight-
+most significant change, however, is observed in (c),              ing the inherent difficulty of fine-grained OOD de-
+where the margin-aware NvMF experts enforce vis-                   tection and indicating room for further improve-
+ibly larger inter-cluster separation. Classes such as              ment. This observation is further supported by
+MUC, STR, and MUS exhibit clearer boundaries                       the Risk-Coverage analysis (Figure 6), where Open-
+and increased spacing from neighbouring clusters,                  Set scenarios consistently exhibit a steeper increase
+indicating that margin-awareness actively pushes                   in risk compared to other OOD settings across all
+class representations apart. This suggests that the                datasets. This indicates that a larger proportion
+proposed framework not only improves clustering                    of novel samples are assigned high-confidence in-
+quality but also explicitly enhances class discrimi-               distribution predictions, reflecting their close prox-
+nation by enforcing stronger geometric separation                  imity to the ID manifold. Such behaviour under-
+in the feature space.                                              scores the intrinsic difficulty of Open-Set detection,
+                                                                   where subtle semantic and visual differences make
+                                                                   reliable separation fundamentally challenging.
+7.     Discussion
+                                                                      In ID classification, MARVEL consistently
+In this study, we present MARVEL, an integrated                    achieves the best performance in both overall ac-
+framework for long-tailed OOD detection that inte-                 curacy and balanced accuracy across all datasets
+grates a novel NvMF classifier, a label-distribution-              (Table 5). In contrast, competing methods exhibit
+aware multi-expert design for ID classification, and               a clear trade-off between these metrics. COCL
+an explicit outlier expert for disentangling ID from               achieves second-best balanced accuracy on RFMiD
+OOD signals. Across the spectrum of OOD set-                       and ISIC2019, reflecting its use of logit adjust-
+tings, MARVEL consistently achieves strong perfor-                 ment to explicitly address class imbalance, but
+mance, while the existing methods exhibit sig-                     does not attain comparable gains in overall accu-
+
+                                                              19
+Figure 7: t-SNE visualization of learned feature representations in the NCTCRC dataset. Representation
+obtained using (a) vMF classifier (b) only NvMF classifier (c) the proposed margin-aware NvMF expert
+ensemble.
+
+
+racy. PASCL achieves the second-best accuracy       the other hand, demonstrates improved calibra-
+on ISIC2019 but not balanced accuracy, indicat-     tion due to its multi-expert design, which effec-
+ing improved feature learning without sufficient    tively acts as an implicit ensemble. In uncertain
+correction of class imbalance. Similarly, PATT      regions, disagreement among experts leads to mod-
+achieves the second-best accuracy on RFMiD and      erated confidence estimates, reducing overconfident
+NCTCRC, but does not consistently achieve the       errors. As a result, uncertainty is modelled struc-
+second-best balanced accuracy, with the exception   turally through the architecture rather than relying
+of NCTCRC where it attains both the second-best     on post-hoc adjustments.
+accuracy and balanced accuracy. These observa-          As for various OOD detection strategies,
+tions suggest that achieving strong performance     distance-based methods such as KNN and MD
+across both metrics is non-trivial in long-tailed set-
+                                                    perform the worst overall (Table 7), as they rely
+tings and depends critically on how decision bound- on well-formed and compact feature clusters, an
+aries are learned under imbalance. The superior ID  assumption that breaks down in long-tailed set-
+classification performance of MARVEL can be at-     tings where tail class representations are sparse and
+tributed to two key factors. First, the proposed    poorly defined. This limitation is particularly pro-
+NvMF classifier enables non-linear decision bound-  nounced in nearOOD scenarios, where tail sam-
+aries that better capture complex and overlapping   ples and OOD inputs occupy similar low-density
+class distributions, which is particularly beneficial
+                                                    regions, making distance-based scores unreliable.
+for tail classes that lie near decision boundaries. In contrast, classifier-based methods such as MSP,
+Second, the margin-aware multi-expert design ex-    MLS, and EBO achieve stronger performance by
+plicitly accounts for the heterogeneous nature of   leveraging decision boundary information, which
+long-tailed data by allowing different experts to   remains more robust under class imbalance. Hy-
+specialise across various regions of the label distri-
+                                                    brid approaches such as NN-Guide partially miti-
+bution (head, mid and tail), thereby reducing head- gate these issues but still fall short of fully classifier-
+class dominance and improving representation for    based strategies. These results suggest that fea-
+underrepresented classes. Together, these design    ture space alone is insufficient for reliable OOD de-
+choices improve class separability while maintain-  tection under imbalance, motivating our choice of
+ing balanced performance across head and tail cat-  MSP as the scoring function.
+egories.                                                Table 6 provides further insights into architec-
+    The impact of the design choices on uncer- tural design choices. For ID classification, hyper-
+tainty estimation is illustrated in Figure 5. OE spherical classifiers (cosine, vMF, NvMF) consis-
+and EAT exhibit underconfident predictions across tently outperform a standard FC classifier (Table
+inputs. This behaviour stems from their shared 6-A), as feature norms in long-tailed settings tend
+use of strong OOD regularization, which suppresses to correlate with class frequency, leading to biased
+prediction confidence globally and leads to low- representations. Normalising features onto the hy-
+confidence outputs even for correctly classified ID persphere removes this bias and improves angular
+samples. In contrast, PASCL, PATT, and COCL separation. Among these, the proposed NvMF clas-
+tend to be overconfident, as their training objec- sifier achieves the best performance due to its non-
+tives emphasise feature separation and sharp deci- linear decision boundaries, which are necessary to
+sion boundaries, resulting in high-confidence pre- separate classes with heterogeneous and overlap-
+dictions even in ambiguous regions. MARVEL, on ping feature distributions prevalent in imbalanced
+
+
+                                                      20
+settings. For OOD classification, removing the out-        distribution shifts. Further, a common limitation
+lier expert leads to a consistent drop in performance      of OOD methods arises from the assumption of a
+(Table 6-B), highlighting the importance of explicit       fixed and well-defined label space. In real-world
+OOD modelling. The outlier expert operates on              clinical practice, diagnostic taxonomies are often
+a binary classification task that separates ID and         hierarchical, evolving, and subject to inter-observer
+OOD samples. During training, OOD samples from             variability. For instance, certain conditions may be
+the auxiliary dataset are balanced with ID samples         grouped differently across institutions or redefined
+within each batch, resulting in a well-conditioned         as new clinical knowledge emerges. As a result, the
+learning setting. Unlike ID classification, this task      distinction between ID and OOD samples may it-
+does not involve class imbalance or complex multi-         self become ambiguous, particularly when rare or
+class decision boundaries. Hence, we use a simple          borderline cases lie between established categories.
+FC classifier to effectively separate the two distribu-        Future directions of this work include explor-
+tions. Additional modelling capacity offers limited        ing an even wider range of distribution shifts for
+benefit, making the FC classifier a natural and ef-        various imaging modalities and improving the in-
+fective choice, with NvMF remaining competitive            terpretability of OOD decisions, for instance, by
+(Table 6-B).                                               identifying the features or regions that contribute
+    From a data-centric perspective, these trends          to OOD prediction; recent advances in foundation
+are further influenced by the intrinsic characteris-       models and vision-language models offer a promis-
+tics of the datasets. RFMiD is the most challeng-          ing direction for such explanations. Another in-
+ing due to subtle visual differences between reti-         teresting extension would be continual or lifelong
+nal pathologies, low inter-class separability, and se-     learning settings, where the framework can incorpo-
+vere imbalance, particularly for rare conditions. In       rate new classes and evolving distributions without
+contrast, NCTCRC exhibits more distinct struc-             degrading performance on previously learned cate-
+tural patterns, enabling clearer feature separation.       gories. Further work would involve extending the
+ISIC2019 lies between these extremes, with moder-          approach to dense prediction tasks, such as segmen-
+ate variability across classes but significant intra-      tation, to broaden its applicability to more complex
+class diversity. These differences highlight that          workflows.
+OOD detection performance is closely tied to data
+complexity, where subtle variations and rare classes
+increase ambiguity between ID and OOD samples.             8.   Conclusions
+An imbalance ratio of 1:50 (tail:head) was chosen to
+reflect a realistic long-tailed regime. At this imbal-     In this work, we have addressed OOD detection un-
+ance, the least frequent classes have limited sam-         der long-tailed class distributions in medical imag-
+ples, e.g., 4 in RFMiD, 72 in ISIC2019, and 170 in         ing using MARVEL, an integrated framework that
+NCTCRC, indicating severe sparsity. Higher ratios          combines a nonlinear vMF classifier, a margin-
+would further reduce tail-class representation, shift-     aware multi-expert learning strategy, and a ded-
+ing the problem towards extreme few-shot learning,         icated outlier expert for explicit OOD modelling.
+complicating estimation of decision boundaries and         In addition to methodological contributions, our
+evaluation metrics. Thus, the chosen imbalance ra-         work also includes a clinically motivated evalua-
+tio simulates realistic distributions and maintains        tion protocol that spans a wide spectrum of dis-
+sufficient data for meaningful learning and fair com-      tributional shifts, including both nearOOD and fa-
+parison. Under this ratio of severe yet statistically      rOOD scenarios, across diverse medical imaging
+reliable imbalance, the ability of MARVEL to model         datasets. Experimental results demonstrate consis-
+complex decision boundaries and adapt to label im-         tent improvements over state-of-the-art methods,
+balance is critical for achieving consistent perfor-       highlighting the effectiveness of jointly addressing
+mance.                                                     class imbalance and OOD detection in a unified
+    Despite the strong performance of MARVEL, a            manner. This capability makes MARVEL well-suited
+few limitations remain. Firstly, the framework re-         for real-world applications, where reliable identifi-
+lies on auxiliary OOD data for training the out-           cation of anomalous or OOD cases is critical for
+lier expert, and its effectiveness may depend on the       supporting decision-making and ensuring safety.
+diversity and representativeness of these samples.         Future directions include exploring wider distribu-
+Secondly, although our evaluation spans multiple           tion shifts, improving the explainability, and ex-
+datasets and OOD scenarios, real-world clinical set-       tending the framework for dense prediction tasks
+tings may involve even broader and compounded              such as medical image segmentation.
+
+
+
+
+                                                      21
+References
+
+ [1]   Barry C. Arnold. Pareto Distributions. 2nd ed. Chapman and Hall/CRC, 2015. doi: 10.1201/
+       b18141.
+ [2]   Christopher M. Bishop. Pattern Recognition and Machine Learning (Information Science and Statistics).
+       Berlin, Heidelberg: Springer-Verlag, 2006. isbn: 0387310738.
+ [3]   A. Buslaev et al. “Albumentations: fast and flexible image augmentations”. In: arXiv preprint arXiv:1809.06839
+       (2018). eprint: 1809.06839.
+ [4]   Kaidi Cao et al. “Learning Imbalanced Datasets with Label-Distribution-Aware Margin Loss”. In:
+       Advances in Neural Information Processing Systems. 2019.
+ [5]   Olivia Cardozo et al. “Dataset of fundus images for the diagnosis of ocular toxoplasmosis”. In:
+       Data in Brief 48 (2023), p. 109056. issn: 2352-3409.
+ [6]   B. Cassidy et al. “The DFUC 2020 Dataset: Analysis Towards Diabetic Foot Ulcer Detection”. In:
+       touchREV Endocrinology 17.1 (Apr. 2021), pp. 5–11. doi: 10.17925/EE.2021.17.1.5.
+ [7]   N. C. F. Codella et al. Skin Lesion Analysis Toward Melanoma Detection: A Challenge at the 2017 International Sy
+       arXiv:1710.05006. 2017.
+ [8]   iNaturalist contributors. iNaturalist Research-grade Observations. 2024.
+ [9]   Yin Cui et al. “Class-Balanced Loss Based on Effective Number of Samples”. In: CVPR. 2019.
+[10]   Andrija Djurisic et al. “Extremely Simple Activation Shaping for Out-of-Distribution Detection”.
+       In: The Eleventh International Conference on Learning Representations. 2023. url: https://openreview.
+       net/forum?id=ndYXTEL6cZz.
+[11]   Xuefeng Du et al. “VOS: Learning What You Don’t Know by Virtual Outlier Synthesis”. In:
+       Proceedings of the International Conference on Learning Representations (2022).
+[12]   Andre Esteva et al. “Dermatologist-level classification of skin cancer with deep neural networks”.
+       In: Nature 542.7639 (2017), pp. 115–118. doi: 10.1038/nature21056.
+[13]   Yarin Gal and Zoubin Ghahramani. “Dropout as a Bayesian Approximation: Representing Model
+       Uncertainty in Deep Learning”. In: Proceedings of The 33rd International Conference on Machine Learning.
+       Ed. by Maria Florina Balcan and Kilian Q. Weinberger. Vol. 48. Proceedings of Machine Learning
+       Research. New York, New York, USA: PMLR, 20–22 Jun 2016, pp. 1050–1059.
+[14]   Riccardo Gatto and Sreenivasa Rao Jammalamadaka. “The generalized von Mises distribution”.
+       In: Statistical Methodology 4.3 (2007), pp. 341–353.
+[15]   Spyros Gidaris and Nikos Komodakis. “Dynamic Few-Shot Visual Learning Without Forgetting”.
+       In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR). June
+       2018.
+[16]   Abhijit Guha Roy et al. “Does your dermatology classifier know what it doesn’t know? Detect-
+       ing the long-tail of unseen conditions”. In: Medical Image Analysis 75 (2022), p. 102274. issn:
+       1361-8415. doi: https : / / doi . org / 10 . 1016 / j . media . 2021 . 102274. url: https : / / www .
+       sciencedirect.com/science/article/pii/S1361841521003194.
+[17]   Yina He et al. “Long-Tailed Out-of-Distribution Detection: Prioritizing Attention to Tail”. In:
+       Proceedings of the AAAI Conference on Artificial Intelligence 39.3 (Apr. 2025), pp. 3446–3454. doi:
+       10.1609/aaai.v39i3.32357. url: https://ojs.aaai.org/index.php/AAAI/article/view/
+       32357.
+[18]   Dan Hendrycks and Kevin Gimpel. “A Baseline for Detecting Misclassified and Out-of-Distribution
+       Examples in Neural Networks”. In: Proceedings of International Conference on Learning Representations
+       (2017).
+[19]   Dan Hendrycks, Mantas Mazeika, and Thomas Dietterich. “Deep Anomaly Detection with Outlier
+       Exposure”. In: Proceedings of the International Conference on Learning Representations (2019).
+[20]   C. Hernández-Pérez et al. “BCN20000: Dermoscopic lesions in the wild”. In: Scientific Data 11.1
+       (June 2024), p. 641. doi: 10.1038/s41597-024-01921-3.
+[21]   Yen-Chang Hsu et al. “Generalized ODIN: Detecting Out-of-Distribution Image Without Learning
+       From Out-of-Distribution Data”. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern R
+       June 2020.
+
+
+                                                     22
+[22]   J. N. Kather, N. Halama, and A. Marx. 100,000 histological images of human colorectal cancer and healthy tissue.
+       Data set. Version v0.1. 2018.
+[23]   Jakob N. Kather, Nikolaus Halama, and Andreas Marx. 100,000 histological images of human colorectal cancer and
+       2018. doi: 10.5281/zenodo.1214456. url: https://doi.org/10.5281/zenodo.1214456.
+[24]   Daniel S. Kermany et al. “Identifying Medical Diagnoses and Treatable Diseases by Image-Based
+       Deep Learning”. In: Cell 172.5 (2018), 1122–1131.e9. issn: 0092-8674. doi: 10 . 1016 / j . cell .
+       2018.02.010.
+[25]   Prannay Khosla et al. “Supervised Contrastive Learning”. In: arXiv preprint arXiv:2004.11362
+       (2020).
+[26]   Diederik P. Kingma and Jimmy Lei Ba. “Adam: A Method for Stochastic Optimization”. In:
+       International Conference on Learning Representations (ICLR). Ithaca, NY: ArXiv, 2015.
+[27]   Jiin Koo, Sungjoon Choi, and Sangheum Hwang. “Generalized Outlier Exposure: Towards a trust-
+       worthy out-of-distribution detector without sacrificing accuracy”. In: Neurocomputing 577 (2024),
+       p. 127371. issn: 0925-2312.
+[28]   Alex Krizhevsky. Learning multiple layers of features from tiny images. Technical Report. Univer-
+       sity of Toronto, 2009.
+[29]   Alex Krizhevsky, Ilya Sutskever, and Geoffrey E Hinton. “ImageNet Classification with Deep Con-
+       volutional Neural Networks”. In: Advances in Neural Information Processing Systems. Ed. by F.
+       Pereira et al. Vol. 25. Curran Associates, Inc., 2012. url: https://proceedings.neurips.cc/
+       paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf.
+[30]   Balaji Lakshminarayanan, Alexander Pritzel, and Charles Blundell. “Simple and Scalable Predic-
+       tive Uncertainty Estimation using Deep Ensembles”. In: Advances in Neural Information Processing Systems.
+       Ed. by I. Guyon et al. Vol. 30. Curran Associates, Inc., 2017.
+[31]   Kimin Lee et al. “A Simple Unified Framework for Detecting Out-of-Distribution Samples and
+       Adversarial Attacks”. In: Advances in Neural Information Processing Systems. Ed. by S. Bengio
+       et al. Vol. 31. Curran Associates, Inc., 2018.
+[32]   Shiyu Liang, Yixuan Li, and R. Srikant. “Enhancing The Reliability of Out-of-distribution Image
+       Detection in Neural Networks”. In: International Conference on Learning Representations. 2018.
+       url: https://openreview.net/forum?id=H1VGkIxRZ.
+[33]   Tsung-Yi Lin et al. “Microsoft COCO: Common Objects in Context”. In: European Conference on Computer Vision
+       2014, pp. 740–755. doi: 10.1007/978-3-319-10602-1_48.
+[34]   Tsung-Yi Lin et al. “Microsoft coco: Common objects in context”. In: European conference on computer vision.
+       Springer. 2014, pp. 740–755.
+[35]   Geert Litjens et al. “A survey on deep learning in medical image analysis”. In: Medical Image Analysis
+       42 (2017), pp. 60–88. issn: 1361-8415. doi: https://doi.org/10.1016/j.media.2017.07.005.
+       url: https://www.sciencedirect.com/science/article/pii/S1361841517301135.
+[36]   Ruhan Liu et al. “DeepDRiD: Diabetic Retinopathy—Grading and Image Quality Estimation
+       Challenge”. In: Patterns 3.6 (2022), p. 100512. issn: 2666-3899. doi: https : / / doi . org / 10 .
+       1016/j.patter.2022.100512. url: https://www.sciencedirect.com/science/article/pii/
+       S2666389922001040.
+[37]   Weitang Liu et al. “Energy-based Out-of-distribution Detection”. In: Advances in Neural Information Processing Sy
+       (2020).
+[38]   Weiyang Liu et al. “SphereFace: Deep Hypersphere Embedding for Face Recognition”. In: The IEEE Conference on C
+       2017.
+[39]   Xiaoxuan Liu et al. “A comparison of deep learning performance against health-care profes-
+       sionals in detecting diseases from medical imaging: a systematic review and meta-analysis”. In:
+       The Lancet Digital Health 1.6 (2019), e271–e297. doi: 10.1016/S2589-7500(19)30123-2.
+[40]   Ziwei Liu et al. “Large-Scale Long-Tailed Recognition in an Open World”. In: IEEE Conference on Computer Vision
+       2019.
+[41]   Haodong Lu et al. “Learning with Mixture of Prototypes for Out-of-Distribution Detection”. In:
+       The Twelfth International Conference on Learning Representations. 2024. url: https://openreview.
+       net/forum?id=uNkKaD3MCs.
+
+
+                                                    23
+[42]   Deval Mehta et al. “Out-of-Distribution Detection for Long-Tailed and Fine-Grained Skin Lesion
+       Images”. In: Medical Image Computing and Computer Assisted Intervention – MICCAI 2022. Ed.
+       by Linwei Wang et al. Cham: Springer Nature Switzerland, 2022, pp. 732–742. isbn: 978-3-031-
+       16431-6.
+[43]   Deval Mehta et al. “Out-of-Distribution Detection for Long-Tailed and Fine-Grained Skin Lesion
+       Images”. In: Medical Image Computing and Computer Assisted Intervention – MICCAI 2022. Ed.
+       by Linwei Wang et al. Cham: Springer Nature Switzerland, 2022, pp. 732–742. isbn: 978-3-031-
+       16431-6.
+[44]   Yang Lu Mengke Li Yiu-ming Cheung. “Long-tailed Visual Recognition via Gaussian Clouded
+       Logit Adjustment”. In: CVPR. 2022, pp. 6929–6938.
+[45]   Aditya Krishna Menon et al. “Long-tail learning via logit adjustment”. In: International Conference on Learning Rep
+       2021. url: https://openreview.net/forum?id=37nvvqkCo5.
+[46]   Wenjun Miao et al. “Out-of-distribution detection in long-tailed recognition with calibrated outlier
+       class learning”. In: Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 38. 2024.
+[47]   Yifei Ming, Ying Fan, and Yixuan Li. “POEM: Out-of-Distribution Detection with Posterior Sam-
+       pling”. In: Proceedings of the 39th International Conference on Machine Learning. Ed. by Kama-
+       lika Chaudhuri et al. Vol. 162. Proceedings of Machine Learning Research. PMLR, 17–23 Jul 2022,
+       pp. 15650–15665. url: https://proceedings.mlr.press/v162/ming22a.html.
+[48]   Yifei Ming et al. “How to Exploit Hyperspherical Embeddings for Out-of-Distribution Detection?”
+       In: The Eleventh International Conference on Learning Representations. 2023.
+[49]   Yuval Netzer et al. Reading Digits in Natural Images with Unsupervised Feature Learning. 2011.
+[50]   H. Q. Nguyen, K. Lam, L. T. Le, et al. “VinDr-CXR: An open dataset of chest X-rays with
+       radiologist’s annotations”. In: Scientific Data 9 (2022), p. 429.
+[51]   NIST Digital Library of Mathematical Functions. Chapter 10 Bessel Functions. Revision 1.1.5.
+       2020. url: https://dlmf.nist.gov/10.40 (visited on 10/27/2023).
+[52]   Samiksha Pachade et al. Retinal Fundus Multi-disease Image Dataset (RFMiD). 2020.
+[53]   Samiksha Pachade et al. Retinal Fundus Multi-disease Image Dataset (RFMiD). 2020. doi: 10 .
+       21227/s3g7-st65. url: https://dx.doi.org/10.21227/s3g7-st65.
+[54]   Andre G.C. Pacheco et al. “PAD-UFES-20: A skin lesion dataset composed of patient data and
+       clinical images collected from smartphones”. In: Data in Brief 32 (2020), p. 106221. issn: 2352-
+       3409. doi: https://doi.org/10.1016/j.dib.2020.106221. url: https://www.sciencedirect.
+       com/science/article/pii/S235234092031115X.
+[55]   Jaewoo Park, Yoon Gyo Jung, and Andrew Beng Jin Teoh. “Nearest Neighbor Guidance for Out-of-
+       Distribution Detection”. In: Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV).
+       Oct. 2023, pp. 1686–1695.
+[56]   Hady Ahmady Phoulady and Peter R. Mouton. A New Cervical Cytology Dataset for Nucleus Detection and Image
+       2018. arXiv: 1811.09651 [cs.CV]. url: https://arxiv.org/abs/1811.09651.
+[57]   Olga Russakovsky et al. “ImageNet Large Scale Visual Recognition Challenge”. In: International Journal of Compute
+       115.3 (2015), pp. 211–252.
+[58]   Vikash Sehwag, Mung Chiang, and Prateek Mittal. “SSD: A Unified Framework for Self-Supervised
+       Outlier Detection”. In: International Conference on Learning Representations. 2021. url: https:
+       //openreview.net/forum?id=v5gjXpmR8J.
+[59]   L. Shi et al. “EBHI-Seg: A novel enteroscope biopsy histopathological hematoxylin and eosin image
+       dataset for image segmentation tasks”. In: Frontiers in Medicine 10 (2023), p. 1114673.
+[60]   Yiyou Sun, Chuan Guo, and Yixuan Li. “ReAct: Out-of-distribution Detection With Rectified
+       Activations”. In: Advances in Neural Information Processing Systems. 2021.
+[61]   Yiyou Sun and Yixuan Li. “DICE: Leveraging Sparsification for Out-of-Distribution Detection”.
+       In: European Conference on Computer Vision. 2022.
+[62]   Yiyou Sun et al. “Out-of-distribution Detection with Deep Nearest Neighbors”. In: ICML (2022).
+[63]   Leitian Tao et al. “Non-parametric Outlier Synthesis”. In: The Eleventh International Conference on Learning Repre
+       2023. url: https://openreview.net/forum?id=JHklpEZqduQ.
+
+
+                                                    24
+[64]   P. Tschandl, C. Rosendahl, and H. Kittler. “The HAM10000 dataset, a large collection of multi-
+       source dermatoscopic images of common pigmented skin lesions”. In: Scientific Data 5 (2018),
+       p. 180161. doi: 10.1038/sdata.2018.161.
+[65]   Sagar Vaze et al. “Open-Set Recognition: a Good Closed-Set Classifier is All You Need?” In:
+       International Conference on Learning Representations. 2022.
+[66]   Haoqi Wang et al. “ViM: Out-Of-Distribution with Virtual-logit Matching”. In: Proceedings of the IEEE/CVF Conf
+       2022.
+[67]   Haotao Wang et al. “Partial and Asymmetric Contrastive Learning for Out-of-Distribution Detec-
+       tion in Long-Tailed Recognition”. In: International Conference on Machine Learning. 2022, pp. 23446–
+       23458.
+[68]   R. Wang et al. “MIHIC: a multiplex IHC histopathological image classification dataset for lung
+       cancer immune microenvironment quantification”. In: Frontiers in Immunology 15 (Feb. 2024),
+       p. 1334348. doi: 10.3389/fimmu.2024.1334348.
+[69]   Tongzhou Wang and Phillip Isola. “Understanding Contrastive Representation Learning through
+       Alignment and Uniformity on the Hypersphere”. In: International Conference on Machine Learning.
+       PMLR. 2020, pp. 9929–9939.
+[70]   Xiaosong Wang et al. “ChestX-Ray8: Hospital-Scale Chest X-Ray Database and Benchmarks on
+       Weakly-Supervised Classification and Localization of Common Thorax Diseases”. In: 2017 IEEE Conference on Com
+       2017, pp. 3462–3471. doi: 10.1109/CVPR.2017.369.
+[71]   Tong Wei, Bo-Lin Wang, and Min-Ling Zhang. “EAT: Towards Long-Tailed Out-of-Distribution
+       Detection”. In: Proceedings of the 38th AAAI Conference on Artificial Intelligence (2024).
+[72]   Alessandro Wollek et al. “Out-of-distribution detection with in-distribution voting using the med-
+       ical example of chest x-ray classification”. In: Medical Physics 51.4 (2024), pp. 2721–2732. doi:
+       https://doi.org/10.1002/mp.16790. eprint: https://aapm.onlinelibrary.wiley.com/doi/
+       pdf/10.1002/mp.16790. url: https://aapm.onlinelibrary.wiley.com/doi/abs/10.1002/
+       mp.16790.
+[73]   Anne Wollek et al. “Out-of-distribution detection with in-distribution voting using the medical
+       example of chest x-ray classification”. In: Medical Physics 51 (2024), pp. 2721–2732. doi: 10 .
+       1002/mp.16790.
+[74]   Kai Xu et al. “Scaling for Training Time and Post-hoc Out-of-distribution Detection Enhance-
+       ment”. In: The Twelfth International Conference on Learning Representations. 2024. url: https:
+       //openreview.net/forum?id=RDSTjtnqCg.
+[75]   Jingkang Yang et al. Generalized Out-of-Distribution Detection: A Survey. 2024. arXiv: 2110 .
+       11334 [cs.CV].
+[76]   Jingkang Yang et al. “Semantically Coherent Out-of-Distribution Detection”. In: Proceedings of the IEEE/CVF Inte
+       Oct. 2021, pp. 8301–8309.
+[77]   Fisher Yu et al. “LSUN: Construction of a Large-scale Image Dataset using Deep Learning with
+       Humans in the Loop”. In: arXiv preprint arXiv:1506.03365 (2015).
+[78]   Qing Yu and Kiyoharu Aizawa. “ Unsupervised Out-of-Distribution Detection by Maximum Clas-
+       sifier Discrepancy ”. In: 2019 IEEE/CVF International Conference on Computer Vision (ICCV).
+       Los Alamitos, CA, USA: IEEE Computer Society, Nov. 2019, pp. 9517–9525. doi: 10.1109/ICCV.
+       2019.00961. url: https://doi.ieeecomputersociety.org/10.1109/ICCV.2019.00961.
+[79]   Jingyang Zhang et al. “Mixture Outlier Exposure: Towards Out-of-Distribution Detection in Fine-
+       Grained Environments”. In: Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision
+       Jan. 2023, pp. 5531–5540.
+[80]   S. Kevin Zhou et al. “A Review of Deep Learning in Medical Imaging: Imaging Traits, Technology
+       Trends, Case Studies With Progress Highlights, and Future Promises”. In: Proceedings of the IEEE
+       109.5 (2021), pp. 820–838. doi: 10.1109/JPROC.2021.3054390.
+
+
+
+
+                                                   25
+
