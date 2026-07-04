@@ -879,7 +879,27 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "note": "Source-first build (iter 34). VPRMs replace neural step-judges with deterministic rule-based verifiers on the Cochrane risk-of-bias decision tree; Theorem 1 reward-separation guarantee. All 7 numeric tables (1-7) verbatim; Table 8 qualitative. GRPO-VPRM wins all 6 result cols (87.9/76.7 CF), +6.4/+6.5 over outcome-only GRPO, +9.7/+20.6 over best neural PRM. Coherence 89.5 vs ~50 baseline. Flagged 1 paper-internal prose-vs-table inconsistency inline: abstract '20% higher F1' magnitude matches Accuracy (+20.8 vs GPT-OSS-120B), not F1 (+26.9)."
+    },
+    {
+      "title": "Ranking Reasoning LLMs under Test-Time Scaling",
+      "authors": [
+        "Mohsen Hariri",
+        "Michael Hinczewski",
+        "Jing Ma",
+        "Vipin Chaudhary"
+      ],
+      "year": "2026",
+      "arxiv_id": "2603.10960",
+      "arxiv_url": "https://arxiv.org/abs/2603.10960",
+      "pdf_url": "https://arxiv.org/pdf/2603.10960",
+      "code_url": "https://github.com/mohsenhariri/scorio",
+      "project_page": "",
+      "abstract": "Test-time scaling evaluates reasoning LLMs by sampling multiple outputs per prompt, but ranking models in this regime remains underexplored. We formalize dense benchmark ranking under test-time scaling and introduce Scorio, a library that implements statistical ranking methods such as paired-comparison models, item response theory (IRT) models, voting rules, and graph- and spectral-based methods. Across 20 reasoning models on four Olympiad-style math benchmarks (AIME 24, AIME 25, HMMT 25, and BrUMO 25; up to N=80 trials), most full-trial rankings agree closely with the Bayesian gold standard Bayes_U@80 (mean Kendall tau_b = 0.93-0.95), and 19-34 methods recover exactly the same ordering. In the single-trial regime, the best methods reach tau_b ~ 0.86. Using greedy decoding as an empirical prior (Bayes_R0@N) reduces variance at N=1 by 16-52%, but can bias rankings when greedy and stochastic sampling disagree.",
+      "folder": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling",
+      "rank": 17,
+      "subarea": "statistical ranking / LLM evaluation methodology under test-time scaling",
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 3067 lines). Tables 1-5, 6-9, 10, 18, 19, 20-24 transcribed verbatim with sourcing line-ranges; Tables 11-17 summarized. No prose-vs-table numeric inconsistencies found. Figure-derived per-method tau_b bars / scatter / violins (Figs 1-7) not back-filled, only prose-confirmed ranges quoted."
     }
   ],
-  "updated_at": "2026-07-04"
+  "updated_at": "2026-07-04T04:25:55.861944"
 }

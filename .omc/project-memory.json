@@ -66,8 +66,8 @@
   "hotPaths": [
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 45,
-      "lastAccessed": 1783130919534,
+      "accessCount": 47,
+      "lastAccessed": 1783131537365,
       "type": "file"
     },
     {
@@ -164,6 +164,12 @@
       "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
       "accessCount": 7,
       "lastAccessed": 1783128447154,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/paper_layout.txt",
+      "accessCount": 7,
+      "lastAccessed": 1783131702772,
       "type": "file"
     },
     {
@@ -272,6 +278,12 @@
       "path": "papers/2026-reasoning-trees-rt-rag-multi-hop-qa/breakdown.md",
       "accessCount": 2,
       "lastAccessed": 1783131143786,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/breakdown.md",
+      "accessCount": 2,
+      "lastAccessed": 1783131875424,
       "type": "file"
     },
     {
