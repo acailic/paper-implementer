@@ -1,0 +1,1846 @@
+                                            DecompRL: Solving Harder Problems by Learning
+                                            Modular Code Generation
+                                            Juliette Decugis1,2∗ , Fabian Gloeckle1,3∗ , Francis Bach2 , Taco Cohen1 , Gabriel Synnaeve1
+                                            1
+                                                FAIR at Meta, 2 Inria, École Normale Supérieure, 3 CERMICS, École des Ponts ParisTech
+                                            ∗
+                                                Equal contribution
+
+                                           How can Large Language Models (LLMs) solve problems they currently cannot? Repeated sampling
+                                           scales test-time compute but GPU cost grows linearly with attempts, while reinforcement learning
+                                           (RL) with verifiable rewards improves single-attempt accuracy at the expense of sample diversity.
+                                           Both strategies ultimately fail when the base policy has near-zero probability of producing a correct
+                                           solution: no amount of sampling or gradient signal can overcome a search space that is simply too
+arXiv:2607.02390v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                           large. We take a different approach: rather than sampling harder, we make the task easier by de-
+                                           composing problems into smaller, independently solvable sub-functions whose implementations can
+                                           be recombined. Since off-the-shelf models are not trained for this modular generation, we introduce
+                                           DecompRL, an RL algorithm that explicitly learns to decompose and implement hierarchical code
+                                           structures. Recombining k implementations of n modules yields up to k n candidate solutions, shift-
+                                           ing the bottleneck from GPU inference to cheap CPU evaluation and cutting GPU token cost by
+                                           ∼50×. On LiveCodeBench and CodeContests (Qwen 2.5 7B, Code World Model 32B), DecompRL
+                                           outperforms standard and diversity-optimized RL baselines beyond 105 tokens per problem, solving
+                                           problems that standard generation cannot reach.
+
+                                            Date: July 3, 2026
+                                            Correspondence: Juliette Decugis at jdecugis@meta.com
+
+
+
+
+                                        1 Introduction
+
+
+
+
+                                        Figure 1 Decomp RL solves harder problems than existing RL methods. Our hierarchical training learns 1) a decomposition
+                                        policy that breaks down problems into simpler functions and 2) an implementation policy that writes code for each
+                                        function in parallel. Given a high token budget, Decomp RL solves up to 35% problems of the LiveCodeBench hard
+                                        subset (2024/08/01 to 2025/02/01) Jain et al. (2024a).
+
+                                        Large language models (LLMs) continue to improve in automatically verifiable domains like competitive
+                                        programming. Currently, the dominant strategy for state-of-the-art performance relies on repeated sampling:
+                                        generating numerous potential solutions to pass a verifier: the pass@k regime (Chen et al., 2021). However,
+                                        the major limitation of this approach lies in its significant GPU computational costs for scaling inference.
+                                        Attempts to mitigate this through reinforcement learning post-training have primarily focused on improving
+                                        single-sample accuracy (pass@1) at the cost of pass@k in high sampling regimes for k >> 100. This reduction
+
+
+                                                                                                  1
+in diversity undermines its effectiveness when scaling inference at test time, because performance gains grow
+logarithmically for linear computational costs (Appendix B).
+Our approach targets tasks where solutions are hierarchically decomposable into independently implementable
+modules and where correctness is automatically verifiable. This structural assumption holds broadly: com-
+petitive programming problems naturally decompose into helper functions; formal proofs factor into lemmas
+(Lample et al., 2022); hardware modules compose into chip designs (Ho et al., 2024); and scientific codebases
+separate data processing, modeling, and evaluation (Haller et al., 2024). Whenever verification is cheap (unit
+tests, proof checkers, simulators) but generation is expensive (LLM inference), modular recombination offers
+a path to scale search without proportionally scaling GPU cost.
+We propose DecompRL: a reinforcement learning framework that fundamentally shifts the scaling bottleneck
+from expensive GPU inference to cheap CPU evaluation. Inspired by modular inference strategies (Zelikman
+et al., 2023), DecompRL trains models to decompose challenges into a hierarchy of independently solvable
+sub-functions that can be re-combined to form a complete solution. For example, for a sorting task, instead
+of generating a single monolithic solution, the model identifies N sub-problems such as partitioning, merging,
+and base-case sorting. By generating K implementations for each of the N modules in parallel, we can
+recombine them into up to K N unique candidate solutions. This approach creates a combinatorial explosion
+of potential programs for a fixed inference budget of only K × N tokens, allowing us to scale search on cheap
+CPU clusters without increasing the GPU footprint.
+By framing hierarchical modular inference as an RL objective, DecompRL prioritizes exploration (Section
+4.1), maximizes the utility of recombinations (Section 4.2) and successfully discovers sparse rewards (Section
+4.3). We do not position DecompRL as a replacement for standard RL post-training, which remains more
+sample-eﬀicient when the starting policy is already strong. Rather, DecompRL is an exploration tool: it
+discovers correct solutions to problems that standard high-pass@k sampling cannot reach, making it a natural
+complement for policy distillation pipelines and for overcoming the cold-start problem on hard tasks where
+the base policy has near-zero solve rates.
+
+                   Standard:               Hierarchical:
+
+                     generations              functions
+                                              implementations
+                     executions
+
+
+
+
+                                                  generations                executions
+
+Figure 2 Learning to scale CPU budget. (left) Example problem from LiveCodeBench and the generated solutions with
+regular and hierarchical inference. (right) Solving a problem directly in M tries leads to M complete code solutions to
+evaluate. Hierarchical inference instead generates N functions each implemented K times independently. Recombining
+these partial code blocks gives up to K N full code solutions to evaluate.
+
+
+
+2 Method
+We first introduce hierarchical generation in the context of problem solving (Section 2.1, 2.2) as described in
+Parsel (Zelikman et al., 2023) and then show how we adapt this to train decomposition and implementation
+policies (Section 2.3).
+
+2.1 Hierarchical inference
+We consider the task of generating code in a modular fashion, where model users have tighter control over
+the generation process than in the standard setup of whole-code generation from an autoregressive language
+
+
+                                                           2
+model. Standard whole-code generation models the joint distribution of a piece of code of multiple parts
+I1 , . . . , In by means of its autoregressive decomposition and can optionally include a plan D sampled before
+I1 . Suppressing conditioning on the problem x, we have:
+                                                                  ∏
+                                                                  n
+                                 π(I1 , . . . , In ) = π(I1 |D)         π(Ii | Ii−1 , . . . , I1 , D).
+                                                                  i=1
+
+
+In this work, we instead consider a hierarchical decomposition:
+                                                                            ∏
+                                                                            n
+                                         π(D, I1 , . . . , In ) = π(D)            π(Ii | D)
+                                                                            i=1
+
+which models the implementations of the pieces Ii as conditionally independent of each other given D, and
+captures all interaction in the decomposition plan D.
+In practice where we consider code generation tasks in Python, we represent decompositions D by a set of
+functions specified by their signatures and natural language specifications in the form of docstrings. The
+parts Ii are then implementations of those functions. We give an example of a decomposition in Figure 1 and
+of a full hierarchical trajectory (D, I1 , I2 ) in the Appendix L. We use prompted and trained language models
+for the decomposition and implementation policies π(D) and π(Ii | D) (see Appendix I for full prompts).
+
+2.2 Recombination
+Hierarchical inference comes with an important benefit: while the conditional independence assumption makes
+individual samples less precise, it can be exploited to generate samples cheaply by recombination. Here and
+in the following, let D be a decomposition of size n and Iij , 1 ≤ i ≤ n, 1 ≤ j ≤ k, be k implementations per
+function Ii described by D. From these nk implementation samples, we can create k n complete trajectories by
+considering all combinations (D, I1j1 , . . . , Injn ) for 1 ≤ j1 , . . . , jn ≤ k. In other words, the number of complete
+trajectories scales polynomially in k while the inference cost scales linearly.
+This is particularly useful in domains where rewards are only observed for complete trajectories, which is the
+case for verifiable reasoning domains like mathematics and code. In such setups, verification is a cheap CPU
+operation while generation is an expensive GPU operation involving large language models. In this work, we
+consider the task of competitive programming where the model must produce a code solution to a problem
+in natural language. The reward is 1 if the code passes all private tests (unknown to the model at inference
+time) and 0 otherwise.
+
+2.3 Reinforcement learning: policy gradient estimators
+As customary with large language models, we consider policy gradient reinforcement learning algorithms
+(Williams, 1992). We write τ = (D, I1 , . . . , In ) for a trajectory, r(τ ) for the reward it receives and πθ as the
+policy given by a large language model. According to the policy gradient theorem (Sutton and Barto, 1998),
+an unbiased estimate of the gradient g of the expected reward is given by
+                                                            [                            ]
+                                                              ∑
+                          g = ∇θ Eτ ∼πθ [r(τ )] = Eτ ∼πθ         (r(τ ) − b)∇θ log πθ (a) ,
+                                                                      a∈τ
+
+for any baseline b which does not depend on the action a ∈ {D, I1 , . . . In }.
+We can now view recombination as a way to produce Monte-Carlo estimates of the policy gradient for
+hierarchical inference more eﬀiciently. Given k implementations Iij of the functions Ii in the decomposition
+D, the standard estimator for g used in sequential reinforcement learning is
+                                        1∑         ∑
+                         ĝstandard =                            (r(D, I1j , . . . , Inj ) − b)∇θ log πθ (a),
+                                        k
+                                        j≤k a∈{D,I j ,...,In
+                                                           j
+                                                             }
+                                                     1
+
+
+which is optimal in the case of linear (autoregressive) rollouts where Ik depends on Ij for k > j.
+
+
+                                                                  3
+                        1.0                                                                    1.0
+                        0.9                                                                    0.9
+Transformed Advantage
+
+                        0.8                                                                    0.8
+                        0.7                                                                    0.7
+                        0.6                                                                    0.6
+                        0.5                       lme(beta=0.2)                                0.5                      lme(beta=0.1344)
+                        0.4                       mean(pass@1, pass@10, pass@100)              0.4                      mean(pass@1, pass@10, pass@100, pass@1000)
+                                                  pass@10                                                               pass@100
+                        0.3                                                                    0.3
+                              0.0   0.2        0.4         0.6             0.8          1.0          0.0          0.2           0.4         0.6       0.8        1.0
+                                              Rollout Accuracy                                                                 Rollout Accuracy
+       Figure 3 Nonlinear reward transformations with utility functions. Reward transformation induced by logmeanexpβ
+      for different values of β, alongside the ones of pass@k: u(p) = 1 − (1 − p)k , and the mean of pass@k values. See
+      Appendix D for details.
+
+
+       For hierarchical inference, however, we made the modeling assumption that implementations are conditionally
+       independent and all interactions are captured by their dependence on the decomposition D. In this case, we
+       can evaluate all combinations of implementations generating a matrix (Iij )j,i ∀i, j for all functions. We can
+       obtain the improved estimator:
+                                                          1      ∑                 ∑
+                                      ĝhierarchical =                                             (r(D, I1j1 , . . . , Injn ) − b)∇θ log πθ (a),
+                                                         kn
+                                                              j1 ,...,jn ≤k a∈{D,I j1 ,...,In
+                                                                                            jn
+                                                                                               }
+                                                                                   1
+
+
+
+      of which ĝstandard represents the diagonal terms (Iij )i,i ∀i. Clearly, both estimators are unbiased, but we have
+      Var(ĝhierarchical ) ≤ Var(ĝstandard ), as we show in Theorem A.2.
+
+       2.4 Reinforcement learning objectives
+      We do not expect hierarchical inference to improve upon whole code generation when compared on a single-
+      attempt (pass@1) basis. This is because hierarchical inference comes with a loss in precision (conditional
+      independence instead of joint modeling of implementations) and with only one sample we do not gain anything
+      from the recombination. Instead, we propose to focus on the task of eﬀicient inference scaling, i.e, comparing
+      pass@k (Chen et al., 2021) metrics for large values of k >> 100.
+       Given n rollouts τj with rewards r = (r(τ1 ), . . . , r(τn )) and a multi-sample objective function f (r), Tang
+       et al. (2025) optimize Eτi ∼πθ [f (r)]. Here, f is typically a function of a variable number of arguments,
+       permutation-invariant and monotonic in each argument such as the maximum function. They show this can
+       be achieved directly by using gradients for any baseline b independent of τi such as the leave-one-out baseline
+       b = f (r−i ) := f (r1 , . . . , r̂i , . . . , rn ) which omits ri , giving
+                                                                 [                                      ]
+                                                                   ∑
+                                                     g = Eτi ∼πθ      (f (r) − f (r−i )) ∇θ log πθ (τi ) .
+                                                                              i
+
+
+     In the case of hierarchical inference where the solutions are recombined before evaluation, we have a large
+     number of correlated rewards and optimize for large pass@k. Unlike the original paper (Tang et al., 2025), we
+     can’t take f as the maximum over all samples since it would saturate and lead to extremely sparse advantages:
+     a positive advantage would only be observed if τi is the only solution among k attempts that solves the task
+     (see Figure 10 in the Appendix). To adapt multi-sample objective training to this use case, we propose to
+     use soft objective functions that interpolate between the hard maximum (pass@k training) and the average
+     (standard training). We opt for the logmeanexpβ function defined by
+                                                                                                           (                )
+                                                                                                               1 ∑ ri /β
+                                                                                                                 n
+                                                         logmeanexpβ (r1 , . . . , rn ) = β log                      e          .                                (1)
+                                                                                                               n i=1
+
+
+                                                                                           4
+This function smoothly interpolates between the average (β → ∞) and the maximum (β → 0), and for
+a well-chosen β closely approximates a log-uniform mixture of pass@k objectives (see Figure 3), balancing
+exploration and exploitation (see Appendix C).
+Concretely, in the setup of hierarchical inference, we apply this form of reward aggregation as follows. We
+generate d decompositions Di of size ni , 1 ≤ i ≤ d, respectively and k implementations for each function in
+each Di . For each decomposition, we evaluate m ≤ k max (n1 ,..,nd ) combinations. Write r for all dm rewards
+obtained in this way, rij for a single reward, i ≤ d, j ≤ m and A(rij ) for the set of actions involved in rij .
+DecompRL is a cooperative framework of two policies: decomposition πθ (D) and implementation πθ (I | D).
+For the decomposition policy, we use the policy gradient
+                      [ n                                                                    ]
+                       ∑(                                                    )
+                                                                     ′
+             g = Erij       logmeanexpβ (r) − logmeanexpβ ({ri′ j | i ̸= i)}) ∇θ log πθ (Di ) .      (2)
+                         i=1
+
+
+For the implementation policy, assume d = 1 and write rj for r1,j . Then we use the policy gradient
+                                                                                                   
+                    ∑ (                                                        )
+         g = E rj        logmeanexpβ (r) − logmeanexpβ ({rj | Iljl ∈/ A(rj )}) ∇θ log πθ (Iljl | D) .
+                  l≤n,jl ≤k
+
+
+In other words, the advantage is computed from the multi-sample objective using all observed rewards and
+baselined by the multi-sample objective computed from all rewards that an action did not participate in.
+Because, by this construction, the baseline is independent of the action, it does not bias the gradient estimate.
+The leave-one-out baseline reduces the overall gradient variance (see Appendix E for the computation adapted
+to multi-sample objectives). Empirically, the reward tensor over recombinations is well-approximated by a
+rank-1 (Appendix J), confirming that credit concentrates along individual function axes and that the leave-
+one-out baseline provides reliable advantage estimates from a sparse subset of k n combinations.
+
+
+3    Experimental setup
+
+3.1 Overview
+Datasets and models: We perform experiments with three different large language models: Qwen 2.5 7B
+(Qwen et al., 2025), Llama 3.1 8B Instruct (AI @ Meta, 2024) and the Code World Model 32B (FAIR
+CodeGen team et al., 2025). We train all models with online reinforcement learning on a mix of 15, 000
+competitive programming problems including the CodeContest (Li et al., 2022) and TACO Li et al. (2023)
+training sets. We evaluate on the DeepMind Code Contest validation set (Li et al., 2022) (117 problems)
+and LiveCodeBench range 2024/08/01 to 2025/02/01 (279 problems) (Jain et al., 2024a). All evaluations are
+done with temperature 1.0 and top-p 1.0 to promote answer diversity.
+Algorithms: Similar to Shao et al. (2024); DeepSeek-AI (2025), we optimize policy gradients using Proximal
+Policy Optimization (PPO) (Schulman et al., 2017) without a critic model using the advantage described in
+section 2.3. We use an asynchronous distributed RL framework (Gehring et al., 2025; Noukhovitch et al.,
+2025) where we divide 80 H100s into a set of workers (producing samples) and trainers (updating the current
+policy). We use 72 workers and 8 trainers. All code generations are evaluated on an external CPU cluster.
+Baselines: We compare with Group Relative Policy Optimization (GRPO) and algorithms optimized for high
+pass@k performance specifically: pass@k training (Chen et al., 2025) (set k = 8), Soft Policy Optimization
+(SPO Cohen et al. (2025)) and our own logmeanexp leave-one-out objective (see Equation 2) with β = 0.3.
+All methods use 16 samples per prompt. We also include a logmeanexp objective with 48 samples per
+prompt and β = 0.1 to mimic the number of forwards per decomposition present in DecompRL training (at
+most 6 functions and 8 implementations per problem). See hyperparameter and baseline tuning details in
+Appendix G and H.
+
+
+
+
+                                                       5
+3.2 DecompRL as Multi-Agent Reinforcement Learning
+DecompRL is a form of cooperative multi-agent RL where a decomposition and an implementation policy
+maximize the number of correct code combinations. Multi-agent reinforcement learning poses challenges not
+present in single-agent reinforcement learning. Agent policies are interdependent and non-stationary, which
+raises the questions of how to perform credit assignment after jointly observed rewards and how to optimize
+toward a social optimum (in the cooperative case) (Albrecht et al., 2024). To address the moving target
+problem, we use sequential training and a counterfactual action value estimation (Foerster et al., 2024) with
+our leave-one-out baseline. Similar to Expectation-Maximization algorithms Rosipal and Girolami (2001),
+our training has two stages. The decomposition and implementation policies are represented by two different
+copies of our model. First, we train the decomposition policy for 30k steps keeping the implementation policy
+fixed. Second we train the implementation policy also for 30k steps keeping the decomposition fixed. For each
+problem, we use 8 decomposition samples. For a decomposition with n functions (nmax = 6), we implement
+each 8 times yielding 8n code combinations. We randomly sample 512 to evaluate out of 8n to balance
+exploration between breadth-first (exploring new problems) and depth-first search (scaling evaluations per
+problem). Although we have two copies of the model, only one is trained at a time so this has similar cost
+as the reference policy used in traditional RL algorithms.
+
+
+4 Results
+DecompRL produces large numbers of diverse samples that lead to diverse solutions (Section 4.1), learns
+modularity (Section 4.2) and solves new problems (Section 4.3)
+
+Table 1 DecompRL makes the most of high token compute. We compare pass@tokens: given a set token budgets what is
+the solve rate across different online RL training methods on LiveCodeBench using Qwen 2.5 7B.
+
+             Token budget      GRPO      instruct   lme16    lme48    pass@8    DecompRL (ours)
+             1,000 tokens       0.18       0.06      0.19     0.12     0.15            0.18
+             5,000 tokens       0.29       0.16      0.28     0.26     0.27            0.18
+             10,000 tokens      0.32       0.21      0.31     0.30     0.31            0.25
+             50,000 tokens      0.38       0.30      0.38     0.36     0.39            0.40
+             100,000 tokens     0.40       0.33      0.40     0.39     0.41            0.44
+             500,000 tokens     0.44       0.39      0.46     0.44     0.46            0.48
+
+
+
+
+4.1 DecompRL leads to diverse solutions
+A decomposition with n functions and k implementations per function costs nk + 1 model forwards and yields
+k n (correlated) code combinations for evaluation. For hierarchical inference to make a difference, we need
+the final solutions to have enough diversity to offset their generation cost compared to nk + 1 independent
+whole-code samples. With the Llama 3.1 8B and Qwen 2.5 7B, we show training the decomposition policy
+increases success rates per decomposition and number of evaluations.
+In Figure 5a, we investigate the diversity of recombined programs by fixing a maximum number m of code
+evaluations per decomposition and observing the relationship between m and the overall success rate of a
+DecompRL model. It can be seen that the success rate from less than 50 model forwards per problem shows
+no sign of plateauing even when scaling m up to 1000 evaluations. Crucially, this remains true throughout
+reinforcement learning training as shown in Figure 4b where the solve rate continues to increase given a fixed
+evaluation budget of m = 512 code samples.
+
+4.2 Recombination matters
+The benefit of recombining partial solutions is most pronounced when the decomposition size n is large where
+n is the number of functions picked by the model. In our experiments, we see that models with similar success
+
+
+                                                       6
+                                        CodeContests valid                                                                                            Qwen 2.5 7B: Training Time Exploration                                                                                                  Evolution of the Decomposition Size
+                                                                                                                                32
+                        GRPO                                                                                                                 RL method:                                                                                                                                                                                     = 0.03
+               0.5      Llama 3.1 8B Instruct                                                                                            Log-mean-exp (16 samples)
+                                                                                                                                         Log-mean-exp (48 samples)                                                                                      4.4                                                                                 = 0.07
+                        pass@8 training                                                                                         30       Pass@8 (16 samples)                                                                                                                                                                                = 0.1
+                        SPO online                                                                                                       GRPO (16 samples)
+               0.4      hierarchical                                                                                                     Decomposition policy
+                                                                                                                                         Implementation policy
+                                                                                                                                                                                                                                                        4.2
+
+
+
+
+                                                                                                                                                                                                                          Average number of functions
+                                                                                                                                28
+
+                                                                                                                                                                                                                                                        4.0
+Success rate
+
+
+
+
+               0.3
+
+
+
+
+                                                                                                          Problems Solved (%)
+                                                                                                                                26
+
+                                                                                                                                                                                                                                                        3.8
+               0.2                                                                                                              24
+
+
+                                                                                                                                                                                                                                                        3.6
+                                                                                                                                22
+               0.1
+                                                                                                                                                                                                                                                        3.4
+                                                                                                                                20
+
+               0.0
+                           103          104         105         106            107                                                   0         2000       4000        6000           8000       10000   12000     14000
+                                                                                                                                                                                                                                                                              0        5000       10000       15000        20000    25000       30000
+                                    Generated tokens per problem                                                                                                             Problems Seen                                                                                                                Training steps
+
+
+                                            (a)                                                                                                                         (b)                                                                                                                                (c)
+
+    Figure 4 Diversity from recombined samples. (a) Scaling inference-compute on CodeContests valid: Standard reinforce-
+   ment learning for code (GRPO) increases pass@1 while degrading pass@k for large k. Our method of hierarchical
+   inference is competitive with scaling inference on the instruct model as well as with diversity-focused reinforcement
+   learning methods pass@8-training and SPO when evaluating only up to 4096 combinations per decomposition. (b)
+   Training the implementation and decomposition policies both help increase the solve rate per problem. (c) The de-
+   composition policy learns to use less functions during training. We apply a logmeanexp normalization where the β
+   can be tuned between mean (β → ∞) and max (β → 0).
+
+               0.25                                                                                       0.44                                                                                                                                                                0.44
+                                                                                                          0.42                                                                               (dec,impl)=(18k,3k)                                                              0.42                                (dec,impl)=(18k,3k)
+               0.20                                                                                                                                                                                                                                                                                         (dec,impl)=(21k,6k)
+
+
+
+
+                                                                                                                                                                                                                                                         Success rate d=100
+                                                                                                                                                                                              (dec,impl)=(21k,6k)
+                                                                                     Success rate d=100
+
+
+
+
+                                                                                                          0.40                                                                                       decomposition                                                            0.40                             decomposition
+Success rate
+
+
+
+
+               0.15                                                                                       0.38                                                                                                                                                                0.38
+                                                                                                          0.36                                                                                                                                                                0.36
+               0.10                                                                                                                                                                            joint (beta=0.1)                                                                       joint (beta=0.1)
+                                                                   RL step 3000
+                                                                   RL step 6000                           0.34                                                                                                                                                                0.34
+                                                                   RL step 9000                                                                                                       joint (beta=0.05)                                                                                joint (beta=0.05)
+               0.05                                                RL step 12000
+                                                                                                          0.32 implementation                                                                                                                                                 0.32                                                   implementation
+                                                                   RL step 15000
+                                                                   RL step 18000
+               0.00 0
+                                                                   RL step 21000                          0.30                                                                                                                                                                0.30
+                   10                101                 102                   103                           0.18                                     0.20            0.22       0.24                             0.26                                                               1.5    2.0     2.5 3.0 3.5 4.0 4.5                        5.0
+                                   Evaluations per decomposition                                                                                                 Success rate d=10                                                                                                                     Number of functions
+                                           (a)                                                                                                                       (b)                                                                                                                                      (c)
+
+   Figure 5 Recombination is critical for benchmark performance. A series of analysis done with LLama 3.1 8B Instruct. (a)
+   Training a decomposition and implementation policy helps maximize success rate per re-combined code evaluation
+   despite a fixed inference budget. (b) Let d the number of decompositions per problem, success rate at d = 10 attempts
+   does not predict success rate at d = 100 attempts, (c) whereas the size of decompositions does. Best performing
+   models for large attempt numbers produce bigger decompositions on average.
+
+
+   rates using 10 decompositions behave very differently when inference is scaled to 100 decompositions. As we
+   scale the inference budget per problem, models that create larger decompositions improve faster than those
+   with smaller ones. The success rate with 10 decomposition attempts does not predict the success rate with
+   100 attempts, but the size of the decomposition does (see Figures 5b and 5c).
+
+    4.3 Solving new problems
+    DecompRL through recombination and diverse evaluations solves new problems that are harder (Figure 1)
+    and only solvable at high inference budgets (Figure 4 and Table 1). Using different models with DecompRL
+    training, we beat the best existing methods for reinforcement learning when using high inference budgets (up
+    to 3 million tokens per problem). We evaluate m = 4096 combinations per decomposition, which is roughly
+    80 times more than nk + 1 language model calls would have produced with standard whole-code generation.
+    On the other hand, m = 4096 is small compared to the theoretical maximum k nmax = 86 of combinations that
+    hierarchical inference can produce. Additional CPU execution resources could further increase the appeal of
+    the method according to the scaling behavior in Figure 4. DecompRL can help overcome the limits of our
+    SFT checkpoint and find solutions not available with regular inference. We see it as a useful way to gather
+    offline data to improve the starting policy.
+
+
+
+                                                                                                                                                                      7
+         0.18
+                                                                      0.30
+         0.16
+                                                                      0.25
+         0.14
+
+
+
+
+                                                            entropy
+reward
+
+
+
+         0.12                                                         0.20
+         0.10                                                         0.15
+                                                                                                       DecompRL
+                                                                      0.10                             No logmeanexp
+         0.08                                                                                          No sequential training
+                                                                                                       No leave one out
+         0.06                                                         0.05
+                15000   20000 25000 30000          35000                     0   5000   10000 15000 20000        25000
+                             training steps                                                 training steps
+  Figure 6 Ablation study on the DecompRL objective, removing logmeanexp for a mean aggregation over rewards using
+  a softmax, removing sequential training for joint training of both policies, and the leave one out baseline for value
+  estimation in the advantage all lead to entropy or reward collapse.
+
+
+  5        Analysis
+
+  5.1 Ablation Study on DecompRL
+  In standard RL with LLMs, one action leads to one reward and with GRPO we compute the advantage
+  over a group G of rewards where G << 100 due to inference limitations. In DecompRL, we instead have
+  two policies performing k × n actions which lead to k n rewards. The advantage of each action is therefore
+  estimated by many indirect and correlated rewards. In order to prevent over-estimating certain actions, we
+  introduce in equation 2: 1) a leave one out instead of mean baseline, 2) transforming the rewards per action
+  using a logmeanexp function (Equation 1) 3) training sequentially a set of two policies. Figure 6 shows how
+  each component prevents instabilities. We run ablations on the Code World Model 32B.
+ Ablation on logmeanexp. We compare our max interpolation (logmeanexp, β = 0.03) with a mean interpolation
+ (softmax, β = 0.5). As we have many noisy rewards optimizing towards the mean eventually leads to reward
+ collapse. Lower β in logmeanexp also leads to faster decomposition size decay (see Figure 4c).
+ Ablation on sequential training. Instead of alternating between training the implementation and decomposition
+  policies, we study two other strategies: training only the implementation policy, and jointly training both
+  policies (meaning no frozen model). Without clear credit assignment and with an over representation of
+  implementation samples, we overfit the implementation policy and underfit the decomposition policy. Joint
+  training leads to entropy collapse (Figure 6) whereas sequential training allows us to keep scaling the number
+  of functions with increased gains in performance (Figure 5).
+ Ablation on leave one out baseline. Removing the leave one out baseline in the advantage calculation for both
+  policies leads to much lower rewards and earlier plateau.
+
+  5.2 Computational cost: GPU to CPU bottleneck shift
+ A key advantage of DecompRL is that it shifts the dominant cost from GPU inference to CPU evaluation.
+ Table 2 reports wall-clock breakdowns for Qwen 2.5 7B on our training setup (see details in Appendix H).
+ At 512 evaluations per problem, DecompRL generates only ∼4k tokens (one decomposition plus n × 8 short
+ function implementations) versus ∼198k for standard sampling, a ∼50× reduction in GPU cost. The evalua-
+ tion cost is identical in both cases since both evaluate the same number of candidate solutions. This makes
+ the total wall-clock time dominated by CPU execution rather than GPU generation.
+ When parallelized, the wall-clock saving from DecompRL scales with how GPU-bound the system is: at 8
+ GPUs with 128 remote execution threads, where generation dominates, DecompRL delivers a 3.6× speedup;
+ at 8 GPUs with 64 threads, a 2.3× speedup; while at 72 GPUs with 128 threads, where remote execution
+ already dominates, the saving shrinks to 1.3×. Since our cluster is heavily GPU-optimized, we argue scaling
+
+
+
+                                                           8
+Table 2 Wall-clock cost breakdown per training step for Qwen 2.5 7B. DecompRL reduces GPU token generation by ∼50×
+at 512 evaluations, shifting the bottleneck to CPU-bound code execution. These numbers are per prompt so for a full
+sample size.
+
+                                 Generation            Execution        Training               Total
+    Method        Samples     Tokens    Time (s)    Calls   Time (s)    Time (s)    Time (s)     GPU / CPU
+    Standard         16         10k        108       16        371          1.1        479        23% / 77%
+    Standard        512        198k       2100       512      11878        21.8       14000       15% / 85%
+    DecompRL        512          4k        42        512      11878         0.4       11900      0.4% / 99.6%
+
+
+the number of CPUs (which is often cheaper than scaling GPUs) could unlock even larger gains for DecompRL
+since the marginal cost of evaluating more recombinations is essentially free on the GPU side.
+
+
+6    Limitations and Discussion
+Format tax. Hierarchical inference without RL training underperforms standard inference, with pass@1
+dropping by 3 percentage points for Qwen 2.5 7B and performing similarly below the standard baseline for
+CWM 32B (Table 4). DecompRL with Llama 3.1 8B Instruct model degrades performance from 26.6% to
+14.5% on the CodeContest validation with the same token budget (10 attempts with DecompRL, correspond-
+ing to pass@316 for standard inference). On the “easy” split of LiveCodeBench, DecompRL performs worse
+than the starting policy using Qwen 2.5 7B (see Figure 1). More generally, for easy problems and low token
+budgets, the format tax of decomposition outweighs the gains from additional recombined evaluations, since
+a strong base model can already solve these problems in a single monolithic attempt. Looking at the Code-
+Contest training set as an example of competitive programming data, we notice decomposition and function
+generation are off-policy tasks for the model. Only 65 % of the provided solutions in the CodeContests
+training set contain functions. We expect data in the training stage of the Llama 3.1 8B Instruct model
+to follow a similar distribution and potentially not encourage modular coding. The model has also been
+heavily fine-tuned through RLHF (Christiano et al., 2023), human annotations and synthetic data for the
+specific task of generating full code answers when prompted with problems in the standard inference setup.
+DecompRL unlike other reinforcement learning algorithms has to overcome this off-policyness during training.
+RL training closes this gap, with DecompRL surpassing even standard inference for both models (Table 4).
+
+Size collapse. Hierarchical inference comes with the cost of reduced precision at the single sample level.
+Decomposition training leads to a decreasing decomposition size (see Figure 4c). This can allow for more
+relevant functions but in the limit if we have a single function, hierarchical inference becomes equivalent to
+classical whole-code generation. We see this as a form of reward hacking during training which can be delayed
+by using a lower β in the logmeanexp objective and alternating between implementation and decomposition
+training. Simpler approaches such as bonuses based on the decomposition size led to reward hacking.
+
+Sampling time. During training, DecompRL scales the number of evaluations per problem to up to 512 in
+our experiments compared to the default 16. This allows for more exploration during training (see Figure
+5a) but can also lead to: slower worker GPUs and introduce off-policyness in online RL. We see DecompRL
+as a policy distillation method for gathering new solutions on the training set not available with regular RL.
+If we have a good enough starting policy using regular RL remains more eﬀicient as a post training strategy.
+
+
+7 Related works
+Scaling inference methods. Intermediate steps to help models generate correct code solutions has been
+studied at the “plan”, “algorithm” and “function” level (Khot et al., 2023; Zhou et al., 2024, 2023; Jain
+et al., 2024b; Wang et al., 2025). We adapt the decomposition and function approach from Zelikman et al.
+(2023). To promote sampling diversity, optimizing over code generation trajectories has been studied mainly
+
+
+                                                        9
+with repeated sampling (Li et al., 2022), self-refinement chains with execution feedback (Shinn et al., 2023;
+Madaan et al., 2023), and tree search using multiple children solutions per chain Feng et al. (2024); Yao et al.
+(2023); Light et al. (2025). Tree based generation systematically organizes and potentially directs linear
+generation, but generally does not create a combinatorial increase in solutions to evaluate (each evaluated
+leaf has to have been generated).
+
+Recombination of partial solutions. Methods that decompose a problem into separate parts which can be
+solved independently and then recombined have been studied for solving mathematical and coding tasks.
+In mathematical theorem proving, tree search in formal theorem proving systems decomposes the problem
+into sub-goals that can be solved and checked independently by the verifier (Lample et al., 2022; Polu et al.,
+2022). In code generation and symbolic regression, library learning creates solutions to sub-problems for later
+reuse (Ellis et al., 2023; Gauthier et al., 2023; Grayeli et al., 2024). These methods study re-combination
+at the inference level with a fixed policy for determining blocks whereas we propose reinforcement learning
+to improve the policy. Programs can be analyzed hierarchically (Shi et al., 2024) or generated hierarchically
+(Zelikman et al., 2023). Via clustering in the embedding space (CodeChain (Le et al., 2023)), prompting
+different agents MapCoder (Islam et al., 2024) and iterating on trees of functions based on shared consensus
+(Divide and Conquer (Chen et al., 2024)), inference methods have enforced modularity in code generation
+trajectories.
+
+Self-play reinforcement learning. In formal mathematical proving, a conjecturer model asserts statements
+for a prover to prove, either as a self-guided exploration task with intrinsic motivation (Poesia et al., 2024)
+or as a live augmentation technique during a standard reinforcement learning run for theorem proving (Dong
+and Ma, 2025). In the domain of code, self-play involves a programming puzzle generator and a model that
+solves the generated tasks (Haluptzok et al., 2022; Teodorescu et al., 2023). In DecompRL, the decomposition
+model can be viewed as a self-play teacher that is conditioned on the underlying programming problem to
+be solved.
+
+Expert Iteration. Expert iteration (Anthony et al., 2017) divides the problem into an “expert” (a slow tree
+search algorithm doing the heavy exploration) and an “apprentice” (a fast neural network). As DecompRL
+is optimized for harder problems and high pass@k, we can view it as the “expert” policy gathering novel
+solutions to train a starting RL policy offline (the “apprentice”). Online expert iteration methods such as
+STaR (Zelikman et al., 2022), Quiet-STaR (Zelikman et al., 2024), ReST (Gulcehre et al., 2023), and ReST-
+MCTS Zhang et al. (2024) use the same model as expert and apprentice to iteratively bootstrap its reasoning
+capabilities using successful trajectories. Similar to our hierarchical inference process, ReST-MCTS goes
+beyond regular inference using tree search to find solutions normally missed by a weak starting policy.
+
+
+8 Conclusion
+Solving programming problems by decomposing them into simpler subproblems and recombining them into
+full solutions allows scaling inference-time evaluation budgets with a limited number of language model calls.
+However, off-the-shelf instruction finetuned models do not fare well at this task. We introduce DecompRL,
+a reinforcement learning technique that directly trains models for hierarchical inference, greatly enhancing
+their performance on this task. This method encourages diversity by directly optimizing for a mixture of
+pass@k objectives with a novel logmeanexp advantage function. The resulting models use recombination
+to solve problems unreachable with regular RL training. With evaluation up to pass@1k or 107 generated
+tokens per problem, we show with different models (Llama 3.1 8B Instruct, Qwen 2.5 7B) that the success
+rate of DecompRL continues to scale whereas other methods begin saturating. With larger CPU resources,
+we envision the potential for significant advancements when scaling such systems to millions of evaluated
+answers. Moreover, the modularity of the resulting generation pipeline offers avenues for interpretability
+insights and an axis of control which is not available in other methods of scaling inference compute, such as
+in repeated sampling or scaled chain-of-thought.
+A promising direction is to use DecompRL as the explorer stage of an explorer/distiller pipeline (DeepSeek-
+AI et al., 2025; Rastogi et al., 2025): DecompRL generates diverse correct solutions at high budgets, and a
+
+
+                                                      10
+standard pass@1 policy is then distilled from these trajectories via supervised fine-tuning. This two-stage
+protocol could combine DecompRL’s exploration strength with the eﬀiciency of monolithic generation at
+deployment time. We also note that problem types that are naturally parallelizable or have a hierarchical
+structure such as multi-step proofs, nested algorithmic routines, or layered engineering systems are likely to
+benefit most from the modular decomposition that DecompRL encourages.
+Looking forward, many scientific and engineering tasks are more easily evaluated than solved, presenting
+opportunities for innovative solutions. For writing entire codebases that solve specific problems, models could
+achieve acceptable pass rates at scale (e.g., pass@1M), even if their initial performance (pass@1) is poor. Our
+findings suggest that DecompRL is a high performing search policy to solve new and harder problems and
+could become an ingredient of any training pipeline where recombination is possible and evaluation is cheap
+while generation is expensive.
+More generally, our findings shed light onto the hard exploration question in LLM post-training (Cui et al.,
+2025): How can models discover new behaviors that allow solving previously unsolved tasks without the need
+for human annotations, and more eﬀiciently than via finetuning on large-scale rejection sampled datasets (e.g.
+in formal math Polu et al., 2022; Lin et al., 2025)? While DecompRL is specific to code generation, it hints
+at a possible future where exploration policies are trained specifically for creating high-quality data with
+behaviors that the final, exploiting policy trained with a standard pass@1 objective could not have found by
+itself over the course of its training.
+
+
+
+
+                                                      11
+References
+Llama Team AI @ Meta. The Llama 3 Herd of Models, 2024.
+Stefano V. Albrecht, Filippos Christianos, and Lukas Schäfer. Multi-Agent Reinforcement Learning: Foundations and
+  Modern Approaches. MIT Press, 2024. https://www.marl-book.com.
+Thomas Anthony, Zheng Tian, and David Barber. Thinking fast and slow with deep learning and tree search. Advances
+  in neural information processing systems, 30, 2017.
+Bradley Brown, Jordan Juravsky, Ryan Ehrlich, Ronald Clark, Quoc V Le, Christopher Ré, and Azalia Mirhoseini.
+  Large language monkeys: Scaling inference compute with repeated sampling. arXiv preprint arXiv:2407.21787,
+  2024.
+Jingchang Chen, Hongxuan Tang, Zheng Chu, Qianglong Chen, Zekun Wang, Ming Liu, and Bing Qin. Divide-and-
+   conquer meets consensus: Unleashing the power of functions in code generation, 2024. https://arxiv.org/abs/
+   2405.20092.
+Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde De Oliveira Pinto, Jared Kaplan, Harri
+ Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman, et al. Evaluating large language models trained on code.
+ arXiv preprint arXiv:2107.03374, 2021.
+Zhipeng Chen, Xiaobo Qin, Youbin Wu, Yue Ling, Qinghao Ye, Wayne Xin Zhao, and Guang Shi. Pass@ k training
+  for adaptively balancing exploration and exploitation of large reasoning models. arXiv preprint arXiv:2508.10751,
+  2025.
+Paul Christiano, Jan Leike, Tom B. Brown, Miljan Martic, Shane Legg, and Dario Amodei. Deep reinforcement
+  learning from human preferences, 2023. https://arxiv.org/abs/1706.03741.
+Taco Cohen, David W Zhang, Kunhao Zheng, Yunhao Tang, Remi Munos, and Gabriel Synnaeve. Soft policy
+  optimization: Online off-policy rl for sequence models. arXiv preprint arXiv:2503.05453, 2025.
+Ganqu Cui, Yuchen Zhang, Jiacheng Chen, Lifan Yuan, Zhi Wang, Yuxin Zuo, Haozhan Li, Yuchen Fan, Huayu Chen,
+ Weize Chen, Zhiyuan Liu, Hao Peng, Lei Bai, Wanli Ouyang, Yu Cheng, Bowen Zhou, and Ning Ding. The entropy
+  mechanism of reinforcement learning for reasoning language models, 2025. https://arxiv.org/abs/2505.22617.
+Dominique de Caen, David A. Gregory, and Norman J. Pullman. The boolean rank of zero-one matrices, 1981.
+DeepSeek-AI. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning, 2025. https://
+  arxiv.org/pdf/2501.12948.
+DeepSeek-AI, Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu, Shirong
+  Ma, Peiyi Wang, Xiao Bi, et al. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning,
+  2025. https://arxiv.org/abs/2501.12948.
+Kefan Dong and Tengyu Ma. Stp: Self-play llm theorem provers with iterative conjecturing and proving, 2025.
+  https://arxiv.org/abs/2502.00212.
+Kevin Ellis, Lionel Wong, Maxwell Nye, Mathias Sable-Meyer, Luc Cary, Lore Anaya Pozo, Luke Hewitt, Armando
+  Solar-Lezama, and Joshua B Tenenbaum. Dreamcoder: growing generalizable, interpretable knowledge with wake–
+  sleep bayesian program learning. Philosophical Transactions of the Royal Society A, 381(2251):20220050, 2023.
+FAIR CodeGen team, :, Jade Copet, Quentin Carbonneaux, Gal Cohen, Jonas Gehring, Jacob Kahn, Jannik
+  Kossen, Felix Kreuk, Emily McMilin, Michel Meyer, Yuxiang Wei, David Zhang, Kunhao Zheng, Jordi Armengol-
+  Estapé, Pedram Bashiri, Maximilian Beck, Pierre Chambon, Abhishek Charnalia, Chris Cummins, Juliette Decugis,
+  Zacharias V. Fisches, François Fleuret, Fabian Gloeckle, Alex Gu, Michael Hassid, Daniel Haziza, Badr Youbi Idrissi,
+  Christian Keller, Rahul Kindi, Hugh Leather, Gallil Maimon, Aram Markosyan, Francisco Massa, Pierre-Emmanuel
+  Mazaré, Vegard Mella, Naila Murray, Keyur Muzumdar, Peter O’Hearn, Matteo Pagliardini, Dmitrii Pedchenko,
+  Tal Remez, Volker Seeker, Marco Selvi, Oren Sultan, Sida Wang, Luca Wehrstedt, Ori Yoran, Lingming Zhang,
+  Taco Cohen, Yossi Adi, and Gabriel Synnaeve. Cwm: An open-weights llm for research on code generation with
+  world models, 2025. https://arxiv.org/abs/2510.02387.
+Xidong Feng, Ziyu Wan, Muning Wen, Stephen Marcus McAleer, Ying Wen, Weinan Zhang, and Jun Wang. Alphazero-
+  like tree-search can guide large language model decoding and training, 2024. https://arxiv.org/abs/2309.17179.
+Jakob Foerster, Gregory Farquhar, Triantafyllos Afouras, Nantas Nardelli, and Shimon Whiteson. Counterfactual
+  multi-agent policy gradients, 2024. https://arxiv.org/abs/1705.08926.
+
+
+                                                         12
+Michael R Garey and David S Johnson. Computers and intractability, volume 29. wh freeman New York, 2002.
+Thibault Gauthier, Miroslav Olšák, and Josef Urban. Alien coding. International Journal of Approximate Reasoning,
+  162:109009, 2023.
+Jonas Gehring, Kunhao Zheng, Jade Copet, Vegard Mella, Quentin Carbonneaux, Taco Cohen, and Gabriel Synnaeve.
+  Rlef: Grounding code llms in execution feedback with reinforcement learning, 2025. https://arxiv.org/abs/2410.
+  02089.
+Arya Grayeli, Atharva Sehgal, Omar Costilla Reyes, Miles Cranmer, and Swarat Chaudhuri. Symbolic regression with
+  a learned concept library. Advances in Neural Information Processing Systems, 37:44678–44709, 2024.
+Caglar Gulcehre, Tom Le Paine, Srivatsan Srinivasan, Ksenia Konyushkova, Lotte Weerts, Abhishek Sharma, Aditya
+  Siddhant, Alex Ahern, Miaosen Wang, Chenjie Gu, et al. Reinforced self-training (rest) for language modeling.
+  arXiv preprint arXiv:2308.08998, 2023.
+Gabriel Haller, Talia Ringer, Jason Rute, and Brando Miranda. Peano: Learning formal mathematical reasoning,
+  2024. https://arxiv.org/abs/2405.06738.
+Patrick Haluptzok, Matthew Bowers, and Adam Tauman Kalai. Language models can teach themselves to program
+  better. arXiv preprint arXiv:2207.14502, 2022.
+Chia-Tung Ho, Yikang Shen, Jingyu Pan, Chao Fang, Hao Liu, Tianyu Liu, and Zhiru Zhang. Openllm-rtl: Open
+  dataset and benchmark for llm-aided design of digital circuits, 2024. https://arxiv.org/abs/2407.14326.
+John Hughes, Sara Price, Aengus Lynch, Rylan Schaeffer, Fazl Barez, Sanmi Koyejo, Henry Sleight, Erik Jones, Ethan
+  Perez, and Mrinank Sharma. Best-of-n jailbreaking, 2024. https://arxiv.org/abs/2412.03556.
+Md. Ashraful Islam, Mohammed Eunus Ali, and Md Rizwan Parvez. Mapcoder: Multi-agent code generation for
+ competitive problem solving, 2024. https://arxiv.org/abs/2405.11403.
+Naman Jain, King Han, Alex Gu, Wen-Ding Li, Fanjia Yan, Tianjun Zhang, Sida Wang, Armando Solar-Lezama,
+  Koushik Sen, and Ion Stoica. Livecodebench: Holistic and contamination free evaluation of large language models
+  for code. arXiv preprint arXiv:2403.07974, 2024a.
+Naman Jain, Tianjun Zhang, Wei-Lin Chiang, Joseph E. Gonzalez, Koushik Sen, and Ion Stoica. Llm-assisted code
+  cleaning for training accurate code generators. In The Twelfth International Conference on Learning Representations,
+  ICLR 2024, Vienna, Austria, May 7-11, 2024. OpenReview.net, 2024b. https://openreview.net/forum?id=
+  maRYffiUpI.
+Tushar Khot, Harsh Trivedi, Matthew Finlayson, Yao Fu, Kyle Richardson, Peter Clark, and Ashish Sabharwal.
+  Decomposed prompting: A modular approach for solving complex tasks. In The Eleventh International Conference
+  on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023. OpenReview.net, 2023. https://
+  openreview.net/forum?id=_nGgzQjzaRy.
+Diederik Kingma and Jimmy Ba. Adam: A method for stochastic optimization. ICLR, 2015.
+Guillaume Lample, Marie-Anne Lachaux, Thibaut Lavril, Xavier Martinet, Amaury Hayat, Gabriel Ebner, Au-
+  rélien Rodriguez, and Timothée Lacroix. Hypertree proof search for neural theorem proving. arXiv preprint
+ arXiv:2205.11491, 2022. https://doi.org/10.48550/arXiv.2205.11491.
+Hung Le, Hailin Chen, Amrita Saha, Akash Gokul, Doyen Sahoo, and Shafiq Joty. Codechain: Towards modular code
+  generation through chain of self-revisions with representative sub-modules. arXiv preprint arXiv:2310.08992, 2023.
+Rongao Li, Jie Fu, Bo-Wen Zhang, Tao Huang, Zhihong Sun, Chen Lyu, Guang Liu, Zhi Jin, and Ge Li. Taco: Topics
+  in algorithmic code generation dataset, 2023. https://arxiv.org/abs/2312.14852.
+Yujia Li, David Choi, Junyoung Chung, Nate Kushman, Julian Schrittwieser, Rémi Leblond, Tom Eccles, James
+  Keeling, Felix Gimeno, Agustin Dal Lago, et al. Competition-level code generation with alphacode. Science, 378
+  (6624):1092–1097, 2022.
+Jonathan Light, Yue Wu, Yiyou Sun, Wenchao Yu, Yanchi Liu, Xujiang Zhao, Ziniu Hu, Haifeng Chen, and Wei Cheng.
+  SFS: Smarter code space search improves LLM inference scaling. In The Thirteenth International Conference on
+  Learning Representations, 2025. https://openreview.net/forum?id=MCHuGOkExF.
+Yong Lin, Shange Tang, Bohan Lyu, Jiayun Wu, Hongzhou Lin, Kaiyu Yang, Jia Li, Mengzhou Xia, Danqi Chen,
+  Sanjeev Arora, and Chi Jin. Goedel-prover: A frontier model for open-source automated theorem proving, 2025.
+  https://arxiv.org/abs/2502.07640.
+
+
+
+                                                         13
+Ilya Loshchilov and Frank Hutter. Decoupled weight decay regularization, 2019.
+Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao, Sarah Wiegreffe, Uri Alon, Nouha Dziri,
+ Shrimai Prabhumoye, Yiming Yang, et al. Self-refine: Iterative refinement with self-feedback. Advances in Neural
+ Information Processing Systems, 36:46534–46594, 2023.
+Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves, Ioannis Antonoglou, Daan Wierstra, and Martin
+  Riedmiller. Playing atari with deep reinforcement learning. arXiv preprint arXiv:1312.5602, 2013.
+Michael Noukhovitch, Shengyi Huang, Sophie Xhonneux, Arian Hosseini, Rishabh Agarwal, and Aaron Courville.
+ Asynchronous rlhf: Faster and more eﬀicient off-policy rl for language models, 2025. https://arxiv.org/abs/
+  2410.18252.
+OpenAI. Gpt-4 technical report, 2023.
+Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini
+  Agarwal, Katarina Slama, Alex Ray, et al. Training language models to follow instructions with human feedback.
+  Advances in neural information processing systems, 35:27730–27744, 2022.
+Gabriel Poesia, David Broman, Nick Haber, and Noah Goodman. Learning formal mathematics from intrinsic moti-
+  vation. Advances in Neural Information Processing Systems, 37:43032–43057, 2024.
+Stanislas Polu, Jesse Michael Han, Kunhao Zheng, Mantas Baksys, Igor Babuschkin, and Ilya Sutskever. Formal
+  mathematics statement curriculum learning, 2022.
+Qwen, :, An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan Li, Dayiheng Liu,
+ Fei Huang, Haoran Wei, Huan Lin, Jian Yang, Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jingren
+ Zhou, Junyang Lin, Kai Dang, Keming Lu, Keqin Bao, Kexin Yang, Le Yu, Mei Li, Mingfeng Xue, Pei Zhang, Qin
+ Zhu, Rui Men, Runji Lin, Tianhao Li, Tianyi Tang, Tingyu Xia, Xingzhang Ren, Xuancheng Ren, Yang Fan, Yang
+ Su, Yichang Zhang, Yu Wan, Yuqiong Liu, Zeyu Cui, Zhenru Zhang, and Zihan Qiu. Qwen2.5 technical report,
+ 2025. https://arxiv.org/abs/2412.15115.
+Srishti Rastogi, Yijia Shao, Rohan Padhye, and Diyi Yang. Learn to reason eﬀiciently with adaptive length-based
+  reward shaping, 2025. https://arxiv.org/abs/2504.01191.
+R. Rosipal and M. Girolami. An expectation-maximization approach to nonlinear component analysis. Neural Com-
+  putation, 13:505–510, 2001.
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization
+  algorithms, 2017. https://arxiv.org/abs/1707.06347.
+Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, Y. K.
+  Li, Y. Wu, and Daya Guo. Deepseekmath: Pushing the limits of mathematical reasoning in open language models,
+  2024. https://arxiv.org/abs/2402.03300.
+Yuling Shi, Songsong Wang, Chengcheng Wan, and Xiaodong Gu. From code to correctness: Closing the last mile of
+  code generation with hierarchical debugging. arXiv preprint arXiv:2410.01215, 2024.
+Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao. Reflexion: Language agents
+  with verbal reinforcement learning. Advances in Neural Information Processing Systems, 36:8634–8652, 2023.
+R. Sutton and A. Barto. Reinforcement learning: An introduction. MIT Press, 1998.
+Yunhao Tang, Kunhao Zheng, Gabriel Synnaeve, and Rémi Munos. Optimizing language models for inference time
+  objectives using reinforcement learning. arXiv preprint arXiv:2503.19595, 2025.
+Laetitia Teodorescu, Cédric Colas, Matthew Bowers, Thomas Carta, and Pierre-Yves Oudeyer. Codeplay: Autotelic
+  learning through collaborative self-play in programming environments. In IMOL 2023-Intrinsically Motivated Open-
+  ended Learning workshop at NeurIPS 2023, 2023.
+A. W. van der Vaart. Asymptotic Statistics. Cambridge Series in Statistical and Probabilistic Mathematics. Cambridge
+  University Press, 1998.
+Evan Z Wang, Federico Cassano, Catherine Wu, Yunfeng Bai, William Song, Vaskar Nath, Ziwen Han, Sean M.
+  Hendryx, Summer Yue, and Hugh Zhang. Planning in natural language improves LLM search for code generation.
+  In The Thirteenth International Conference on Learning Representations, 2025. https://openreview.net/forum?
+  id=48WAZhwHHw.
+
+
+
+
+                                                        14
+Ronald J. Williams. Simple statistical gradient-following algorithms for connectionist reinforcement learning. Mach.
+  Learn., 8(3–4):229–256, May 1992. ISSN 0885-6125. doi: 10.1007/BF00992696. https://doi.org/10.1007/
+  BF00992696.
+Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Tom Griﬀiths, Yuan Cao, and Karthik Narasimhan. Tree
+  of thoughts: Deliberate problem solving with large language models. In Alice Oh, Tristan Naumann, Amir
+  Globerson, Kate Saenko, Moritz Hardt, and Sergey Levine, editors, Advances in Neural Information Process-
+  ing Systems 36: Annual Conference on Neural Information Processing Systems 2023, NeurIPS 2023, New
+  Orleans, LA, USA, December 10 - 16, 2023, 2023. http://papers.nips.cc/paper_files/paper/2023/hash/
+  271db9922b8d1f4dd7aaef84ed5ac703-Abstract-Conference.html.
+Eric Zelikman, Jesse Mu, Noah D. Goodman, and Yuhuai Tony Wu. Star: Self-taught reasoner bootstrapping reasoning
+  with reasoning. 2022.
+Eric Zelikman, Qian Huang, Gabriel Poesia, Noah D Goodman, and Nick Haber. Parsel: A (de-) compositional
+  framework for algorithmic reasoning with language models. arXiv preprint arXiv:2212.10561, 2023.
+Eric Zelikman, Georges Harik, Yijia Shao, Varuna Jayasiri, Nick Haber, and Noah D Goodman. Quiet-star: Language
+  models can teach themselves to think before speaking. arXiv preprint arXiv:2403.09629, 2024.
+Dan Zhang, Sining Zhoubian, Ziniu Hu, Yisong Yue, Yuxiao Dong, and Jie Tang. Rest-mcts*: Llm self-training via
+  process reward guided tree search. Advances in Neural Information Processing Systems, 37:64735–64772, 2024.
+Denny Zhou, Nathanael Schärli, Le Hou, Jason Wei, Nathan Scales, Xuezhi Wang, Dale Schuurmans, Claire Cui,
+  Olivier Bousquet, Quoc V. Le, and Ed H. Chi. Least-to-most prompting enables complex reasoning in large
+  language models. In The Eleventh International Conference on Learning Representations, ICLR 2023, Kigali,
+  Rwanda, May 1-5, 2023. OpenReview.net, 2023. https://openreview.net/forum?id=WZH7099tgfM.
+Pei Zhou, Jay Pujara, Xiang Ren, Xinyun Chen, Heng-Tze Cheng, Quoc V. Le, Ed H. Chi, Denny Zhou, Swaroop
+  Mishra, and Huaixiu Steven Zheng. Self-discover: Large language models self-compose reasoning structures, 2024.
+  https://arxiv.org/abs/2402.03620.
+
+
+
+
+                                                        15
+Appendix
+A    Proofs
+
+A.1 Variance Reduction
+In this section, we give the proof for the theorem on variance reduction by evaluating recombinations. First,
+we give an accessible direct proof in the case of two components that exhibits the key idea, then we extend
+to an arbitrary amount of components.
+Theorem A.1. Let n ≥ 1, X1 , . . . , Xn , Y1 , . . . , Yn be independent random variables such that all Xi are
+identically distributed and all Yj are identically distributed. Let f (X, Y ) be a scalar function and assume
+Ef (X1 , Y1 )2 < ∞. Then
+                                    1 ∑                      1∑                1
+                            Var      2
+                                          f (Xi , Yj ) ≤ Var     f (Xi , Yi ) = Var f (X1 , Y1 ).
+                                    n i,j                    n i               n
+
+Proof. The equality follows from independence of (Xi , Yi ) and (Xj , Yj ) for i ̸= j. For the proof of the
+inequality, write fX = E[f (X, Y ) | X], fY = E[f (X, Y ) | Y ], µ = E[f (X, Y )] and consider the Hoeffding
+decomposition
+                     Var f (X, Y ) = Var fX + Var fY + Var (f (X, Y ) − fX − fY + µ) ,
+which is proved by expanding all terms and applying the law of total expectation. In particular, by non-
+negativity of the variance, we have
+
+                                                  Var fX + Var fY ≤ Var f (X, Y ).
+
+To apply this result, write
+                1 ∑
+          Var          f (Xi , Yj )
+                n2 i,j
+          1 ∑
+      =       Cov(f (Xi , Yj ), f (Xk , Yl ))
+          n4
+             i,j,k,l
+        1              ∑
+      = 4                         Cov(f (Xi , Yj ), f (Xk , Yl ))
+       n
+             i,j,k,l,i=k or j=l
+                                                                                                                        
+        1 ∑                       ∑                                             ∑
+      = 4       Var f (Xi , Yj ) +   Cov(f (Xi , Yj ), f (Xi , Yl )) +                      Cov(f (Xi , Yj ), f (Xk , Yj ))
+       n    i,j                            i,j,l,j̸=l                          i,j,k,k̸=i
+        1                 n−1             n−1
+      = 2 Var f (X, Y ) +    2
+                               Var fX +       Var fY
+       n                   n               n2
+        1                 n−1
+      ≤ 2 Var f (X, Y ) +      Var f (X, Y )
+       n                   n2
+       1
+      = Var f (X, Y ).
+       n
+Here, we used the fact that f (Xi , Yj ) and f (Xk , Yl ) are independent if i ̸= k and j ̸= l and made sure not to
+count the pair of index pairs (i, j), (i, j) twice.
+
+The generalization to m variables is given in the following theorem. The proof proceeds in the same way but
+requires the general Hoeffding decomposition involving marginals over all subsets of variables (Vaart, 1998,
+Chapter 11.4).
+
+
+
+
+                                                                    16
+Theorem A.2. Let n, m ≥ 1, Xij , i ≤ m, j ≤ n be independent random variables such that Xij , Xik are
+identically distributed for all i, j, k. Let f (X1 , . . . , Xm ) be a scalar function and assume Ef (X11 , . . . , Xm
+                                                                                                                     1 2
+                                                                                                                       ) <
+∞. Then
+                    1 ∑                                    1∑                           1
+              Var m        f (X1j1 , . . . , Xm
+                                              jm
+                                                 ) ≤ Var         f (X1j , . . . , Xm
+                                                                                   j
+                                                                                     ) = Var f (X11 , . . . , Xm
+                                                                                                               1
+                                                                                                                 ).
+                   n j                                     n j                          n
+                          i
+
+
+
+Proof. Write f = f (X1 , . . . , Xm ) for short and consider the Hoeffding decomposition defined recursively by
+
+                                                             f∅ = E[f ],
+
+and for A ⊆ {1, . . . , m},                                                       ∑
+                                            fA = E[f | Xi , i ∈ A] −                    fB .
+                                                                                  B⊊A
+
+This decomposition is orthogonal (i.e. E[fA fB ] = 0 if A ̸= B) (Vaart, 1998, Lemma 11.11), and we have
+                                                       ∑
+                                              f=              fS
+                                                              S⊆{1,...m}
+
+and thus                                                         ∑
+                                                     Var f =          Var fS .
+                                                                  S
+
+We now proceed with the proof by writing the variance of the sum into covariance terms and counting
+contributions like in the case of m = 2 above. Write j = (j1 , . . . , jm ) and k = (k1 , . . . , km ) for two multi-
+indices, j ∩ k = {i | ji = ki } for the positions where they agree and f j for f (X1j1 , . . . , Xm
+                                                                                                  jm
+                                                                                                     ). We have
+
+                                                        1 ∑ j
+                                                 Var        f
+                                                       nm j
+                                                  1 ∑
+                                             =               Cov(f j , f k )
+                                                 n2m
+                                                       j,k
+                                                  1 ∑               ∑             ∑
+                                             =               Cov(         fSj ,       fTk )
+                                                 n2m
+                                                       j,k            S           T
+                                                  1 ∑ ∑
+                                             =                        Cov(fSj , fSk )
+                                                 n2m
+                                                       j,k S⊆j∩k
+                                                  1 ∑ ∑
+                                             =                        Var fS
+                                                 n2m
+                                                       j,k S⊆j∩k
+
+
+by orthogonality and the fact that fSj and fSk depend on the same random variables.
+What is the coeﬀicient of the term Var fS in this sum? Since the indices must agree at the positions in S,
+there are n options for each ji = ki for i ∈ S, giving n|S| combinations. At the other indices i ∈
+                                                                                                 / S, the indices
+ji and ki can take any values (ji = ki is possible because S ⊆ j ∩ k, not S = j ∩ k), giving another n2m−2|S|
+combinations and a total of n2m−|S| . Therefore, we get
+                     1 ∑ j     1 ∑ ∑           1 ∑ 2m−|S|          ∑ 1
+              Var         f = 2m     Var fS = 2m  n       Var fS =       Var fS
+                    n m
+                        j
+                             n               n
+                                         j,k S⊆j∩k
+                                                                    n|S|     S                 S
+
+and using that Var f∅ = Var E[f ] = 0 and |S| ≥ 1 for S ̸= ∅,
+                              ∑     1              ∑ 1                  ∑ 1            1
+                        =            |S|
+                                         Var f S =        |S|
+                                                              Var f S ≤        Var fS = Var f
+                                   n                    n                    n         n
+                              S̸=∅                 S̸=∅                 S̸=∅
+
+according to the variance decomposition stated above.
+
+
+                                                                 17
+The bound in the theorem is tight, as evidenced       ∏ by functions f which are linear in scalar random variables
+Xi . In the other extreme, if f (X1 , . . . , Xn ) = i Xi and E[Xi ] = 0 for all i, then all non-diagonal covariance
+                                                    1
+terms disappear and the left-hand side is n2m−1        Var f while the right-hand side is n1 Var f .
+Let X1 , . . . Xn and Y1 , . . . , Yn be independent random variables such that Xi identically distributed and Yi
+identically distributed. Let f be a deterministic function such that Zi = f (Xi , Yi ) has finite mean µ and
+finite variance σ 2 .
+According to the central limit theorem, with Sn = Z1 +...+Z
+                                                       n
+                                                            n
+                                                              we have
+                                                        √
+                                                            n(Sn − µ) → N (0, σ 2 )
+
+in distribution.
+Now consider the recombining estimator
+                                                                 1 ∑
+                                                        Tn =         f (Xi , Yj ).
+                                                                 n2
+                                                                    i,j≤n
+
+
+Clearly, ETn = µ. In theorem A.2 we established
+                                                                               1 2
+                                                        Var Tn ≤ Var Sn =        σ
+                                                                               n
+using the Hoeffding decomposition of f (Xi , Yj ).
+More precisely, setting fX = E[f (X, Y ) | X] − µ, fY = E[f (X, Y ) | Y ] − µ, fXY = f (X, Y ) − fX − fY − µ
+and f ′ (X, Y ) = µ + fX + fY + √1n fXY , we derived (implicitly in the proof, and noting the change of notation
+for fX , fY )
+                                     1            1            1               1
+                           Var Tn = Var fX + Var fY + 2 Var fXY = Var f ′ .
+                                     n            n            n               n
+                   ′               ′
+Now set Sn′ = f (X1 ,Y1 )+...+f
+                           n
+                                (Xn ,Yn )
+                                          , observe that Ef ′ = µ and write
+
+                                                                                1
+                                   σ ′2 = Var f ′ = Var fX + Var fY +             Var fXY ≤ σ 2 .
+                                                                                n
+According to the central limit theorem,
+                                                    √
+                                                         n(Sn′ − µ) → N (0, σ ′2 )
+
+We will now prove that 1                                    √
+                                                                n∥Tn − Sn′ ∥2 → 0
+with n → ∞. Indeed,
+                                          1 ∑
+                       n∥Tn − Sn′ ∥22 =       (f (Xi , Yj ) − f ′ (Xi , Yi )) (f (Xk , Yl ) − f ′ (Xk , Yk ))
+                                          n3
+                                              i,j,k,l
+
+Subtracting µ from all f - and f ′ -terms, proceeding as in the proof of Prop. B.1 and observing that
+Cov(f (Xi , Yj ), f ′ (Xi , Yi )) = Var fX , Cov(f (Xi , Yj ), f ′ (Xj , Yj )) = Var fY , Cov(f (Xi , Yi ), f ′ (Xi , Yi )) = Var f ′ ,
+we get
+                  1 ( 2                                                           )
+n∥Tn − Sn′ ∥22 =   3
+                     n Var f + n3 Var f ′ − n2 (n − 1) Var fX − n2 (n − 1) Var fY
+                 n (                                                                                  )
+                  1                                     1
+                = 3 n2 Var f + n3 (Var fX + Var fY + Var fXY ) − n2 (n − 1) Var fX − n2 (n − 1) Var fY ,
+                 n                                      n
+   1 Similar to https://math.stackexchange.com/questions/2760951/.
+
+
+
+
+                                                                      18
+so all n3 terms within the brackets cancel and
+
+                                                   n∥Tn − Sn′ ∥22 → 0
+
+with n → ∞ as claimed.
+      √                √              √                                          √
+Since n(Tn − µ) → n(Sn′ − µ) in L2 and n(Sn′ − µ) → N (0, σ ′2 ) in distribution, n(Tn − µ) → N (0, σ ′2 )
+in distribution, satisfying a CLT.
+We now state the Delta Method theorem2 .
+                                                                              √
+Theorem A.3. Let Sn be a sequence of random variables that satisfies              n(Sn −µ) → N (0, σ 2 ) in distribution.
+For a given function u, suppose that u′ (µ) exists and is not 0.
+Then,                                  √
+                                           n(u(Sn ) − u(µ)) → N (0, σ 2 u′ (µ)2 )
+in distribution.
+We have seen that in the setup of our paper with u a concave utility function implicitly defined by a reward
+aggregation both the recombination estimator Tn and the standard (diagonal) estimator Sn satisfy a CLT
+with variances σ ′2 and σ 2 , respectively. Applying the Delta Method theorem, we can conclude that u(Tn )
+and u(Sn ) likewise satisfy a CLT but with different variances σ ′2 u′ (µ) and σ 2 u′ (µ), respectively. Since
+σ ′2 = σ 2 − n−1
+              n Var fXY , the recombination estimator is an improvement over the standard estimator, not
+just for u = id, but also in the presence of nonlinear utility functions (reward aggregation functions) u in the
+n → ∞ limit.
+
+
+B Information-Theoretic View on Inference Scaling
+Consider a dataset D of problems x ∈ D, an evaluation function v(x, y) ∈ {0, 1}, a probabilistic model π and
+consider the pass rate or coverage function
+
+                                      c(k) = Ex∼D,y1 ,...,yk ∼π(x) [max v(x, yi )].
+                                                                     i
+
+Empirical investigations (Brown et al., 2024; Hughes et al., 2024; OpenAI, 2023) frequently report power law
+scaling of the logarithmic pass rate with respect to the number of samples of the form
+
+                                                    log(c) ≈ −ak −b ,
+
+where a, b > 0.
+To analyze this relationship, note that k can be seen as an expected waiting time in the Bernoulli process
+with repeated samples from v(x, π(x)) ∼ Bern(p) where p = k1 , and we can consider the information quantity
+h = − log p = log k. Under the logarithmic power law model, we know the cumulative distribution function
+                                                               (       )
+                                      P(k ≤ k0 ) = c(k0 ) = exp −ak −b
+
+and thus for h0 = log k0 ,                                   (      )
+                                             P(h ≤ h0 ) = exp −ae−bh .
+Differentiating, we get the probability density function
+                                                                   (               )
+                                                      −bh      1      h−µ    − h−µ
+                             p(h) = ab exp(−bh − ae         ) = exp −     −e    β    ,
+                                                               β       β
+
+i.e. a Gumbel distribution with mode parameter µ = − logb a and scale parameter β = 1b .
+Note that the Gumbel distribution arises as an extreme value distribution over exponentially distributed
+samples, and we can interpret this by imagining several “latent dimensions of problem diﬀiculty” hi , the
+largest of which determines the overall diﬀiculty of a given problem: h = maxi hi .
+  2 https://www.stat.rice.edu/~dobelman/notes_papers/math/TaylorAppDeltaMethod.pdf
+
+
+
+
+                                                            19
+                                     10                                                                               0.26                                                                                          decomposition only
+                                                                         sum_{k=1}^1000 1/k pass@k
+Induced importance sampling factor                                       sum_{k=1}^100 1/k pass@k                                                                                                                   + implementation only from 15000
+                                                                         pass@1                                                                                                                          0.24       + implementation only from 18000
+                                                                                                                      0.24                                                                                          + implementation only from 21000
+                                     8                                   pass@10
+                                                                         lme(beta=0.0500)                             0.22
+                                                                         lme(beta=0.1344)                                                                                                                0.22
+                                                                         lme(beta=0.1986)
+                                     6                                   lme(beta=0.4000)                             0.20
+
+
+
+
+                                                                                                       Success rate
+
+
+
+
+                                                                                                                                                                                          Success rate
+                                                                         softmax_mean(beta=0.5)
+                                                                                                                                                                                                         0.20
+                                                                                                                      0.18
+                                     4
+                                                                                                                      0.16                                                                               0.18
+                                                                                                                                 joint training, (m=512, beta=0.05)
+                                     2                                                                                0.14       joint training, (m=512, beta=0.1)
+                                                                                                                                 decomposition only (m=512, beta=0.13)                                   0.16
+                                                                                                                      0.12       implementation only (m=512, beta=0.13)
+                                                                                                                                 alternate freezing (m=512, beta=0.13)
+                                     0                                                                                           joint training, (m=2048, beta=0.03)
+                                      0.0       0.2        0.4         0.6           0.8         1.0                  0.10                                                                               0.14
+                                                                                                                             0          10000             20000           30000   40000                         0        5000           10000        15000   20000   25000
+                                                          Problem value p_x                                                                                   Step                                                                                Step
+
+                                      (a) Importance sampling weights.                                                  (b) Decomposition bottleneck.                                                               (c) Sequential training.
+
+           Figure 7 Training dynamics and ablations. (a) Importance sampling weights induced by explorative utility functions
+      enable jointly optimizing pass@1 to pass@k. (b) Ablation on CodeContests validation pass@10 shows that removing
+      implementation training does not hurt performance, indicating the decomposition policy is the main RL bottleneck.
+      (c) Continuing a decomposition-only run with implementation training at 15k, 18k, and 21k steps yields checkpoints
+      among the best but within variance of decomposition-only results.
+
+
+           C Properties of the Logmeanexp Objective
+          The logmeanexpβ function (Equation 1) has several theoretical appeals beyond serving as a smooth interpo-
+          lation between the average (β → ∞) and the maximum (β → 0):
+                                          • For a well-chosen value of β, it closely approximates the average between pass@1 + pass@10 + pass@100
+                                            + pass@1000. Such objectives strike a balance between favoring exploration and diversity (due to
+                                            pass@1000 components) and re-ranking to favor successful solution attempts for exploiting the current
+                                            knowledge (due to pass@1 components). See Appendix D for details and Figure 3.
+                                          • It represents a soft form of optimism over the other actions. Recall that Deep-Q-Learning (Mnih
+                                            et al., 2013) uses Rt + maxa Q(st+1 , a) as the Q-value target for Q(st , at ) if the action led to the new
+                                            state st+1 . This target can be seen as an approximation of Q∗ (st , at ) for the Q∗ the state-action
+                                            values of the optimal policy Q∗ . In the language of soft reinforcement learning (Cohen et al., 2025),
+                                            Vβ = logmeanexpβ (r1 , . . . , rn ) can be seen as the β-soft value function of selecting one out of n rollouts
+                                            with uniform prior π0 .
+
+
+           D Reward Aggregation as Utility Functions
+                                                                  For zero-one rewards ri ∈ {0, 1}, and different choices of a
+           Consider as in Section 2.4 n rewards r1 , . . . , rn . ∑
+           multi-sample objective function f , we write c = i ri and factor f (r1 , . . . , rn ) = u(p) via p = nc . Note that
+           p is the mean estimator of E[r] if ri are samples from the distribution of p.
+
+           Logmeanexp. We compute
+                                                                                              1 ∑ ri /β         1 ( 1/β          )       (             )
+                                                      f (r1 , . . . , rn ) = β log                e     = β log    ce   + (n − c) = β log pe1/β + 1 − p .
+                                                                                              n i               n
+
+           Pass@k with replacement. In this case, f (r1 , . . . , rn ) is already defined by
+                                                                   (      c )k
+                                        f (r1 , . . . , rn ) = 1 − 1 −         = 1 − (1 − p)k .
+                                                                          n
+                                                                                                                                                                                                                    ∑         eri /β
+           Softmax-weighted average. Tang et al. (2025) suggest the multi-sample objective                                                                                                                                 i ∑ erj /β ri . In this case,
+                                                                                                                                                                                                                                    j
+          we obtain
+                                                                               ∑        eri /β        ce1/β           pe1/β              1−p
+                                                 f (r1 , . . . , rn ) =                ∑ r /β ri = 1/β           = 1/β           = 1 − 1/β      .
+                                                                                 i      je
+                                                                                             j    ce   + (n − c)  pe   + (1 − p)      pe   +1−p
+
+
+                                                                                                                                                      20
+Utility functions are a convenient method to understand the impact of a given choice of multi-sample objective
+function. We call a function u : [0, 1] → [0, 1] a utility function if it is monotonically increasing. We call a
+utility function explorative if it is concave. Examples of explorative utility functions have been derived above,
+and are depicted in Figure 3.
+For a single problem x, we have
+
+                                        Eri ∼π(x) [f (r1 , . . . , rn )] = u(Er∼π(x) [r]),
+
+and thus the same holds when taking expectations over x. In other words, reinforcement learning with multi-
+sample objective functions changes the objective to a utility-transformed objective. On a single problem, by
+monotonicity of u, optimal policies for the original objective are optimal for the transformed objective and
+vice versa. When averaging over a dataset of problems, however, utility functions induce a different allocation
+of optimization budget. Concretely, let dx be the distribution over problems and px = Er∼π(x) [r]. Then
+                                                         ∫
+                                              Ex [px ] =   px dx,
+                                                                         x
+
+and                                                      ∫                      ∫
+                                                                                             u(px )
+                                    Ex [u(px )] =                u(px )dx =             px          dx,
+                                                             x                      x         px
+so u(p x)
+    px dx can be seen as the importance-reweighted distribution of problem diﬀiculties according to u. Explo-
+rative utility functions are therefore the utility functions that induce a monotonically decreasing reweighting
+on problem diﬀiculties, as depicted in Figure 7a.
+
+
+E     Variance Reduction with Leave-One-Out Baselines
+Consider as in Appendix
+                   ∑     D a multi-sample objective function f of zero-one rewards r1 , . . . , rn that factors
+via the mean p = n1 i ri via a utility function u:
+
+                                            f (r1 , . . . , rn ) = u(p(r1 , . . . , rn )).
+
+Writing gi = ∇θ log πθ (ai ), we are going to compare the default gradient estimator
+                                            ∑                            ∑
+                                      G1 =      f (r1 , . . . , rn )gi =   u(p)gi
+                                                   i                                     i
+
+with the baselined one
+                                    ∑
+                            G2 =         (f (r1 , . . . , rn ) − f (r1 , . . . , ri−1 , ri+1 , . . . , rn )) gi
+                                    i
+                                    ∑
+                                =        (u(p) − u(p−i )) gi ,
+                                    i
+
+where
+                                                                    1 ∑
+                                                       p−i =            rj .
+                                                                   n−1
+                                                                             j̸=i
+
+
+Because E[u(p−i )gi ] = 0, we have E[G2 ] = E[G1 ] = ∇θ E[f (r1 , . . . , rn )] by the policy gradient theorem.
+We will now compare the covariances of G1 and G2 , respectively, assuming u ∈ C 2 (R+ , R+ ) for convenience
+and setting µ = E[r1 ]. We have
+                                                    1
+                                           p = p−i + (ri − p−i )                                          (3)
+                                                    n
+and                                                                    ( )
+                                               1 ′                      1
+                              u(p) = u(p−i ) + u (p−i )(ri − p−i ) + O     ,
+                                               n                        n2
+
+                                                                    21
+hence
+               [                                   ]         [                  ]                                ( )
+                   ∑1                                        u′ (µ) ∑              u′ (µ)2                        1
+                            ′
+Cov G2 ≈ Cov               u (p−i )(ri − p−i )gi       ≈ Cov          (ri − µ)gi =         Cov [(r1 − µ)g1 ] ∈ O
+                   i
+                       n                                       n    i
+                                                                                      n                           n
+
+by independence of (ri − µ)gi and (rj − µ)gj for i ̸= j.
+For G1 , on the other hand, we obtain,
+                                [          ]      [         ]
+                                  ∑                 ∑
+                  Cov G1 = Cov       u(p)gi ≈ Cov     u(µ)gi = nu(µ)2 Cov [g1 ] ∈ O(n)
+                                         i                        i
+
+
+Since E[G1 ] = E[G2 ] = ∇θ E[u(µ)] is independent of n in the limit, we obtain signal-to-noise ratios of
+                                                                   ( )
+                                                   ∥E[G1 ]∥           1
+                                      SNR(G1 ) =               ∈O
+                                                  Tr[Cov G1 ]        n
+
+and
+                                                               ∥E[G2 ]∥
+                                             SNR(G2 ) =                   ∈ O(n),
+                                                              Tr[Cov G2 ]
+making G1 inconsistent. The estimator G2 with the leave-one-out baseline, on the other hand, is asymptoti-
+cally deterministic.
+Note that for simplicity, in the above, we considered a leave-one-out baseline that removes one out of n terms
+from the aggregation. In the case of DecompRL, we remove a fraction of d1 out of md terms in the case of
+decomposition actions and a fraction of k1 terms out of m terms in the case of implementation actions. Since
+Equation 3 holds with n replaced by d or k, resp., and ri replaced by the average over the removed terms,
+the same asymptotic analysis holds.
+
+
+
+
+                                                                 22
+     F Additional Experiments on Multi-Policy Training
+    We perform experiments at the 8B scale using the LLama 3.1 8B Instruct model AI @ Meta (2024) to
+    derive our multi-policy training recipe described in section 3. We train on the CodeContest training set and
+    evaluate on its validation set. We give additional experiments regarding multi-policy training: benchmark
+    results of combinations of separately trained policies (Figure 8), results on sequential training (Figure 7c)
+    and an overall comparison of multi-policy training methods over the course of reinforcement learning runs
+    including alternate training (Figure 7b). See Section 3.2 for additional discussion.
+    Analyzing the policy entropies for decomposition and implementation in separate training runs, we find
+    that entropy decreases substantially over the course of training, hinting at better certainty about good
+    actions (exploitation) but also harming diversity at large sampling scales (exploration). The conditioning
+    of a fixed implementation policy on an entropy-decreasing decomposition policy leaves the implementation
+    policy entropy unaffected (Figure 9).
+                                                                                                                       27000                                                                                                                                           0.300
+                                                                                                                               0.231      0.205       0.214        0.222   0.24
+                        21000
+
+
+
+
+                                  0.205            0.256           0.205    0.24
+                                                                                                                                                                                                                                                                       0.295
+                                                                                              Decomposition model step
+
+
+
+
+                                                                                                                                                                                                                   21000
+                                                                                                                                                                                                                             0.301          0.286           0.279
+Decomposition model step
+
+
+
+
+                                                                                                                                                                                               Decomposition model step
+                                                                                                                                                                           0.23
+                                                                                                            24000
+
+
+
+                                                                            0.22                                               0.222      0.214       0.197        0.231
+
+
+
+
+                                                                                                                                                                              Success rate
+                                                                                                                                                                                                                                                                       0.290
+                                                                               Success rate
+
+
+
+
+                                                                                                                                                                                                                                                                           Success rate
+        12000
+
+
+
+
+                                  0.171            0.179           0.197    0.20                                                                                           0.22
+                                                                                                  21000
+
+
+
+
+                                                                                                                               0.239      0.205       0.222        0.197
+                                                                                                                                                                                                                                                                       0.285
+                                                                            0.18                                                                                           0.21
+
+
+
+
+                                                                                                                                                                                             18000
+                                                                                                                                                                                                                             0.293          0.299           0.275
+                                                                                                          18000
+
+
+
+
+                                                                                                                               0.248      0.231       0.239        0.239                                                                                               0.280
+                                  0.145            0.162           0.154                                                                                                   0.20
+            0
+
+
+
+
+                                                                            0.16
+                                                                                                                               6000
+
+
+
+                                                                                                                                           9000
+
+
+
+                                                                                                                                                       12000
+
+
+
+                                   0               12000            24000                                                                                          15000                                                   value-3000     value-6000      value-9000
+                                                                                                                                                                                                                                                                       0.275
+                                          Implementation model step                                                                    Implementation model step                                                                   Implementation model step
+
+
+
+
+    Figure 8 Performance of different combinations of independently trained decomposition and implementation models. We
+    train a model on decompositions with implementations from fixed Llama 3.1 8B Instruct, and another model on
+    implementations with decompositions from fixed Llama 3.1 8B Instruct, and evaluate cross combinations between
+    the resulting checkpoints. This off-policy estimation is not guaranteed to work in principle but some combinations
+    appear to work in practice. Note that the best configuration is the decomposition checkpoint with 21k steps coupled
+    with the implementation checkpoint with 3k steps, highlighting the importance of joint optimization. Evaluations
+    are conducted on CodeContests valid with 4096 function evaluations per decomposition, k = 8 implementations per
+    function and 10 decompositions per problem.
+
+
+
+
+     G                            Baselines
+    We compare DecompRL with four reinforcement learning algorithms:
+                                • GRPO (Shao et al., 2024) - the state of the art for optimizing pass@1 performance.
+                                • analytical pass@k (Chen et al., 2025) - the state of the art for optimizing pass@k.
+                                • Soft Policy Optimization (SPO) (Cohen et al., 2025) - optimized for diverse policies.
+                                • our own logmeanexp utility function with regular inference which optimizes the mean between pass@1
+                                  and pass@k.
+    We train all baselines until the reward plateaus and tune the hyperparameters based on the best pass@10
+    performance on LiveCodeBench (see Figure 10). We set 16 samples per prompt for all baselines, k = 8 for
+    pass@k and β = 0.3 in the logmeanexp. Since DecompRL has a higher sampling budget per problem its
+    reward plateaus after 1 epoch whereas baselines plateau after 3 epochs on the same training set.
+
+
+
+
+                                                                                                                                                    23
+                                                 decomposition (RL model)                             0.26
+                 0.26                            implementation (fixed model)
+
+                 0.25                                                                                 0.24
+
+                 0.24
+                                                                                                      0.22
+entropy (nats)
+
+
+
+
+                                                                                     entropy (nats)
+                 0.23
+                 0.22                                                                                 0.20
+
+                 0.21
+                                                                                                      0.18
+                 0.20
+                 0.19                                                                                 0.16       decomposition (fixed model)
+                                                                                                                 implementation (RL model)
+                        0   5000   10000      15000      20000        25000                                  0       5000          10000          15000   20000
+                                           step                                                                                            step
+
+
+    Figure 9 Policy entropy during decomposition policy training (left) and implementation policy training (right). All ablations in
+    this figure were run during decomposition or implementation policy training, respectively, not at evaluation time. Left:
+    decomposition-only training, the implementation policy of a fixed model only changes marginally with the changing
+    prompts from the decomposition model while decomposition policy entropy decreases. Right: implementation-only
+    training; the implementation policy entropy decreases over the course of training.
+
+
+    H Hyperparameters and Additional Training Details
+    We train our models with the Adam optimizer (Kingma and Ba, 2015) (β1 = 0.9, β2 = 0.95) with decoupled
+    weight decay (Loshchilov and Hutter, 2019) factor 0.1 and gradient clipping at a norm of 1. We warm up
+    the learning rate linearly over 200 steps to a final value of 6 × 10−8 . We use a local batch size of 2. Trainers
+    discard the first 10 batches at the beginning of a run as warmup.
+    Our distributed runs use 80 H100 GPUs, split up into 8 trainer GPUs and 72 worker GPUs. On the
+    worker side, we use temperature 1.0 for generations. During decomposition training, we set the number of
+    implementations k = 8, a maximum decomposition size of nmax = 6 and conduct up to m = 1024 evaluations
+    per decomposition. We run three separate decomposition trainings with β = 0.03, 0.07, 0.1 with Qwen 2.5 7B
+    which according to Figure 3 corresponds to a mixture of pass@k objectives for 1 ≤ k ≤ 1000. We pick β = 0.07
+    as it had the highest pass@10 performance on the DeepMind Code Contest validation set. Each RL training
+    run takes 2–3 days on 80 H100 GPUs for Qwen 2.5 7B. Each evaluation run (up to 1000 decompositions per
+    problem with 4096 evaluations each) takes approximately 20 minutes with tensor parallelism TP=4 on 32
+    GPUs for Qwen 2.5 7B.
+    At evaluation time we use temperature of 1.0 and up to 1000 decompositions per problem with each up to
+    4096 evaluations.
+
+    Memory cost. DecompRL maintains two copies of the model (decomposition and implementation policies),
+    but only one is trained at a time. For Qwen 2.5 7B, model weights occupy less than 10% of GPU memory
+    on workers (∼7 GiB for two model copies vs. ∼3.5 GiB per GPU for a single model). Only worker GPUs
+    bear the extra memory cost. We observed zero out-of-memory errors and required no CPU offloading, even
+    with the Code World Model 32B. We argue the cost of storing two policies is similar to the one of using a
+    reference model to compute a KL penalty in standard RL.
+
+   Code execution. For all our code evaluations, we use a sandbox similar to the one provided for Li et al.
+   (2022) using Python 3.11. We set a time limit of 2T + 1 seconds for all test cases if T is the number of test
+   cases. We execute code on an external CPU cluster that parallelizes unit test executions. Each problem in
+   our training set has a mean of 10 unit tests, each with average size < 102 bytes which we estimated to take
+   < 0.1 seconds to execute in our evaluation setup. If we have 512 evaluations per problem during training,
+   this gives an upper bound of 512 × 0.1 = 51.2 seconds per problem.
+
+
+                                                                                24
+         0.38
+                                                                         0.53
+
+         0.36
+                                                                         0.52
+                                                                                                          pass@8, n_rollouts = 8
+         0.34
+
+
+
+
+                                                               pass@10
+                                                                                                          pass@16, n_rollouts = 8
+pass@1
+
+
+
+
+                                                                                                          logmeanexp, beta = 0.2
+                                                                                                          logmeanexp, beta = 0.4
+                                                                         0.51                             grpo
+         0.32
+
+                                                                         0.50
+         0.30
+
+
+                                                                         0.49
+                0   5000 10000 15000 20000 25000 30000 35000                    0   5000 10000 15000 20000 25000 30000 35000
+                               training steps                                                  training steps
+  Figure 10 Evaluation results during training for baseline methods on the LiveCodeBench v5 split. Experiments ran with
+  the Code World Model 32B FAIR CodeGen team et al. (2025). Sampling is performed with nucleus sampling with a
+  probability mass of 0.95 and temperature 0.6 for all methods.
+
+
+  I Prompts
+ We use language models as decomposition and implementation policies.
+  For decompositions, we use the following decomposition prompt with a one-shot example, where the {context}
+  is the dataset’s problem description:
+
+          Decomposition Prompt
+
+          To solve complicated reasoning problems , it is often helpful to break them down into components.
+          Can you help a student of computer science solve a competitive programming problem by
+          breaking it down into sensible component functions?
+
+          ## Example problem
+          An inversion in an array is a pair of elements where the first element is greater than the second
+          element ,
+          and the first element appears before the second element in the array.
+          For example , in the array [2, 4, 1, 3, 5], the inversions are (2, 1), (4, 1), and (4, 3). The total
+          number of inversions is 3.
+
+          Task: Write a function that counts the number of inversions in an array efficiently.
+          The goal is to achieve this in O(n log n) time complexity.
+
+          ## Example decomposition into component functions
+          ```python
+          def merge_and_count(left: list[int], right: list[int]) -> tuple[list[int], int]:
+              """
+              Merges two sorted lists and counts the number of inversions.
+              Args:
+                   left (list[int]): The left sorted subarray.
+                   right (list[int]): The right sorted subarray.
+              Returns:
+                   tuple[list[int], int]: A tuple containing the merged sorted list and
+                   the count of inversions found during the merge.
+              """
+              pass
+
+          def merge_sort_and_count (arr: list[int]) -> tuple[list[int], int]:
+              """
+              Recursively sorts an array and counts the number of inversions.
+              Args:
+
+
+
+
+                                                             25
+            arr (list[int]): The array to be sorted and analyzed for inversions.
+       Returns:
+            tuple[list[int], int]: A tuple containing the sorted array and the
+            total count of inversions in the array.
+       """
+       pass
+
+   def count_inversions(arr: list[int]) -> int:
+       """
+       Counts the number of inversions in an array using a modified merge sort.
+       Args:
+            arr (list[int]): The array to be analyzed for inversions.
+       Returns:
+            int: The total number of inversions in the array.
+       """
+       pass
+   ```
+
+   In this example decomposition of the programming problem , we give the student the idea
+   to use count the number of inversions by modifying the merge step of the merge -sort algorithm.
+   We explain clearly and concisely what the component functions are supposed to do by means of
+   their type signatures and their docstring , but leave the implementation to the student.
+
+   Now , let 's do the same for the following competitive programming question:
+
+   ## Student 's competitive programming problem to decompose:
+   {context}
+
+   ## Instructions
+   Please decompose the programming problem into component functions like in the example above.
+   Guidelines:
+   - Explain all the functions that the student will need to solve the problem without implementing them.
+   - Annotate each function with a type signature for its inputs and outputs.
+   - For each function , write a clear and concise docstring describing what the function does.
+   - Do not implement the functions: put `pass ` as their body.
+   - The functions can call each other but they should "do one thing" only whereever possible.
+        Their behavior should be fully described by their docstring.
+   - If shared state needs to be passed between the functions , describe it in one of their docstrings
+        and make it an argument for the functions that need to read or modify it.
+   - Enclose the functions in a single code block using triple backticks like so: ```python YOUR CODE HERE
+   ```.
+   - You can reason about the problem first before starting the code block.
+
+
+
+After the decomposition step, we extract the function headers and documentation strings from the language
+model’s generation. We implement each function in the decomposition using the prompt below. We have
+{decomposition} extracted from our first language model call, {current_name} the function being imple-
+mented, and {other_names} other function descriptions in the decomposition.
+
+   Implementation Prompt
+
+   I'm trying to solve the following code competitive programming problem:
+   ## Problem description:
+   {context}
+
+   ## Instructions
+   I have decomposed the problem into the following component functions:
+   ```python
+   {decomposition}
+   ```
+
+   Please help me implement the function {current_name }.
+   You can assume the following functions have been implemented correctly and use them without defining
+   them in your code:
+   {other_names}
+
+   Guidelines:
+   - Enclose the code in triple backticks like so: ```python YOUR CODE HERE ```.
+   - You can reason about the problem first before starting the code block.
+   - You can add import statements on top if necessary.
+
+   Now , please implement this
+   ```python
+   {current_code}
+   ```
+   by filling in the function body , keeping the signature and docstring.
+
+
+
+
+                                                       26
+J Reward Tensor Structure
+We investigate the structure of reward tensors. For this, we generate solutions to CodeContests validation
+problems using hierarchical inference with d = 2 decompositions of a maximal size of 6 and k = 4 imple-
+mentations per function. We evaluate all resulting combinations, i.e. up to 46 = 4096 per problem, and
+analyze the resulting reward tensors r of mode (number of axes) n and shape k × . . . × k. Assume that each
+implementation is either correct or incorrect, at an individual level, and that combinations pass the tests if
+and only if all their constituting implementations are correct. In this case, correctness of implementations
+can be expressed as the maxima mi across all modes of r except the i-th, and the reward tensor would equal
+the outer product r(1) = m1 ⊗ . . . ⊗ mn of the mi , which is a rank-1 approximation of r. More generally, the
+rank of a Boolean tensor using the Boolean operations (∨ for addition, and ∧ for multiplication) is known as
+the Boolean rank (de Caen et al., 1981). In the case of n = 2 it is also known as the bipartite dimension of
+the corresponding bipartite graph. It is NP-hard to compute (Garey and Johnson, 2002).
+From 20 decompositions with at least one positive reward, we obtain the following statistics: In 17 cases,
+r = r(1) agrees with the rank-1 approximation. Overall, viewing r(1) as a prediction of r, there are 859 true
+positives, 483 true negatives, 34 false positives and no false negatives (the latter by definition).
+
+
+K Number of Tokens Generated
+Figure 1, 4a, and Table 1 compare RL-trained models (SPO, GRPO, pass@8, logmeanexp) against our
+hierarchical inference method (DecompRL) for different token counts. We consider one attempt as one code
+generation per problem for standard inference and one full decomposition with 8 implementations, 4096 max
+evaluations for hierarchical inference. To ensure a fair comparison, we compare the pass rates per generated
+tokens which correspond to a different number of attempts for each RL algorithm. Table 3 summarizes the
+average cost of an attempt per method for the LLama 3.1 8B and Qwen 2.5 7B models.
+
+                 Model                      RL Algorithm                Avg Tokens per Attempt
+                                            no training                                     317
+                                            GRPO                                            215
+                 Llama 3.1 8B Instruct      pass@8                                          942
+                                            SPO                                             295
+                                            DecompRL                                      10495
+                                            no training                                     387
+                                            GRPO                                            545
+                                            pass@8                                          570
+                 Qwen 2.5 7B
+                                            logmeanexp, 16 samples                          500
+                                            logmeanexp, 48 samples                          538
+                                            DecompRL                                       4000
+
+Table 3 Token count per code attempt. Overall RL training increases the the number of generated tokens per attempt.
+A DecompRL attempt encompasses 1 decomposition and n × 8 implementations for n functions so it contains much
+more tokens.
+
+
+We compare success rates for a fixed budget of tokens similar to the pass@t from Ouyang et al. (2022).
+
+
+L    Example DecompRL
+We show below an example of a code problem extracted from LiveCodeBench and a generated decomposition
+with 6 functions from a Qwen 2.5 7B model trained with DecompRL. This decomposition leads to correct
+code solutions.
+
+
+
+
+                                                        27
+   Problem Description
+
+   You are given a positive number n.
+
+   Return the smallest number x greater than or equal to n, such that the binary representation of x
+   contains only set bits
+
+   Example 1:
+   Input: n = 5 Output: 7
+   Explanation: The binary representation of 7 is \"111\".
+
+
+   Example 2:
+   Input: n = 10 Output: 15
+
+   Explanation: The binary representation of 15 is \"1111\".
+
+
+   Example 3:
+   Input: n = 3 Output: 3
+
+   Explanation: The binary representation of 3 is \"11\".
+
+   Constraints: 1 <= n <= 1000
+
+
+
+   Generated Decomposition
+
+   Certainly! Here 's the decomposition of the problem into component functions , along with the type
+   signatures and docstrings for each function:
+
+   def next_power_of_two(n: int) -> int:
+       pass
+
+   def set_bits_until_power_of_two (n: int) -> int:
+       pass
+
+   def smallest_number(n: int) -> int:
+       pass
+
+   def count_set_bits(x: int) -> int:
+       pass
+
+   def main(n: int) -> int:
+       pass
+
+   def smallestNumber(n: int) -> int:
+       power_of_two = next_power_of_two (n)
+       set_bits = set_bits_until_power_of_two (power_of_two)
+       x = (power_of_two - 1) or set_bits
+       return x
+
+   In this decomposition:
+   next_power_of_two finds the smallest power of two greater than or equal to n
+
+   set_bits_until_power_of_two counts the number of set bits in n until it reaches the next power of two.
+
+   smallest_number uses these two functions to find the smallest number x with all set bits in its binary
+   representation.
+
+   count_set_bits simply counts the number of set bits in a given number x.
+
+   main is a placeholder for any additional logic.
+
+   smallestNumber is the main function that users will call , which leverages the other functions to solve
+   the problem.
+
+
+
+
+M Hierarchical Inference Without RL
+
+N Licenses of Used Datasets
+We use datasets with the following licenses:
+
+
+
+                                                       28
+Table 4 Hierarchical inference without RL underperforms standard inference. Pass@1 comparison at ∼4k tokens on Live-
+CodeBench. Hierarchical (no RL) uses prompted decomposition without any RL training. DecompRL’s gains come
+from RL training, not from the hierarchical structure alone.
+
+                              Model                   Method            Pass@1 (%)
+                              Qwen 2.5 7B           Standard                14.0
+                              Qwen 2.5 7B      Hierarchical (no RL)         11.0
+                              Qwen 2.5 7B          DecompRL                 18.0
+                              CWM 32B          Hierarchical (no RL)         11.9
+                              CWM 32B              DecompRL                 27.8
+
+
+
+
+   • CodeContests (Li et al., 2022): CC BY 4.0 with MIT and Apache 2.0 licenses components.
+   • TACO (Li et al., 2023): Apache 2.0.
+   • LiveCodeBench (Jain et al., 2024a): CC BY 4.0 with MIT and Apache 2.0 licenses components.
+
+
+
+
+                                                        29
+
