@@ -72,8 +72,14 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 15,
-      "lastAccessed": 1783124087217,
+      "accessCount": 16,
+      "lastAccessed": 1783124363986,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/breakdown.md",
+      "accessCount": 16,
+      "lastAccessed": 1783124602686,
       "type": "file"
     },
     {
@@ -101,9 +107,9 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/breakdown.md",
-      "accessCount": 8,
-      "lastAccessed": 1783118574894,
+      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper_layout.txt",
+      "accessCount": 9,
+      "lastAccessed": 1783124488381,
       "type": "file"
     },
     {
@@ -158,12 +164,6 @@
       "path": "papers/2026-the-verification-horizon-no-silver-bullet/paper.txt",
       "accessCount": 4,
       "lastAccessed": 1783118004985,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper_layout.txt",
-      "accessCount": 4,
-      "lastAccessed": 1783118410114,
       "type": "file"
     },
     {

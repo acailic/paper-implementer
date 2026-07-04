@@ -500,6 +500,24 @@ Because the draft head produces all $N$ tokens in a single parallel forward pass
 token decreases as $1/N$. On H200 NVL with $N=256$ and $L \leq 2048$, this drops to ~0.05% — an
 ultra-low-cost regime where the draft overhead is negligible.
 
+**Measured cost (Table 12, H200 NVL, single DFlash-style draft head, Qwen3-8B target).**
+Per-draft-token cost ratio $c$ (%) sweeping context length $L$ and draft depth $N$:
+
+| $L\backslash N$ | 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 |
+|------:|------:|------:|------:|------:|------:|------:|------:|------:|------:|------:|
+| 128 | 15.10 | 6.81 | 3.40 | 1.68 | 0.85 | 0.42 | 0.21 | 0.11 | 0.05 | 0.03 |
+| 256 | 15.04 | 6.74 | 3.33 | 1.66 | 0.84 | 0.42 | 0.21 | 0.11 | 0.05 | 0.03 |
+| 512 | 15.08 | 6.71 | 3.33 | 1.68 | 0.84 | 0.42 | 0.21 | 0.11 | 0.05 | 0.03 |
+| 1024 | 15.03 | 6.72 | 3.33 | 1.69 | 0.85 | 0.42 | 0.21 | 0.10 | 0.05 | 0.04 |
+| 2048 | 15.03 | 6.66 | 3.35 | 1.67 | 0.83 | 0.42 | 0.21 | 0.11 | 0.06 | 0.04 |
+| 4096 | 18.30 | 8.80 | 4.41 | 2.23 | 1.13 | 0.57 | 0.29 | 0.15 | 0.07 | 0.04 |
+
+> In the practical regime ($L \leq 2048$, $N \geq 16$), $c < 1\%$ and falls as $1/N$: at $L=1024$,
+> $c$ drops from 0.85% at $N=16$ to 0.054% at $N=256$. The "~0.05%" figure above is anchored at
+> $L=1024$/$N=256$ (0.054%); at $L=2048$/$N=256$ it is 0.064%, still below 0.1%. $c$ only rises
+> materially at $L=4096$ (e.g. 1.13% at $N=16$), the regime where long-draft scaling needs causal
+> tree drafting to keep acceptance high — the paper's central motivation.
+
 ### Failure Mode Analysis: Causal vs. Diffusion
 
 **Concrete example (MATH-500 prompt 0, decode step 0):**
@@ -595,11 +613,21 @@ achieving 7.83× on MATH-500 and 4.06× on MT-Bench.
 
 ### MoE Generalization (Table 5, Qwen3-30B-A3B)
 
+JetSpec vs. DDTree, both SFT-trained on the same 800K-example mixture, MoE target (3B active
+params), budget 256, temp=0. Each cell is speedup / $\tau$:
+
 | Benchmark | DDTree | JetSpec |
 |-----------|-------:|--------:|
+| GSM8K | 7.26× / $\tau$=7.93 | **7.40×** / $\tau$=8.18 |
 | MATH-500 | 8.61× / $\tau$=9.49 | **9.45×** / $\tau$=10.65 |
 | AIME25 | 9.01× / $\tau$=9.71 | **9.35×** / $\tau$=10.28 |
+| HumanEval | 6.18× / $\tau$=6.76 | **6.51×** / $\tau$=7.23 |
+| MBPP | 6.39× / $\tau$=7.06 | **6.53×** / $\tau$=7.29 |
+| LCB | 7.40× / $\tau$=8.31 | **7.47×** / $\tau$=8.62 |
 | MT-Bench | 4.26× / $\tau$=5.35 | **4.33×** / $\tau$=5.59 |
+
+> JetSpec wins all seven benchmarks on the MoE target; the largest gains are on MATH-500
+> (+0.84×) and AIME25 (+0.34×). Causal tree drafting generalizes beyond dense Qwen3-8B.
 
 ### vLLM Serving (Table 11, single H100, MATH-500)
 
@@ -642,17 +670,24 @@ End-to-end serving speedup over AR (single H100, MATH-500, temp=0); AR baseline 
 > Reverse KL causes 36–46% relative drop. Mode-seeking concentrates probability on high-confidence
 > teacher modes, killing tree diversity.
 
-### Ablation: Tree Scoring (Table 10)
+### Ablation: Tree Scoring (Table 10, MATH-500 n=500)
+
+Hybrid scoring is $\sum_i \log r_i + \alpha \cdot H_i$ with per-depth entropy $H_i$:
 
 | Algorithm | Speedup | $\tau$ |
 |-----------|--------:|---:|
-| Accum log-prob (default) | **8.15×** | **9.81** |
+| Accum log-prob (default) | 8.15× | 9.81 |
 | Entropy-guided | 4.76× | 5.52 |
+| Hybrid ($\alpha=0.25$) | **8.27×** | **9.81** |
+| Hybrid ($\alpha=0.5$) | 8.22× | 9.78 |
 | Hybrid ($\alpha=1$) | 8.15× | 9.78 |
+| Hybrid ($\alpha=2$) | 7.98× | 9.63 |
+| Hybrid ($\alpha=4$) | 7.75× | 9.27 |
 | Hybrid ($\alpha=8$) | 7.42× | 9.00 |
 
-> Cumulative log-probability dominates. Entropy alone collapses to 4.76×. Increasing $\alpha$
-> monotonically degrades acceptance.
+> Cumulative log-probability dominates. Entropy alone collapses to 4.76×. Adding a small entropy
+> term ($\alpha=0.25$) edges pure log-prob (8.27 vs 8.15); $\alpha\geq 1$ then degrades acceptance
+> monotonically, confirming the default near-pure-log-prob choice.
 
 ### Ablation: Loss-Weighting Parameter $\gamma$
 
@@ -672,6 +707,43 @@ lower weight. This is important for bidirectional heads that are more accurate n
 JetSpec's causal head, this weighting is unnecessary — the causal mask ensures all positions
 receive consistent conditioning, so uniform weighting ($\gamma=0$) is optimal and tuning $\gamma$
 doesn't matter.
+
+### Ablation: Learning Rate (Table 3, $\gamma=0$)
+
+A grid over LR $\in \{5\!\times\!10^{-5}, 1\!\times\!10^{-4}, 3\!\times\!10^{-4}, 6\!\times\!10^{-4}, 1\!\times\!10^{-3}\}$
+on GSM8K and MATH-500, for both SFT and Forward-KL. Each cell is speedup / $\tau$:
+
+| LR | GSM8K SFT | GSM8K FKL | MATH-500 SFT | MATH-500 FKL |
+|------:|------:|------:|------:|------:|
+| $5\!\times\!10^{-5}$ | 4.69 / 5.46 | 4.76 / 5.58 | 7.27 / 8.70 | 7.29 / 8.71 |
+| $1\!\times\!10^{-4}$ | 5.37 / 6.22 | 5.45 / 6.32 | 7.89 / 9.34 | 7.89 / 9.39 |
+| $3\!\times\!10^{-4}$ | **5.79** / **6.78** | **5.92** / **6.87** | **8.30** / **9.80** | 8.29 / 9.81 |
+| $6\!\times\!10^{-4}$ | 5.87 / 6.74 | 5.79 / 6.78 | 8.23 / 9.73 | 8.14 / 9.70 |
+| $1\!\times\!10^{-3}$ | 5.75 / 6.64 | 5.73 / 6.70 | 8.17 / 9.66 | 8.15 / 9.66 |
+
+> Performance peaks at $3\!\times\!10^{-4}$ (MATH-500-SFT speedup 8.30×); $6\!\times\!10^{-4}$ and
+> $1\!\times\!10^{-3}$ stay within ~2% of the peak, while $5\!\times\!10^{-5}$ underfits. This is
+> why all main results use $3\!\times\!10^{-4}$. (Note: GSM8K-SFT peaks marginally at
+> $6\!\times\!10^{-4}$, 5.87× — the per-task best differs slightly from the MATH-500 best.)
+
+### Ablation: Training Data (Table 6, Qwen3-8B, SFT, temp=0)
+
+JetSpec (model-regenerated continuations) vs JetSpec-Corpus (raw corpus), across tree budgets.
+Each cell is speedup / $\tau$:
+
+| Method | Budget | GSM8K | AIME25 | HumanEval | MBPP | LCB | MT-Bench |
+|--------|------:|------:|------:|------:|------:|------:|------:|
+| JetSpec | 16 | 4.80 / 6.00 | 5.78 / 7.23 | 4.26 / 5.32 | 3.97 / 4.96 | 4.77 / 6.24 | 2.68 / 3.98 |
+| JetSpec-Corpus | 16 | 2.06 / 2.54 | 2.41 / 2.99 | 2.11 / 2.61 | 1.93 / 2.39 | 2.75 / 3.45 | 1.54 / 2.00 |
+| JetSpec | 64 | 5.98 / 6.56 | 6.47 / 7.00 | 5.53 / 6.06 | 5.34 / 5.88 | 5.95 / 6.59 | 3.97 / 4.77 |
+| JetSpec-Corpus | 64 | 2.57 / 2.78 | 2.70 / 2.89 | 2.74 / 2.97 | 2.60 / 2.83 | 3.43 / 3.64 | 2.28 / 2.40 |
+| JetSpec | 256 | **7.82** / 8.62 | **8.78** / 9.82 | **7.12** / 7.78 | **6.73** / 7.43 | **7.67** / 8.79 | **4.58** / 5.94 |
+| JetSpec-Corpus | 256 | 3.36 / 3.65 | 3.66 / 4.06 | 3.53 / 3.82 | 3.27 / 3.58 | 4.42 / 4.86 | 2.63 / 2.98 |
+
+> Regenerated target-model sequences give the strongest performance (best matching the target's own
+> generation distribution). JetSpec-Corpus underperforms (~2.3–2.6× at budget 256) but still yields
+> consistent speedups — suggesting causal parallel drafting could be incorporated during mid-training
+> or pretraining where full regeneration would be prohibitively expensive.
 
 ## 7. Limitations
 
