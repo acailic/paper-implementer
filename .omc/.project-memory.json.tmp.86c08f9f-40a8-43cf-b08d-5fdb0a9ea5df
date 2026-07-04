@@ -95,12 +95,6 @@
       "type": "file"
     },
     {
-      "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
-      "accessCount": 9,
-      "lastAccessed": 1783123965988,
-      "type": "file"
-    },
-    {
       "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/breakdown.md",
       "accessCount": 8,
       "lastAccessed": 1783118574894,
@@ -224,6 +218,12 @@
       "path": "templates/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783117559667,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783117572936,
       "type": "file"
     },
     {
