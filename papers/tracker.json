@@ -2862,6 +2862,57 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "8pp (file misreports 1pp, pdfinfo=8, defect recurs). 5 tables + Eqs 1-4. Source-first reconciliation (Python-verified): Table-1 averages EXACT (Inc 5.8e-5, Sol 1.4e-3, IdErr 1.4e-4); increment beats identity, solution 10x WORSE than identity. Cross-table identities byte-exact: T2 Baseline==T1 Solution, T4 (256,64)==T2 Improved (both 2.1e-5). CAUGHT lone-cell avg defect: Table 3 row dt=0.001 Average stated 8.2e-5 recomputes 5.35e-5 (53% overstatement; other 3 rows OK). CAUGHT magnitude-headline overstatement: section 4.1 'two orders of magnitude' = avg 24.4x (1.39 orders); per-var max p 58x (1.76); only conclusion 'up to two orders' via Improved-vs-Baseline-Solution 69x (1.84) borderline. CAUGHT T3<->T2 cross-table run-drift (single-step dt=0.001 differs 2.5-4x). 0.11-vs-0.04 Straat = end-horizon vs reported (FNO better at t=0.5). Sibling to dsgnar iter 67 (physics-ML/PDE; FNO operator-learning vs PINN optimiser) + soap-muon/dsgnar science-ML-efficiency lineage."
+    },
+    {
+      "rank": 61,
+      "arxiv_id": "2607.02166",
+      "arxiv_url": "https://arxiv.org/abs/2607.02166",
+      "pdf_url": "https://arxiv.org/pdf/2607.02166",
+      "title": "Dynamic Neural Graph Encoding of Inference Processes in Deep Weight Space",
+      "authors": [
+        "Di Wu",
+        "Huan Liu",
+        "Zhixiang Chi",
+        "Yuanhao Yu",
+        "Konstantinos N. Plataniotis",
+        "Yang Wang"
+      ],
+      "year": "2026",
+      "code_url": "https://github.com/dddiowww/DNG",
+      "project_page": "",
+      "subarea": "Deep weight-space networks / metanetworks: model a neural network's weights as a DYNAMIC (temporal) graph with one timestamp per forward-pass layer, processed by an RNN-based DNG-Encoder (FiLM message fn + GRU node memory, TGN-inspired). The falsifiable hinge: a STATIC neural graph forces the L-th MPNN layer to solve an ill-posed inverse problem (isolate b^l from compound b^l+W^l*b^{l-1}); the dynamic graph sidesteps it because each node exists at only one timestamp. Downstream INR2JLS maps INR weights -> joint latent space with image content (Latent Generator + transposed-conv Decoder) for INR classification. Surpasses SOTA INR classification by ~10pp on CIFAR-100-INR; predicts CNN/ViT generalization from weights (Kendall tau). Distinct from program-as-weights (differentiable-program) and viq (visual tokens) -- uniquely processes another network's weights as a temporal graph.",
+      "ai_keywords": [
+        "deep weight space",
+        "metanetworks",
+        "neural network as input",
+        "weight space learning",
+        "dynamic graph",
+        "dynamic neural graph",
+        "temporal graph network",
+        "TGN",
+        "DNG-Encoder",
+        "FiLM message passing",
+        "GRU",
+        "INR classification",
+        "implicit neural representation",
+        "SIREN",
+        "INR2JLS",
+        "joint latent space",
+        "generalization prediction",
+        "Kendall tau",
+        "permutation equivariance",
+        "graph neural network",
+        "Small CNN Zoo"
+      ],
+      "abstract": "The rapid advancements in using neural networks as implicit data representations have attracted significant interest in developing machine learning methods that analyze and process the weight spaces of other neural networks. However, efficiently handling these high-dimensional weight spaces remains challenging. Existing methods often overlook the sequential nature of layer-by-layer processing in neural network inference. In this work, we propose a novel approach using dynamic graphs to represent neural network parameters, capturing the temporal dynamics of inference. Our Dynamic Neural Graph Encoder (DNG-Encoder) processes these graphs, preserving the sequential nature of neural processing. Additionally, we also leverage DNG-Encoder to develop INR2JLS (Implicit Neural Representation to Joint Latent Space) for facilitate downstream applications, such as classifying Implicit Neural Representations (INRs). Our approach demonstrates significant improvements across multiple tasks, surpassing the state-of-the-art INR classification accuracy by approximately 10% on the CIFAR-100-INR.",
+      "popularity": "",
+      "citation_count": "",
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-dynamic-neural-graph-encoding-deep-weight-space",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "notes": "28pp (file misreports 17pp, pdfinfo=28, defect recurs). TMLR 06/2026. 8 tables + Eqs 3-6/11-13/30-33. Source-first reconciliation (Python-verified): Table-1 CIFAR-10/100 deltas 9.8/10.75pp EXACT ('at least 9%/10%' holds); abstract '+10% CIFAR-100-INR' = 10.75pp EXACT (absolute pp; relative gain is 34%). Table-7 '+9.31% CIFAR-10' = 54.00-44.69 EXACT. Table-5 2.0x speedup + lowest comp cost 1.31 GFLOPs EXACT. Table-8 highest tau 0.9028, 372x less GFLOPs vs NG-T, fastest latency 4.38ms all EXACT. Cross-table identities BYTE-EXACT: INR2JLS(Ours) row (98.6,90.6,73.2,42.4) identical across T1/T3-top/T3-bottom/T4-Rot&Flip/T6-Ours; DNG-Encoder-only row (96.6,78.4,54.0) identical across T3-bottom/T7. CAUGHT 1 genuine defect: Table-4 'fifth row' stale row-reference -- section 9.1 says 'comparing the third and fifth row in Table 4' but Table 4 has only 3 data rows (No Aug/Adding Noise/Rotation&Flip); 5th row does not exist, leftover from an earlier 5-row draft; no headline impact (the 7%/9% augmentation deltas recompute 6.8/9.5pp). 11 honest-scope flags: T4 fifth-row ref; '+10%' is pp not relative (rel=34%); pos-enc 'no improvement' loose (pos-enc higher on 2/4 datasets); NFT ±0.00 std implausible; T2 SVHN-GS loss + CIFAR-10-GS win only +0.001; NFN/NFT cannot run CNN Wild Park (win partly by default); T7 +9.31% partly probe-feature-removal-inflated; T7 omits CIFAR-100; T8 transformer benchmark self-built (1000 ViT, not standard); 10-view aug inflates inference cost; applicability boundary discriminative-only not weight-generation. NO numeric prose-vs-table contradiction beyond the T4 row-reference. Sibling to GNN lineage but uniquely dynamic/temporal weight-space; first repo metanetworks/deep-weight-space paper."
     }
   ]
 }
