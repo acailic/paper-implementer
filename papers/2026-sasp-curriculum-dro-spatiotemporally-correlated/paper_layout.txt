@@ -1,0 +1,606 @@
+                                               Beyond the Performance Illusion: Structure-Aware Stratified
+                                            Partitioning and Curriculum Distributionally Robust Optimization
+                                                            for Spatially Correlated Domains
+
+
+
+                                                       Prathamesh Patil1         Arpit Jain, PhD1             Aswanth Krishnan1
+                                                                                1 QpiAI India Pvt. Ltd.
+
+                                                   patil.p@qpiai.tech      arpit.j@qpiai.tech            ashwanth.krishnan@qpiai.tech
+arXiv:2607.02055v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                        Abstract                                                   training and validation subsets yields an unbiased
+                                                                                                   estimate of generalization performance. This as-
+                                        Performance evaluation in AI systems commonly              sumption relies on the premise that data points
+                                        assumes that random dataset splits produce in-             are independent and identically distributed (i.i.d.).
+                                        dependent and identically distributed (i.i.d.) sub-        While this approximation may hold for object-
+                                        sets. We show that this assumption often breaks            centric benchmarks such as ImageNet, where im-
+                                        down in spatiotemporally correlated domains                ages are sourced from diverse and largely inde-
+                                        such as aerial surveillance, precision agriculture,        pendent internet collections, it often breaks down
+                                        and medical imaging, leading to two systematic             in real-world data acquisition settings.
+                                        failures: data leakage, where correlated samples              In many practical domains, data is collected se-
+                                        span training and validation splits and inflate per-       quentially or spatially, inducing strong spatiotem-
+                                        formance estimates, and hidden stratification,             poral correlations between samples. Examples in-
+                                        where errors on minority subpopulations are ob-            clude aerial surveillance, where videos are cap-
+                                        scured by aggregate metrics.                               tured by drones traversing urban environments,
+                                           To address these issues, we propose a uni-              precision agriculture, where crops are imaged re-
+                                        fied evaluation and training framework for spa-            peatedly across nearby plots, and medical imag-
+                                        tially correlated data. We introduce Structure-            ing, where samples may be clustered by patient,
+                                        Aware Stratified Partitioning (SASP), which                scanner, or acquisition protocol. In such settings,
+                                        constructs validation splits that reduce spatiotem-        random splitting can lead to evaluation protocols
+                                        poral leakage while preserving meaningful class            that substantially overestimate a model’s ability to
+                                        balance, and Curriculum Distributionally Ro-               generalize to genuinely novel conditions.
+                                        bust Optimization (CDRO), a curriculum-based
+                                        relaxation of distributionally robust training that
+                                        stabilizes optimization under these stricter splits.       1.1   The Failure of I.I.D. Assumptions
+                                           Across multiple benchmarks, this combination            We illustrate this issue using the VisDrone-DET
+                                        yields consistently improved generalization, more          benchmark [28], a widely used dataset for aerial
+                                        reliable confidence calibration, and exposes fail-         object detection. VisDrone consists of video se-
+                                        ure modes that remain hidden under conventional            quences collected during drone flights over urban
+                                        random-split evaluation.                                   scenes, where consecutive frames often depict the
+                                                                                                   same physical environment under nearly identical
+                                        1     Introduction                                         viewpoints and lighting conditions. Under stan-
+                                                                                                   dard random splitting protocols, temporally adja-
+                                        The reliability of machine learning systems de-            cent frames may be assigned to different splits,
+                                        ployed in high-stakes environments critically de-          placing near-duplicate samples in both training
+                                        pends on the validity of their evaluation proto-           and validation sets.
+                                        cols. In standard AI research, it is commonly as-             This practice introduces spatiotemporal leak-
+                                        sumed that randomly partitioning a dataset into            age: the model can achieve high validation per-
+
+                                                                                               1
+formance by implicitly memorizing background                    Second, we propose Curriculum Distribu-
+structure rather than learning robust object-                tionally Robust Optimization (CDRO), a train-
+centric representations. As a result, performance            ing strategy designed to stabilize learning un-
+measured on the validation set may fail to reflect           der these more stringent evaluation conditions.
+behavior on truly unseen locations or acquisition            CDRO progressively emphasizes difficult or un-
+conditions. Similar leakage patterns arise in other          derperforming subgroups during training, miti-
+spatially correlated datasets, including precision           gating the instability often observed when apply-
+agriculture benchmarks such as Global Wheat                  ing standard empirical risk minimization or fully
+head detection and medical imaging datasets such             adversarial robust objectives on rigorously parti-
+as BCCD, where correlated samples are routinely              tioned data.
+split across evaluation folds.
+                                                             1.4     Contributions
+1.2   Hidden Stratification and the Long In summary, our contributions are threefold:
+      Tail
+                                                                 1. We identify and empirically characterize spa-
+A second, orthogonal challenge arises from the                      tiotemporal leakage and hidden stratifica-
+long-tailed nature of real-world data. Many                         tion as pervasive failure modes of standard
+datasets are dominated by common conditions,                        random-split evaluation in spatially corre-
+such as well-lit daytime scenes or typical anatom-                  lated computer vision datasets.
+ical presentations, while rare but critical sub-
+populations appear infrequently. These may in-                   2. We introduce Structure-Aware Stratified
+clude pedestrians under adverse lighting, crops af-                 Partitioning (SASP), a dataset partition-
+fected by uncommon growth patterns, or patho-                       ing framework that enforces semantic
+logical cases in medical imaging. As described                      disjointness while maintaining class bal-
+by Oakden-Rayner et al. [16], this phenomenon,                      ance, enabling more reliable evaluation of
+termed hidden stratification, allows models to                      generalization.
+achieve strong aggregate performance while fail-
+ing systematically on minority subgroups.                        3. We propose Curriculum Distributionally Ro-
+   Random dataset partitioning exacerbates this                     bust Optimization (CDRO), which improves
+issue by failing to control the distribution of these               training stability and model reliability un-
+rare subpopulations across splits. In extreme                       der the rigorous evaluation protocols induced
+cases, minority scenarios may be entirely absent                    by SASP, and demonstrate its effectiveness
+from training data or insufficiently represented in                 across aerial surveillance, precision agricul-
+validation sets, masking failure modes that only                    ture, and medical imaging domains.
+surface at deployment time.
+                                                             2     Related Work
+1.3   Overview of the Proposed Frame-
+      work                            Spatiotemporal Correlation and Evaluation
+                                                             Bias. The problem of evaluation bias induced
+To address these challenges, we propose a uni-               by spatial and temporal autocorrelation has been
+fied framework that treats dataset partitioning              extensively documented across ecology, climate
+and model training as coupled problems rather                modeling, and remote sensing. Early work by
+than independent design choices. First, we in-               Roberts et al. [19] showed that random cross-
+troduce Structure-Aware Stratified Partition-                validation can lead to severe underestimation of
+ing (SASP), a principled dataset splitting strategy          generalization error when samples exhibit spa-
+that constructs validation folds which are seman-            tial dependence, motivating spatial blocking, en-
+tically disjoint yet class-balanced, substantially re-       vironmental clustering, and structured resampling
+ducing spatiotemporal leakage while preserving               strategies. Subsequent studies refined these in-
+meaningful coverage of minority subpopulations.              sights, demonstrating that even weak autocorre-
+By design, SASP yields evaluation protocols that             lation can invalidate standard i.i.d. evaluation as-
+more faithfully reflect real-world generalization.           sumptions [18, 26].
+
+                                                         2
+   Similar issues arise in modern computer vi-                dataset structure is ignored [6, 15]. Our structure-
+sion benchmarks constructed from video streams,               aware stratified partitioning (SASP) directly ad-
+autonomous driving logs, medical imaging se-                  dresses this gap by ensuring systematic represen-
+quences, or geographically clustered imagery.                 tation of minority semantic patterns across folds,
+Frame-level or instance-level random splits often             enabling reliable subgroup-level evaluation with-
+leak near-duplicate content across training and               out requiring explicit subgroup labels.
+evaluation sets, inflating reported performance
+and masking generalization failures [2, 24]. To               Distributionally Robust Optimization and
+mitigate this, prior work has proposed tempo-                 Curriculum-Based Training. Distributionally
+ral splits [11], scene-level partitioning [5], or             Robust Optimization (DRO) provides a principled
+location-based grouping [22]. However, these ap-              framework for improving worst-case performance
+proaches rely on hard heuristics and typically                under distribution shift. Methods such as Invari-
+trade off semantic coverage, class balance, or eval-          ant Risk Minimization (IRM) [1], Group DRO [21],
+uation realism.                                               and related environment-based objectives aim to
+   Recent ICML and NeurIPS works have empha-                  learn representations that generalize across prede-
+sized that evaluation protocol design is itself a crit-       fined groups. While theoretically appealing, these
+ical source of inductive bias. For instance, Gulra-           methods often suffer from optimization instability,
+jani and Lopez-Paz [9] and Taori et al. [23] showed           sensitivity to group definitions, and limited scala-
+that benchmark performance often fails to predict             bility to large vision models and object detection
+real-world robustness due to implicit correlations            pipelines [20].
+in dataset construction. Unlike prior approaches                 Recent work has increasingly focused on sta-
+that impose coarse partitioning rules, our work               bilizing robust objectives via curriculum learn-
+formulates dataset splitting as a constrained opti-           ing, adaptive reweighting, or gradual constraint
+mization problem, jointly enforcing semantic dis-             enforcement, including large-scale methods for
+jointness and stratification. This enables evalu-             worst-case optimization [14] and adaptive group
+ation folds that explicitly expose generalization             discovery during training [27]. These approaches
+gaps induced by spatiotemporal structure while                suggest that fully adversarial objectives may be
+preserving realistic semantic diversity.                      unnecessarily brittle when evaluation protocols
+                                                              already induce strong distributional stress.
+Hidden Stratification and Long-Tailed Struc-                     Our method builds on this insight by coupling
+ture. Real-world vision datasets are inherently               SASP-induced evaluation rigor with a curriculum-
+long-tailed, with rare but semantically important             based DRO formulation. Rather than enforcing
+conditions underrepresented in aggregate met-                 worst-case constraints from the outset or relying
+rics. Oakden-Rayner et al. [16] introduced the                on manually specified groups, we progressively
+notion of hidden stratification, demonstrating that           increase robustness pressure as training stabi-
+models can achieve strong average performance                 lizes. This yields consistent gains under the more
+while failing catastrophically on clinically or op-           stringent, structure-aware evaluation regime in-
+erationally critical subgroups. Follow-up work ex-            troduced by SASP, while avoiding the optimiza-
+plored subgroup discovery [8], slice-based evalu-             tion pathologies commonly observed in standard
+ation [12], and reweighting or resampling strate-             Group DRO for dense vision tasks.
+gies [10] to expose and mitigate such failures.
+   However, these methods typically assume that               Self-Supervised Representations for Seman-
+evaluation splits already contain adequate repre-             tic Structure. Self-supervised representation
+sentation of minority strata. When datasets ex-               learning has emerged as a powerful tool for cap-
+hibit spatiotemporal correlation, random parti-               turing semantic structure without task-specific
+tioning can unevenly allocate rare scenarios, or              supervision. Vision Transformers trained via
+eliminate them entirely from validation or test               contrastive or distillation-based objectives have
+sets; thereby compounding hidden stratification               been shown to encode global scene attributes
+effects. Recent ICML work on long-tailed and                  such as texture, geometry, and illumination, en-
+subgroup robustness has noted that evaluation                 abling strong transfer across domains [3, 4]. Re-
+bias can dominate training improvements when                  cent foundation models such as DINOv2 [17] fur-
+
+                                                          3
+ther demonstrate that self-supervised features can          be available. Our goal is to partition D into 𝐾 dis-
+serve as reliable semantic descriptors across di-           joint folds F = {𝐹 1, . . . , 𝐹𝐾 } such that evaluation
+verse visual distributions.                                 faithfully reflects generalization under spatiotem-
+   Prior work has primarily leveraged such repre-           poral correlation.
+sentations as pretrained backbones or initializa-              SASP enforces two complementary principles:
+tion schemes. In contrast, recent work has ex-
+plored their use for dataset analysis and seman-              1. Structural Disjointness: Highly correlated
+tic shift characterization [25]. Our work adopts                 samples must not be split across folds.
+this perspective by using self-supervised embed-
+dings as a semantic metric for identifying latent             2. Stratification: Each fold should approxi-
+correlation structure and guiding dataset parti-                 mately preserve the global class distribution.
+tioning. Crucially, this approach remains agnos-
+                                                              When metadata is available, it is treated as a
+tic to downstream task labels and model archi-
+                                                            hard constraint; otherwise, structure is inferred
+tectures, allowing SASP to be applied uniformly
+                                                            entirely from visual semantics.
+across tasks while preserving evaluation fidelity.
+
+                                                            3.1.2   Atomic Units and Structural Con-
+Positioning of Our Work. Taken together,
+                                                                    straints
+prior work has addressed spatiotemporal corre-
+lation, hidden stratification, robust optimization,         We define atomic units as the smallest indivisible
+and self-supervised representations largely in iso-         groups of samples that must remain within the
+lation. Our contribution lies in unifying these             same fold. When metadata is available (e.g., video
+threads: we show that evaluation bias induced by            sequence identifiers), all images sharing the same
+structured data can be systematically exposed via           metadata value form a single atomic unit. In the
+SASP, and that curriculum-based DRO provides a              absence of metadata, each image initially forms its
+practical and stable training response to the result-       own atomic unit.
+ing distributional stress. Unlike prior DRO or ro-             Atomic units serve as the fundamental entities
+bustness methods, our approach explicitly treats            for partitioning, ensuring that no explicit or im-
+dataset partitioning and training dynamics as cou-          plicit structural correlations are violated during
+pled design choices, yielding improvements that             splitting.
+persist under realistic, structure-aware evaluation.
+                                                            3.1.3   Latent Semantic Clustering
+3     Methodology                                           Metadata alone is insufficient to capture latent
+                                                            semantic correlations, such as visually similar
+Our framework consists of two sequential stages.
+                                                            scenes arising from different acquisition contexts.
+First, we construct rigorous, leakage-resistant
+                                                            To capture such structure, we compute semantic
+evaluation splits using Structure-Aware Strat-
+                                                            embeddings using a frozen self-supervised vision
+ified Partitioning (SASP). Second, we train
+                                                            model and represent each atomic unit by the mean
+models under these stringent splits using Cur-
+                                                            embedding of its constituent images:
+riculum Distributionally Robust Optimiza-
+tion (CDRO), which improves training stability                                       1 ∑︁
+and robustness when standard empirical risk min-                            𝑧𝑗 =               𝑓 (𝑥),           (1)
+                                                                                   |𝑈 𝑗 | 𝑥 ∈𝑈
+imization fails.                                                                             𝑗
+
+
+                                                   where 𝑓 (·) denotes the embedding function.
+3.1   Structure-Aware         Stratified     Parti-  We construct a similarity graph over atomic
+      tioning (SASP)                               units using cosine similarity and identify con-
+3.1.1 Problem Setting                              nected components under an adaptive similarity
+                                                   threshold. Each connected component defines a
+Let D = {(𝑥𝑖 , 𝑦𝑖 )}𝑖=1
+                    𝑁 denote a dataset of images semantic cluster, representing a latent neighbor-
+
+and labels. In some domains, additional metadata hood of visually correlated samples that must re-
+𝑚𝑖 (e.g., sequence or acquisition identifiers) may main indivisible during partitioning.
+
+                                                        4
+3.1.4    Hybrid Cluster-to-Fold Assignment                 Algorithm 1 Structure-Aware Stratified Parti-
+                                                           tioning (SASP)
+Given a set of semantic clusters with heteroge-
+neous sizes and class compositions, the goal is to Require: Dataset D = {(𝑥𝑖 , 𝑦𝑖 )}𝑖=1 , number of
+                                                                                        𝑁
+
+assign each cluster to one of 𝐾 folds while main-       folds 𝐾, similarity threshold 𝜏
+taining stratification. This induces a constrained Ensure: Fold assignment for all samples
+assignment problem balancing structural disjoint-
+ness, fold capacity, and class distribution.         1: Construct atomic units
+                                                     2: if metadata 𝑚𝑖 is available then
+   To achieve scalability, we adopt a hybrid strat-
+egy. Large clusters, which dominate fold statistics, 3:     Group samples with identical metadata
+are assigned first using a constrained optimization     into atomic units {𝑈 𝑗 }
+                                                     4: else
+procedure that minimizes deviation from target
+class proportions. Smaller clusters are then greed-  5:     Treat each sample as an atomic unit
+                                                     6: end if
+ily assigned to fill remaining capacity and correct
+residual imbalance. This two-stage procedure en-
+                                                     7: Compute semantic representations
+sures stable stratification while preserving strict
+                                                     8: for all atomic units 𝑈 𝑗 do
+semantic disjointness.
+                                                     9:     Compute prototype embedding
+
+3.2     Curriculum Distributionally Robust                                             1 ∑︁
+                                                                             𝑧𝑗 ←                𝑓 (𝑥)
+        Optimization (CDRO)                                                          |𝑈 𝑗 | 𝑥 ∈𝑈
+                                                                                              𝑗
+
+
+Training under SASP splits is substantially more           10: end for
+challenging than under random splits, as models
+can no longer exploit spurious correlations. In this       11: Discover latent semantic clusters
+setting, standard empirical risk minimization of-          12: Build similarity graph 𝐺 over {𝑧 𝑗 } using co-
+ten exhibits unstable optimization and poor worst-             sine similarity
+case generalization.                                       13: Connect (𝑖, 𝑗) if 𝑆 (𝑧𝑖 , 𝑧 𝑗 ) > 𝜏
+   CDRO addresses this by progressively empha-             14: Extract connected components               C       =
+sizing underperforming domains during training,                {𝐶 1, . . . , 𝐶𝑀 }
+approximating distributionally robust optimiza-
+tion through a curriculum-based relaxation.                15: Assign clusters to folds
+                                                           16: Split clusters into large (Cbig ) and small (Csmall )
+                                                           17: Assign Cbig via constrained optimization
+3.2.1    Curriculum Construction
+                                                           18: for all 𝑐 ∈ Csmall (sorted by size) do
+We partition training into 𝑇 consecutive phases. 19:          Assign 𝑐 to the fold with the largest re-
+Each phase samples data from structurally defined          maining capacity
+groups (e.g., folds or semantic clusters) according 20: end for
+to a distribution that reflects their relative diffi- 21: return fold assignments
+culty. Group difficulty can be estimated using val-
+idation performance or embedding-based proxies,
+depending on domain and label availability.
+                                                      3.2.2 Final Stabilization Phase
+   At the end of phase 𝑡, we compute a difficulty
+score Δ𝑔(𝑡 ) for each group 𝑔, and update its sam- Strong reweighting can distort batch statistics and
+pling probability via:                                harm precision on common cases. To mitigate
+                                                      this, CDRO concludes with a stabilization phase in
+                        𝑃𝑔(𝑡 ) exp(𝜂Δ𝑔(𝑡 ) )
+              (𝑡 +1)
+             𝑃𝑔      = Í (𝑡 )                 ,  (2) which sampling is returned to uniform, aggressive
+                        𝑗 𝑃 𝑗 exp(𝜂Δ 𝑗 )
+                                         (𝑡 )         augmentations are reduced, and the learning rate
+                                                      is decayed. This allows the model to recover cal-
+where 𝜂 controls the strength of reweighting. This ibration and precision while retaining robustness
+biases training toward groups with poor general- learned during earlier phases.
+ization while avoiding fully adversarial objectives.     —
+
+                                                       5
+4     Experiments
+We conduct an extensive empirical study across
+three spatially correlated object detection bench-
+marks to analyze the failure modes of standard
+evaluation protocols and to validate the effective-
+ness of our proposed framework. Our experiments
+are designed to answer the following questions:
+
+(Q1) To what extent do standard random splits in-
+     duce spatiotemporal leakage and optimistic
+     validation?
+(Q2) Can SASP recover meaningful latent domain
+     structure without access to metadata?
+                                                 Figure 1: Unsupervised domain discovery on
+(Q3) Does SASP produce honest validation signals
+                                                 GWHD. Rows denote true geographic regions;
+     under strict structural constraints?
+                                                 columns denote latent clusters. Strong alignment
+(Q4) Can CDRO improve generalization once eval- indicates that SASP recovers physical domains
+     uation is made rigorous?                    without metadata.
+
+4.1   Datasets
+                                                               • Training Schedule: Up to 200 epochs with
+Global Wheat Head Detection (GWHD) [7].
+                                                                 early stopping (patience = 25).
+GWHD contains wheat-field images collected
+from geographically distinct regions worldwide.
+Domain shift arises from differences in geography,             • CDRO: Curriculum-based reweighting
+climate, crop variety, and imaging protocols. We                 across SASP folds, followed by a final
+hold out Asian regions (UTokyo, NAU) as a fixed                  uniform, zero-augmentation phase.
+test set and treat all remaining regions as the train-
+ing–validation pool. Importantly, no geographic
+metadata is provided to SASP.                                  • Hardware:     NVIDIA L40S GPU (48 GB
+   VisDrone-DET 2019 [28]. VisDrone consists                     VRAM).
+of 10,209 images extracted from 288 drone video
+sequences across 14 cities. Strong spatiotemporal
+correlation arises from adjacent frames, repeated            4.3   Latent Domain Discovery without
+camera trajectories, and shared urban environ-                     Metadata (Q2)
+ments.
+   BCCD. BCCD is a medical microscopy dataset                We first evaluate whether SASP recovers mean-
+of blood cell images. Although smaller in scale, it          ingful latent domains. On GWHD, we cluster im-
+exhibits strong acquisition-level correlations and           ages using frozen DINOv2 embeddings and com-
+serves as a representative safety-critical domain            pare the resulting clusters with true geographic
+where validation reliability is crucial.                     regions.
+                                                  As shown in Figure 1, latent clusters exhibit
+4.2   Experimental Setup
+                                               high purity with respect to geographic origin. This
+All experiments are implemented in PyTorch us- indicates that SASP discovers semantically coher-
+ing the Ultralytics YOLO framework.            ent domains rather than relying on explicit meta-
+                                               data or heuristic grouping.
+   • Models: YOLOv8n (lightweight), YOLOv5x
+                                                  The visualization in Figure 2 provides qualita-
+     and YOLOv10x (high-capacity).
+                                               tive evidence that SASP preserves global semantic
+   • Optimization: SGD with momentum 0.937 structure, whereas random splitting actively de-
+     and weight decay 5 × 10−4 .               stroys it.
+
+                                                         6
+Figure 2: t-SNE visualization of GWHD embed-
+                                                          Figure 4: Class distribution across SASP folds on
+dings. Left: SASP induces distinct semantic is-
+                                                          VisDrone. Despite strict structural constraints,
+lands corresponding to latent domains. Right:
+                                                          SASP preserves class balance across folds.
+Random splitting produces confetti-like mixing,
+obscuring domain structure.                               Table 1: Random results are evaluated on leaky
+                                                          validation sets. GWHD reference performance is
+                                                          taken from the public winning solution [13].. †
+                                                          Proposed method.
+
+                                                           Dataset           Method             Val mAP    Test mAP
+                                                           GWHD (v8n)        Random + ERM         80.0           61.5
+                                                                             SASP + ERM           70.0           62.5
+                                                                             SASP + CDRO†         75.0           68.0
+                                                           GWHD (v5x)        Random + ERM         82.5           70.0
+                                                                             SASP + CDRO†         77.0           72.0
+Figure 3: Nearest-neighbor similarity between              VisDrone (v8n)    Random + ERM         38.0           29.1
+validation and training images on VisDrone. Ran-                             SASP + ERM           30.6           29.2
+dom splits exhibit substantial near-duplicate leak-                          SASP + CDRO†         31.2           30.0
+age, while SASP sharply reduces overlap.                   VisDrone (v10x)   Random + ERM         56.0           50.0
+                                                                             SASP + CDRO†         53.0           51.9
+
+4.4   Quantifying Spatiotemporal Leak-                     BCCD (v8n)        Random + ERM         92.4           85.6
+      age (Q1)                                                               SASP + ERM           87.2           87.5
+                                                                             SASP + CDRO†         88.8           89.2
+To measure leakage, we compute the maximum
+cosine similarity between each validation im-
+age and the training set using DINOv2 em-                 provements are not due to favorable class reallo-
+beddings. Similarity above 0.95 indicates near-           cation.
+duplicate samples.
+   As shown in Figure 3, random splits contain            4.6   Evaluation Fidelity and Generaliza-
+a significant mass of near-duplicate samples, ex-               tion under Structural Constraints
+plaining inflated validation performance. SASP                  (Q3, Q4)
+reduces leakage by 98.5%, creating a genuinely
+out-of-distribution evaluation.                           We now study detection performance under pro-
+                                                          gressively stricter evaluation protocols: (i) ran-
+                                                          dom splitting with empirical risk minimization
+4.5   Structure vs. Stratification Trade-off
+                                                          (ERM), (ii) SASP-based structural partitioning
+A key challenge in strict partitioning is preserv-        with ERM, and (iii) SASP combined with curricu-
+ing class balance while enforcing structural con-         lum distributionally robust optimization (CDRO).
+straints. To verify that SASP does not degenerate         This progression isolates the effect of evaluation
+into naive blocking, we analyze class distributions       fidelity from optimization strategy.
+across folds.                                                Three consistent trends are observed. First,
+   Figure 4 shows that SASP maintains low vari-           random splitting yields overly optimistic valida-
+ance in class proportions, confirming that im-            tion estimates that fail to predict true test behav-
+
+                                                      7
+ior. Second, enforcing structural constraints via
+SASP substantially reduces this mismatch, pro-
+ducing validation metrics that track test perfor-
+mance more faithfully. Third, once evaluation bias
+is removed, CDRO recovers generalization perfor-
+mance that would otherwise be obscured under
+leaky validation.
+
+
+Integration of Latent Structure and Robust
+Optimization. Individually, the components
+underlying our framework—latent domain discov-
+ery, stratified partitioning, and distributionally ro-
+bust optimization—have each been explored in
+prior work. However, these techniques are typ-
+ically studied in isolation and under incompati-
+ble assumptions. In particular, most DRO formu-
+lations presuppose the existence of well-defined
+groups or environments, while existing domain
+discovery methods are rarely designed to pro-
+duce partitions that are simultaneously semanti-
+cally meaningful, stratified, and suitable for robust        Figure 5: Training dynamics on BCCD with pa-
+training.                                                    tience = 25. Top: Random splits exhibit a large
+   Our contribution lies in unifying these elements          validation–test gap, causing premature early stop-
+into a coherent pipeline. SASP leverages self-               ping. Bottom: SASP + CDRO collapses the gap,
+supervised representations to uncover latent do-             restoring validation reliability.
+main structure without metadata, while explicitly
+enforcing stratification constraints that preserve
+class balance. These inferred domains then serve
+as well-formed groups for CDRO, enabling ro-
+bust optimization in settings where group annota-
+tions are unavailable and naive clustering would
+lead to degenerate or unstable training. Empir-
+ically, we find that neither component is effec-
+tive in isolation: latent structure alone yields pes-
+simistic but underperforming models, while DRO
+without structurally grounded groups fails to sta-
+bilize. Their combination is therefore essential for
+achieving both evaluation fidelity and improved              Figure 6: Prediction confidence distribution on
+generalization.                                              GWHD. SASP + CDRO shifts predictions toward
+                                                             high-confidence regimes, indicating improved cal-
+                                                             ibration.
+4.7   Training Dynamics and Validation
+      Reliability
+To understand why CDRO is necessary, we ana-                 4.8   Confidence and Calibration
+lyze training dynamics on BCCD.
+   Under random splitting, validation peaks at
+                                                             Finally, we analyze model confidence.
+92.4% while test performance remains at 85.6%,
+causing early stopping to halt training prema-                 As shown in figure 6, SASP+CDRO increases
+turely. In contrast, SASP+CDRO aligns validation             the fraction of predictions exceeding 0.7 confi-
+and test (88.8% vs. 89.2%), allowing early stopping          dence from 8% to 53%, indicating a fundamental
+to function as intended. This is shown in figure 5.          shift in model behavior under distribution shift.
+
+                                                         8
+5    Conclusion                                            References
+                                                           [1] Martin Arjovsky, Léon Bottou, Ishaan Gul-
+                                                               rajani, and David Lopez-Paz.        Invari-
+This work exposes a fundamental weakness in                    ant risk minimization.      arXiv preprint
+how computer vision models are evaluated in spa-               arXiv:1907.02893, 2019.
+tially correlated domains. We show that stan-
+dard random splitting protocols violate the i.i.d.         [2] Aharon Azulay and Yair Weiss. Why do deep
+assumption, inducing spatiotemporal leakage that               convolutional networks generalize so poorly
+inflates validation performance and obscures true              to small image transformations? Journal
+generalization.                                                of Machine Learning Research, 20(184):1–25,
+                                                               2019.
+   To address this, we reframe dataset parti-
+tioning as a structured optimization problem.              [3] Mathilde Caron, Hugo Touvron, Ishan
+Structure-Aware Stratified Partitioning (SASP) en-             Misra, Hervé Jégou, Julien Mairal, Piotr
+forces strict disjointness while preserving seman-             Bojanowski, and Armand Joulin. Emerging
+tic and class balance, yielding validation sets that           properties in self-supervised vision trans-
+faithfully reflect out-of-distribution performance.            formers. In Proceedings of the IEEE/CVF
+We further demonstrate that once evaluation is                 International Conference on Computer Vision
+made rigorous, standard ERM training becomes                   (ICCV), 2021.
+unstable, motivating Curriculum Distributionally           [4] Xinlei Chen, Saining Xie, and Kaiming
+Robust Optimization (CDRO), which restores val-                He. An empirical study of training self-
+idation reliability and improves generalization.               supervised vision transformers. In Proceed-
+                                                               ings of the IEEE/CVF International Conference
+   Across aerial surveillance, precision agricul-
+                                                               on Computer Vision (ICCV), 2021.
+ture, and medical imaging benchmarks, our
+framework not only corrects misleading evalua-             [5] Marius Cordts, Mohamed Omran, Sebastian
+tion but also induces meaningful changes in train-             Ramos, Timo Rehfeld, Markus Enzweiler, Ro-
+ing dynamics, confidence calibration, and early                drigo Benenson, Uwe Franke, Stefan Roth,
+stopping behavior. These findings suggest that                 and Bernt Schiele. The cityscapes dataset for
+progress in robust perception requires rethinking              semantic urban scene understanding. In Pro-
+evaluation protocols alongside model design.                   ceedings of the IEEE Conference on Computer
+                                                               Vision and Pattern Recognition (CVPR), 2016.
+   Beyond computer vision, the issues identified in
+this work extend to other modalities with struc-           [6] Elliot Creager, Jörn-Henrik Jacobsen, and
+tured data collection. In large language mod-                  Richard Zemel. Environment inference for
+els, for example, data contamination and bench-                invariant learning. In International Confer-
+mark leakage arise from near-duplicate docu-                   ence on Machine Learning (ICML), 2021.
+ments, shared sources, and temporal overlap be-            [7] Etienne David, Simon Madec, Pouria
+tween training and evaluation corpora. Analo-                  Sadeghi-Tehran, Helge Aasen, Bangyou
+gous to spatiotemporal leakage in vision, such                 Zheng, Shouyang Liu, Norbert Kirchgessner,
+correlations can inflate reported performance and              Goro Ishikawa, Koichi Nagasawa, Min-
+obscure true generalization. We believe that                   hajul A. Badhon, et al. Global wheat head
+structure-aware partitioning based on semantic                 detection (gwhd) dataset: A large and di-
+similarity, combined with curriculum-based ro-                 verse dataset of high-resolution rgb-labelled
+bust training, offers a promising direction for con-           images to develop and benchmark wheat
+structing more reliable evaluation protocols in                head detection methods. Plant Phenomics,
+language and multimodal models.                                2020, 2020.
+  We believe future benchmarks should move be-             [8] Tigran Galstyan, Hrayr Harutyunyan, Hrant
+yond random splitting and adopt structure-aware                Khachatrian, Greg Ver Steeg, and Aram Gal-
+evaluation to ensure that reported improvements                styan. Failure modes of domain general-
+correspond to real-world reliability.                          ization algorithms. In Proceedings of the
+
+                                                       9
+     IEEE/CVF Conference on Computer Vision and          imaging. In Proceedings of the ACM Con-
+     Pattern Recognition (CVPR), 2022.                   ference on Health, Inference, and Learning
+                                                         (CHIL), 2020.
+ [9] Ishaan Gulrajani and David Lopez-Paz. In
+     search of lost domain generalization. In In- [17] Maxime Oquab, Timothée Darcet, Théo
+     ternational Conference on Learning Represen-       Moutakanni, Huy Vo, Marc Szafraniec, Vasil
+     tations (ICLR), 2021.                              Khalidov, Pierre Fernandez, Daniel Haz-
+                                                        iza, Francisco Massa, Alaaeldin El-Nouby,
+[10] Pavel Izmailov, Polina Kirichenko, Nate Gru-       et al. Dinov2: Learning robust visual fea-
+     ver, and Andrew Gordon Wilson. On feature          tures without supervision. arXiv preprint
+     learning in the presence of spurious correla-      arXiv:2304.07193, 2023.
+     tions. In Advances in Neural Information Pro-
+     cessing Systems (NeurIPS), 2022.              [18] Pierre Ploton, Frédéric Mortier, Maxime
+                                                        Réjou-Méchain, Nicolas Barbier, Nicolas Pi-
+[11] Andrej Karpathy, George Toderici, Sanketh          card, Vivien Rossi, Carsten Dormann, Guil-
+     Shetty, Thomas Leung, Rahul Sukthankar,            laume Cornu, Gaëlle Viennois, Nicolas
+     and Li Fei-Fei. Large-scale video classifica-      Bayol, et al. Spatial validation reveals poor
+     tion with convolutional neural networks. In        predictive performance of large-scale eco-
+     Proceedings of the IEEE Conference on Com-         logical mapping models. Nature Communi-
+     puter Vision and Pattern Recognition (CVPR),       cations, 11(1):4540, 2020.
+     2014.
+                                                   [19] David R. Roberts, Volker Bahn, Simone
+[12] Pang Wei Koh, Shiori Sagawa, Henrik Mark-          Ciuti, Mark S. Boyce, Jane Elith, Gurutzeta
+     lund, Sang Michael Xie, Marvin Zhang, Ak-          Guillera-Arroita, Severin Hauenstein, José J.
+     shay Balsubramani, Weihua Hu, Michihiro            Lahoz-Monfort, Boris Schröder, Wilfried
+     Yasunaga, Richard Lanas Phillips, Irena Gao,       Thuiller, et al. Cross-validation strategies
+     et al. Wilds: A benchmark of in-the-wild dis-      for data with temporal, spatial, hierarchical,
+     tribution shifts. In International Conference      or phylogenetic structure. Ecography, 40(8):
+     on Machine Learning (ICML), 2021.                  913–929, 2017.
+[13] ksnxr.          Winning solution to the [20] Elan Rosenfeld, Pradeep Ravikumar, and An-
+     global wheat head detection challenge.             drej Risteski. The risks of invariant risk
+     https://github.com/ksnxr/GWC                       minimization. In International Conference on
+     solution, 2020.          GitHub repository.        Learning Representations (ICLR), 2021.
+     Accessed: 2026-01.
+                                                   [21] Shiori Sagawa, Pang Wei Koh, Tatsunori B.
+[14] Daniel Levy, Yair Carmon, John C. Duchi,           Hashimoto, and Percy Liang.         Distribu-
+     and Aaron Sidford. Large-scale methods for         tionally robust neural networks for group
+     distributionally robust optimization. In Ad-       shifts: On the importance of regularization
+     vances in Neural Information Processing Sys-       for worst-case generalization. In Interna-
+     tems (NeurIPS), 2020.                              tional Conference on Learning Representations
+                                                        (ICLR), 2020.
+[15] Evan Z. Liu, Behzad Haghgoo, Annie S.
+     Chen, Aditi Raghunathan, Pang Wei Koh, Sh- [22] Pei Sun, Henrik Kretzschmar, Xerxes Doti-
+     iori Sagawa, Percy Liang, and Chelsea Finn.        walla, Aurelien Chouard, Vijaysai Patnaik,
+     Just train twice: Improving group robustness       Paul Tsui, James Guo, Yin Zhou, Yuning
+     without training group information. In In-         Chai, Benjamin Caine, et al. Scalability in
+     ternational Conference on Machine Learning         perception for autonomous driving: Waymo
+     (ICML), 2021.                                      open dataset. In Proceedings of the IEEE/CVF
+                                                        Conference on Computer Vision and Pattern
+[16] Luke Oakden-Rayner, Jared Dunnmon, Gus-            Recognition (CVPR), 2020.
+     tavo Carneiro, and Christopher Ré. Hid-
+     den stratification causes clinically meaning- [23] Rohan Taori, Achal Dave, Vaishaal Shankar,
+     ful failures in machine learning for medical       Nicholas Carlini, Benjamin Recht, and Lud-
+
+                                                 10
+     wig Schmidt. Measuring robustness to natu-
+     ral distribution shifts in image classification.
+     In Advances in Neural Information Processing
+     Systems (NeurIPS), 2020.
+
+[24] Antonio Torralba and Alexei A. Efros. Un-
+     biased look at dataset bias. In Proceedings of
+     the IEEE Conference on Computer Vision and
+     Pattern Recognition (CVPR), 2011.
+
+[25] Sagar Vaze, Kai Han, Andrea Vedaldi, and
+     Andrew Zisserman. Open-set recognition:
+     A good closed-set classifier is all you need?
+     In International Conference on Learning Rep-
+     resentations (ICLR), 2022.
+
+[26] Alexandre M. J.-C. Wadoux, Gerard B. M.
+     Heuvelink, Sytze de Bruin, and Dick J. Brus.
+     Spatial cross-validation is not the right way
+     to evaluate map accuracy. Ecological Mod-
+     elling, 457:109692, 2021.
+
+[27] Chunting Zhou, Xuezhe Ma, Paul Michel,
+     and Graham Neubig. Examining and com-
+     bating spurious features under distribution
+     shift. In International Conference on Machine
+     Learning (ICML), 2021.
+
+[28] Pengfei Zhu, Longyin Wen, Xiao Bian,
+     Haibin Ling, and Qinghua Hu.      Vision
+     meets drones: A challenge. arXiv preprint
+     arXiv:1804.07437, 2018.
+
+
+
+
+                                                    11
+

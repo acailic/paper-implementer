@@ -2191,6 +2191,53 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper.pdf (10pp, 2.99MB) + paper_layout.txt (pdftotext -layout, 1089 lines). 7 explicit tables (T1 main L212-240, T2 thinking-enabled L429/433-442, T3 64K L429/433-442, T4 token-source L463/467-473, T5 runtime L765/768-775, T6 rounds L825/831-838, T7 top-K L887/891-899) + Eqs 1-22 + Theorem 1 + 6 figures. Source-free reconciliation PASSED: Table-1 24-cell macro Acc Vanilla 0.2421 -> ReContext 0.3017 = 24.61% relative (paper 24.6% EXACT); avg ranks recomputed over 14 metric columns = Qwen3-4B 1.00 (column-max all 14), Qwen3-8B 1.46 EXACT (non-max cells match paper exceptions: HotQA DAC, InfMC Vanilla/DAC 0.64, CLIPPER DySCO 0.34), Llama3-8B 1.25 vs paper 1.29 (tie-handling tolerance; non-max NQ-F1 A-MEM 0.34, NarrQA-F1 DAC 0.30 match caveat); T3 64K macro 34.95% (paper 35.0% EXACT); T4 0.190->0.226 (paper 0.19->0.23); T6 R=1->2 macro 0.168->0.218 (paper 0.17->0.22); T7 K=1->32 macro 0.190->0.232 (paper 0.19->0.23); T6 R=2 row byte-identical to T7 K=8 row (default R=2,K=8 confirmed). 7 inline honest-scope flags: (1) T2 relative-gain 16.4% recomputed vs paper 16.7% (0.3pp over-rounding of headline); (2) ablation InfMC run-drift 0.50 vs T1 main 0.55 / T4-Context 0.54 (NQ/PopQA stable, InfMC noisy 0.50-0.58); (3) closed-API limitation (requires attention access, authors' Limitations); (4) avg-rank win not per-cell dominance (Qwen3-8B non-max on 4/14 cells, Llama3-8B on 3 F1 cells); (5) top-K recall-noise trade-off (K=32 helps PopQA/InfMC, hurts NQ); (6) best recursion depth task-dependent (R=2 main is not per-task optimum for NQ/InfMC); (7) Theorem 1 proved under orthogonal unit-norm token-embedding idealization (interpretive, not a bound on empirical 128K results). NO numeric prose-vs-table contradiction."
+    },
+    {
+      "rank": 48,
+      "arxiv_id": "2607.02055",
+      "arxiv_url": "https://arxiv.org/abs/2607.02055",
+      "pdf_url": "https://arxiv.org/pdf/2607.02055",
+      "title": "Beyond the Performance Illusion: Structure-Aware Stratified Partitioning and Curriculum Distributionally Robust Optimization for Spatially Correlated Domains",
+      "authors": [
+        "Prathamesh Patil",
+        "Arpit Jain",
+        "Aswanth Krishnan"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "Evaluation-fidelity / dataset-splitting bias: structure-aware stratified partitioning (SASP) + curriculum distributionally robust optimization (CDRO) for spatiotemporally correlated vision data (aerial surveillance, precision agriculture, medical imaging)",
+      "ai_keywords": [
+        "dataset partitioning",
+        "spatiotemporal correlation",
+        "data leakage",
+        "hidden stratification",
+        "evaluation bias",
+        "distributionally robust optimization",
+        "DRO",
+        "curriculum learning",
+        "object detection",
+        "YOLO",
+        "DINOv2",
+        "self-supervised embeddings",
+        "validation fidelity",
+        "domain generalization",
+        "long-tail",
+        "multiplicative weights",
+        "calibration",
+        "early stopping",
+        "spatial cross-validation",
+        "computer vision"
+      ],
+      "abstract": "Performance evaluation in AI systems commonly assumes that random dataset splits produce independent and identically distributed (i.i.d.) subsets. We show that this assumption often breaks down in spatiotemporally correlated domains such as aerial surveillance, precision agriculture, and medical imaging, leading to two systematic failures: data leakage, where correlated samples span training and validation splits and inflate performance estimates, and hidden stratification, where errors on minority subpopulations are obscured by aggregate metrics. To address these issues, we propose a unified evaluation and training framework for spatially correlated data. We introduce Structure-Aware Stratified Partitioning (SASP), which constructs validation splits that reduce spatiotemporal leakage while preserving meaningful class balance, and Curriculum Distributionally Robust Optimization (CDRO), a curriculum-based relaxation of distributionally robust training that stabilizes optimization under these stricter splits. Across multiple benchmarks, this combination yields consistently improved generalization, more reliable confidence calibration, and exposes failure modes that remain hidden under conventional random-split evaluation.",
+      "popularity": 0,
+      "citation_count": 0,
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-sasp-curriculum-dro-spatiotemporally-correlated",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "sourcing_note": "Source-first breakdown built from paper.pdf (11pp) + paper_layout.txt (pdftotext -layout, 605 lines). 1 explicit results table (Table 1, 13 method-rows x Val/Test mAP, L362-381) transcribed verbatim + Algorithm 1 (SASP, L228-277) + Eq 1-2 + 6 figures. Source-free reconciliation PASSED: all 25 distinct Table-1 cell values grep-confirmed in layout; CDRO Test-mAP >= Random+ERM on all 5 dataset-configs (GWHD v8n +6.5, GWHD v5x +2.0, VisDrone v8n +0.9, VisDrone v10x +1.9, BCCD +3.6); Val-Test gap shrinks Random->SASP+CDRO on all 5 (GWHD v8n 18.5->7.0, GWHD v5x 12.5->5.0, VisDrone v8n 8.9->1.2, VisDrone v10x 6.0->1.1, BCCD 6.8->-0.4); SASP honesty-tax Val drop confirmed (GWHD v8n -10.0, VisDrone v8n -7.4, BCCD -5.2); prose headlines 98.5% leakage / 8%->53% confidence / BCCD 92.4&85.6 / 88.8&89.2 all grep-confirmed. 9 inline honest-scope flags (no seeds/SD/significance; figure-only results; GWHD reference [13] cited-not-tabulated; SASP+ERM omitted on 2/5 configs; underspecified tau/eta/T/stabilization; Eq-2 is standard Hedge; metadata-use ambiguity on VisDrone/BCCD; per-domain scope; no code released). NO numeric prose-vs-table contradiction."
     }
   ]
 }
