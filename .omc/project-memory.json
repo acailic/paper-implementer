@@ -72,14 +72,14 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 14,
-      "lastAccessed": 1783123134666,
+      "accessCount": 15,
+      "lastAccessed": 1783124087217,
       "type": "file"
     },
     {
       "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
-      "accessCount": 11,
-      "lastAccessed": 1783120002226,
+      "accessCount": 14,
+      "lastAccessed": 1783124298517,
       "type": "file"
     },
     {
@@ -137,6 +137,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/paper_layout.txt",
+      "accessCount": 6,
+      "lastAccessed": 1783124190134,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
       "accessCount": 5,
       "lastAccessed": 1783117893190,
@@ -182,12 +188,6 @@
       "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
       "accessCount": 3,
       "lastAccessed": 1783118125289,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/paper_layout.txt",
-      "accessCount": 3,
-      "lastAccessed": 1783119987058,
       "type": "file"
     },
     {

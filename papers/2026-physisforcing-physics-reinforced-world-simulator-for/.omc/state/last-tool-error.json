@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd papers/2026-physisforcing-physics-reinforced-world-simulator-for/ && rtk grep -n \\\"Avg\\\\|HunyuanVideo\\\\|Sora\\\\|Manip\\\\|Spatial\\\\|Wan2.2-I2V\\\\|Cosmos3-Nano\\\\|Table\\\\|PF-Wan\\\\|PF-Cosmos\\\\...",
-  "error": "Exit code 1\n/bin/bash: line 1: cd: papers/2026-physisforcing-physics-reinforced-world-simulator-for/: No such file or directory",
-  "timestamp": "2026-07-03T23:00:44.011Z",
+  "tool_input_preview": "{\"command\":\"cd papers/2026-physisforcing-physics-reinforced-world-simulator-for && rtk grep -n -i \\\"Table 2\\\\|Table 3\\\\|Table 4\\\\|Table 5\\\\|Table 7\\\\|Table 8\\\\|PAI-Bench\\\\|WorldArena\\\\|Fast-WAM\\\\|plac...",
+  "error": "Exit code 1\n/bin/bash: line 1: cd: papers/2026-physisforcing-physics-reinforced-world-simulator-for: No such file or directory",
+  "timestamp": "2026-07-04T00:16:18.760Z",
   "retry_count": 1
 }

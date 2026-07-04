@@ -291,17 +291,25 @@ PAI-Bench-G evaluates quality and domain-specific physics in robot manipulation 
 
 ### 4.4 Generation Results — EZS-Bench (Zero-Shot OOD)
 
-EZS-Bench is a training-independent zero-shot benchmark of 196 unseen robot-task-scene combinations probing out-of-distribution generalization.
+EZS-Bench is a training-independent zero-shot benchmark of 196 unseen robot-task-scene combinations probing out-of-distribution generalization. It uses a decoupled dual-model protocol (Qwen3-VL-32B-Thinking generates a physical checklist; a separate Qwen2.5-VL-72B-Instruct scores the generated video against it), reporting Quality, Domain, and their average.
 
-| Model | Avg | Δ vs ft |
-|-------|----:|--------:|
-| Wan2.2-I2V-A14B (ft) | 79.0 | — |
-| **PF-Wan** | **80.5** | **+1.5** |
-| Cosmos3-Nano (ft) | 80.3 | — |
-| **PF-Cosmos** | **81.1** | **+0.8** |
-| Abot-PhysWorld | 80.3 | — |
+> **Source:** all EZS-Bench numbers below are transcribed verbatim from the paper's Appendix C Table 8 (paper_layout.txt, `pdftotext -layout`).
 
-**Key takeaway:** PF-Cosmos achieves the best overall average (81.1), outperforming Abot-PhysWorld (80.3). Even on completely unseen combinations, physics alignment generalizes.
+| Model | Quality | Domain | Avg |
+|-------|--------:|-------:|----:|
+| WoW-Wan 14B | 76.09 | 79.51 | 77.80 |
+| GigaWorld-0 | 72.72 | 78.26 | 75.49 |
+| Cosmos-Predict 2.5 | 70.89 | 76.98 | 73.94 |
+| UnifoLM-WMA-0 | 73.55 | 52.32 | 62.94 |
+| Kling 2.6 Pro | 78.05 | 80.72 | 79.39 |
+| Abot-PhysWorld | 76.94 | 83.66 | 80.30 |
+| Wan2.2-I2V-A14B (base) | 76.89 | 77.42 | 77.16 |
+| Wan2.2-I2V-A14B (ft) | 76.12 | 81.95 | 79.04 |
+| **PF-Wan** | 76.58 | **84.49** | **80.54** |
+| Cosmos3-Nano (ft) | 77.42 | 83.16 | 80.29 |
+| **PF-Cosmos** | 76.95 | **85.20** | **81.08** |
+
+**Key takeaway:** PF-Cosmos achieves the best overall average (81.08), and PF-Wan is second (80.54) — both ahead of the strongest non-PhysisForcing model Abot-PhysWorld (80.30). As on PAI-Bench, the gain is concentrated on the Domain Score (physical-semantic plausibility): PF-Wan lifts Domain 81.95 → 84.49 (+2.54) and PF-Cosmos 83.16 → 85.20 (+2.04), while Quality stays competitive (PF-Wan +0.46, PF-Cosmos −0.47). Even on completely unseen combinations of robot/scene/task/viewpoint, physics alignment generalizes — and generalizes in the same physical-fidelity-not-visual-polish direction as the in-distribution PAI-Bench result.
 
 ### 4.5 Robotics Results — WorldArena Action Planner
 
