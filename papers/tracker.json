@@ -1482,6 +1482,53 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown from paper_layout.txt (pdftotext -layout, 1845 lines, 4 explicit tables + 10 figures; caption format 'Table N <text>' no colon so ^Table N: regex misses them). All 4 tables transcribed verbatim (T1 L321 pass@tokens, T2 L539 wall-clock, T3 L1728 tokens/attempt, T4 L1824 pass@1). Source-free reconciliation PASSED: all distinctive cells grep-confirmed; 50x=198000/4000, 80x=4096/(6*8+1)=83.6, 8^6=262144; Table-1 DecompRL column-max at >=50k tokens + column-min at 5k/10k (honest format tax); Table-2 GPU fractions sum to 100%; Table-4 DecompRL>Hierarchical-no-RL for both models. 1 inline flag: section 4.3 'theoretical maximum k^nmax = 86' is 8^6=262144 with exponent glyph stripped by pdftotext (not a paper typo); figure-derived decomposition-size tension (Fig 4c 'less' vs section 4.2/Fig 5c 'larger') flagged. NO numeric prose-vs-table contradiction. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+    },
+    {
+      "rank": 33,
+      "arxiv_id": "2607.02072",
+      "arxiv_url": "https://arxiv.org/abs/2607.02072",
+      "pdf_url": "https://arxiv.org/pdf/2607.02072",
+      "title": "kNNGuard: Turning LLM Hidden Activations into a Training-Free Configurable Guardrail",
+      "authors": [
+        "Mahmoud Abdelfattah",
+        "Hamid Nasiri",
+        "Peter Garraghan"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "FIRST training-free, inference-time safety guardrail in the repo. kNNGuard reuses a frozen LLM (Llama-3.1-8B-Instruct) as a feature extractor: a 50 safe + 50 unsafe prompt bank is run once, last-token activations from 9 evenly-spaced layers are cached and Fisher-discriminant-weighted (J_l = B_l/W_l), and a prompt is classified by cosine kNN (k=13) unsafe-fraction in activation space (kNNGuard LE), fused via an adaptive confidence rule (gap gamma=0.1; winner-takes-all if branches disagree, confidence-weighted blend otherwise) with the same score in MiniLM embedding space (kNNGuard FE). Threshold tau=0.5. NO weight updates (grad Theta_F = grad Theta_E = 0). Distinct from refusal-subspaces (which ablates a learned RFM refusal cone -> WEIGHT modification) and subliminal-clocks (which STEERS a diffusion LM residual stream): kNNGuard touches no weights and does no steering. Sibling-in-spirit to the activation-monitoring interpretability line (Arditi refusal direction; SafeSwitch). Averages F1 87.4% at FPR 12.9% / 45.9ms across 6 domains (Code Instr/Outputs, Medical, Safety, Jailbreak, Prompt Injection), 2.7x faster than Llama Nemotron Topic Guard V1 (126ms), ~10x faster than Nemotron Safety Guard V2 (454.6ms). Domain adaptation = swap the 50-example bank, constructible in 7.95s = 3156x speedup over LoRA fine-tuning. Only method with moderate (non-extreme) FPR and ASR across all 3 security domains.",
+      "ai_keywords": [
+        "LLM guardrail",
+        "training-free guardrail",
+        "prompt injection detection",
+        "jailbreak detection",
+        "hidden activations",
+        "activation space",
+        "k-nearest neighbors",
+        "kNN",
+        "Fisher discriminant",
+        "layer ensemble",
+        "adaptive fusion",
+        "embedding kNN",
+        "MiniLM",
+        "safety classifier",
+        "false positive rate",
+        "attack success rate",
+        "distributional shift",
+        "domain adaptation",
+        "configurable guardrail",
+        "inference-time safety"
+      ],
+      "abstract": "Large language models (LLMs) are increasingly deployed in domains requiring guardrails to detect unsafe, off-topic, or adversarial prompts. Existing guardrails predominately rely on fine-tuning to build classifiers, which often suffer from low generalization and high inference latency. We present kNNGuard, a training-free guardrail that utilizes the activation space of an off-the-shelf LLM. Given a small bank of 50 safe and unsafe prompts, kNNGuard extracts hidden activations and performs multi-layer kNN fusing activation-space and embedding-space scores for classification. Across six domains spanning topical and security prompts, kNNGuard achieves competitive or superior F1 compared to fine-tuned state-of-the-art guardrails while running 2.7x faster than the best comparable guardrail, and 10x faster than a fine-tuned safety classifier without gradient updates or fine-tuning. Domain adaptation requires only updating the labeled bank, which can be constructed in under 10 seconds and several orders of magnitude faster than established guardrails. We also analyze the impact of system prompts, layer selection, and integration into production LLM pipelines as a configurable, low-latency guardrail.",
+      "popularity": 0,
+      "citation_count": 0,
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-knnguard-training-free-activation-guardrail",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "sourcing_note": "Source-first breakdown from paper_layout.txt (pdftotext -layout, 1315 lines, 17pp incl appendices, 7 explicit tables T1-T7 + 11 figures). All 7 tables transcribed verbatim with sourcing line-ranges (T1 datasets L439, T2 avg summary L585, T3 topical L639, T4 security L727, T5 deployment cost L931, T6 backbone topical L1245, T7 backbone adversarial L1287). Source-free reconciliation PASSED: Table-2 averages reproduce from T3+T4 per-domain cells (display-rounding +/-0.1 boundary noise, computed from full precision = iter-45 pattern, not transcription errors); T5 speedups all recompute (2.7x=126/46.8, 9.71~=10x, 60.8~=61x, 3156x=25092/7.95); Silhouette relative improvements (89.0% Medical, 52.8~=53.2% Coding) reconcile to FIGURE labels; T6/T7 Llama-3.1-8B-Instruct rows byte-identical to T3/T4 kNNGuard FE rows (cross-table consistency triangle); cost conversions exact (413s=6.89min, 25092s=6.97h). 3 inline flags (paper-internal, transcribed verbatim): (1) section 5.3 Silhouette PROSE values (Coding 0.527, Medical 0.342) disagree with Figure-7 LABELS (0.532, 0.391) -> 89.0/53.2% match figure not prose; (2) section 5.2-5.3 '%' convention mixed ('66% FPR reduction' is relative but '20.1% ASR reduction relative to' and '64.9% FPR higher' are absolute pp); (3) backbone safety-direction ablation confounded (Llama-3 vs 3.1 8B + abliteration). NO numeric prose-vs-table contradiction. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     }
   ],
   "updated_at": "2026-07-04"
