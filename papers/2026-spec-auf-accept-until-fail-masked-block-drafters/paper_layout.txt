@@ -1,0 +1,645 @@
+                                          Spec-AUF: Accept-Until-Fail Training under Train-Inference Misalignment for
+                                                                    Masked Block Drafters
+                                                                                             Tianjian Yang1 , Meng Li2,3∗
+                                                           1
+                                                               School of Electronics Engineering and Computer Science, Peking University, Beijing, China
+                                                                         2
+                                                                           Institute for Artificial Intelligence, Peking University, Beijing, China
+                                                                            3
+                                                                              School of Integrated Circuits, Peking University, Beijing, China
+                                                                                    2300012738@stu.pku.edu.cn, meng.li@pku.edu.cn
+
+
+                                                                       Abstract                               match target tokens over a full block, often with a hand-
+                                                                                                              designed position prior — a fixed weight that decays with
+arXiv:2607.01893v1 [cs.AI] 2 Jul 2026
+
+
+
+
+                                          Speculative decoding accelerates autoregressive generation          block position, encoding the inductive bias that earlier to-
+                                          by drafting a block of tokens that the target model veri-
+                                                                                                              kens matter more (DFlash, for instance, uses an exponential
+                                          fies left-to-right, committing only the longest accepted prefix.
+                                          Block (DLM-style) drafters predict the whole block in parallel,     decay (Chen, Liang, and Liu 2026)). These objectives recog-
+                                          which is fast but trained with a full-block cross-entropy that      nize that early positions matter more, but they still supervise
+                                          supervises every position against the gold continuation—even        tokens whose contribution to throughput is conditional on all
+                                          though inference discards every token after the first rejection.    previous draft tokens being accepted. Draft-model training
+                                          Recent acceptance-aware objectives patch this by reweighting        is therefore not only a token-alignment problem; it must also
+                                          the full-block loss; we instead use teacher-forced learning as      reflect the left-to-right prefix contract used by the verifier.
+                                          a motivation for how supervision should concentrate on the             Our starting point is the analogy to autoregressive draft-
+                                          accepted prefix. A mask-only block drafter has no input-side        model training. With teacher-forced maximum likelihood,
+                                          channel for gold-prefix conditioning, so AUF approximates
+                                          that prefix-sensitive supervision on the loss side by keeping the
+                                                                                                              an autoregressive drafter receives the gold prefix on its input
+                                          cross-entropy support only through the drafter’s first predicted    side, so the loss at position i is conditioned on the event that
+                                          failure. AUF is a single, detached change to the CE support—        positions < i are already correct (Li et al. 2025). Gold super-
+                                          no auxiliary objective, no verifier rollouts, and no change to      vision is the strong signal, and the design question is which
+                                          the inference pipeline or the exactness contract. Within fixed      positions are entitled to receive it. A masked or diffusion-style
+                                          drafter backbones and serving settings on Qwen3-8B, AUF             block drafter such as DFlash cannot obtain this conditioning
+                                          raises the DFlash drafter’s average emitted length τ , averaged     from its input at all: the block positions are predicted in
+                                          over six benchmarks, from 2.40 to 2.61, with a gain on every        parallel from masked tokens. We therefore approximate that
+                                          benchmark, and transfers to Domino’s two-branch head (2.56          prefix-sensitive supervision on the loss side. Accept-Until-
+                                          to 2.68). Two findings sharpen the picture: the decay-only          Fail (AUF) keeps the gold-target cross-entropy only through
+                                          baseline reaches higher token accuracy on the shared block
+                                          mask yet decodes worse, and on DFlash, once AUF truncates
+                                                                                                              the first draft error: the accepted prefix and the first failing
+                                          the support, the standard exponential position-decay weight-        token remain active, while all later positions are masked out.
+                                          ing becomes empirically inert.                                         The closest related line begins with GRIFFIN, which also
+                                                                                                              drops the draft loss once an earlier target token falls outside
+                                                                                                              the model’s Top-K predictions (Hu et al. 2025); AUF shares
+                                                                1    Introduction                             this “stop supervising once the prefix is broken” intuition
+                                        Speculative decoding (SD) accelerates autoregressive                  but differs in both criterion and mechanism, while the soft-
+                                        language-model inference by letting a lightweight draft               weighting line (decay, D-PACE) keeps a full-block support
+                                        model propose several future tokens and letting the target            and re-approximates the conditioning with position weights
+                                        model verify them in one parallel pass (Leviathan, Kalman,            instead (Wu et al. 2026a). Section 3 places these treatments
+                                        and Matias 2023; Chen et al. 2023). Because verification ac-          of the same training–verification mismatch on one axis; what
+                                        cepts only the longest target-consistent prefix, the practical        we add is a teacher-forcing-motivated reading and the mask-
+                                        speedup of SD is governed less by isolated token accuracy             only setting it applies to, where the prefix conditioning has
+                                        than by the draft model’s ability to produce a consecutive            no input-side channel and must act on the loss side.
+                                        prefix that the target will accept. A drafter that predicts later        This direction is not an obvious win. D-PACE reports that
+                                        tokens correctly after an early mistake still wastes those pre-       a GRIFFIN-style Top-3 prefix-mask baseline underperforms
+                                        dictions: the verifier rejects the suffix once the prefix is bro-     even the decayed-CE DFlash baseline on Qwen3-4B (Wu
+                                        ken.                                                                  et al. 2026a) — but Top-3 membership is GRIFFIN’s AR-
+                                           This observation changes how draft-model training should           tuned choice, not the same operator as truncation at the first
+                                        be viewed. Standard alignment objectives train the drafter to         greedy (argmax) error (Section 3). On Qwen3-8B our exact-
+                                                                                                              match truncation improves τ over the decayed-CE baseline
+                                           ∗
+                                               Corresponding author.                                          on DFlash across all six evaluated benchmarks, and transfers
+to Domino’s two-branch head across the same benchmarks.                this gap by optimizing a streak-distillation objective over
+That a coarse Top-3 mask helps in an AR drafter yet hurts              verifier-sampled teacher trajectories and by adding test-time
+on a block drafter, while exact first-error truncation helps, is       self-selection. AUF follows the same high-level diagnosis
+itself evidence that prefix-aware supervision does not transfer        but uses a cheaper hard-label approximation: it keeps the
+trivially from AR to mask-only drafters — the gap this paper           existing DFlash/Domino drafter and changes only which CE
+is about.                                                              terms are active.
+   On DFlash, AUF fully replaces this hand-designed po-                   Concretely, let ℓi (ψ) = − log qψ,i (yi | s, [MASK]1:B ) be
+sition prior: once the support is truncated at the first pre-          the masked-block CE at position i, where all future positions
+dicted error, applying the exponential decay inside that sup-          are predicted in parallel. The DFlash objective is a weighted
+port leaves τ unchanged on all six benchmarks (Section 5.1).           additive reconstruction loss,
+The position-decay weighting is thus redundant under AUF                            PB
+                                                                                           mi wi ℓi (ψ)
+rather than complementary to it. This is not only a simpli-            LDFlash = i=1   PB               ,   wi = exp(−(i−1)/γd ),
+                                                                                         i=1 mi wi
+fication of the loss: AUF removes a fixed, manually tuned
+inductive-bias term and lets the model’s own first-failure po-
+sition decide where supervision lands — replacing a hand-set           where mi is the validity mask and wi is the fixed decay. This
+position prior, and its decay-rate hyperparameter γd , with a          loss can emphasize early positions, but every valid suffix
+model-decided support. Whether this model-decided support              token remains an independent training target. The speculative
+remains the better default beyond the fixed settings studied           verifier instead advances by an accepted streak,
+here is a question we return to in Section 6.                                                         " B k                       #
+                                                                                                       XY
+                                                                            E[τ | s] = 1 + Eŷ1:B ∼qψ          αi (s, ŷ<i , ŷi ) ,
+                     2    Preliminaries                                                                        k=1 i=1
+Speculative decoding. Let pθ be the target model and qψ be             where αi is the conditional acceptance probability at position
+a draft model. At each SD iteration, the draft model proposes          i given that the previous i − 1 draft tokens survived. The ob-
+a block of B candidate tokens (ŷ1 , . . . , ŷB ). The target model   jective gap is therefore structural: the decayed CE optimizes
+verifies these candidates left-to-right in one parallel forward        an additive per-position surrogate, while inference rewards a
+pass and accepts the longest prefix that matches the target            product-gated prefix event.
+decoding policy. Let
+                                                                       A unified weighted-CE view. Up to per-batch normal-
+                A = max{k : ŷi = yi ∀i ≤ k}                           ization, the decayed CE, D-PACE’s dynamic weights, and
+denote the number of accepted draft tokens before the verifier         the GRIFFIN-style prefix mask are all instances of a single
+emits the next target token. In our SGLang serving path                weighted cross-entropy,
+the reported acceptance length is τ = A + 1, where the                                         PB
+                                                                                                    mi ci ℓi (ψ)
+extra token is this verifier-emitted correction token. For a                           L(ψ) = i=1PB              ,             (1)
+fixed implementation and hardware setting, higher expected                                         i=1 mi ci
+τ directly reduces the number of target verification rounds per        differing only in the per-position credit ci assigned to each
+generated token, so draft accuracy matters primarily through           CE term; in all of them ci is detached from the gradient, per-
+its effect on consecutive prefix acceptance.                           forming credit assignment without itself being optimized.
+Parallel DLM/block drafters. DFlash is a representative                Up to the constant correction-token offset in τ = A + 1,
+block drafter: it predicts a full block in one draft forward           the natural smooth surrogate for accepted length is the
+pass using target hidden-state features and masked block               cumulative-confidence proxy used by D-PACE (Wu et al.
+                                                                                     PB Q
+tokens (Chen, Liang, and Liu 2026). This removes the se-               2026a), S̃ = k=1 i≤k qψ,i (yi ), whose gradient decom-
+quential drafting dependency inside the block, but it creates          poses into a weighted sum of per-position score gradients,
+a mismatch with SD verification. The DLM-style drafter pre-
+                                                                                 B
+dicts positions in parallel, while the target verifier consumes                  X                                       Q            
+them strictly left-to-right. A correct prediction at position j        ∇ψ S̃ =         gi ∇ψ log qψ,i (yi ),     gi =     l≤i qψ,l (yl )   fi ,
+is useful only if all previous positions are also accepted.                      i=1
+                                                                                                             P      Qm             (2)
+Train–inference mismatch in block objectives. The same                 with continuation value fi = 1 + m>i l=i+1 qψ,l (yl ).
+mismatch can be phrased as an objective gap. DFlash-                   Q credit gi factorizes into a prefix-acceptance gate
+                                                                       The
+style training uses block-level masked CE, optionally with                l≤i qψ,l (yl ) — a smooth estimate of the probability that
+a hand-designed position decay, while inference measures               the draft prefix through position i is accepted — times a
+an accepted streak under a left-to-right verifier. Thus, train-        continuation value. The gate is the dominant factor: D-PACE
+ing can reward later-token reconstruction even when those              reports that the cumulative-only weight recovers most of the
+later tokens would be discarded after an earlier rejection.            gain over fixed decay while the continuation-only variant is
+SpecDiff-2 makes an analogous point for diffusion drafters:            far weaker (Wu et al. 2026a). The reference signal is therefore
+diffusion models learn joint denoising distributions over              that a position’s training credit should scale with the prob-
+blocks, whereas autoregressive verifiers make local prefix-            ability that its prefix is accepted, and any objective whose
+conditional token decisions (Sandler et al. 2025). It addresses        credit ignores this gate is structurally misaligned with the
+                                                                     target token is outside the draft model’s Top-K predictions,
+CE loss
+                                                                     propagating the mask through a short window (Hu et al.
+                                                                     2025). D-PACE instead keeps the CE support intact but re-
+target              T0       T1   T2      T3         T4   T5   T6    places fixed position decay with dynamic weights derived
+                                                                     from an accepted-length surrogate (Wu et al. 2026a), and the
+                                                                     left-to-right focal objective for diffusion drafters adds a first-
+output
+                                                                     error focal term on top of a retained position decay (Whalen,
+                    d0       d1   d2       d3        d5   d6   d7
+                                                                     Ito, and Sakamoto 2026). These three are different treatments
+                                                                     of the same training–verification mismatch. AUF takes the
+                                       Draft Token                   hardest, most direct form of the signal: the drafter first emits
+                                                                     a greedy block, the first exact (argmax) token mismatch de-
+                                           AR Draft Model
+                                                                     fines the SD prefix boundary j ∗ , and CE is applied only up to
+                                                                     that boundary. The criterion and the mechanism both differ
+ input                       T0   T1      T2         T3   T4   T5    from GRIFFIN — an argmax mismatch on the model’s own
+                                                                     greedy block, not Top-K membership, and a clean trunca-
+                   Anchor
+                                                                     tion of all later positions, not a windowed product that can
+                                       Teacher-forced
+                                                                     re-activate — and from D-PACE’s soft reweighting and the
+                                                                     focal term’s additive penalty. AUF is not GRIFFIN’s K=1
+Figure 1: Teacher-forced training for an autoregressive draft
+                                                                     special case: GRIFFIN never defines a first-error boundary
+model. The model receives the gold prefix as input and pre-
+                                                                     or truncates past it.
+dicts shifted target tokens, so each CE term is trained under
+                                                                        Table 1 makes the relationship precise: all of these ob-
+the prefix-correct condition.
+                                                                     jectives are the same weighted block CE, differing only in
+                                                                     the per-position credit ci , and only AUF sets ci from an ex-
+inference reward. SpecDiff-2 closes the gap most directly            act prefix-acceptance test on the model’s own greedy block
+by optimizing a soft prefix-product reward along verifier-           — the hard limit of the soft prefix-acceptance gate that the
+sampled teacher continuations, at the cost of those rollouts         other methods grade (Section 2), augmented with the breaker
+and a distillation procedure (Sandler et al. 2025); the present      token.
+work instead approximates the same gate with a hard, single-         The soft-reweighting and divergence-shaping lines. Be-
+sample plug-in, developed in Section 4.                              yond our nearest neighbors, a broader set of recent methods
+Teacher forcing as the source of the design. The reason              keeps a full-block support and changes how it is weighted
+this is natural is teacher forcing. In autoregressive training the   or scored. PARD-2 reweights each position by a cumulative
+model predicts yi conditioned on the gold prefix y<i , making        product of target confidences, again replacing the fixed de-
+the loss at position i a conditional-prefix loss by construction     cay (An et al. 2026); LK Losses optimize a direct acceptance-
+(Figure 1). The opposite choice — training on self-generated         rate surrogate (Samarin et al. 2026) and Halfway couples
+prefixes while still mapping them to gold next tokens — cre-         drafter and target in a joint acceptance objective (Nistor
+ates a distribution mismatch: once the prefix is corrupted,          2026), but both retain an exponential position decay; and
+the supervised input–output pair may not correspond to the           VSD lifts the objective from token likelihood to sequence-
+data distribution (Huszár 2015). The practical reading is that       level acceptance (Zou et al. 2026). The common thread is a
+gold supervision is the strong signal: EAGLE-3 keeps gold            full-block soft support, or a decay term left in place. AUF
+shifted tokens for exactly this reason, and generates subse-         differs in one structural respect: it lets the drafter’s own first
+quent hidden states from its own training-time rollout only          greedy error define the support and then removes the decay,
+because those intermediate features have no gold counter-            rather than reweighting, augmenting, or re-shaping a support
+part to teacher-force against, not because self-generated in-        that still spans the block.
+puts are preferable (Li et al. 2025). The open question for          Block- and diffusion-style drafters. The drafters we build
+a block drafter is therefore not whether to use gold targets         on predict a block in parallel. DFlash is the block-diffusion
+— they are the strong signal — but which positions can le-           baseline whose masked-block CE with exponential decay
+gitimately receive gold supervision. This question is sharp          we target (Chen, Liang, and Liu 2026), and Domino adds
+in speculative decoding: Domino can answer it on the input           a causal branch that consumes ground-truth prefix tokens,
+side, because its causal branch consumes ground-truth prefix         giving it the input-side conditioning a mask-only drafter
+tokens (Huang et al. 2026), whereas a masked block drafter           lacks (Huang et al. 2026); these are the two backbones we
+has no such channel and must answer it on the loss side —            evaluate. Masked-diffusion LMs can be trained as weighted
+the route AUF takes, developed in Section 4.                         masked-CE objectives (Sahoo et al. 2024), and block dif-
+                                                                     fusion interpolates between autoregressive and full diffu-
+                    3       Related Work                             sion via the block size (Arriola et al. 2025): larger blocks
+Acceptance-aware block-drafter objectives. The training              expose more parallelism but rely more on intra-block bidi-
+objective we modify is shared, up to per-position weighting,         rectional aggregation. Curricula that grow the block from
+across a growing family of methods. GRIFFIN introduces a             next-token to next-block prediction ease adaptation from AR
+prefix mask that removes the loss at position j if an earlier        checkpoints and stabilize large-block generation (Tian et al.
+                                                                                       P
+Table 1: Block-drafter CE objectives as instances of one weighted block CE L ∝ i mi ci ℓi (ψ), differing only in the per-
+position credit ci (gate defined in Section 2). “Graded credit” marks soft gates and “verifier rollout” marks methods that sample
+teacher trajectories from pθ . Only AUF truncates the active support to the accepted prefix plus the breaker {1, . . . , j ∗ }; every
+prior objective keeps the full-block support and only reweights it.
+
+  Method                    Per-position credit ci   Active support                  Gate form                  Graded credit   Verifier rollout
+  Uniform CE                        1                  full block                       none                         —                no
+  Position decay          exp(−(i − 1)/γd )            full block               none (position prior)                —                no
+  GRIFFIN Top-K           1[prefix in Top-K]          coarse mask                   hard, coarse                     no               no
+                                            ∗
+  L2R focal                 wi Q+ λ 1[i=j ]           full block         position prior + first-error focal         no               no
+  D-PACE                          l≤i q̃l fi           full block                        soft                        yes              no
+  SpecDiff-2          product reward over pθ paths     full block                   soft, verifier                   yes              yes
+  AUF (ours)                    1[i ≤ j ∗ ]           {1, . . . , j ∗ }            hard + breaker                    no               no
+
+
+2025; Wu et al. 2026b), and TraceRL argues that DLM post-                   AUF as the hard plug-in of the gate. AUF replaces the
+training should use information from the inference trajectory               fixed weight with the maximum-a-posteriori, single-sample
+rather than an off-policy surrogate alone (Wang et al. 2025).               plug-in of the same gate. Replacing each soft factor qψ,l (yl )
+Together these motivate treating AUF’s active support as a                                                    Q realization 1[ŷl = yl ] col-
+                                                                            in the prefix product by its greedy
+training-dynamics object, not only a static loss mask. Other                lapses the gate to the indicator l≤i 1[ŷl = yl ] = 1[i < j ∗ ],
+recent parallel drafters scale a different axis — D2 SD pairs               where j ∗ is the first greedy mismatch. This hard gate acti-
+two diffusion drafters (Zhang et al. 2026a), JetSpec widens                 vates only the accepted prefix {1, . . . , j ∗ −1}; AUF extends
+parallel tree drafting (Hu et al. 2026), and HCSpec cascades                the support by one position to include the failing token j ∗
+two tiers (Zhang et al. 2026b) — and are orthogonal to the                  itself, because it is the decision that breaks the accepted pre-
+training-objective change AUF makes, which leaves the ar-                   fix and the position whose improvement directly extends A.
+chitecture and inference pipeline untouched.                                The resulting support {1, . . . , j ∗ } is therefore not the gate
+                                                                            alone but the gate plus the breaker — the minimal super-
+Teacher forcing in autoregressive drafters. The prefix-                     set that covers every position relevant to the next unit of
+sensitive supervision that motivates AUF is native to au-                   acceptance. AUF is thus a zero-temperature, hard version
+toregressive drafters, which receive the gold prefix on their               of the prefix-acceptance gate that D-PACE estimates softly,
+input (Li et al. 2025); GRIFFIN’s loss mask supplements this                augmented with the single token whose CE gradient most di-
+input-side channel rather than substituting for it. A mask-only             rectly pushes j ∗ rightward, applied as a 0/1 support instead
+block drafter has no such channel, so the same intuition has                of a graded weight. Unlike fixed decay it retargets automati-
+to act on the loss side (Section 4). This setting difference, not           cally: as the drafter improves, j ∗ moves right and the active
+the masking operator, is what we claim is new.                              support expands with no schedule. We give the loss next,
+                                                                            then return to what this hard plug-in gives up.
+
+                        4      Method                                       Accept-Until-Fail CE. For a training block of length B,
+                                                                            let V = {i : mi = 1} be the set of natively valid posi-
+Why fixed decay is train–inference inconsistent. The                        tions (the validity mask of equation 1), let yi be the target
+unified view of Section 2 makes the design target explicit: a               token and ŷi = arg max qψ (·)i be the draft model’s current
+position’s credit cQ
+                   i in equation 1 should track the prefix-
+                                                                            greedy token at position i (Figure 2). AUF finds the first exact
+acceptance gate l≤i qψ,l (yl ) of equation 2. The hand-                     mismatch among valid positions,
+designed position prior sets ci = wi = exp(−(i − 1)/γd ), a                                   j ∗ = min{j ∈ V : ŷj ̸= yj }.
+function of position alone, and is inconsistent with that gate
+in two ways. First, credit on unrealizable positions: when                  If such a position exists, the active CE support is S = {i ∈
+the prefix has already broken at some position j < i, the                   V : i ≤ j ∗ }; otherwise S = V . The loss is
+gate is near zero but wi remains strictly positive, so the de-                                        1 X
+cayed CE spends gradient raising qψ,i (yi ) on positions the                                LAUF =            − log qψ (yi )i .
+                                                                                                     |S|
+                                                                                                               i∈S
+verifier has already abandoned — the block-drafter form of
+exposure bias. Second, a static bottleneck: the gate is data-               The first failing token is kept in the support because it is
+and model-dependent and moves rightward as the drafter im-                  the decision that breaks the accepted prefix. Tokens after the
+proves, whereas wi is fixed before training, so a schedule set              first failure are inactive because they would not be verified
+ex ante cannot track the position that currently limits accep-              as accepted draft tokens in the corresponding SD iteration.
+tance. Fixed decay does encode the correct prior that earlier               Equivalently, AUF replaces the fixed DFlash weights wi with
+positions matter more — which is why it beats uniform CE                    the model-dependent hard prefix weight ai (ψ) = 1[i ≤ j ∗ ]
+— but it is a position prior, not a prefix-acceptance signal,               (with ai = 1 for all i on a fully correct block), so the loss is
+and the two diverge exactly on the examples that determine                  the weighted CE equation 1 with ci = ai (ψ). The mask ai (ψ)
+A.                                                                          is computed from detached predictions and is not a gradient
+                                                                                          active support 1... j*                    masked
+
+
+CE loss                                                              CE loss
+
+
+target              T0      T1   T2       T3         T4   T5   T6    target              T0     T1       T2        T3          T4     T5     T6
+
+                                                                                                                          j*
+
+output              d0     d1    d2       d3         d4   d5   d6     output             d0     d1       d2         d3         d5     d6     d7
+           Anchor                                                               Anchor
+
+                                       Draft Token                                                            Draft Token
+
+
+                                           DLM Draft Model                                                           DLM Draft Model
+
+
+ input                                                                 input
+           Anchor                                                               Anchor
+                                         Mask                                                                      Mask
+
+
+Figure 2: Full-block decayed CE versus AUF for a masked block drafter. Left: the block is predicted in parallel, and the full-block
+decayed CE assigns nonzero credit to suffix tokens after the first greedy error. Right: AUF computes the first mismatch j ∗ from
+detached greedy predictions and keeps CE active only on positions 1:j ∗ , the accepted prefix plus the first failing token.
+
+
+path: AUF remains a CE objective whose only change is the            accuracy: because the support is the accepted prefix plus the
+credit-assignment rule over positions.                               breaker token, it is tied to the current first-failure depth. We
+                                                                     use it as a training-side diagnostic of where the support lies,
+What AUF gives up, and what it costs. Relative to the
+                                                                     and use common-token accuracy and inference-side condi-
+soft gate of equation 2, the hard plug-in discards two things.
+                                                                     tional acceptance for fixed-denominator comparisons.
+First, it removes graded credit: a near-miss at the breaker
+and a confidently correct early token both receive credit 1,            This exposes an optimization dimension that fixed-
+whereas the soft gate down-weights a fragile prefix. Second,         support objectives — uniform CE, fixed decay, and dynamic
+a single deterministic argmax is a coarse, 0/1 estimator of          reweighting such as D-PACE — do not have: they keep the
+the gate: on any given example the credit is binary rather than      supervised token set fixed and improve only the accuracy or
+graded, so per-example information about prefix confidence           weighting of the same positions, whereas AUF can also im-
+is lost. These are exactly the two properties that D-PACE’s          prove by pushing the first failure later, growing ractive . AUF
+smoothing and SpecDiff-2’s product reward preserve at extra          thus turns the left-to-right acceptance boundary itself into
+cost; AUF trades that graded information for a parameter-free        part of the training signal. We read the resulting trajectory as
+hard support. What AUF buys in return is cost, simplicity, and       an implicit easy-to-hard curriculum the drafter sets for itself:
+one fewer inductive bias: it changes only the coefficient ci in      early on it is supervised to be reliable on a short accepted
+the existing decayed-CE loss, needs only a detached greedy           prefix (small ractive ), and as that prefix competence grows
+readout from the training logits to locate j ∗ , adds no auxiliary   it pushes j ∗ rightward and extends the supervised horizon
+objective, samples no verifier trajectories, removes the decay       with it, so a single driver moves both diagnostics up and to
+hyperparameter γd , and leaves the inference pipeline and the        the right rather than two independently scheduled quantities
+rejection-sampling exactness contract untouched.                     (Figure 3). The native serving block size stays fixed; only
+                                                                     the loss horizon grows, per example and per step, from the
+Two optimization axes. AUF changes training along two                drafter’s realized prefix rather than a manually fixed block-
+measurable axes. First, it changes the active token ratio            size schedule — mirroring the block-diffusion observation
+                         ractive = |S|/B,                            that fine-grained local correctness should be established be-
+                                                                     fore exploiting large parallel blocks. This is an interpretation
+which measures how much of the block participates in the             of the training dynamics measured in Section 5.1, not a sep-
+CE update: early in training the first error appears near the        arate mechanism.
+beginning, so ractive is small, and as the drafter pushes the
+first failure rightward the support expands. Second, it induces      AUF as a teacher-forcing-motivated support rule.
+the diagnostic support-token accuracy                                Stated as interpretation rather than theorem, AUF is the
+                               1 X                                   loss-side realization of the teacher-forcing idea of Section 2
+                  asupport =         1[ŷi = yi ],                   for drafters without an input-side gold-prefix channel. The
+                              |S|
+                                 i∈S                                 acceptance-aware methods push back toward prefix-sensitive
+measured on the same first-error support that AUF selects for        supervision but mostly by reweighting a full-block loss
+CE. For AUF this is not an independent fixed-denominator             whose support still spans the block; each changes how much
+support accuracy                                                   uses the same backbone with its GRU-prefix base/final two-
+                                                                   branch head. Our baseline is the standard decayed-CE con-
+                                                                   figuration (γ = 7) recommended by the SpecForge training
+                                                 higher τ          recipe (Chen, Liang, and Liu 2026; Huang et al. 2026); this is
+                                                                   the default used in both DFlash and Domino and reproduces
+                                                                   the exponential position decay adopted across the block-
+                   AUF-Spec
+                                       lower τ                     drafter literature (EAGLE-3, DFlash, Domino all hand-set
+                                                                   an exponential γ (Li et al. 2025; Chen, Liang, and Liu 2026;
+                                                                   Huang et al. 2026)). AUF keeps the architecture and training
+                                             fixed ratio
+                                                                   data fixed and only changes the supervised support, replacing
+                                                                   the full-block decayed CE support with the first-error sup-
+                                                                   port of Section 4. All decode numbers are produced by our
+                                                                   SGLang DFlash/Domino V2 speculative-decoding backend
+                                           active token ratio      (single GPU, batch size 1) under two verification settings:
+                                                                   greedy (T =0) and sampling (T =1); in both cases the draft
+Figure 3: A two-dimensional training diagnostic over training      proposal is greedy (single top-1 candidate per position). Be-
+steps, drawn schematically from the per-step measurements          cause every comparison in this section is within a fixed drafter
+of Figure 4. Axes: x = active token ratio ractive = |S|/B,         architecture (AUF is a training recipe, not a new model), per-
+y = accuracy on the selected first-error support asupport .        iteration forward cost is identical across the variants we com-
+Dashed contours schematically indicate higher acceptance           pare. We therefore report average acceptance length τ (mean
+length τ toward the upper right. A fixed-support method            accepted draft tokens plus one correction token per specula-
+moves almost vertically (constant ractive , accuracy measured      tive iteration, as reported by SGLang’s built-in metrics) as
+on the same positions). AUF instead traces an expanding-           the main decode metric throughout this section.
+support path where the active support grows as the first failure
+j ∗ moves rightward.                                               Benchmarks. Both backbones are evaluated on the same
+                                                                   six benchmarks: GSM8K, MATH-500, HumanEval, MBPP,
+                                                                   MT-Bench, and Alpaca, with prompt counts 200, 200, 164,
+a position counts without changing which positions receive         200, 80, 200 and a uniform max_new_tokens=512 cap
+CE. The first-error focal objective even keys on the same          across all methods and temperatures. Every drafter is trained
+breaker j ∗ yet adds a term on top of the full decayed CE,         for six epochs on ShareGPT; the decode tables report the
+leaving the suffix supervised, whereas AUF sets ci = 0 for         epoch-6 checkpoints, and the training-dynamics figures use
+i > j ∗ and removes it; among drafters, only Domino changes        the full epoch-1 optimizer-step logs. We separate the two
+the conditioning event on the input side. The analogy is inten-    backbones into their own subsections because the Domino
+tionally limited: strict teacher forcing conditions on a coun-     two-branch head admits a richer family of AUF variants.
+terfactual gold prefix, whereas AUF conditions the support
+on the drafter’s own realized greedy prefix up to j ∗ while the    5.1   DFlash
+target at every supervised position stays the gold token. We       DFlash has a single output distribution, so the AUF design
+therefore use teacher-forcing language as motivation, not as       space is small. We train three matched variants: the official-
+a claim that AUF exactly recovers the same conditional.            style decay-only reference (γ = 7 full-block CE), AUF-only
+                                                                   (first-error truncated CE, no decay), and AUF+decay (the
+Applying AUF to different drafters. For DFlash, AUF is             same exponential decay applied inside the AUF support).
+applied directly to the block logits. For Domino, which has a      Table 2 reports the epoch-6 decode results.
+base branch and a final correction branch, the first-error sup-       Both AUF variants improve over the decay-only reference
+port is computed separately for each output distribution. The      on every benchmark under both greedy and sampling decod-
+change is scoped to the CE support and modifies neither the        ing (Table 2), with the largest gains on the longer, more struc-
+drafter architecture nor the inference-time verifier contract.     tured code and math outputs; the sampling result confirms the
+                                                                   gain is not an artifact of the greedy verification match used
+                       5      Evaluation                           during training, and the advantage holds throughout training,
+                                                                   not just at convergence (Figure 4). Notably, AUF-only and
+Setup. We evaluate Qwen3-8B drafters trained on
+                                                                   AUF+decay are indistinguishable: once the support is trun-
+ShareGPT. The target model is Qwen3-8B. We use the
+                                                                   cated at the first predicted error, re-weighting the surviving
+original ShareGPT training conversations directly, without
+                                                                   positions with exponential decay adds nothing measurable.
+regenerating assistant responses from the target model. For
+                                                                   We read this decay-inert result in Section 6.
+Qwen3 we use the standard qwen chat template rather
+than the thinking-enabled qwen3-thinking template,                 Training dynamics. Figure 4 logs two token accuracies
+so thinking is disabled both when formatting training data         per optimizer step: common-token accuracy, measured on a
+and when rendering evaluation prompts. We treat thinking-          fixed common mask (all natively-valid block positions) so the
+enabled Qwen3 as a different serving setting and do not            three methods share a denominator, and the support accuracy
+vary it here. DFlash uses a 5-layer block drafter with tar-        of Section 4, measured on the positions each method actually
+get layers {1, 9, 17, 25, 33} and block size B = 16; Domino        trains on (for AUF, the selected first-error support). Two
+Table 2: DFlash epoch-6 average acceptance length (τ ) on Qwen3-8B across six benchmarks, measured through the SGLang
+serving path (batch size 1). Best per temperature setting in bold.
+
+                                           Math                           Code                          Chat                Overall
+      Temperature    Method
+                                 GSM8K        MATH-500       HumanEval           MBPP        MT-Bench          Alpaca          Avg.
+                    Decay-only     2.29           2.39             2.86           2.85          2.03            2.01           2.40
+         T =0       AUF+decay      2.50           2.64             3.09           3.08          2.19            2.14           2.61
+                     AUF-only      2.51           2.64             3.09           3.09          2.18            2.15           2.61
+                    Decay-only     2.21           2.28             2.70           2.74          1.94            1.96           2.31
+         T =1       AUF+decay      2.39           2.49             2.88           2.93          2.08            2.09           2.48
+                     AUF-only      2.40           2.50             2.89           2.94          2.06            2.11           2.48
+
+
+facts stand out. First, on the common mask the decay-only                 Table 3: Domino AUF variants. “Support” is the training
+baseline is the most accurate, yet it is the worst at decode.             mask used by each branch: common = full native block,
+Second, AUF’s active token ratio starts low and grows over                base-auf/final-auf = first-error truncation from the
+training while decay-only trains the full block, so the AUF               base/final branch. Decay is the γ = 7 position weight applied
+support diagnostic tracks a much shorter first-error region.              inside the support. Short names are used in subsequent tables.
+This common-mask accuracy inversion — more accurate yet
+slower — is the empirical signature we interpret in Section 6.              Short name              base support final support decay
+Per-position conditional acceptance. The matching                           Decay-only (baseline) common           common         on
+inference-side measurement is the per-position conditional                  B-AUF                   base-auf       common         off
+acceptance rate αk — among speculative steps whose draft                    B-AUF+D                 base-auf       common         on
+prefix through position k − 1 was fully accepted, the fraction              S-AUF                   base-auf       base-auf       off
+that also accept position k,                                                S-AUF+D                 base-auf       base-auf       on
+                                                                            F-AUF                   base-auf       final-auf      off
+                             #{A ≥ k}                                       F-AUF+D                 base-auf       final-auf      on
+                     αk =                ,
+                            #{A ≥ k − 1}                                     B = base-only (AUF on base branch only); S = shared (both
+                                                                             branches share base-auf support); F = branch-specific (final
+read off the accepted-draft-token histogram the SGLang ver-
+                                                                          branch uses its own final-auf support). +D = decay applied inside
+ifier records per request.
+                         P Q  This is exactly the per-position                                    the AUF support.
+factor in E[τ ] = 1 + k i≤k αi (Section 2): it removes
+the compounding penalty of earlier rejections and isolates
+conditional predictive quality at each block offset. We plot              and sampling decoding, regardless of how the two branches
+positions 1–6 only, where every curve retains a non-trivial               split their support. Three observations sharpen the picture.
+fraction of speculative steps in the conditioning set under                  First, the empirically strongest variant under greedy de-
+the six-benchmark average; deeper positions are too thin to               coding is B-AUF+D, which applies AUF to the base branch,
+be stable. On DFlash (Figure 5, left) both AUF variants lie               leaves the final branch on the common mask, and retains the
+above the decay-only baseline across the block, and AUF-                  decay inside the AUF support; under sampling, B-AUF (with-
+only and AUF+decay are again nearly indistinguishable: the                out decay) is marginally stronger. The gain is localized to the
+decode gain is a lift of the conditional acceptance profile that          base (proposer) branch: its training loss drops sharply once
+determines τ , not a global shift in raw token accuracy.                  AUF is applied, while pushing AUF onto the final branch as
+                                                                          well does not help (and slightly hurts) — a degree of freedom
+5.2    Domino                                                             DFlash’s single distribution does not expose.
+Domino is harder to analyze because its head is not a single                 Second, the spread among the six AUF variants is small,
+distribution: it mixes a base branch (the drafter’s own logits)           so we report the ordering rather than claim a designed main
+and a final branch (base plus a causal correction), trained as            line. The smaller absolute Domino margin than on DFlash is
+L = λbase Lbase + (1 − λbase )Lfinal . AUF therefore has a                consistent with its stronger baseline: a higher starting point
+choice of which support each branch trains on, and there is               leaves less headroom for support reshaping.
+no a-priori “main” AUF line — we treat the branch-support                    Third, unlike DFlash where decay on top of AUF is in-
+assignment as an experimental variable and let the measured               ert (Table 2), on Domino decay adds a small benefit under
+decode decide. We evaluate seven trained variants spanning                greedy decoding across all three matched decay-toggle pairs
+that space (Table 3): three support assignments (base-only,               that vanishes or reverses under sampling. The residual is
+base-shared, branch-specific), each with and without the γ =              modest and regime-dependent; we take up whether it carries
+7 decay applied inside the AUF support, plus the decay-only               information beyond the support selection in Section 6.
+baseline.
+   Table 4 shows the support-selection idea transfers: every              Per-position conditional acceptance on Domino.
+AUF variant beats the decay-only baseline under both greedy               Domino’s two-branch head has no single training-accuracy
+                                              Decay-only     AUF+decay       AUF-only
+                 Support accuracy           Common-token accuracy   Active token ratio                           Acceptance length τ
+      0.75                                                                1.0                              2.6
+                                       0.3
+
+      0.50                                                                                                 2.4
+                                       0.2
+                                                                          0.5
+                                                                                                           2.2
+      0.25                             0.1
+                                                                                                           2.0
+      0.00                             0.0                                0.0
+             0       50k     100k            0      50k     100k                0     50k    100k                1     2      3   4    5      6
+                  Training step                  Training step                      Training step                     Training epoch
+
+Figure 4: DFlash training dynamics across epochs (rolling mean over 3000 steps; τ from six-benchmark greedy SGLang decode).
+Panels: (1) support accuracy, on the positions each method actually trains on (for AUF, the selected first-error support); (2)
+common-token accuracy, on the fixed common mask of all natively-valid block positions; (3) active token ratio, the fraction of
+block positions each method supervises; (4) acceptance length τ . See text for interpretation.
+
+Table 4: Domino epoch-6 average acceptance length (τ ) on Qwen3-8B across six benchmarks, same SGLang protocol as Table 2.
+Best per temperature block in bold; all AUF variants beat the decay-only baseline. Short names refer to Table 3.
+
+                                             Math                           Code                           Chat                       Overall
+    Temperature Method
+                                    GSM8K        MATH-500    HumanEval              MBPP      MT-Bench               Alpaca            Avg.
+                   Decay-only        2.42           2.52           3.10             3.08            2.13              2.13             2.56
+                   B-AUF             2.51           2.65           3.21             3.17            2.23              2.20             2.66
+                   B-AUF+D           2.52           2.65           3.21             3.18            2.26              2.23             2.68
+        T =0
+                   S-AUF             2.51           2.66           3.15             3.11            2.20              2.17             2.63
+                   S-AUF+D           2.52           2.66           3.17             3.11            2.23              2.18             2.65
+                   F-AUF             2.49           2.63           3.16             3.09            2.21              2.18             2.63
+                   F-AUF+D           2.54           2.67           3.14             3.15            2.23              2.18             2.65
+                   Decay-only        2.33           2.38           2.89             2.94            2.02              2.11             2.44
+                   B-AUF             2.41           2.52           2.98             3.04            2.11              2.12             2.53
+                   B-AUF+D           2.40           2.49           3.03             3.01            2.08              2.14             2.52
+        T =1
+                   S-AUF             2.45           2.49           2.94             2.96            2.07              2.13             2.51
+                   S-AUF+D           2.40           2.50           2.95             2.97            2.07              2.12             2.50
+                   F-AUF             2.40           2.47           2.99             2.99            2.06              2.13             2.51
+                   F-AUF+D           2.45           2.48           2.93             2.99            2.08              2.09             2.50
+
+
+axis to plot, so we read the effect of AUF off the inference               closely. This is principled but not proven: “better aligned ob-
+side, with the same αk used for DFlash (Figure 5, right). The              jective” and “higher measured τ ” are not the same statement,
+two base-branch AUF variants (B-AUF and B-AUF+D) lift                      and we treat the causal link as a hypothesis.
+the conditional acceptance profile over decay-only through                    Two readings refine this. The first is structural: AUF is
+most of the block, but by a smaller margin than on DFlash,                 a projection of an RL objective onto a supervised one.
+consistent with Domino’s stronger baseline and narrow τ                    Maximizing the verifier’s expected acceptance length E[τ ]
+spread.                                                                    would sample rollouts from the current policy, assign credit
+                                                                           along them, and update with a reward-weighted gradi-
+                       6   Discussion                                      ent; AUF keeps the on-policy rollout (the greedy block)
+Why does AUF help? AUF improves τ over the decayed-                        and the acceptance-aligned credit rule (the first-error po-
+CE baseline across our runs (Section 5). We are confi-                     sition j ∗ deciding where to supervise) but replaces the
+dent about the method’s structure and its train–inference-                 reward-weighted
+                                                                              P               policy gradient with the ordinary gold CE
+consistency motivation (Section 4), but not yet about the                  − i≤j ∗ ∇ψ log qψ,i (yi ). This explains the appeal — a sta-
+precise causal mechanism, which likely needs targeted inter-               ble dense CE gradient that still carries acceptance-aligned
+pretability analysis we leave to future work. The principled               credit — without our having measured that this is why it
+explanation is that the full-block CE supervises positions                 wins. The second is a falsifiable prediction: supervising post-
+whose prefix the verifier never reaches, learning a target less            failure positions is an off-deployment task that competes for
+prefix-sensitive than inference itself, whereas AUF truncates              capacity with the early positions determining the accepted
+the support at the first predicted failure and thus optimizes              prefix, so fixed-support baselines should buy higher generic
+a quantity that tracks SGLang’s acceptance length τ more                   token accuracy at the expense of decode. This is exactly the
+                                 Decay-only       AUF + decay       AUF only           sampling (B-AUF 2.53 vs. B-AUF+D 2.52); averaged across
+                                                                                       regimes the decay-on and decay-off variants are within noise
+                                      DFlash                         Domino
+Cond. acceptance αk
+
+
+                      0.71                                                             and the sign flips with temperature. We therefore conclude
+                                                                                       that decay is not a necessary complement to AUF on either
+                      0.66                                                             backbone.
+                                                                                       Limitations. All results are at a single configuration: block
+                      0.61
+                                                                                       size B = 16, target Qwen3-8B, and ShareGPT training data.
+                                                                                       Three axes remain unverified because each requires a full
+                      0.56
+                             1    2   3       4    5   6 1      2     3   4    5   6   drafter retraining run. We do not vary B or model scale, so the
+                                  Draft position                Draft position         broader-default argument above is a structural expectation,
+                                                                                       not a confirmation; we do not include head-to-head retraining
+  Figure 5: Per-position conditional acceptance αk (epoch 6,                           against D-PACE or other acceptance-aware baselines under
+  greedy SGLang decode), averaged over all six benchmarks.                             matched compute; and whether AUF’s stable SFT-side up-
+  Aggregation weights prompts equally within each benchmark                            date is preferable to a tuned on-policy RL objective, or only
+  and then weights the six benchmarks equally; MT-Bench’s                              cheaper, is untested.
+  two turns count as separate prompts. Left: DFlash decay-
+  only, AUF+decay, and AUF-only. Right: Domino decay-only                                                      References
+  and the two base-branch AUF variants (B-AUF+D, B-AUF),                               An, Z.; Liu, T.; Liu, Z.; Li, D.; Liu, R.; and Barsoum,
+  using the same line styles. AUF raises the six-benchmark                             E. 2026. PARD-2: Target-Aligned Parallel Draft Model
+  conditional acceptance profile on both backbones.                                    for Dual-Mode Speculative Decoding. arXiv preprint
+                                                                                       arXiv:2605.08632.
+  inversion DFlash shows (Section 5.1); what it does not set-                          Arriola, M.; Gokaslan, A.; Chiu, J. T.; Yang, Z.; Qi, Z.;
+  tle is whether the effect is causal data-curation or the same                        Han, J.; Sahoo, S. S.; and Kuleshov, V. 2025. Block Dif-
+  inversion the consistency reading already predicts.                                  fusion: Interpolating Between Autoregressive and Diffusion
+                                                                                       Language Models. In International Conference on Learning
+  A spectrum, with AUF as the minimal intervention. The                                Representations.
+  existing objectives lie on one axis from supervised imitation                        Chen, C.; Borgeaud, S.; Irving, G.; Lespiau, J.-B.; Sifre,
+  toward verifier-calibrated RL: uniform CE → position decay                           L.; and Jumper, J. 2023. Accelerating Large Language
+  → AUF → D-PACE → SpecDiff-2. Uniform CE and fixed                                    Model Decoding with Speculative Sampling. arXiv preprint
+  decay encode a position prior with no acceptance signal; AUF                         arXiv:2302.01318.
+  is the first point that conditions on the model’s realized pre-
+                                                                                       Chen, J.; Liang, Y.; and Liu, Z. 2026. DFlash: Block
+  fix, using a hard on-policy support and a gold target; D-PACE
+                                                                                       Diffusion for Flash Speculative Decoding. arXiv preprint
+  softens the same gate into a graded weight; SpecDiff-2 moves
+                                                                                       arXiv:2602.06036. Accepted at ICML 2026.
+  the target onto verifier trajectories, approaching the RL ob-
+  jective itself (Sandler et al. 2025). AUF is thus the minimal                        Hu, L.; Feng, Z.; Wu, Y.; Yuan, H.; Zhao, Y.; Qian, Y.-
+  edit that conditions training on the realized accepted prefix,                       Y.; Wang, B.; Zhao, P.; Jiang, D.; Zhu, Y.; Rosing, T.; and
+  and is distinct from sequence-level rejection-sampling fine-                         Zhang, H. 2026. JetSpec: Breaking the Scaling Ceiling of
+  tuning: it performs block-internal, token-prefix-level credit                        Speculative Decoding with Parallel Tree Drafting. arXiv
+  assignment tied to the left-to-right acceptance semantics of                         preprint arXiv:2606.18394.
+  speculative decoding.                                                                Hu, S.; Li, J.; Xie, X.; Lu, Z.; Toh, K.-C.; and Zhou, P. 2025.
+                                                                                       GRIFFIN: Effective Token Alignment for Faster Speculative
+  One fewer inductive bias. A practical consequence is that                            Decoding. arXiv preprint arXiv:2502.11018.
+  AUF removes a hand-designed component rather than adding
+  one: it replaces the exponential position decay — a fixed,                           Huang, J.; Zhang, Y.; Zhang, Q.; Lin, H.; Xu, H.; and
+  manually tuned weight — with the drafter’s own first-failure                         Zhang, L. 2026. Domino: Decoupling Causal Modeling from
+  boundary, which the DFlash result shows carries the same                             Autoregressive Drafting in Speculative Decoding. arXiv
+  “earlier tokens matter more” prior and the acceptance signal                         preprint arXiv:2605.29707.
+  the fixed prior lacks. This removes the decay rate γd from the                       Huszár, F. 2015. How (not) to Train Your Generative Model:
+  hyperparameter budget, and because the support is computed                           Scheduled Sampling, Likelihood, Adversary? arXiv preprint
+  from the model rather than fixed ex ante, the rule is defined                        arXiv:1511.05101.
+  identically regardless of block size B or backbone. We stress                        Leviathan, Y.; Kalman, M.; and Matias, Y. 2023. Fast In-
+  this is a structural motivation, not an empirical scaling claim.                     ference from Transformers via Speculative Decoding. In
+                                                                                       International Conference on Machine Learning.
+  Does AUF replace decay, or only supplement it? On
+  DFlash this is answered cleanly: AUF-only and AUF+decay                              Li, Y.; Wei, F.; Zhang, C.; and Zhang, H. 2025. EAGLE-3:
+  are indistinguishable under both greedy and sampling decod-                          Scaling up Inference Acceleration of Large Language Models
+  ing (Section 5.1), so decay is fully redundant once the support                      via Training-Time Test. arXiv preprint arXiv:2503.01840.
+  is selected. On Domino a small greedy-regime residual sur-                           Nistor, M.-S. 2026. Halfway Speculative Decoding: Di-
+  vives (B-AUF+D 2.68 vs. B-AUF 2.66) but reverses under                               rect Acceptance Rate Optimization with Joint Drafter-Target
+Training. Technical report, https://sergiu-nistor.com/assets/
+publications/Halfway_Speculative_Decoding.pdf.
+Sahoo, S. S.; Arriola, M.; Schiff, Y.; Gokaslan, A.; Mar-
+roquin, E.; Chiu, J. T.; Rush, A.; and Kuleshov, V. 2024.
+Simple and Effective Masked Diffusion Language Models.
+In Advances in Neural Information Processing Systems.
+Samarin, A.; Krutikov, S.; Shevtsov, A.; Skvortsov, S.; Fisin,
+F.; and Golubev, A. 2026. LK Losses: Direct Acceptance
+Rate Optimization for Speculative Decoding. arXiv preprint
+arXiv:2602.23881.
+Sandler, J.; Christopher, J. K.; Hartvigsen, T.; and Fioretto,
+F. 2025. SpecDiff-2: Scaling Diffusion Drafter Align-
+ment For Faster Speculative Decoding. arXiv preprint
+arXiv:2511.00606.
+Tian, Y.; Liang, Y.; Zhang, S.; Shu, Y.; Yang, G.; He, W.;
+Fang, S.; Guo, T.; Han, K.; Xu, C.; Chen, H.; Chen, X.; and
+Wang, Y. 2025. From Next-Token to Next-Block: A Prin-
+cipled Adaptation Path for Diffusion LLMs. arXiv preprint
+arXiv:2512.06776.
+Wang, Y.; Yang, L.; Li, B.; Tian, Y.; Shen, K.; and Wang,
+M. 2025. Revolutionizing Reinforcement Learning Frame-
+work for Diffusion Large Language Models. arXiv preprint
+arXiv:2509.06949.
+Whalen, L.; Ito, Y.; and Sakamoto, R. 2026. Teach-
+ing Diffusion to Speculate Left-to-Right. arXiv preprint
+arXiv:2606.11552.
+Wu, T.; Yao, Y.; Qi, Z.; Zheng, H.; Wang, Z.; Ma, H.; Liao,
+L.; Lakkaraju, H.; Li, J.; and Du, Y. 2026a. D-PACE: Dy-
+namic Position-Aware Cross-Entropy for Parallel Speculative
+Drafting. arXiv preprint arXiv:2605.18810.
+Wu, Z.; Zheng, L.; Ye, J.; Gong, S.; Zhao, X.; Feng, Y.;
+Bi, W.; and Kong, L. 2026b. DreamReasoner-8B: Block-
+Size Curriculum Learning for Diffusion Reasoning Models.
+arXiv preprint arXiv:2606.19257.
+Zhang, L.; Zhang, J.; Yao, J.; Yan, R.; Yang, Y.; Zhang, J.;
+Yang, T.; Wu, Y.; and Yuan, B. 2026a. D2 SD: Accelerating
+Speculative Decoding with Dual Diffusion Draft Models.
+arXiv preprint arXiv:2606.04446.
+Zhang, Y.; Chen, S.; Ye, H.; and Feng, E. 2026b. HC-
+Spec: Two-Tier Horizontal Cascade Speculative Decoding
+for High-Efficiency Large Language Model Inference. In
+Proceedings of the 64th Annual Meeting of the Associa-
+tion for Computational Linguistics (Volume 1: Long Papers),
+7773–7783.
+Zou, X.; Li, J.; Huang, J.; and Zhou, P. 2026. Variational
+Speculative Decoding: Rethinking Draft Training from To-
+ken Likelihood to Sequence Acceptance. arXiv preprint
+arXiv:2602.05774.
+
