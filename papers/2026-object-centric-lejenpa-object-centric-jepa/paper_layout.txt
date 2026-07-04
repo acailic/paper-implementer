@@ -1,0 +1,840 @@
+                                                                                    Object-centric LeJEPA
+
+                                                                               Jakob Geusen, Ender Konukoglu
+                                                                        Biomedical Image Computing Group, ETH Zurich
+                                                                                            jgeusen@ethz.ch
+
+
+
+                                                                Abstract                                   context-dependent, each patch feature focuses more on en-
+                                                                                                           coding information on the surrounding scene rather than the
+arXiv:2607.02404v1 [cs.CV] 2 Jul 2026
+
+
+
+
+                                        Image encoders trained with LeJEPA can deliver strong              object at its location. Object-level alignment removes this
+                                        features for downstream tasks, but, like other image-level         tension. Rather than matching scenes to scenes, it matches
+                                        self-supervised methods, typically require large training          objects to objects: only representations of the same ob-
+                                        datasets. Aligning representations at the level of objects         ject need to agree across views, while distinct objects re-
+                                        rather than whole scenes promises greater data efficiency,         main free to differ. This makes the representation modu-
+                                        but doing this in a completely self-supervised way, ef-            lar, allowing the encoder to separate object identity from
+                                        fectively jointly partitioning a scene and representing its        scene context. Such a representation should transfer across
+                                        objects, is unstable: the two are locked in a cyclic de-           the many scenes an object appears in. It is our hypothe-
+                                        pendency, partitioning requires meaningful representations,        sis that object-centric learning is more data-efficient than
+                                        while meaningful representations require consistent par-           image-level learning, since the model can connect instances
+                                        titioning. We sidestep this instability by taking object           of the same object across scenes instead of relearning it in
+                                        masks as given during training, using cheap, off-the-shelf         each new context. Beyond data efficiency through composi-
+                                        SAM proposals. We extend LeJEPA - whose distributional             tional generalization, object-centric encoders could advance
+                                        anti-collapse objective ports naturally from whole images          relational reasoning, interpretability and temporal dynamic
+                                        to variable-sized sets of objects - to align object-centric        modelling [9, 24, 32, 36].
+                                        representations rather than whole images. An additional                Alignment between object representations is more chal-
+                                        instance-separating loss, which treats other objects in the        lenging than alignment between whole images. While
+                                        same scene as negatives, further boosts downstream perfor-         the latter has clearly defined positive samples (augmented
+                                        mance. Across two model scales and 10–100% of COCO,                views of the same image), the former requires object masks
+                                        object-level LeJEPA outperforms image-level LeJEPA on              to define such samples. Previous approaches to object-
+                                        tracking (DAVIS), classification (ImageNet-1k), segmenta-          centric learning tried to jointly solve partitioning and rep-
+                                        tion (ADE20k), and re-identification (NAVI).                       resentation learning in an end-to-end manner [8, 20], how-
+                                                                                                           ever, this strategy could only work on natural images if it
+                                                                                                           relied on frozen large-scale pre-trained encoders to extract
+                                        1. Introduction                                                    patch features [30]. Building on patch features from frozen
+                                        Object-centric learning promises better data efficiency than       pre-trained encoders with slot attention lets both the parti-
+                                        image-level learning. By aligning representations at the           tioning and the object representations be learned jointly, but
+                                        level of objects rather than whole scenes, a model can ex-         at the price of a restriction on each: both are a function of
+                                        ploit the compositional structure that scenes share, learn-        features from the frozen encoder. In contrast, our method
+                                        ing to assign similar representations to an object across          accepts a fixed partitioning during training in exchange for
+                                        the many scenes it appears in. Image-level self-supervised         far fewer restrictions on the representation space.
+                                        methods align augmented views of the same image. But                  Different downstream tasks have different demands from
+                                        under random cropping, two views often capture differ-             object-centric representations. Classification calls for a
+                                        ent regions of a scene, potentially featuring different ob-        largely semantic space, in which the representations of two
+                                        jects, and a good encoder should arguably assign these             instances with the same semantics lie close together, e.g.,
+                                        regions different representations. Image-level alignment           two horses in the same image should have similar repre-
+                                        works against this: forcing the two views to agree, while          sentations. Tracking, in contrast, calls for a more instance-
+                                        avoiding collapse, leaves the encoder no choice but to rely        specific space: watching two nearly identical horses race,
+                                        on global, high-level semantics. Because semantics are             we still need to tell them apart. These demands are in ten-
+
+
+                                                                                                       1
+                                                                                  External Mask                                               semantic
+                                                                                    Generator                                                  object
+                                                                                                                                                reps.
+
+                                                                                            masks                                     f          z1
+
+
+
+
+                          g
+                                                                                                                                      f          z2
+
+
+
+      input image x
+                                      patch features g(x)                    masked patch features g(x)
+                                                                                                                                      f          z3
+
+                                                                         ϕ   ϕ       ϕ      ϕ       ϕ     ϕ   ···
+
+                                                                                                                                            LObjectLeJEPA
+                                                       instance object
+                                                           predictions
+                                                                                                              ···
+
+
+                                                                                           Linstance
+
+
+Figure 1. Overview over our training framework. An exemplary input image x, generated by [25], is embedded by the ViT backbone
+g into per-patch features. An external mask generator generates object masks for the same image - here two horses and a dog (orange,
+blue, green). For each object, the aggregator f pools its patch features into a single object representation zk . The proposed object-centric
+LeJEPA loss LObjectLeJEPA (bottom right) shapes their semantic geometry via cross-view alignment, here ideally resulting in the two
+horses (z1 , z2 ) having similar representations while keeping the dog (z3 ) different. Every patch is mapped by the instance projection ϕ
+to an instance object prediction (colored by object, background patches in gray). The instance-level contrastive loss Linstance clusters
+predictions of the same object together while keeping them separable from other objects and the background.
+
+
+sion, since semantic similarity pulls instances of the same                              than whole scenes, and object-centric learning that jointly
+category together while instance-specificity pushes them                                 discovers and represents objects.
+apart. In encoders trained with image-level losses, empir-
+ical evidence suggests that final-layer representations are                              2.1. Representation Learning
+largely semantic, and instance-specific object binding, if                               Purely reconstruction-based representation learning can
+it occurs at all, emerges only in earlier layers [17]. Our                               lead to representations that are not aligned with perception-
+method instead encodes both semantic and instance-specific                               based downstream tasks [1]. This is why contrastive and
+information in the final-layer representations.                                          self-supervised learning paradigms have begun to dominate
+    As illustrated in Figure 1, we capture both semantic and                             the field of representation learning [4, 26, 31, 38]. Many
+instance-specific information in each patch feature through                              of them rely on heuristics to avoid representation collapse,
+training with two heads. The semantic head, f , uses masks                               such as teacher–student architectures, stop-gradients, or hy-
+to aggregate patch features into a single object represen-                               perparameter schedules. The LeJEPA framework [2] re-
+tation. These object representations feed into an object-                                places these heuristics with a principled anti-collapse objec-
+centric LeJEPA loss that aligns different augmented views                                tive that regularizes the representations toward an isotropic
+of the same object while preventing collapse, yielding se-                               Gaussian through a statistical test for normality. In the im-
+mantic coherence. The instance head, ϕ, is applied to each                               age domain, LeJEPA has only been applied to embeddings
+patch feature individually and can be understood as predict-                             for images as a whole, we adopt the LeJEPA loss to work
+ing the instance representation of the object the patch be-                              on an object level.
+longs to. Here the aim is to align the instance predictions of
+patches within the same mask while keeping them separa-                                  2.2. Region- and Object-level SSL
+ble from those of patches outside it. We achieve this with a                             A growing body of work moves self-supervised pretraining
+contrastive loss [5, 14, 33].                                                            from whole images to local regions, aligning the features of
+                                                                                         corresponding regions across views instead of pooling the
+2. Related Works                                                                         entire scene. VICRegL [3] and DenseCL [34] match dense
+                                                                                         or local features, whereas DetCon [11] and ODIN [12] pool
+Our work sits at the intersection of three lines of research:                            features over heuristic or self-generated mask proposals and
+general self-supervised representation learning (SSL), self-                             contrast the resulting region representations. Another ap-
+supervised pretraining at the level of image regions rather                              proach incorporates object proposals into the augmentation
+
+
+                                                                                 2
+pipeline, cropping views around proposed objects rather              masks avoid this leakage by enforcing binary assignments.
+than at random [23]. Unlike approaches that reduce each              Motivated by this, Rubinstein et al. [29] obtain binary
+image to a single representation and apply alignment and             masks from external segmenters, which are now cheap to
+repulsion on an image level [23], our method extracts a sep-         acquire at scale from promptable models [16, 28]. Their
+arate representation for every object via its mask and applies       approach inherits the clean separation of hard masks but,
+a loss among these within-image representations, explicitly          unlike ours, still depends on a pre-trained encoder: object
+separating distinct instances. Closest to us, SlotMIM [35]           representations are extracted by passing mask-cropped
+couples masked image modeling with slot-style grouping               crops through a frozen foundation model, leaving the
+to learn object-level representations, and serves as our pri-        encoder unable to adapt its features to objects. Relying
+mary object-centric baseline. Our method shares the region-          on an external segmenter does mean accepting stale, fixed
+pooling idea with the previous works but differs in two re-          partitions that do not adapt during training. In return, the
+spects: the anti-collapse signal comes from a distributional         partitioning is clean and the encoder is no longer restricted
+normality test ported more naturally to variable-sized sets          to forming slots within a frozen feature space, so the
+of objects rather than from a contrastive or teacher–student         representation can be trained end-to-end. We trade adaptive
+mechanism, and we add an explicit instance-separating ob-            partitioning for clean, hard masks and an unconstrained,
+jective so that co-occurring objects of the same category re-        fully trainable encoder.
+main distinguishable.
+                                                                     3. Background
+2.3. Object-centric Learning
+                                                                     The guiding principle behind self-supervised image en-
+Ideally, an object-centric model decomposes a scene and              coders is to map similar images to similar representations.
+finds representations for each object in the scene. This chal-       In the absence of labels indicating similarity, similar pairs
+lenge was tackled in an end-to-end manner by combining               are synthesized by randomly augmenting an image. Enforc-
+sequential or parallelized grouping mechanisms with repre-           ing alignment across augmentations - typically photometric
+sentation learning [8, 20]. While initial methods solely re-         transforms such as color jitter together with random crop-
+lied on reconstruction-based objectives, more recent works           ping - push the encoder towards capturing semantics.
+have explored adding contrastive objectives for object-                  This alignment objective alone has a trivial solution,
+centric representation learning [22]. Scaling these models           known as collapse: mapping every image to the same rep-
+to real-world scenes generally requires incorporating im-            resentation satisfies alignment perfectly. LeJEPA [2] there-
+age foundation models [30] due to the cyclic dependency              fore pairs the alignment term with a regularizer, SIGReg,
+mentioned before. However, building on top of frozen fea-            that wards off collapse by encouraging the representations
+tures imposes a ceiling on what the model can express. In            of a batch to resemble an isotropic Gaussian distribution
+slot attention, each slot is a projected linear combination of       through checking the Epps-Pulley statistic.
+patch features, so a slot can only ever express what is al-              LeJEPA applies both terms at the image level: it aligns
+ready present in the patch feature space. The same frozen            whole-image representations across augmentations and reg-
+features also dictate how the scene is partitioned, placing a        ularizes them with SIGReg. Our method instead applies
+strong prior on the partitioning. Training the encoder from          them per object. Rather than aligning and regularizing the
+scratch removes this ceiling, because the patch features can         representation of an entire scene, which may consist of mul-
+adapt to become more powerful in representing objects than           tiple objects, we do so for each object representation, which
+generic features.                                                    promises greater data efficiency.
+   Training end-to-end object-centric encoders without
+reconstruction-based losses is difficult, since joint-               4. Method
+embedding and contrastive objectives rely on meaningful
+positive (and negative) object pairs, which would not                We learn object representations in two complementary
+be available at the beginning of training due to unstable            spaces. The first is a semantic space, shaped by an object-
+scene decomposition. As a remedy, some works propose                 centric LeJEPA loss LObjectLeJEPA , in which two horses
+image decomposition based on dataset-wide prototypes                 are assigned similar representations. The second is an in-
+[10, 15, 19, 35]. These methods again rely on slot attention         stance space, shaped by a contrastive loss Linstance , in
+to match patches to the prototypes, where the assignment             which those same two horses remain separable within a
+is soft. Even when different regions of the image favor              scene. Both losses build on object representations extracted
+different prototypes, no patch is assigned to a single               from masks supplied by an external model (SAM 2 [28]).
+prototype exclusively. Object information therefore bleeds           As illustrated in Figure 1, we extract one semantic represen-
+across the resulting partitions, undermining the clean               tation per mask and feed it to LObjectLeJEPA , while every
+separation that compositional generalization requires. Hard          patch predicts an instance-level representation of its object,
+
+
+                                                                 3
+which Linstance processes. At inference time no masks are             the set of objects present in the v-th view of the n-th im-
+needed, as the backbone yields informative patch features             age as Kn,v ⊆ Kn . Dually, we define the set of views
+directly. Section 4.1 details the extraction before the two           where an object is present as Vn,k . A common procedure in
+sections after it present the losses.                                 self-supervised learning is to apply alignment on an MLP-
+                                                                      projection of the representations, which we will refer to as
+4.1. Object Representation Extraction                                 z̃n,v,k . We set the projection dimension to d = 64.
+The extraction of an object’s representation relies on knowl-
+edge about its spatial location and extent. Obtaining these           Instance-level Object Representations Here we rely on
+in an unsupervised manner in turn relies on meaningful im-            the principle that a part should know which whole it belongs
+age representations. As of now, training both in an end-to-           to. Hence, the extraction of the instance-level object predic-
+end manner is unstable for natural images without “extra              tions of i-th patch boils down to an MLP ϕ applied to the
+knowledge”, for instance using pre-trained encoders. Here,            i-th patch feature before applying ℓ2 normalization,
+we focus on the representation learning part and take the
+object masks as given. These masks are precomputed with                                            ϕ(g(xn,v )i )
+                                                                                       yn,v,i =                    ,              (1)
+SAM 2 before the training to avoid repeated computations                                          ∥ϕ(g(xn,v )i )∥2
+over the epochs. Concretely, we run the SAM 2 automatic
+mask generator on each original image, prompting it with              where xn,v is the v-th augmented view of the n-th image
+a regular 16 × 16 grid of point cues. More details on mask            and g(xn,v )i is the patch feature of the i-th patch.
+generation are provided in the appendix. Our goal is to train
+                                                                      4.2. Object-centric LeJEPA
+an image encoder g that for each patch of the image x en-
+codes both instance-level and semantic information about              The object-centric LeJEPA loss combines an alignment
+objects that it may belong to.                                        term and a regularization term. The alignment term Lpred
+                                                                      encourages the representations of the same object across
+                                                                      different views to be similar. We can only align when an
+Semantic Object Representations Following the princi-                 object appears in at least two views. Hence, we define the
+ple that a whole is defined by its parts, we compute a seman-         effective set Kneff = {k ∈ Kn | |Vn,k | ≥ 2}. For each ex-
+tic object representation z as a function f of the patch fea-         tracted object representation zn,v,k that is present in at least
+tures that fall within its mask. As illustrated in Figure 2, we       one other view, we compute the alignment as such
+                      k,v
+                                                                                    1
+                                                                         ℓpred
+                                                                          n,v,k =     ∥µn,k − z̃n,v,k ∥22 , k ∈ Kneff , v ∈ Vn,k (2)
+                    mask-          masked                                           d
+ g(x)
+                              q
+                                              +   Residual   z
+          MLP      weighted         cross
+                                                   MLP                                   1
+                                                                                             P
+                    mean          attention                           where µn,k = |Vn,k   |   v∈Vn,k z̃n,v,k is the average of the k-
+                                                                      th object representation across all views where it is present.
+                                                                      The final prediction loss Lpred is an average over all object-
+Figure 2. Diagram of the patch aggregator f outputting semantic
+                                                                      level alignment terms ℓpred
+                                                                                              n,v,k .
+object representation given patch features g(x) and a mask.
+                                                                         The regularization term LSIGReg [2] is applied on the
+                                                                      projected object representations z̃n,v,k to prevent collapse.
+first calculate a weighted mean of independently projected            Instead of calculating the empirical characteristic function
+patch features based on the patch-wise average-pooled ob-             with respect to representations of images in a batch of size
+ject mask. The following cross attention masks out keys               B, we compute it over all object representations extracted
+and values coming from outside the mask. Finally, we ob-              from all B images. In the original LeJEPA paper, SIGReg
+tain the object representation by adding a residual connec-           uses the Epps–Pulley test statistic, which is scaled by the
+tion from the weighted mean before passing it through a               sample size. In our case this sample size varies significantly
+residual MLP.                                                         across batches, since the number of objects in a view is far
+    LeJEPA [2] relies on augmentations for its alignment              from constant. Hence, we regularize the Epps–Pulley test
+term and we closely follow the same augmentation pipeline.            statistic with a constant scale factor set to B to avoid large
+Let us denote the semantic object representation from the n-          fluctuations in gradient magnitude and unstable training.
+th training image, v-th augmented view, and k-th mask as                 The two terms are combined into the object-centric
+zn,v,k . Because the random augmentations involve crop-               LeJEPA loss
+ping, some objects will not be visible in all views. We de-
+fine an object to be present in a view, if its view-projected                LObjectLeJEPA = Lpred + λLeJEPA LSIGReg ,            (3)
+mask covers an area of at least 16 × 16 pixels, correspond-
+ing to the patch size of the ViTs we are using. We define             where we set λLeJEPA = 0.05 as recommended by [2].
+
+
+                                                                  4
+4.3. Instance-level Loss                                              size 128 × 128, together with the standard LeJEPA augmen-
+Our second object-centric objective targets instance-                 tations. We used these same hyperparameters for training
+specific structure so that co-occurring objects can be told           both image-level LeJEPA and our method. SlotMIM (800)
+apart. We want all patches of the same object to agree on             was trained for 800 epochs on COCO as recommended in
+a common instance representation while remaining separa-              the training script provided by its authors. For comparabil-
+ble from those of other objects. Unlike the LeJEPA loss,              ity, we also include a SlotMIM model that was trained for
+this term is computed independently within each view, since           150 epochs. Unless reported otherwise, all models used the
+separating co-occurring objects is an intra-image problem             ViT-Base architecture [7] with a patch size of 16 × 16. Fur-
+while cross-view consistency is already handled by Lpred .            ther implementation details can be found in the appendix.
+                                                                      The code will be made publicly available upon publication.
+Following the supervised contrastive formulation [14], for
+every patch i, let A(i) be all other patches in the same view
+                                                                      5.2. Downstream Tasks
+and P(i) ⊆ A(i) those sharing its dominant mask. With
+temperature τ = 0.1, the per-anchor loss is defined for all           In the following paragraphs, we introduce downstream tasks
+patches i that share its mask with at least one other patch,          and probes on frozen patch features and discuss the results.
+                                             ⊤
+                                                                     Further details can be found in the appendix.
+ instance         1     X             exp yn,v,i  yn,v,p /τ
+ℓn,v,i = −                   log P                ⊤
+                                                                .
+               |P(i)|               a∈A(i) exp yn,v,i yn,v,a /τ
+                      p∈P(i)                                          Instance-Awareness Probing To test whether encoders
+                                                           (4)        capture instance-level information, we first assigned each
+                                                                      patch to the mask that occupies the largest fraction of the
+We average all valid granular loss terms ℓinstance
+                                             n,v,i   first over
+                                                                      patch. We discarded patches assigned to the background.
+all patches within a view, and then jointly over all views
+                                                                      Then we applied two postprocessing pipelines to the frozen
+v and images n. Here we assign patches to a mask if it
+                                                                      foreground patch features on ADE20k. First, we K-Means
+covers at least 50% of the mask. Background patches serve
+                                                                      clustered the L2-normalized features, setting the number of
+as negatives but are not used as anchors.
+                                                                      clusters to the number of ground-truth instance masks, and
+    The total training objective is the sum of the two object-
+                                                                      measured agreement with those masks via foreground ad-
+centric losses,
+                                                                      justed rand index (FG-ARI) and mean IoU. Second, fol-
+              L = LObjectLeJEPA + Linstance .              (5)        lowing Li et al. [17], we trained a quadratic probe on the
+                                                                      ADE20k train set to predict whether a pair of foreground
+5. Results                                                            patches belongs to the same instance, and reported accuracy
+                                                                      and AUC on the validation set. Features encoding instance-
+We compared three methods trained on COCO [18]: image-
+                                                                      level information should both cluster into object instances
+level LeJEPA [2], SlotMIM [35], and our own method,
+                                                                      and support accurate same-instance prediction.
+Object-LeJEPA, which uses mask proposals from SAM 2
+[28]. As an upper bound, we also report results for DI-               Table 1. FG-ARI and mean IoU between K-Means clusters of
+NOv3 [31], using the official checkpoint (ViT-B) trained              frozen patch features and ground-truth instance masks.
+at scale. We froze all encoders and evaluated them on a
+range of downstream tasks: linear probing for image clas-
+                                                                                 Encoder            FG-ARI      mIoU
+sification on ImageNet [6], various dense tasks on ADE20k
+[37], tracking via nearest neighbours on DAVIS [27], and                         Image LeJEPA        0.285     0.229
+object re-identification from region-pooled patch features                       SlotMIM (800)       0.347     0.277
+on NAVI [13]. Our downstream benchmarks span object                              SlotMIM             0.343     0.271
+types, scene layouts, and image distributions that differ                        Object LeJEPA       0.431     0.355
+from COCO, so they probe how well the frozen features
+                                                                                 DINOv3              0.357      0.300
+generalize beyond the pretraining domain.
+5.1. Training Details                                                    When clustering patch features into object instances (Ta-
+For the main experiments we trained on COCO for 150                   ble 1), Object LeJEPA not only lead the COCO-trained
+epochs, following [2] in setting λLeJEPA = 0.05, a weight             models but overtook DINOv3, raising the FG-ARI from
+decay of 0.05, and a LeJEPA projection dimension of 64.               0.357 to 0.431 and the mIoU from 0.300 to 0.355. The
+We optimized with AdamW [21] at a batch size of 256 and               quadratic probe (Table 2) tells the same story: Object
+a learning rate of 5 · 10−4 , using a cosine schedule preceded        LeJEPA reached 0.915 accuracy and 0.954 AUC, surpass-
+by one linear warm-up epoch. For each image, we sam-                  ing both COCO baselines and effectively matching DINOv3
+pled 2 global views of size 256 × 256 and 8 local views of            (0.914 / 0.957). Learning representations guided by explicit
+
+
+                                                                  5
+Table 2. Accuracy and AUC of a quadratic probe predicting            Table 4. Label propagation on DAVIS via nearest-neighbour
+whether two patches share an instance.                               matching of frozen patch features, reporting contour accuracy
+                                                                     (Fm ), the J &F mean, and region similarity (Jm ).
+           Encoder            Accuracy      AUC
+                                                                            Encoder              Fm       J &F       Jm
+           Image LeJEPA         0.877      0.914
+           SlotMIM (800)        0.894      0.938                            Image LeJEPA        0.632     0.613     0.594
+           SlotMIM              0.890      0.931                            SlotMIM (800)       0.642     0.629     0.615
+           Object LeJEPA        0.915      0.954                            SlotMIM             0.623     0.609     0.595
+                                                                            Object LeJEPA       0.713     0.682     0.650
+           DINOv3               0.914       0.957
+                                                                            DINOv3              0.744     0.715     0.685
+
+object information shapes a patch feature space whose ge-
+ometry encodes object membership about as well as a model            clearly improving over image-level LeJEPA (0.339), while
+trained at far greater scale. Prior work [17] shows that the         DINOv3 remained ahead at 0.500. On DAVIS label propa-
+ability to tell whether two patches share an object emerges          gation (Table 4), Object LeJEPA improved the J &F mean
+in pretrained ViTs such as DINO, but that this signal may            to 0.682, well above image-level LeJEPA (0.613) and Slot-
+reside more strongly in intermediate layers than in the fi-          MIM (0.629), and narrowed the gap to DINOv3 (0.715).
+nal one. Our instance-level loss instead pulls this object-          Our patch representations were therefore both temporally
+membership information directly into the last-layer repre-           stable and object-discriminative. Notably, our instance-
+sentation that downstream tasks consume, which avoids the            level loss only contrasts objects within a single view, yet
+need to find the right layer for the right task.                     the discriminability it induces together with the semantic
+                                                                     loss seems to have transferred to separating objects across
+Dense Semantic Tasks To test whether the encoders cap-               frames and scenes.
+ture similarities across objects in different images, we eval-
+uated the frozen patch features on two dense prediction              Object-level Tasks Because our model was trained with
+tasks. First, we trained a linear probe mapping frozen patch         mask-guided object-level alignment, we evaluated whether
+features to semantic segmentation labels on the ADE20k               the resulting object representations transfer to object-level
+training set and evaluated it on the validation set, report-         downstream tasks. We considered two tasks. On ADE20k,
+ing mean IoU and pixel accuracy. Second, following the               we extracted a representation for each object using its
+setup of [4], we ran a simple tracking pipeline on DAVIS             ground-truth mask. We averaged patch features within the
+in which the mask of the initial frame is propagated to sub-         mask and additionally computed the semantic object rep-
+sequent frames by nearest-neighbour matching of the L2-              resentations (z) for our method. We trained a linear probe
+normalized frozen patch features, reporting contour accu-            to predict the object class and computed top-1 and top-5
+racy, region similarity, and their mean. Although this task          balanced accuracy on the validation set. The second task
+also benefits from instance-level information, it requires           was object re-identification on NAVI, which contains mul-
+matching objects across frames under appearance and pose             tiple images per object across varying backgrounds, poses,
+changes.                                                             and lighting. Here we also extracted object representations
+                                                                     using ground-truth masks and built a memory bank with k
+Table 3. Linear-probe semantic segmentation on ADE20k from           representations per object and classified each remaining im-
+frozen patch features, reporting mIoU and pixel accuracy.
+                                                                     age by its nearest neighbor in the bank, using ℓ2 -normalized
+                                                                     object representations. We varied k from 1 to 10 and, for
+           Encoder            mIoU      Pixel acc.                   each k, repeated the memory-bank sampling 10 times and
+           Image LeJEPA       0.339       0.664                      averaged.
+           SlotMIM (800)      0.409       0.735                          For linear classification of individual objects (Table 5),
+           SlotMIM            0.368       0.696                      Object LeJEPA again outperformed both baselines using av-
+           Object LeJEPA      0.418       0.739                      eraged patch features (0.212 top-1), and its native slot rep-
+                                                                     resentation lifted this further to 0.250, though all COCO-
+           DINOv3              0.500      0.800                      trained models trail DINOv3 (0.367) on this semantically
+                                                                     demanding task.
+    On linear-probe semantic segmentation (Table 3), Ob-                 On NAVI instance re-identification (Figure 3), a few
+ject LeJEPA attained the best mIoU among the COCO-                   points stand out. First, DINOv3 was exceptionally strong,
+trained models (0.418), edging out SlotMIM (0.409) and               reaching 92.2% balanced accuracy from a single shot while
+
+
+                                                                 6
+Table 5. Object classification on ADE20k, reporting top-1 and top-         tures themselves, however, local information dominates, so
+5 balanced accuracy. Objects are represented by averaging their            for re-identification the average-pooled patch-object vectors
+patch features. An asterisk (∗) denotes Object LeJEPA’s native             transferred better.
+semantic object representation.
+
+                           Encoder            Top-1    Top-5               Image-level Task We also evaluated image-level classifi-
+                                                                           cation on ImageNet-1k. We trained a linear probe to pre-
+                           Image LeJEPA       0.168    0.307               dict the class label from the image representation and re-
+                           SlotMIM (800)      0.201    0.328               ported top-1 and top-5 balanced accuracy on the validation
+                           SlotMIM            0.181    0.311               set. Since the object-centric models did not learn a [CLS]
+                           Object LeJEPA      0.212    0.364               token, we represented each image by globally average pool-
+                           Object LeJEPA∗     0.250    0.420               ing its patch features.
+                           DINOv3              0.367   0.592
+                                                                           Table 6. Linear-probe classification on ImageNet-1k, reporting
+                                                                           top-1 and top-5 balanced accuracy. An asterisk (∗) denotes aver-
+                                 DINOv3                Object LeJEPA       aged patch tokens, unstarred rows use the [CLS] token.
+                                 Object LeJEPA (z)     Image LeJEPA
+                                 SlotMIM (800)         SlotMIM                         config                Top-1     Top-5
+                      1
+                                                                                       Image LeJEPA*        0.463      0.708
+                                                                                       Image LeJEPA         0.473      0.718
+ Balanced accuracy
+
+
+
+
+                     0.8                                                               SlotMIM (800)*       0.552      0.798
+                                                                                       SlotMIM*             0.467      0.713
+                     0.6                                                               Object LeJEPA*       0.539      0.784
+                                                                                       DINOv3*               0.776     0.946
+                     0.4                                                               DINOv3                0.790     0.951
+
+                                                                               Despite being trained to represent objects rather than
+                            1          2     3        5           10       whole images, our averaged patch features improved top-1
+                                       Number of shots k                   balanced accuracy over LeJEPA from 47.3% to 53.9% and
+                                                                           trailed SlotMIM trained for 800 epochs (55.2%) by only
+Figure 3. Few-shot instance re-identification on NAVI. Balanced            a small margin. We attribute this gap to SlotMIM’s soft
+accuracy of a nearest-neighbour classifier versus the number of            masks, which likely make its latent space more compatible
+shots per instance (k ∈ {1, 2, 3, 5, 10}, log-scaled x-axis), using
+                                                                           with global average pooling. The appendix contains further
+object representations obtained by average pooling patch features
+over the ground-truth masks. For Object LeJEPA we additionally
+                                                                           visual results on samples from ImageNet, visually assessing
+report its semantic object representations z.                              the feature quality by self-similarity maps on images con-
+                                                                           taining object categories that were not seen during training.
+
+the COCO-trained models trailed far behind. While the
+                                                                           5.3. Dataset Size Ablation
+NAVI objects can be considered out-of-distribution for                     Figure 4 ablates the effect of the pretraining set size and the
+COCO, we do not know whether the same holds for DI-                        backbone capacity across four downstream tasks, described
+NOv3, that was trained on a much larger corpus. Second,                    in Section 5.2. Our central finding is one of data effi-
+among the COCO-trained models SlotMIM was the weak-                        ciency: trained on only 10% of COCO, Object LeJEPA with
+est, even below image-level LeJEPA. We suspect its patch                   a ViT-B architecture already matched image-level LeJEPA
+feature representations blend global and local information                 trained on the full COCO dataset on every task. With a
+to a higher extent due to the soft object assignments intro-               tenth of the data it reached 0.648 J &F on DAVIS track-
+duced by their slot attention module. Third, Object LeJEPA                 ing, 0.472 top-1 balanced accuracy on ImageNet-1k, 0.380
+was the strongest, and its averaged patch-object features                  mIoU on ADE20k segmentation, and 0.343 1-shot balanced
+clearly beat its own object embeddings. These are trained to               accuracy on NAVI re-identification, in each case meeting
+align objects across augmented views and, although region-                 or slightly exceeding image-level LeJEPA’s full-data scores
+specific, they also absorb surrounding context. That con-                  (0.613, 0.463, 0.339, and 0.337, respectively). Object-level
+text is useful for category-level tasks such as object clas-               alignment therefore recovered, from ten times less data,
+sification, where objects and backgrounds statistically co-                what image-level alignment attained only at full scale. The
+occur, and indeed the slots won there (Table 5). In the fea-               remaining trends were as expected. Scaling Object LeJEPA
+
+
+                                                                       7
+                   Object LeJEPA ViT-B             Object LeJEPA ViT-S           Image LeJEPA ViT-B           Image LeJEPA ViT-S
+
+                 DAVIS tracking                     ImageNet-1k                   ADE20k seg.                    NAVI re-id
+                    J &F                           Top-1 bal. acc.                  mIoU                       1-shot bal. acc.
+
+
+                                         0.5                              0.4                         0.45
+       0.65
+                                         0.4                             0.35                          0.4
+        0.6
+                                                                          0.3                         0.35
+                                         0.3
+
+                10%         100%                 10%          100%           10%         100%                10%          100%
+                                                        Pretraining data (COCO fraction)
+
+Figure 4. Dataset-size ablation across the four downstream tasks. The x-axis is the fraction of COCO used for pretraining (10% vs. 100%).
+Each line is one (method, backbone) pair: Image LeJEPA (orange) or Object LeJEPA (blue), ViT-Base (solid, circles) vs. ViT-Small
+(dashed, squares). From left to right we report DAVIS tracking J &F on ℓ2 -normalized patch features, ImageNet-1k logistic-regression
+top-1 balanced accuracy (average-pooled patch features for Object LeJEPA and [cls]-token for Image LeJEPA), ADE20k linear-probe
+segmentation mIoU on patch features, and NAVI 1-shot balanced accuracy on the mask-pooled patch features.
+
+
+along either axis - from 10% to 100% of COCO, or from a                   improved every task over either loss in isolation, with the
+ViT-Small to a ViT-Base backbone - improved performance                   sole exception of image classification, where the alignment-
+on all four tasks.                                                        only setting remained marginally ahead (54.5% vs. 53.9%).
+                                                                          The final row replaces the unsupervised SAM masks with
+5.4. Loss & Mask Ablation                                                 COCO ground-truth instance masks during training, isolat-
+                                                                          ing the effect of mask quality while keeping the objective
+Table 7. Loss ablation on the full COCO dataset with a ViT-Base           fixed. The two were strikingly close, and neither domi-
+backbone. We report DAVIS tracking J &F on ℓ2 -normalized                 nated: ground-truth masks were marginally ahead on track-
+patch features, ImageNet-1k linear probe top-1 balanced accuracy
+                                                                          ing and image classification, whereas SAM masks were bet-
+(average-pooled patch features), ADE20k linear-probe segmenta-
+tion mIoU on patch features, and NAVI 1-shot balanced accuracy
+                                                                          ter on segmentation and substantially better on NAVI re-
+on the mask-pooled patch features. The top block varies the train-        identification. Crucially, Object LeJEPA does not rely on
+ing loss. The bottom row (Object LeJEPA GT) keeps the full Ob-            costly human annotation, and unsupervised SAM masks are
+ject LeJEPA objective but replaces the unsupervised SAM masks             sufficient for learning strong representations.
+with COCO ground-truth instance masks during training, isolating
+the effect of mask quality. Bold marks the best among the SAM-            6. Conclusion
+trained loss variants (top block).
+                                                                          Our method extends LeJEPA by moving the alignment and
+                         DAVIS     IN-1k       ADE20k NAVI                regularization term from the image to the object level. This
+   Loss                  J &F      Top-1        mIoU  1-shot              is enabled through cheap mask proposals during training
+                                                                          and results in a much more data-efficient training. At in-
+   Image LeJEPA        0.613 0.463             0.339     0.337
+                                                                          ference time we do not require masks and, in our experi-
+   Object alignment    0.642 0.545             0.400     0.380
+                                                                          ments, achieved the same downstream task performance as
+   Instance Separation 0.678 0.490             0.396     0.393
+   Object LeJEPA       0.682 0.539             0.418     0.476            the image-level LeJEPA with 10% of the training data.
+
+   Object LeJEPA GT       0.689    0.554        0.399    0.421
+
+
+    Table 7 disentangles the contribution of each loss. Object
+alignment LObjectLeJEPA on its own already outperformed
+image-level LeJEPA on every task. The instance separa-
+tion loss Linstance added dense, instance-level supervision,
+boosting the instance-discrimination tasks of tracking and
+re-identification, but it struggled on the more semantic clas-
+sification and segmentation tasks. Combining the two losses
+
+
+                                                                     8
+References                                                                 [13] Varun Jampani, Kevis-Kokitsi Maninis, Andreas Engel-
+                                                                                hardt, Arjun Karpur, Karen Truong, Kyle Sargent, Stefan
+ [1] Randall Balestriero and Yann Lecun. How Learning by Re-                    Popov, Andre Araujo, Ricardo Martin-Brualla, Kaushal Pa-
+     construction Produces Uninformative Features For Percep-                   tel, Daniel Vlasic, Vittorio Ferrari, Ameesh Makadia, Ce
+     tion. In Proceedings of the 41st International Conference on               Liu, Yuanzhen Li, and Howard Zhou. NAVI: Category-
+     Machine Learning, pages 2566–2585. PMLR, 2024. 2                           agnostic image collections with high-quality 3D shape and
+ [2] Randall Balestriero and Yann LeCun. LeJEPA: Provable and                   pose annotations. In NeurIPS, 2023. 5
+     Scalable Self-Supervised Learning Without the Heuristics,             [14] Prannay Khosla, Piotr Teterwak, Chen Wang, Aaron Sarna,
+     2025. 2, 3, 4, 5                                                           Yonglong Tian, Phillip Isola, Aaron Maschinot, Ce Liu, and
+ [3] Adrien Bardes, Jean Ponce, and Yann LeCun. VICRegL:                        Dilip Krishnan. Supervised contrastive learning. Advances
+     Self-Supervised Learning of Local Visual Features. Ad-                     in neural information processing systems, 33:18661–18673,
+     vances in Neural Information Processing Systems, 35:8799–                  2020. 2, 5
+     8810, 2022. 2                                                         [15] Dongwon Kim, Seoyeon Kim, and Suha Kwak. Bootstrap-
+ [4] Mathilde Caron, Hugo Touvron, Ishan Misra, Hervé Jégou,                  ping top-down information for self-modulating slot atten-
+     Julien Mairal, Piotr Bojanowski, and Armand Joulin. Emerg-                 tion. Advances in Neural Information Processing Systems,
+     ing properties in self-supervised vision transformers. In                  37:103751–103773, 2024. 3
+     Proceedings of the IEEE/CVF International Conference on               [16] Alexander Kirillov, Eric Mintun, Nikhila Ravi, Hanzi Mao,
+     Computer Vision, pages 9650–9660, 2021. 2, 6, 15                           Chloe Rolland, Laura Gustafson, Tete Xiao, Spencer White-
+ [5] Krishna Chaitanya, Ertunc Erdil, Neerav Karani, and Ender                  head, Alexander C Berg, Wan-Yen Lo, et al. Segment any-
+     Konukoglu. Contrastive learning of global and local features               thing. In Proceedings of the IEEE/CVF International Con-
+     for medical image segmentation with limited annotations. In                ference on Computer Vision, pages 4015–4026, 2023. 3
+     Advances in Neural Information Processing Systems, pages              [17] Yihao Li, Saeed Salehi, Lyle Ungar, and Konrad Kording.
+     12546–12558. Curran Associates, Inc., 2020. 2                              Does object binding naturally emerge in large pretrained vi-
+ [6] Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li,                     sion transformers? Advances in Neural Information Process-
+     and Li Fei-Fei. ImageNet: A large-scale hierarchical im-                   ing Systems, 38:3394–3423, 2026. 2, 5, 6, 14
+     age database. In 2009 IEEE Conference on Computer Vision              [18] Tsung-Yi Lin, Michael Maire, Serge Belongie, James Hays,
+     and Pattern Recognition, pages 248–255, 2009. 5                            Pietro Perona, Deva Ramanan, Piotr Dollár, and C Lawrence
+                                                                                Zitnick. Microsoft coco: Common objects in context. In
+ [7] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,
+                                                                                European Conference on Computer Vision, pages 740–755.
+     Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,
+                                                                                Springer, 2014. 5
+     Mostafa Dehghani, Matthias Minderer, Georg Heigold, Syl-
+     vain Gelly, Jakob Uszkoreit, and Neil Houlsby. An Image               [19] Hongjia Liu, Rongzhen Zhao, Haohan Chen, and Joni Pa-
+     is Worth 16x16 Words: Transformers for Image Recognition                   jarinen. Metaslot: Break through the fixed number of slots
+     at Scale. In 9th International Conference on Learning Rep-                 in object-centric learning. Advances in Neural Information
+     resentations, ICLR 2021, Virtual Event, Austria, May 3-7,                  Processing Systems, 38:67319–67344, 2026. 3
+     2021. OpenReview.net, 2021. 5                                         [20] Francesco Locatello, Dirk Weissenborn, Thomas Un-
+                                                                                terthiner, Aravindh Mahendran, Georg Heigold, Jakob
+ [8] S. M. Ali Eslami, Nicolas Heess, Theophane Weber, Yuval
+                                                                                Uszkoreit, Alexey Dosovitskiy, and Thomas Kipf. Object-
+     Tassa, David Szepesvari, koray kavukcuoglu, and Geoffrey E
+                                                                                Centric Learning with Slot Attention. In Advances in Neural
+     Hinton. Attend, infer, repeat: Fast scene understanding with
+                                                                                Information Processing Systems, pages 11525–11538. Cur-
+     generative models. In Advances in Neural Information Pro-
+                                                                                ran Associates, Inc., 2020. 1, 3
+     cessing Systems 29, pages 3225–3233. Curran Associates,
+                                                                           [21] I. Loshchilov and F. Hutter. Decoupled Weight Decay Reg-
+     Inc., 2016. 1, 3
+                                                                                ularization. In International Conference on Learning Repre-
+ [9] Gege Gao, Bernhard Schölkopf, and Andreas Geiger. Slots,                  sentations, 2017. 5
+     transitions, loops: Learning composable world models for              [22] Anna Manasyan, Maximilian Seitzer, Filip Radovic, Georg
+     ARC. arXiv preprint arXiv:2606.12316, 2026. 1                              Martius, and Andrii Zadaianchuk. Temporally consistent
+[10] Oliver Hahn, Nikita Araslanov, Simone Schaub-Meyer, and                    object-centric learning by contrasting slots. In Proceedings
+     Stefan Roth. Boosting unsupervised semantic segmentation                   of the Computer Vision and Pattern Recognition Conference,
+     with principal mask proposals. Transactions on Machine                     pages 5401–5411, 2025. 3
+     Learning Research (TMLR), 2024. 3                                     [23] Shlok Kumar Mishra, Anshul Shah, Ankan Bansal, Janit K
+[11] Olivier J Hénaff, Skanda Koppula, Jean-Baptiste Alayrac,                  Anjaria, Abhyuday Narayan Jagannatha, Abhishek Sharma,
+     Aaron van den Oord, Oriol Vinyals, and João Carreira. Ef-                 David Jacobs, and Dilip Krishnan. Object-aware crop-
+     ficient visual pretraining with contrastive detection. Interna-            ping for self-supervised learning. Transactions on Machine
+     tional Conference on Computer Vision, 2021. 2                              Learning Research, 2022. 3
+[12] Olivier J Hénaff, Skanda Koppula, Evan Shelhamer, Daniel             [24] Heejeong Nam, Quentin Le Lidec, Lucas Maes, Yann Le-
+     Zoran, Andrew Jaegle, Andrew Zisserman, João Carreira,                    Cun, and Randall Balestriero. Causal-JEPA: Learning world
+     and Relja Arandjelović. Object discovery and representa-                  models through object-level latent masking. In 2nd Work-
+     tion networks. In European Conference on Computer Vision,                  shop on Compositional Learning: Safety, Interpretability,
+     pages 123–143. Springer, 2022. 2                                           and Agents, 2026. 1
+
+
+                                                                       9
+[25] OpenAI. ChatGPT, 2026. 2                                                 Vision and Pattern Recognition (CVPR), pages 5122–5130,
+[26] Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy                    2017. 5
+     Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez,              [38] Jinghao Zhou, Chen Wei, Huiyu Wang, Wei Shen, Cihang
+     Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Mah-                 Xie, Alan Yuille, and Tao Kong. iBOT: Image BERT pre-
+     moud Assran, Nicolas Ballas, Wojciech Galuba, Russell                    training with online tokenizer. International Conference on
+     Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael                  Learning Representations (ICLR), 2022. 2
+     Rabbat, Vasu Sharma, Gabriel Synnaeve, Hu Xu, Hervé Je-
+     gou, Julien Mairal, Patrick Labatut, Armand Joulin, and Pi-
+     otr Bojanowski. DINOv2: Learning Robust Visual Features
+     without Supervision, 2024. 2
+[27] Jordi Pont-Tuset, Federico Perazzi, Sergi Caelles, Pablo Ar-
+     beláez, Alex Sorkine-Hornung, and Luc Van Gool. The 2017
+     DAVIS Challenge on Video Object Segmentation, 2017. 5
+[28] Nikhila Ravi, Valentin Gabeur, Yuan-Ting Hu, Ronghang
+     Hu, Chaitanya Ryali, Tengyu Ma, Haitham Khedr, Roman
+     Rädle, Chloe Rolland, Laura Gustafson, et al. Sam 2: Seg-
+     ment anything in images and videos. In International Con-
+     ference on Learning Representations, pages 28085–28128,
+     2025. 3, 5, 14
+[29] Alexander Rubinstein, Ameya Prabhu, Matthias Bethge, and
+     Seong Joon Oh. Are We Done with Object-Centric Learn-
+     ing?, 2025. 3
+[30] Maximilian Seitzer, Max Horn, Andrii Zadaianchuk, Do-
+     minik Zietlow, Tianjun Xiao, Carl-Johann Simon-Gabriel,
+     Tong He, Zheng Zhang, Bernhard Schölkopf, Thomas Brox,
+     and Francesco Locatello. Bridging the gap to real-world
+     object-centric learning. In The Eleventh International Con-
+     ference on Learning Representations, 2023. 1, 3
+[31] Oriane Siméoni, Huy V. Vo, Maximilian Seitzer, Federico
+     Baldassarre, Maxime Oquab, Cijo Jose, Vasil Khalidov,
+     Marc Szafraniec, Seungeun Yi, Michaël Ramamonjisoa,
+     Francisco Massa, Daniel Haziza, Luca Wehrstedt, Jianyuan
+     Wang, Timothée Darcet, Théo Moutakanni, Leonel Sentana,
+     Claire Roberts, Andrea Vedaldi, Jamie Tolan, John Brandt,
+     Camille Couprie, Julien Mairal, Hervé Jégou, Patrick La-
+     batut, and Piotr Bojanowski. DINOv3, 2025. 2, 5
+[32] Gautam Singh, Fei Deng, and Sungjin Ahn. Illiterate DALL-
+     E Learns to Compose. In The Tenth International Con-
+     ference on Learning Representations, ICLR 2022, Virtual
+     Event, April 25-29, 2022. OpenReview.net, 2022. 1
+[33] Aaron van den Oord, Yazhe Li, and Oriol Vinyals. Represen-
+     tation Learning with Contrastive Predictive Coding, 2019. 2
+[34] Xinlong Wang, Rufeng Zhang, Chunhua Shen, Tao Kong,
+     and Lei Li. Dense contrastive learning for self-supervised
+     visual pre-training. In Proceedings of the IEEE/CVF Con-
+     ference on Computer Vision and Pattern Recognition, pages
+     3024–3033, 2021. 2
+[35] Xin Wen, Bingchen Zhao, Yilun Chen, Jiangmiao Pang, and
+     Xiaojuan Qi. A data-centric revisit of pre-trained vision
+     models for robot learning. In CVPR, 2025. 3, 5
+[36] Ziyi Wu, Nikita Dvornik, Klaus Greff, Thomas Kipf, and
+     Animesh Garg. SlotFormer: Unsupervised visual dynam-
+     ics simulation with object-centric models. arXiv preprint
+     arXiv:2210.05861, 2022. 1
+[37] Bolei Zhou, Hang Zhao, Xavier Puig, Sanja Fidler, Adela
+     Barriuso, and Antonio Torralba. Scene Parsing through
+     ADE20K Dataset. In 2017 IEEE Conference on Computer
+
+
+                                                                    10
+A. Visual Results
+In this section we present visual results for models that are
+trained on the COCO dataset. Only DINOv3 was trained
+on a larger dataset. Since COCO does not include im-
+ages of fish, it is interesting to investigate the encoders’
+instance-separating and cross-image matching capabilities
+on out-of-distribution objects. We performed two different
+experiments. For the first experiment we applied K-Means
+clustering on the ℓ2 -normalized patch features with vary-
+ing number of clusters k. In the second experiment, we se-
+lected a patch feature belonging to a fish in one image and
+visualized the feature similarity (cosine-similarity) to other
+patches from the same image and other images.
+    Among the COCO-trained models, our encoder, Object
+LeJEPA, is the only method that actually separates the two
+instances into different clusters (Figure 5). The other mod-
+els tend to introduce clusters that contain patches from both
+fish. This supports the thesis that our encoder actually gen-
+eralizes the instance-detection capabilities to objects not
+seen during training. The instance-separating capabilities
+of our model are also demonstrated by much sharper ob-
+ject boundaries in the intra-image similarity map (Figure 6).
+The patch features belonging to the other fish are notice-
+ably darker. We can see that the COCO-trained models have
+never seen a fish during training because they do not seem
+to be able to distinguish them from flowers like DINOv3
+does (image 5).
+
+
+
+
+                                                                 11
+                                                  k=2                     k=5                    k = 10                  k = 15
+
+
+
+                                    LeJEPA
+                                     Image
+                                   SlotMIM
+                                    150 ep
+                                   SlotMIM
+                                    800 ep
+
+
+
+
+     input image
+                                    LeJEPA
+                                    Object
+                                     DINOv3
+
+
+
+
+Figure 5. k-means clustering of frozen patch features (columns: clusters k; rows: backbone). Cluster colors are arbitrary per fit and not
+comparable across cells.
+
+
+
+
+                                                                   12
+           image 1 (anchor)               image 2                   image 3                   image 4                   image 5
+  input
+ LeJEPA
+  Image
+SlotMIM
+ 150 ep
+SlotMIM
+ 800 ep
+ LeJEPA
+ Object
+  DINOv3
+
+
+
+
+Figure 6. Cosine similarity of all patches to one anchor patch (white ring, image 1), across five goldfish images (columns) and backbones
+(rows); grayscale scale, black = 0 to white = 1.
+
+
+
+
+                                                                   13
+B. Implementation Details                                             a multiple of the 16-pixel patch size: ADE20k, COCO,
+                                                                      and NAVI at 512 × 512 and ImageNet-1k at 224 × 224.
+B.1. Training Details                                                 DAVIS instead keeps its native 480p aspect ratio, resizing
+We list here the full set of hyperparameters used to train our        each frame so that its shorter side is 512 pixels (rounded to
+main model. The encoder is a ViT-Base with a patch size of            a multiple of 16).
+16 × 16, trained from scratch with a stochastic-depth (drop-
+path) rate of 0.1. The LeJEPA projection head is a three-             Instance Clustering (ADE20k) For each validation im-
+layer MLP (768 → 2048 → 2048 → 64) with synchro-                      age we ℓ2 -normalize the foreground patch features and run
+nized batch normalization, projecting into a 64-dimensional           K-Means with K set to the number of ground-truth fore-
+space, and the masked cross-attention pooling uses 8 heads.           ground instances in that image. We use 5 random initial-
+    We train on COCO for 150 epochs with AdamW (β de-                 izations per image. Clusters are matched to ground-truth
+faults, ϵ = 10−4 ), a learning rate of 5 · 10−4 , and a weight        instances by Hungarian assignment on cluster-vs-instance
+decay of 0.05. The effective batch size is 256 (64 im-                IoU, and we report the mean IoU over the K matched pairs.
+ages per GPU across 4 NVIDIA RTX A6000 GPUs). The                     The adjusted rand index (FG-ARI) is computed directly
+learning rate follows a cosine schedule decaying to 5% of             over all foreground patches and needs no matching, as it
+its peak, preceded by a single linear warm-up epoch. We               is permutation-invariant. Metrics are averaged over all val-
+use mixed-precision (AMP) training and clip gradients to a            idation images containing at least two instances. We use
+global norm of 1.0. Per image we sample 2 global views at             the 2021 ADE20k release, which provides true per-instance
+256 × 256 and 8 local views at 128 × 128, together with the           masks.
+standard LeJEPA photometric augmentations (color jitter,
+grayscale, Gaussian blur, Gaussian noise, and solarization).          Same-Instance Quadratic Probe (ADE20k) Following
+    The training objective combines three terms: the                  Li et al. [17], we learn a low-rank symmetric bilinear form
+LeJEPA SIGReg regularizer on the slot projections (weight
+                                                                        IsSameObject(x, y) = σ (P x)⊤ diag(g)(P y) + b (6)
+                                                                                                                            
+λLeJEPA = 0.05), the object-alignment loss (weight
+1.0), and the within-view instance-separation InfoNCE loss            that predicts, for a pair of raw (unnormalized) patch em-
+(weight 1.0, temperature 0.1). SIGReg uses 1024 random                beddings, whether they belong to the same object instance.
+projections and 17 quadrature knots.                                  Here P ∈ Rk×d projects each patch into a k = 32 dimen-
+    The object masks are mask proposals precomputed once              sional binding subspace and g ∈ Rk is a learned signed sig-
+with the SAM 2.1 Hiera-Large automatic mask generator                 nature, giving a symmetric, rank-≤ k form with O(kd) pa-
+[28], run with 16 points per side, a predicted-IoU threshold          rameters that is not constrained to be positive semi-definite.
+of 0.8 (how confident SAM is in a mask), and a stability-             The probe is trained on the ADE20k training split with bi-
+score threshold of 0.92 (how stable the binary mask is with           nary cross-entropy over all within-image off-diagonal patch
+respect to cutoff threshold variations). The other values are         pairs, sampling at most 64 foreground patches per image.
+left to the default configuration. We cap the number of par-          We optimize with Adam (learning rate 10−3 , weight decay
+titions (masks) per image at 64, which bounds the per-batch           10−4 , cosine schedule) for 5 epochs at 32 images per batch.
+slot count and the cross-attention memory footprint.                  At evaluation we score every foreground patch pair (up to
+                                                                      256 patches per validation image) and report, per image, the
+B.2. Downstream Task Details                                          pair-classification accuracy at the decision boundary (logit
+All encoders are frozen and used purely as feature extrac-            > 0) and the threshold-free ROC-AUC, averaged over vali-
+tors. For each dataset we run a single forward pass per im-           dation images.
+age and cache its outputs, so every probe on a given dataset
+reads the same features. We work with three kinds of repre-           Semantic Segmentation (ADE20k) We train a single
+sentations. Patch features are the last-layer feature maps.           1×1 convolutional head on the frozen patch features to pre-
+At a patch size of 16 × 16 a 512 × 512 image yields a                 dict the 150 ADE20k semantic classes, with cross-entropy
+32 × 32 grid. The image-level representation is the mean              and the background class ignored. Training is done at the
+of all patch features over the spatial grid. For the image-           feature-grid resolution (the label mask is nearest-neighbour
+level models, Image LeJEPA and DINOv3, we additionally                downsampled), and at evaluation the logits are bilinearly
+extract the [CLS] token. The object-level representation of           upsampled back to the cached mask resolution before the
+a mask is the weighted mean of the patch features over the            argmax, so the metric follows the full-resolution protocol.
+patches. The weights for this mean come from the patch-               We optimize with Adam (learning rate 10−2 , cosine sched-
+wise average-pooled mask. For Object LeJEPA we addi-                  ule) for 5 epochs at a batch size of 128. We report mean IoU
+tionally evaluate the semantic slot representations zn,v,k .          (over the classes present in each image) and pixel accuracy,
+Each dataset is processed at a fixed input resolution, always         averaged over the validation images.
+
+
+                                                                 14
+Label Propagation (DAVIS) We follow the label-
+propagation tracker of [4]. The ground-truth mask of the
+first frame is propagated to subsequent frames by affinity-
+weighted voting over ℓ2 -normalized patch features: affini-
+ties are softmax-weighted with temperature 0.1, restricted
+to a spatial neighborhood of radius 12 patches around each
+query, and sparsified to the top 5 source patches per query.
+The context set for each frame is the first frame plus the 7
+most recently predicted frames. Frames keep their aspect
+ratio (short-side resize) and are processed one at a time. We
+report region similarity Jm (mask IoU), contour accuracy
+Fm (boundary F-measure with a tolerance band of 0.8% of
+the image diagonal), and their mean J &F , first averaged
+over objects and frames within a video, then over videos.
+
+Object Classification (ADE20k) Each object is repre-
+sented by its object-level descriptor, extracted with its
+ground-truth mask, and for Object LeJEPA additionally by
+its semantic object representation. We train a linear head
+on the training-split objects with cross-entropy, using Adam
+(learning rate 10−2 , cosine schedule) for 50 epochs at a
+batch size of 4096. The classes present in the training split
+are densely re-indexed, and validation objects of classes un-
+seen in training are excluded from scoring. We report top-1
+and top-5 balanced accuracy over the validation objects.
+
+Object Re-Identification (NAVI) On the NAVI wild set,
+each object instance appears in multiple images under vary-
+ing background, pose, and lighting. We represent each ob-
+ject by its mask-pooled patch descriptor (and, for Object
+LeJEPA, its slot), ℓ2 -normalized. For each number of shots
+k ∈ {1, 2, 3, 5, 10} we build a memory bank by sampling
+k representations per identity and classify every remaining
+image by its cosine-nearest exemplar across all identities;
+identities with ≤ k images are skipped. For each k we re-
+peat the sampling 10 times and report the mean balanced
+accuracy (with standard deviation).
+
+Image Classification (ImageNet-1k) The object-centric
+models (SlotMIM and Object LeJEPA) do not learn a us-
+able [CLS] token, so we represent each of their images by
+the image-level descriptor (the global average of its patch
+features). For the image-level models, Image LeJEPA and
+DINOv3, we additionally report results using their [CLS]
+token. On the ℓ2 -normalized, standardized representations
+we fit a multinomial logistic-regression probe (inverse reg-
+ularization C = 1) on the full training split and report top-1
+and top-5 balanced accuracy on the validation split.
+
+
+
+
+                                                                 15
+
