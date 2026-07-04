@@ -1,0 +1,1111 @@
+                                                         Unlocking Speech–Text Compositional Powers:
+                                           Instruction-Following Speech Language Models without Instruction Tuning
+
+
+                                                                        Congrui Du * 1 Yang Zhang * 2 Kaizhi Qian * 2 Shiyu Chang 1
+
+
+                                                                    Abstract                                  instructions. In particular, SLM instructions can be catego-
+                                                                                                              rized into three types.
+                                               Instruction tuning for speech language models
+                                               (SLMs) is substantially more challenging than for              • Text-oriented instructions. These include instructions
+arXiv:2607.02214v1 [cs.CL] 2 Jul 2026
+
+
+
+
+                                               text-based large language models (LLMs), as it                 that standard text LLMs can already follow, such as question
+                                               requires learning a new modality and a wide range              answering (QA), reasoning, and article generation. The key
+                                               of speech-specific instructions in addition to those           difference is that, for SLMs, the input instructions may be
+                                               supported by text LLMs. Existing SLM training                  conveyed in either text or speech, and the model’s responses
+                                               approaches largely replicate the text LLM train-               can likewise be produced in either modality.
+                                               ing paradigm by synthesizing large-scale speech
+                                                                                                              • Speech understanding instructions. These include in-
+                                               pre-training and instruction-tuning datasets. How-
+                                                                                                              structions that query information from input speech utter-
+                                               ever, this strategy is difficult to scale, since speech
+                                                                                                              ances, particularly paralinguistic attributes such as emotion
+                                               sequences are significantly longer than text se-
+                                                                                                              or emphasis. For these instructions, the input must contain
+                                               quences. In this paper, we propose S PEECH C OM -
+                                                                                                              speech, while the output may be in either speech or text.
+                                               BINE , an instruction-following speech language
+                                               model trained without any instruction tuning,                  • Speech generation instructions. These include instruc-
+                                               using only a single round of speech pre-training               tions that require generating speech utterances subject to
+                                               on 30k hours of data. Starting from a text LLM                 specific constraints, such as emotion or emphasized words.
+                                               base model, we perform continuous pre-training                 For this category, the input requirements may be expressed
+                                               on speech utterances to obtain a speech-adapted                in either speech or text, but the output must be speech.
+                                               model, and then directly combine its weights with
+                                                                                                              In summary, instruction following in SLMs introduces two
+                                               the weight difference between the instruction-
+                                                                                                              additional levels of complexity beyond those faced by text
+                                               tuned and base versions of the text LLM. Our
+                                                                                                              LLMs. First, an SLM must follow the same instructions as
+                                               results show that this simple combination strategy
+                                                                                                              a text LLM, but in a new modality. Second, it must handle
+                                               not only preserves the knowledge and capabili-
+                                                                                                              entirely new, speech-specific instructions that text LLMs
+                                               ties of the original text LLM, but also effectively
+                                                                                                              cannot address. As a result, instruction tuning for SLMs is
+                                               transfers them to the speech domain. These find-
+                                                                                                              substantially more challenging than for text LLMs.
+                                               ings suggest a new direction for SLM training that
+                                               avoids reliance on massive speech data.                        To perform instruction tuning for SLMs, most existing meth-
+                                                                                                              ods largely replicate the training pipeline used for text
+                                                                                                              LLMs (Ding et al., 2025). Usually, an SLM is first pre-
+                                        1. Introduction                                                       trained on a large speech corpus using a next-token predic-
+                                                                                                              tion objective, and then fine-tuned on datasets containing
+                                        Recent advances in large language models (LLMs) have                  various speech instructions using supervised fine-tuning
+                                        catalyzed significant progress in speech language models              (SFT) and/or reinforcement learning (RL) (Ghosh et al.,
+                                        (SLMs). One key capability of SLMs, as with text LLMs,                2026). In other paradigms, only speech instruction-tuning
+                                        is the ability to follow instructions. Unlike text LLMs,              is performed (Zhang et al., 2023). The training datasets
+                                        however, SLMs must handle a much broader spectrum of                  typically consist of discrete speech tokens derived from real
+                                           1
+                                            University of California, Santa Barbara, USA 2 MIT-IBM Com-       speech and/or synthetic speech generated from text datasets
+                                        puting Research Lab, IBM Research, USA. Correspondence to:            originally used for text LLM training.
+                                        Yang Zhang <yang.zhang2@ibm.com>.
+                                                                                                              However, this paradigm is heavily bottlenecked by the data
+                                        Proceedings of the 43 rd International Conference on Machine          inflation problem. For example, the sentence “How are you”
+                                        Learning, Seoul, South Korea. PMLR 306, 2026. Copyright 2026          comprises no more than five tokens in text form, whereas the
+                                        by the author(s).
+
+                                                                                                          1
+                           Instruction-Following Speech Language Models without Instruction Tuning
+
+corresponding speech utterance typically lasts around one                                                       SpeechCombine
+                                                                            Speech-adapted
+second and expands to roughly 60–200 speech tokens (Wang                    model 𝜽𝑠𝑝𝑒𝑒𝑐ℎ
+et al., 2025b), representing a ∼20× increase relative to text.
+1
+  Such inflation makes it significantly more difficult to scale
+the effective dataset size for SLM training. As a result,                                Δ𝜽𝑠𝑝𝑒𝑒𝑐ℎ
+compared to text LLM training, SLM training must solve a
+substantially more challenging problem using far less effec-                                                        Text instruct
+tive data, which can lead to compromises in both knowledge                 Text base                                model 𝜽𝑖𝑛𝑠𝑡
+acquisition and instruction-following capabilities.                        model 𝜽𝑏𝑎𝑠𝑒
+
+More importantly, although SLM training is often initialized
+                                                                          Figure 1. Illustration of S PEECH C OMBINE in weight space.
+from a text LLM, subsequent training on massive speech
+tokens can lead to severe catastrophic forgetting. As a re-
+sult, a substantial portion of SLM training is devoted to               proach combines the speech adaptation direction ∆θspeech
+re-learning knowledge and skills in the original text LLM,              with the instruction-following direction ∆θinst in parameter
+often in a much harder-to-learn speech representation. If the           space, hence the name S PEECH C OMBINE.
+knowledge and capabilities of the text LLM could be better              Our experiments show that this combination unleashes sur-
+preserved, SLM training would not need to be conducted at               prising compositional effects, enabling the model to follow
+such an extensive scale. Some efforts (Wang et al., 2024)               instructions across all three categories. The ability to follow
+attempt to address this issue by freezing the text LLM and              speech understanding and generation instructions is partic-
+training only adapters for speech input and output. However,            ularly striking because neither ∆θspeech nor ∆θinstr has
+the resulting SLMs can only support text-oriented instruc-              been exposed to these instructions during training. Further-
+tions, but not the other speech-related instructions.                   more, we find that this combination strategy also transfers
+In summary, existing SLM training paradigms involve an                  other capabilities of the text LLM to the speech domain,
+inherent trade-off between preserving the knowledge and                 such as long-thinking capabilities. These findings open up a
+capabilities of text LLMs and acquiring new, speech-specific            new possibility for SLM training, escaping from the undue
+skills. This raises a natural question: Is it possible to achieve       ordeal of inefficient data piling in today’s world.
+both objectives and thereby build more powerful SLMs?
+In this paper, we propose S PEECH C OMBINE, an SLM with                 2. Related Work
+strong instruction-following capabilities across all three in-          Speech Language Models. SLMs can be classified into two
+struction categories, whose training procedure is surpris-              primary categories: native multimodal and modular-aligned
+ingly simple: no iterative rounds of training, but only a               models. Native multimodal models (Défossez et al., 2024;
+single round of pre-training with a standard next-token                 Xie & Wu, 2024; Chen et al., 2025; Ding et al., 2025; Zeng
+prediction objective on just 30k hours of speech data. The              et al., 2024; Geng et al., 2025; Wu et al., 2025; Xu et al.,
+core idea behind S PEECH C OMBINE is to directly transfer               2025a; Ghosh et al., 2026) employ a large language model
+the instruction-following capabilities of text LLMs to a new            (LLM) as the core reasoning backbone and extend it to the
+modality and new skills, inspired by recent advances in                 speech domain via audio encoders and speech decoders. In
+model merging (Huang et al., 2024).                                     contrast, modular-aligned models (Shao et al., 2025; Lu
+Figure 1 illustrates the basic idea. Given a text LLM base              et al., 2025; Wang et al., 2024; Fathullah et al., 2024; Kang
+model and its instruction-tuned counterpart, we first com-              et al., 2024; Wang et al., 2025a) freeze the backbone LLM
+pute their parameter difference, denoted as ∆θinst (blue                while training modality adapters to grant the LLM audio
+arrow), which can be interpreted as a direction encoding                capabilities. These methods either require large-scale train-
+instruction-following capability. Starting again from the               ing or are confined to text-related instructions. Existing
+base model, we then perform continuous pre-training on                  approaches typically rely on large-scale audio instruction
+speech data, yielding a second weight difference ∆θspeech               turning data, which is often expensive at scale. We aim to
+(black arrow) that captures knowledge of the speech modal-              bridge this gap.
+ity. Finally, S PEECH C OMBINE is constructed by trans-                 Expressive Speech Synthesis. Recent expressive TTS is
+planting ∆θinst onto the speech-adapted model (red arrow),              moving from label-based control toward open-vocabulary,
+based on the hypothesis that instruction-following capabili-            natural-language instructions for steering paralinguistic at-
+ties can generalize to the speedh domain. In essence, our ap-           tributes. HiStyle (Zhang et al., 2025) improves text-to-
+    1
+      Some speech tokenizers (Zeng et al., 2024) have a code rate       style alignment with a hierarchical style predictor, while
+of 25Hz, but each speech code typically consists of 8 tokens.           ParaStyleTTS (Lou et al., 2025) enhances robust paralinguis-
+                                                                        tic control without reference audio. OV-InstructTTS (Ren
+
+                                                                    2
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+et al., 2026) and FlexiVoice (Chen et al., 2026) further            tokens, are subsequently converted back into speech by the
+strengthen instruction-following for expressive/zero-shot           decoder. In this paper, we focus exclusively on training the
+settings, the latter leveraging preference optimization to          LLM module. The encoder and decoder are instantiated
+disentangle content, timbre, and style. Beyond single ut-           using a pre-trained, open-source system (Section 3.5) and
+terances, DeepDubbing (Dai et al., 2025) uses contextual            are kept frozen throughout training.
+InstructTTS for consistent audiobook narration.
+                                                                    Section 1 and Figure 1 have already provided a brief
+Speech Tokenizers. Speech tokenizers can be categorized             overview of our weight combination framework for the
+into discrete or continuous tokenization. Recent discrete           LLM module. Here, we present a more formal description.
+tokenizers emphasize low bitrates and enhanced feature              Let θbase and θinst denote the parameters of a text LLM
+factorization: TaDiCodec (Wang et al., 2025b) employs               base model and instruct model, respectively. Starting from
+a text-aware diffusion approach for ultra-low-rate model-           the base model, we perform continuous pre-training on a
+ing, while LongCat-Audio-Codec (Zhao et al., 2025) of-              speech corpus, yielding parameters θspeech . We then define
+fers a streaming-friendly tokenizer-detokenizer solution tai-       two directions in parameter space:
+lored for practical SLMs. To improve generation quality,
+                                                                     ∆θinst = θinst −θbase , ∆θspeech = θspeech −θbase . (1)
+DSA-Tokenizer (Zhao et al.) disentangles semantic and
+acoustic features through hierarchical fusion. Alternatively,       ∆θinst and ∆θspeech contain two complementary capabil-
+ProsodyLM (Qian et al., 2025) represents speech as tran-            ities: ∆θinst encodes instruction-following behavior but
+scripts augmented with explicit word-level prosody tokens.          contains no knowledge of speech, while ∆θspeech captures
+Several recent works (Yang et al., 2025b; He et al., 2025;          knowledge of the speech modality but lacks the ability to
+Li et al., 2025) explore continuous tokenization. and aim to        follow natural language instructions. Our S PEECH C OM -
+bypass the inherent information loss of quantization.               BINE model, parameterized by θSC , is obtained by linearly
+                                                                    combining these two directions, i.e.,
+Model Merging. Model merging aims to integrate multiple
+capabilities within a single parameter space by combining                     θSC = θbase + λ∆θspeech + ∆θinst ,             (2)
+model weights. Early works such as Task Arithmetic (Il-             where λ ∈ (0, 1] is a soft weight.
+harco et al., 2022) and Model Soups (Wortsman et al., 2022)
+demonstrate that simple linear combinations of fine-tuned           One way to interpret the above combination is as follows.
+models can yield robust multi-task performance. Subse-              The instruction-following capabilities encoded in ∆θinst
+quent studies, including Chat Vector (Huang et al., 2024),          are tailored to the knowledge present in the base model.
+BILLY (Pai et al., 2025), and Preference Vector (Liang              Equation (2) can thus be viewed as transferring ∆θinst onto
+et al., 2025), further show that task- or alignment-specific        the speech-adapted model, θbase + λ∆θspeech , which in-
+behaviors can be represented as weight-difference vectors           corporates new knowledge of speech. The success of this
+and transferred across models without additional training.          transfer depends on how close the speech-adapted model re-
+Model merging has also been explored as a strategy to miti-         mains to the original base model. A smaller value of λ keeps
+gate catastrophic forgetting in multimodal adaptation (Chen         the speech-adapted model closer to the base model, making
+et al., 2025; Sokar et al., 2025; Yu & Ananiadou, 2025). Fun-       it easier for ∆θinst to generalize. However, choosing λ
+Audio-Chat (Chen et al., 2025) adopts the model merging             too small would limit the acquisition of speech knowledge.
+idea in speech SLM, but it does not utilize the text LLM base       Therefore, this trade-off must be carefully balanced.
+model, which is shown to yield a more robust foundation             One important caveat is that the continuous pre-training on
+for model merging (Anonymous, 2025).                                speech must start from the base model θbase rather than the
+                                                                    instruction-tuned model θinst , which is a major distinction
+3. Method                                                           from existing SLM training recipes that also involve model
+                                                                    merging (Chen et al., 2025). Training from base is crucial
+In this section, we describe how S PEECH C OMBINE is                in retaining the compositional structure of knowledge and
+trained. Our goal is to retain the knowledge and instruction-       skill inside the SLM to allow for a successful combination.
+following capabilities of a text LLM, while teaching the
+model to follow speech-related instructions.                        Since the training of S PEECH C OMBINE only involves one
+                                                                    round of pre-training, the algorithm design boils down to
+3.1. The S PEECH C OMBINE Framework                                 designing a good recipe for the continuous pre-training,
+                                                                    which we detail in Sections 3.2 to 3.5.
+Figure 2 illustrates the overall framework of S PEECH C OM -
+BINE. Speech inputs are first converted into discrete speech        3.2. Knowledge of Speech
+tokens by the encoder module and then fed into the LLM.
+The LLM’s generated outputs, also in the form of speech             Before introducing the details of speech pre-training (which
+                                                                    aims to learn speech knowledge), it is important to explain
+
+                                                                3
+                             Instruction-Following Speech Language Models without Instruction Tuning
+
+
+              Text Queries                                                                             Text Answers
+
+                                   Encoder                     LLM
+                                                                𝜽𝑆𝐶
+                                     ASR        [text]                       [text]      Decoder
+                                   Tokenizer   [speech]                     [speech]
+             Speech Queries                                                                           Speech Answers
+
+
+                                  Figure 2. The S PEECH C OMBINE framework and inference pipeline.
+
+what speech knowledge is. Speech carries multiple levels of        tains the exact transcription of the corresponding speech
+ information, including ❶ content, which can typically be          tokens. Although this design introduces some redundancy,
+                              Text Queries                                                Text Answers
+ transcribed into text; ❷ prosody,   which    describes
+               What is the capital city of the US?
+                                                        properties we   show that  it is necessary
+                                                                               The capital   city of to facilitate
+                                                                                                      the  US is … the transfer of
+ such as pitch, intonation, rhythm, and loudness; and ❸ LLMtext-based instruction-following capabilities to speech (Sec-
+ timbre, which characterizes theEncoder
+                                     speaker’s voice. Since the 𝜽𝑆𝐶tion 3.6). Section 3.5 describes how we reduce this redun-
+                                      ASR
+ majority of the speech-related instructions        are about the
+                                                   [text]          dancy through
+                                                                             [text]speechDecoder
+                                                                                            tokenization.
+ prosodic aspect of speech, such      as expressive
+                                    Tokenizer          generation,
+                                                  [speech]                  [speech]
+              Speech Queries etc., we limit ourselves to the first The [cap] section may appear before         or after [speech].
+                                                                                                       Speech Answers
+word emphasis     detection,
+                                                                   We adopt a randomization strategy: for each sentence,
+ two levels of information in this paper. Future generalization
+                                                                   [cap] appears before [speech] with probability 0.3, ap-
+ to timbre is easily achievable in our framework.
+                                                                   pears after [speech] with probability 0.3, and is omitted
+The speech modality differs from text in two fundamental           with probability 0.4. This ensures that the pre-training data
+ways. First, speech token sequences differ substantially           contain sufficient instances of the following three transi-
+ from text token sequences in their structure and vocabulary.      tion patterns: ❶ [cap][text][speech], which teaches
+ Second, speech carries much richer information than text.         knowledge for speech generation; ❷ [text][speech]
+As a result, during pre-training, an SLM must achieve two          [cap], which teaches knowledge for speech understand-
+ goals: ❶ become familiar with speech token sequences,             ing; and ❸ [text][speech][text][speech], which
+ and ❷ understand the information in speech (content and           teaches knowledge for multi-sentence speech generation.
+ prosody in this paper). Section 3.3 describes how we design       Other pre-training details can be found in Appendix A.1.
+ the pre-training scheme to achieve these two goals.
+                                                                   3.4. Speech Caption
+ 3.3. Pre-training Data Structure
+                                                                   To generate a caption for a speech utterance, we first extract
+We adopt the standard next-token prediction objective for          the following attributes from the utterance: average pitch
+ pre-training. As a result, the key design choice in our pre-      level (high, medium, or low), average speaking rate (high,
+ training recipe lies in constructing training data that can       medium, or low), emphasized words, perceived emotion,
+ achieve the two goals described above under the next-token        emotional arousal (i.e., the intensity of the emotion), and
+ prediction regime. To this end, we design the following           the text transcription. We then randomly select a subset of
+ pre-training data structure:                                      these attributes to include in the caption: specifically, we
+                                                                   sample an integer k uniformly from 1 to the total number of
+ [S1 cap] [S1 text] [S1 speech] [S1 cap]
+                                                                   available attributes for the sentence and include k attributes
+ [S2 cap] [S2 text] [S2 speech] [S2 cap] · · ·
+                                                                   in the caption. Finally, the selected attributes are provided to
+‘S1’ stands for sentence 1; ‘speech’ stands for speech token       GPT-OSS 120B (Agarwal et al., 2025), which is prompted
+ sequence; ‘cap’ stands for speech caption.                        to generate a natural-language description that covers all
+                                                                   supplied attributes. Below is an example generated caption:
+The speech captions describe the information conveyed in
+ speech, including both content and prosody, in natural lan-       <cap> The spoken excerpt is a read passage rendered at a
+ guage, so the [cap] section is essential for achieving the        medium tempo, featuring a high pitch, spotlighting the word
+ second goal outlined in Section 3.2. Each [speech] sec- “nose”, and expressing anger.</cap>
+ tion contains the speech token sequence for a single sentence
+                                                                   Additional details are provided in Appendix A.2.
+ and familiarizes the SLM with the structure of speech token
+ sequences, thereby addressing the first goal. Sections 3.4
+ and 3.5 detail our designs of the speech caption and speech       3.5. Speech Tokenization
+ token sequence, respectively.                                     To reduce redundancy between the [text]–[speech]
+ During both pre-training and inference, each [speech]             pairs, we aim to adopt a tokenization scheme whose encoded
+ section is always preceded by a [text] section, which con-        information has minimal overlap with the text transcription.
+
+
+                                                                 4
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+To this end, we adopt the prosody tokenization scheme               ically, when generating a [text] section, we mask out
+proposed in Qian et al. (2025), which encodes only prosodic         the speech-token vocabulary to prevent unintended speech
+information in speech and therefore produces substantially          outputs. When speech mode is enabled, we boost the gener-
+shorter token sequences than schemes that encode the full           ation probability of the delimiter <speech> to ensure that
+waveform. Specifically, for each word in a speech utterance,        a speech section is produced at the end of each text section.
+the prosody tokenization scheme generates five numerical            Additional inference details are provided in Appendix A.4.
+values describing the word’s median pitch, pitch range, pitch
+slope, duration, and energy. These values are quantized             3.7. Enabling Long Thinking
+into 512 discrete levels, yielding a sequence of discrete
+prosody tokens. We introduce delimiter tokens <speech>              Section 3.6 shows that, as long as the answer template
+and </speech> to enclose each speech token sequence.                closely matches that of the text LLM, the instruction-
+Additional details are provided in Appendix A.3.                    following abilities of the instruct model (θinst ) can be read-
+                                                                    ily transferred to S PEECH C OMBINE. We thus wonder: Can
+                                                                    other abilities in θinst be transferred as well?
+3.6. Inference
+                                                                    We thus seek to elicit another prominent capability of many
+Once the model has been pre-trained and the instruction
+                                                                    text LLMs – long thinking, by modifying the answer tem-
+direction has been integrated according to Equation (2), the
+                                                                    plate in the same manner used to invoke long thinking in text
+resulting S PEECH C OMBINE is ready to answer real user
+                                                                    LLMs. For example, when the text LLM is QWEN3-8B, we
+queries. This naturally raises our next research questions:
+                                                                    simply insert a <think> [text]</think> section imme-
+What input–output format should be used during inference?
+                                                                    diately after Assistant. This is implemented by forcing
+Can S PEECH C OMBINE, which is never trained on the infer-
+                                                                    the first token after Assistant to be <think>. Additional
+ence tasks themselves, reliably follow this format?
+                                                                    design choices that stabilize the onset of long-thinking gen-
+The following shows our inference template, based on a              eration are discussed in Appendix A.5.
+model derived from QWEN3-8B (Yang et al., 2025a).
+                                                                    Unlike other SLMs, S PEECH C OMBINE acquires long think-
+<|im start|> User                                                   ing almost ‘for free’ – without any modification to the train-
+What is the emotion of the following                                ing procedure or weight combination, but simply through a
+utterance?[text][speech]<|im end|>                                  change in the answer template. Accordingly, we enable the
+                                                                    long-thinking mode by default in this paper.
+<|im start|> Assistant
+[text][speech][text][speech]...<|im end|>
+                                                                    4. Experiments
+As can be observed, our answer template is the same as
+that of the corresponding LLM instruct model, except that           In this section, we present experiments to evaluate the effec-
+it includes [speech] sections to enable speech-mode inter-          tiveness of S PEECH C OMBINE.2 Unlike most existing work
+action. Since each [speech] section is always accompa-              in this area, our approach is not directly trained on any of
+nied by its corresponding [text] section (as discussed in           the evaluation tasks. We divide the evaluation tasks into two
+Section 3.3), S PEECH C OMBINE relies on an external ASR            categories based on the required levels of skill combination:
+system to transcribe an input speech query into the [text]
+                                                                    Shallow combination. This category includes text-oriented
+section before prosody tokens are extracted, as illustrated
+                                                                    tasks that the text LLM can already perform, but posed and
+in Figure 2. We leave internalizing the ASR module within
+                                                                    answered in the speech modality. These tasks primarily re-
+the model as a direction for future work.
+                                                                    quire combining the problem-solving capabilities in ∆θinst
+The answer template above also clarifies why S PEECH C OM -         with the speech input–output format learned in ∆θspeech ,
+BINE , despite not being trained on this inference format, is       which is relatively straightforward.
+still able to produce correct responses. This is because the
+                                                                    Deep combination. This category includes speech-related
+instruction-following direction of the text LLM (∆θinst )
+                                                                    tasks, such as speech generation and speech understand-
+already recognizes most of the template structure. The
+                                                                    ing, that are completely unseen during training. These
+only additional element, the [speech] section, is readily
+                                                                    tasks require transferring the instruction-following capa-
+handled by the speech pre-training direction (∆θspeech ).
+                                                                    bilities in ∆θinst to the newly acquired speech knowledge
+The [text] sections serve as anchors for transferring the
+                                                                    in ∆θspeech , which is much more challenging.
+text LLM’s capabilities, which is why the [text] and
+[speech] sections must always appear in pairs.                         2
+                                                                       Github:        https://github.com/CongruiDu/
+                                                                    SpeechCombine
+To further improve the stability of S PEECH C OMBINE fol-              Demo Webpage: https://auspicious3000.github.
+lowing this format, we introduce format forcing. Specif-            io/SpeechCombine-Demo
+
+
+                                                                5
+                               Instruction-Following Speech Language Models without Instruction Tuning
+
+Table 1. Results on text-oriented tasks. The metric is accuracy (%) ↑ for all the tasks. Among all the methods in Group B, except for
+GPT-4 O -AUDIO with significantly larger model size, the best results are noted in bold, second best results underlined.
+
+                                                (a) QA                                          (b) Reasoning
+       Methods                           OpenbookQA MMSU                     GSM8k          Truthful       MLC         MLCpro
+                         1,2
+       GPT-4 O -AUDIO                        89.23            80.25           80.00            82.67         80.00       46.67
+       ASR + T EXT LLM                       83.29            73.22           94.61            71.12         93.26       94.13
+       C ONT. P RE -T RAIN                   78.46            68.21           87.05            42.11         85.31       88.27
+       C ONT. P RE -T RAIN + SFT             80.21            60.8            87.34            42.58         83.23       88.27
+       GLM-4-VOICE1,2                        53.41            39.75           30.93            59.28         57.82       65.20
+       AUDIO -F LAMINGO 3                    58.68            42.19           37.11            32.02         68.36       61.9
+       S TEP -AUDIO 2- MINI                  72.74            54.42           42.89            53.87         87.38       80.21
+       S TEP -AUDIO 2- MINI - THINK          65.70            53.87           39.46            52.89         85.12       76.55
+       OSUM-EC HAT3                          78.46            60.11           32.41            36.82         46.70       51.28
+       QWEN-2.5-O MNI                         81.1            61.32           38.09            46.25         73.33       64.83
+       K IMI -AUDIO1                         83.52            62.17           95.53            57.61         93.59       87.91
+       F UN -AUDIO -C HAT4                   83.52            71.08           88.31            61.27         93.97       93.40
+       S PEECH C OMBINE                      86.59            73.38           90.03            60.09         93.97       89.01
+         1. QA results copied from Chen et al. (2024). 2. Reasoning results copied from Yan et al. (2025).
+         3. QA results copied from Geng et al. (2025). 4. QA results copied from Chen et al. (2025).
+
+We will first present results on shallow combination in Sec-                around 10,000 hours of speech instruction-tuning data from
+tion 4.2, then deep combination in Sections 4.3 and 4.4.                    SIFT-50M (Pandey et al., 2025), InstructS2S-200K
+                                                                            (Fang et al., 2025), and VoiceAssistant-400K (Xie &
+4.1. Experimental Configurations                                            Wu, 2024), using SFT;
+We choose the QWEN3-8B-base and -instruct as our                            Group B consists of state-of-the-art SLMs, including: GPT-
+θbase and θinst , respectively. For the continuous pre-                     4 O -AUDIO (OpenAI, 2024), GLM-4-VOICE (9B) (Zeng
+training on speech, we apply LoRA-based tuning (Hu et al.,                  et al., 2024), AUDIO F LAMINGO 3 (Ghosh et al., 2026),
+2022) with rank 64 and α 16. The pre-training datasets                      S TEP -AUDIO 2- MINI (7B) (Wu et al., 2025), S TEP -AUDIO 2-
+include Librilight (Kahn et al., 2020), BEAT (Liu et al.,                   MINI - THINK (7B) (Wu et al., 2025), OSUM-EC HAT (3B)
+2022), CREMA-D (Cao et al., 2014), ESD (Zhou et al., 2022),                 (Geng et al., 2025), QWEN-2.5-O MNI (Xu et al., 2025b),
+JL Corpus (James et al., 2018), EmoV-DB (Adigwe et al.,                     K IMI -AUDIO (7B) (Ding et al., 2025), and F UN -AUDIO -
+2018), Expresso (Nguyen et al., 2023), MEAD (Wang et al.,                   C HAT (8B) (Chen et al., 2025). All baselines undergo mul-
+2020) TESS (Pichora-Fuller & Dupuis, 2020). We follow                       tiple rounds of training on substantially larger datasets than
+Qian et al. (2025) to extract the prosody tokens and use                    S PEECH C OMBINE. For example, F UN -AUDIO -C HAT was
+whisper-large-v3 (Radford et al., 2023) to extract text                     trained on millions of hours of speech data (Chen et al.,
+transcriptions, and the total amount of data, after dropping                2025), over 100× the size of our training data. All the mod-
+extration failures, is only around 30k hours. λ is set to 0.85.             els are of similar sizes, except for GPT-4 O -AUDIO, whose
+                                                                            results are thus excluded from bolding.
+We include two groups of baselines. Group A consists of
+alternative training methods using comparable training data
+                                                                            4.2. Text-Oriented Tasks
+and the same base models as for S PEECH C OMBINE. This
+group is more controlled to better study the effectiveness of               We consider two text-oriented tasks: QA and logical rea-
+S PEECH C OMBINE compared to the common SLM training                        soning. QA is included because it represents a common
+paradigms. It includes -                                                    application for SLM, while logical reasoning is used to
+                                                                            challenge the models with more complex questions. For
+• ASR + T EXT LLM: Input speech is converted to
+                                                                            QA, we evaluate on OpenbookQA, SDQA, and MMSU in
+text using whisper-large-v3 and then fed to the
+                                                                            VoiceBench (Chen et al., 2024). For logical reasoning,
+QWEN3-8B-instruct model;
+                                                                            we evaluate on GSM8kEval, MLCpro-en, TruthfulEval,
+• C ONTINUOUS P RE -T RAIN : Continuous pre-training on                     and MLC in URO-Bench (Yan et al., 2025). Additional de-
+the QWEN3-8B-instruct model (instead of base), using                        tails are provided in Appendix B.1.
+the same 30k hours of speech data;
+                                                                            Table 1 summarizes the results. Among the Group A meth-
+• C ONTINUOUS P RE -T RAIN + SFT: Continuous pre-                           ods, ASR + T EXT LLM represents the topline performance,
+training on the QWEN3-8B-base model, using the same                         because it does not suffer from any catastrophic forgetting.
+30k hours of speech data, and then further fine-tuning on                   Nevertheless, S PEECH C OMBINE performs on par or even
+
+                                                                        6
+                             Instruction-Following Speech Language Models without Instruction Tuning
+
+Table 2. Results on speech understanding and generation tasks. Among all the methods in Group B, except for GPT-4 O -AUDIO with
+significantly larger model size, the best results are noted in bold, second best results underlined.
+
+                                            (a) Speech Understanding                                    (b) Speech Generation
+                                     UnderEmo        Emph Detection                           GenEmo           Emph Generation
+ Methods                               Acc. ↑        Prec. ↑      Recall ↑         F1 ↑       Score ↑     Prec. ↑    Recall ↑      F1 ↑
+                    1
+  GPT-4 O -AUDIO                       48.53          33.00         61.68         42.99        33.46      66.95        63.19       65.02
+                        2
+  ASR + T EXT LLM                      55.42          15.79         26.94         19.91        5.06       11.35        29.71       16.42
+  C ONT. P RE -T RAIN                  47.15           1.53          6.51          2.48        24.23       6.9          17.5        9.89
+  C ONT. P RE -T RAIN + SFT            48.90           2.12          3.42          2.61        24.23      16.76        26.95       20.67
+  GLM-4-VOICE                          52.41          11.92         29.52         16.98        48.13      24.67        28.75       26.55
+  AUDIO -F LAMINGO 33                  24.28          17.09         33.32         22.59          -          -            -           -
+  S TEP -AUDIO 2- MINI                 44.57          19.59         25.76         22.25        31.35      22.48        23.23       22.85
+  S TEP -AUDIO 2- MINI - THINK         45.83          20.37         39.45         26.87        23.73      22.75        23.11       22.93
+  QWEN-2.5-O MNI                       35.86           3.75         26.26          6.56        13.54      18.82        34.03       24.24
+  OSUM-EC HAT                          48.71          22.51          9.02         12.88        36.01      13.87        19.61       16.25
+  K IMI -AUDIO                         63.69          19.71         20.04         19.88        28.01      18.21        26.81       21.69
+  F UN -AUDIO -C HAT                   74.74          23.46         37.15         28.76        39.30      23.01        22.82       22.91
+  S PEECH C OMBINE                     52.70          55.11         67.89         60.84        45.42      25.91        39.90       31.42
+    1. UnderEmo and GenEmo results copied from Yan et al. (2025).
+    2. Speech generation achieved by appending Kokoro text-to-speech (hexgrad, 2025).
+    3. Generation task results unavailable because the audio decoder has not been released.
+
+better compared with this topline. With additional training,                  benchmark for mimicking emphasis patterns from a refer-
+the other two methods in Group A yield much compro-                           ence utterance. We treat the reference utterance as the input
+mised performance, underperforming S PEECH C OMBINE.                          speech and use the provided emphasis annotations as ground
+However, the catastrophic forgetting is not as severe as we                   truth. Performance is evaluated using precision, recall, and
+anticipated, which we suspect is due to the small dataset                     F1 score computed over the predicted emphasized words.
+size for the additional training. As shown in Sections 4.3                    Additional details are provided in Appendix B.2.
+and 4.4, although Group A methods decently retain text
+                                                                              Table 2 (Panel a) reports the results. As shown, S PEECH -
+LLM’s knowledge, it is at the cost of severe failures in
+                                                                              C OMBINE does not achieve top-tier performance on emotion
+speech-related tasks, reflecting difficult trade-offs in these
+                                                                              understanding. This is likely due to the insufficient emo-
+conventional training paradigms.
+                                                                              tion information in the speech captions: only about 100
+Among the Group B methods with comparable model sizes,                        hours of the pre-training corpus include emotion captions.
+S PEECH C OMBINE achieves either the top or second-best                       In contrast, more than 15k hours contain emphasis-related
+results across all datasets. This performance is particu-                     information. As a result, S PEECH C OMBINE achieves state-
+larly notable given that the top-performing SLM baselines                     of-the-art performance on the emphasis detection task, with
+are trained on extensive math and reasoning datasets to                       substantial margins over all baselines. Group A methods,
+strengthen these capabilities (Ding et al., 2025), whereas                    with no or insufficient adaptation to speech, fail in speech
+S PEECH C OMBINE is not. These results demonstrate that                       understanding tasks, especially for emphasis detection. Yet
+our weight combination strategy successfully preserves the                    their performance does not drop to zero because they can
+original capabilities of the text LLM, while seamlessly in-                   still partially infer the answers based on text only.
+tegrating speech-mode interaction without interfering with
+                                                                              One important caveat is that speech understanding capabili-
+correct content generation.
+                                                                              ties are inherently more difficult to elicit than shallow com-
+                                                                              bination capabilities. In practice, we find that S PEECH C OM -
+4.3. Speech Understanding Tasks                                               BINE tends to answer such questions primarily based on
+We consider two speech understanding tasks: emotion un-                       textual content, rather than prosodic cues, unless additional
+derstanding and emphasis detection. Emotion understand-                       measures are taken to explicitly encourage prosody-aware
+ing requires identifying the speaker’s emotion based on                       reasoning. For example, in the emphasis detection task,
+prosodic cues in an utterance. We evaluate this task on                       we prepend “Based on the prosody” to the long-thinking
+the UnderEMO-en benchmark from URO-Bench. Empha-                              section to force the model to attend to prosodic information.
+sis detection aims to identify words in an utterance that                     Section 4.5 provides a more detailed analysis of this behav-
+are emphasized by the speaker. We adapt the EmphAssess                        ior. This design choice introduces a mild advantage over
+dataset (de Seyssel et al., 2024), which was originally a                     baseline methods. Nevertheless, the strong performance of
+
+
+                                                                          7
+                                Instruction-Following Speech Language Models without Instruction Tuning
+
+ Question: Humans, cats, dogs,          Question: Which word(s) in the           Question: Which word(s) in the      Question: Read the following
+ and elephants are known as             audio clip are emphasized? Audio:        audio clip are emphasized? Audio:   sentence with a surprised tone:
+ mammals because their kids are         “Didn't you read her book?”              “Didn't you read her book?”         “You actually remembered my
+ born alive. Non-mammalian                                                                                           birthday!”
+ babies are born. A. Old. B. Dead.      Think: …The audio has the line           Think: Based on the prosody, this
+ C. In an egg. D. Big.                  “Didn't you read her book?”              audiobook excerpt is delivered      Think: Okay, the user wants me
+                                        spoken with a questioning tone. I        with a moderate level of arousal    to read a sentence with a surprised
+ Think: …The question states that       need to figure out which words get       and a normal speaking rate…         tone and high arousal… Surprise
+ non-mammalian babies are born...       extra stress. Let me think.              The audio clip contains the         is the key, so I should sound really
+ so the answer should contrast          The sentence is a question, so           emphasized word “book?” and         excited and startled. Maybe use a
+ mammals with non-mammals.              the word “Didn’t” is likely              no other words are stressed…        high pitch and fast delivery. Wait,
+ Mammals give birth to live young,      emphasized. The rest of the              The content is a question about     the user didn't specify pitch or
+ so non-mammals don't. Non-             words are “you”, “read”, “her”,          which words are emphasized in       speed… So I'll keep it natural
+ mammalian animals might lay            “book”. But the main emphasis            the audio… The answer is            but with clear surprise. Let me
+ eggs, like birds or reptiles. So the   would be on “Didn’t” to make it a        “book?” as it is the only           say it with a lot of energy.
+ correct answer would be C…             question…                                emphasized word…
+                                                                                                                     Answer: “You actually
+ Answer: C.                             Answer: “Didn’t” (Incorrect)             Answer: “book?” (Correct)           remembered my birthday!”
+
+               (a) QA                      (b) Emphasis detection w/o               (c) Emphasis detection w/        (d) Expressive speech generation
+                                          forcing “Based on prosody”               forcing “Based on prosody”
+
+              Figure 3. Excerpts of thinking processes of S PEECH C OMBINE. Non-text sections are removed for readability.
+
+
+S PEECH C OMBINE remains       encouraging: It confirms that
+                         Text Queries                          4.5. Visualizing the Thinking     Process
+                                                                                         Text Answers
+the weight   combination
+          What             strategycity
+                 is the capital      is capable
+                                         of the of cultivating
+                                                 US?                       The capital city of the US is …
+                                                               To gain further insight into how S PEECH C OMBINE lever-
+novel speech understanding capabilities, even though addi-LLM
+                               Encoder
+tional mechanisms are currently required to activate them. 𝜽𝑆𝐶
+                                                               ages its combined capabilities, we select three representative
+                                 ASR          [text]           tasks – OpenbookQA
+                                                                          [text]      , Decoder
+                                                                                        emphasis detection on EmphAssess,
+                                                               and GenEmo – one from each task category. For each task,
+4.4. Speech Generation Tasks   Tokenizer    [speech]                     [speech]
+          Speech Queries                                       we visualize  the model’s reasoning Speech
+                                                                                                      process and answer for
+                                                                                                            Answers
+We consider two speech generation tasks: expressive speech     a representative example.
+generation and emphasis generation. Expressive speech          Figure 3(a) illustrates the thinking process for a QA exam-
+generation requires producing speech utterances that sat-      ple, which closely resembles the typical reasoning behavior
+isfy given emotion constraints. We evaluate this task using    of text LLMs. This observation further confirms that the
+the GenEmotion-en benchmark from URO-Bench. Per-               original capabilities of the text LLM are well preserved.
+formance is measured using a composite score that com-
+bines word error rate with the correctness of the expressed    Figure 3 (b) and (c) show the thinking process for the
+emotion, as determined by an external emotion classifier.      same emphasis detection question with (c) and without (b)
+Emphasis generation involves generating speech utterances      prepending “Based on the prosody” to the thinking (Sec-
+that satisfy given emphasis requirements. For this task, we    tion 4.3). Interestingly, without the forcing, S PEECH C OM -
+again adapt the EmphAssess dataset by converting empha-        BINE attempts to infer what should be emphasized based on
+sis labels into emphasis constraints, and we use the provided  the text, which leads to an incorrect answer. Only when it
+emphasis detector to evaluate whether the generated speech     is forced to focus on prosody does it start to reason what is
+emphasizes the required words. Performance is reported         actually being emphasized by the speaker, which leads to
+using precision, recall, and F1 score. Additional details are  the correct answer. This contrast suggests that while weight
+provided in Appendix B.3.                                      combination enables the emergence of speech understand-
+                                                               ing capabilities, it is not sufficient on its own to reliably
+Table 2 (Panel b) reports the results. Surprisingly, speech    signal when and how these capabilities should be invoked.
+generation capabilities prove easier to elicit than speech un-
+derstanding capabilities, and do not require any task-specific Figure 3(d) shows the thinking process for an expressive
+enforcement mechanisms. The resulting generation quality       speech generation task. Remarkably, the model is able to
+is strong: S PEECH C OMBINE achieves the second-best per-      reason about the most appropriate prosodic styles to ac-
+formance on emotion generation and the best performance        centuate the requested emotion of excitement, exhibiting a
+on emphasis generation, with clear margins over the base-      previously unseen form of long-thinking behavior. Specifi-
+lines. Group A methods, in particular, achieve the worst       cally, the model considers increasing pitch or speaking rate,
+performance due to the insufficient acquisition of speech      and ultimately decides to increase energy. This observation
+skills. We encourage readers to refer to our demo webpage      provides strong evidence that long-thinking behavior has
+to judge the perceptual quality of the generation.             been extended to solve unseen, speech-centric tasks.
+
+
+                                                                             8
+                          Instruction-Following Speech Language Models without Instruction Tuning
+
+
+
+
+                 (a) QA                               (b) Emphasis Detection                  (c) Expressive Speech Generation
+                                              Figure 4. Performance across different λ.
+
+                Table 3. Ablation study results.
+                                                                     Table 3, when the [cap] is removed, the speech genera-
+                  Openbook       Emph Det          GenEmo            tion and understanding performance degrades significantly,
+  Methods           Acc. ↑         F1 ↑            Score ↑           because [cap] introduces the knowledge of speech gener-
+  Original           86.59          60.84           45.42            ation and understanding. When [text] is removed, the
+                                                                     speech generation and understanding performance is also
+  No Thinking        64.83          53.14           36.37
+                                                                     significantly impacted, because [text] serves as an anchor
+  No [cap]           84.83           0.39           27.18
+  No [Text]          83.95           0.40           35.69            for fusing speech knowledge.
+  No ∆θinst          71.68          40.38           15.34
+                                                                     Weight directions. To study the effect of ∆θinst , we re-
+                                                                     move ∆θinst , but instead use task-specific in-context exam-
+4.6. Ablation Studies                                                ples to provide instruction-following guidance. The results
+                                                                     in Table 3 show that in-context learning can achieve better
+Combination weight. As discussed in Section 3.1, the pa-
+                                                                     performance on the text-oriented task than the no-thinking
+rameter λ in Equation (2) controls the trade-off between ac-
+                                                                     S PEECH C OMBINE, but worse for speech understanding and
+quiring speech-specific knowledge and preserving the trans-
+                                                                     generation, which suggests it cannot completely replace
+ferability of text-based instruction-following capabilities.
+                                                                     ∆θinst . On the other hand, if ∆θspeech is removed, the
+We examine how different choices of λ affect performance,
+                                                                     model becomes ASR + T EXT LLM (Tables 1 and 2), which
+using the same three tasks considered in Section 4.5.
+                                                                     excels in text-oriented tasks but fails in speech-related tasks.
+Figure 4 (solid curves) plots task performance as a function
+                                                                     More ablation studies are shown in Appendix C.
+of λ, revealing clear contrasting trends. As λ increases,
+performance on QA, a text-oriented task, degrades due to
+greater perturbations to the original text LLM weights, while        5. Conclusion and Limitations
+performance on the two speech-related tasks improves as
+                                                                     In this paper, we explore weight combination as an alterna-
+speech knowledge is more strongly integrated. Despite this
+                                                                     tive paradigm for training instruction-following SLMs that
+trade-off, there exists a broad sweet spot for λ that yields
+                                                                     avoids multi-round training on massive data. The resulting
+competitive, well-balanced performance across all tasks.
+                                                                     empirical findings exceed our expectations: S PEECH C OM -
+Effect of long thinking. We also plot the corresponding              BINE achieves state-of-the-art performance across multiple
+performance curves for S PEECH C OMBINE in non-thinking              tasks, with less than 1% of training data for existing SLMs.
+mode in Figure 4 (dashed curves). As shown, performance
+                                                                     Despite these promising results, S PEECH C OMBINE in its
+without long thinking is consistently lower, confirming that
+                                                                     current form has several limitations. First, its output for-
+long thinking provides meaningful benefits even on unseen
+                                                                     matting is unstable, requiring format forcing for correction.
+tasks. Nevertheless, the non-thinking model still achieves
+                                                                     Second, the prosody tokenization scheme used in this work
+competitive performance, further validating that the strong
+                                                                     does not encode timbre, voice quality, or accent informa-
+results primarily stem from the effective skill combination
+                                                                     tion, which limits its applicability to a broader range of
+enabled by our weight combination scheme.
+                                                                     speech tasks. Finally, reliance on an external ASR system
+Pre-training data structure. Our pre-training data con-              introduces additional latency and transcription errors during
+tains three sections, [speech], [cap], [text]. The first             inference. Nevertheless, this paper unveils great potential of
+is essential because it is the only section with speech in-          our proposed paradigm. Beyond enabling the development
+formation. To study whether the other two sections are               of competitive SLMs today, this paradigm provides a scal-
+necessary, we remove them from pre-training and evaluate             able path for SLMs to rapidly inherit emerging capabilities
+the resulting models on the same three tasks. As shown in            from text LLMs as they continue to evolve in the future.
+
+                                                                 9
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+Impact Statement                                                      Ding, D., Ju, Z., Leng, Y., Liu, S., Liu, T., Shang, Z., Shen,
+                                                                        K., Song, W., Tan, X., Tang, H., et al. Kimi-audio techni-
+This paper presents work whose goal is to advance the field             cal report. arXiv preprint arXiv:2504.18425, 2025.
+of machine learning. There are many potential societal
+consequences of our work, none of which we feel must be               Fang, Q., Guo, S., Zhou, Y., Ma, Z., Zhang, S., and Feng, Y.
+specifically highlighted here.                                          Llama-omni: Seamless speech interaction with large lan-
+                                                                        guage models. In International Conference on Learning
+References                                                              Representations, volume 2025, pp. 57607–57624, 2025.
+
+Adigwe, A., Tits, N., Haddad, K. E., Ostadabbas, S., and Du-          Fathullah, Y., Wu, C., Lakomkin, E., Li, K., Jia, J., Shang-
+  toit, T. The emotional voices database: Towards control-              guan, Y., Mahadeokar, J., Kalinli, O., Fuegen, C., and
+  ling the emotion dimension in voice generation systems.               Seltzer, M. Audiochatllama: Towards general-purpose
+  arXiv preprint arXiv:1806.09514, 2018.                                speech abilities for llms. In Proceedings of the 2024
+                                                                        Conference of the North American Chapter of the Associ-
+Agarwal, S., Ahmad, L., Ai, J., Altman, S., Applebaum, A.,              ation for Computational Linguistics: Human Language
+  Arbus, E., Arora, R. K., Bai, Y., Baker, B., Bao, H., et al.          Technologies (Volume 1: Long Papers), pp. 5522–5532,
+  gpt-oss-120b & gpt-oss-20b model card. arXiv preprint                 2024.
+  arXiv:2508.10925, 2025.
+                                                                      Feng, T., Lee, J., Xu, A., Lee, Y., Lertpetchpun, T., Shi, X.,
+Anonymous. Knitlm: Weaving knowledge into instruction-                  Wang, H., Thebaud, T., Moro-Velazquez, L., Byrd, D.,
+  tuned llms via continual pre-training and merging. Open-              et al. Vox-profile: A speech foundation model benchmark
+ Review preprint, 2025. Under review at ICLR 2026.                      for characterizing diverse speaker and speech traits. arXiv
+                                                                        preprint arXiv:2505.14648, 2025.
+Cao, H., Cooper, D. G., Keutmann, M. K., Gur, R. C.,
+  Nenkova, A., and Verma, R. Crema-d: Crowd-sourced                   Geng, X., Shao, Q., Xue, H., Wang, S., Xie, H., Guo, Z.,
+  emotional multimodal actors dataset. IEEE transactions                Zhao, Y., Li, G., Tian, W., Wang, C., et al. Osum-echat:
+  on affective computing, 5(4):377–390, 2014.                           Enhancing end-to-end empathetic spoken chatbot via
+                                                                        understanding-driven spoken dialogue. arXiv preprint
+Chen, D., Zhang, X., Wang, Y., Dai, K., Ma, L., and Wu,                 arXiv:2508.09600, 2025.
+  Z. Flexivoice: Enabling flexible style control in zero-
+  shot tts with natural language instructions. arXiv preprint         Ghosh, S., Goel, A., Kim, J., Kumar, S., Kong, Z., Lee,
+  arXiv:2601.04656, 2026.                                               S.-g., Yang, C.-H., Duraiswami, R., Manocha, D., Valle,
+                                                                        R., et al. Audio flamingo 3: Advancing audio intelligence
+Chen, Q., Cheng, L., Deng, C., Li, X., Liu, J., Tan, C.-H.,            with fully open large audio language models. Advances
+  Wang, W., Xu, J., Ye, J., Zhang, Q., et al. Fun-audio-chat            in Neural Information Processing Systems, 38:41819–
+  technical report. arXiv preprint arXiv:2512.20156, 2025.             41886, 2026.
+Chen, Y., Yue, X., Zhang, C., Gao, X., Tan, R. T., and Li, H.         He, X., Ray, S. N., Mallidi, H., Huang, J.-H., Bellur,
+  Voicebench: Benchmarking llm-based voice assistants.                  A., Chandak, C., Maruf, M., and Ravichandran, V.
+  arXiv preprint arXiv:2410.17196, 2024.                                Continuous-token diffusion for speaker-referenced tts in
+                                                                        multimodal llms. arXiv preprint arXiv:2510.12995, 2025.
+Dai, Z., Chen, Y., Xu, J., Xie, L., Wang, Y., Yang, Z.,
+  Bai, B., Gao, Y., Zhou, W., Zhao, W., et al. Deep dub-              hexgrad. Kokoro-82m. https://huggingface.co/
+  bing: End-to-end auto-audiobook system with text-to-                  hexgrad/Kokoro-82M, 2025. Hugging Face model
+  timbre and context-aware instruct-tts. arXiv preprint                 card.
+  arXiv:2509.15845, 2025.
+                                                                      Hu, E. J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang,
+de Seyssel, M., D’Avirro, A., Williams, A., and Dupoux, E.              S., Wang, L., Chen, W., et al. Lora: Low-rank adaptation
+  Emphassess: a prosodic benchmark on assessing empha-                  of large language models. ICLR, 1(2):3, 2022.
+  sis transfer in speech-to-speech models. In Proceedings
+  of the 2024 Conference on Empirical Methods in Natural              Huang, S.-C., Li, P.-Z., Hsu, Y.-C., Chen, K.-M., Lin, Y. T.,
+  Language Processing, pp. 495–507, 2024.                               Hsiao, S.-K., Tsai, R., and Lee, H.-Y. Chat vector: A
+                                                                        simple approach to equip llms with instruction following
+Défossez, A., Mazaré, L., Orsini, M., Royer, A., Pérez,              and model alignment in new languages. In Proceed-
+  P., Jégou, H., Grave, E., and Zeghidour, N. Moshi:                   ings of the 62nd Annual Meeting of the Association for
+  a speech-text foundation model for real-time dialogue.                Computational Linguistics (Volume 1: Long Papers), pp.
+  arXiv preprint arXiv:2410.00037, 2024.                               10943–10959, 2024.
+
+                                                                 10
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+Ilharco, G., Ribeiro, M. T., Wortsman, M., Gururangan, S.,           Nguyen, T. A., Hsu, W.-N., d’Avirro, A., Shi, B., Gat, I.,
+   Schmidt, L., Hajishirzi, H., and Farhadi, A. Editing mod-           Fazel-Zarani, M., Remez, T., Copet, J., Synnaeve, G.,
+   els with task arithmetic. arXiv preprint arXiv:2212.04089,          Hassid, M., et al. Expresso: A benchmark and analysis
+   2022.                                                               of discrete expressive speech resynthesis. arXiv preprint
+                                                                       arXiv:2308.05725, 2023.
+James, J., Tian, L., and Watson, C. I. An open source
+  emotional speech corpus for human robot interaction ap-            OpenAI. Hello gpt-4o. https://openai.com/
+  plications. In Interspeech, pp. 2768–2772, 2018.                     index/hello-gpt-4o/, 2024. Accessed: 2026-01-
+                                                                       28.
+Jin, Z., Jia, J., Wang, Q., Li, K., Zhou, S., Zhou, S., Qin,
+   X., and Wu, Z. Speechcraft: A fine-grained expressive             Pai, T.-M., Wang, J.-I., Lu, L.-C., Sun, S.-H., Lee, H.-Y.,
+   speech dataset with natural language description. In Pro-           and Chang, K.-W. Billy: Steering large language models
+   ceedings of the 32nd ACM International Conference on                via merging persona vectors for creative generation. arXiv
+   Multimedia, pp. 1255–1264, 2024.                                    preprint arXiv:2510.10157, 2025.
+
+Kahn, J., Riviere, M., Zheng, W., Kharitonov, E., Xu, Q.,            Pandey, P., Swaminathan, R. V., Girish, K. V., Sen, A., Xie,
+  Mazaré, P.-E., Karadayi, J., Liptchinsky, V., Collobert,            J., Strimel, G., and Schwarz, A. Sift-50m: A large-scale
+  R., Fuegen, C., et al. Libri-light: A benchmark for asr              multilingual dataset for speech instruction fine-tuning.
+  with limited or no supervision. In ICASSP 2020-2020                  In Proceedings of the 63rd Annual Meeting of the Asso-
+  IEEE International Conference on Acoustics, Speech and               ciation for Computational Linguistics (Volume 1: Long
+  Signal Processing (ICASSP), pp. 7669–7673. IEEE, 2020.               Papers), pp. 13921–13942, 2025.
+
+Kang, W., Jia, J., Wu, C., Zhou, W., Lakomkin, E., Gaur, Y.,         Pichora-Fuller, M. K. and Dupuis, K. Toronto emotional
+  Sari, L., Kim, S., Li, K., Mahadeokar, J., et al. Frozen             speech set (TESS), 2020. URL https://doi.org/
+  large language models can perceive paralinguistic aspects            10.5683/SP2/E8H2MF.
+  of speech. arXiv preprint arXiv:2410.01162, 2024.
+                                                                     Qian, K., Fan, X., Ni, J., Shechtman, S., Hasegawa-Johnson,
+                                                                       M., Gan, C., and Zhang, Y. Prosodylm: Uncovering the
+Li, Y., Xie, R., Sun, X., Cheng, Y., and Kang, Z. Continuous
+                                                                       emerging prosody processing capabilities in speech lan-
+   speech tokenizer in text to speech. In Findings of the
+                                                                       guage models. arXiv preprint arXiv:2507.20091, 2025.
+  Association for Computational Linguistics: NAACL 2025,
+   pp. 3341–3347, 2025.                                              Radford, A., Kim, J. W., Xu, T., Brockman, G., McLeavey,
+                                                                       C., and Sutskever, I. Robust speech recognition via large-
+Liang, R.-W., Hsu, C.-T., Yu, C.-H., Agrawal, S., Huang,
+                                                                       scale weak supervision. In International conference on
+  S.-C., Chen, S.-T., Huang, K.-H., and Sun, S.-H. Adap-
+                                                                       machine learning, pp. 28492–28518. PMLR, 2023.
+  tive helpfulness-harmlessness alignment with preference
+  vectors. arXiv preprint arXiv:2504.20106, 2025.                    Ren, Y., Yi, J., Tao, J., Sun, H., Wen, Z., Gu, H., Xu, L., and
+                                                                       Bai, Y. Ov-instructtts: Towards open-vocabulary instruct
+Liu, H., Zhu, Z., Iwamoto, N., Peng, Y., Li, Z., Zhou, Y.,             text-to-speech. arXiv preprint arXiv:2601.01459, 2026.
+  Bozkurt, E., and Zheng, B. Beat: A large-scale semantic
+  and emotional multi-modal dataset for conversational               Shao, Y., Liu, W., Li, J., Wang, T., Wei, K., Yu, M., and Yu,
+  gestures synthesis. In European conference on computer               D. Azeros: Extending llm to speech with self-generated
+  vision, pp. 612–630. Springer, 2022.                                 instruction-free tuning. arXiv preprint arXiv:2601.06086,
+                                                                       2025.
+Lou, H., Paik, H.-Y., Hu, W., and Yao, L. Parastyletts:
+  Toward efficient and robust paralinguistic style control           Sokar, G., Dziugaite, G. K., Arnab, A., Iscen, A., Cas-
+  for expressive text-to-speech generation. In Proceedings             tro, P. S., and Schmid, C. Continual learning in vision-
+  of the 34th ACM International Conference on Information              language models via aligned model merging. arXiv
+  and Knowledge Management, pp. 1979–1988, 2025.                       preprint arXiv:2506.03189, 2025.
+
+Lu, K.-H., Chen, Z., Fu, S.-W., Yang, C.-H. H., Huang,               Wang, D., Xu, J., Chu, R., Guo, Z., Wang, X., Wu, J., Yang,
+  S.-F., Yang, C.-K., Yu, C.-E., Chen, C.-W., Chen, W.-C.,            D., Ji, S., and Lin, J. Inserter: Speech instruction fol-
+  Huang, C.-y., et al. Desta2. 5-audio: Toward general-               lowing with unsupervised interleaved pre-training. In
+  purpose large audio language model with self-generated              Proceedings of the 63rd Annual Meeting of the Associ-
+  cross-modal alignment. arXiv preprint arXiv:2507.02768,             ation for Computational Linguistics (Volume 1: Long
+  2025.                                                               Papers), pp. 18024–18046, 2025a.
+
+                                                                11
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+Wang, K., Wu, Q., Song, L., Yang, Z., Wu, W., Qian, C., He,           Yosha, I., Shteyman, D., and Adi, Y. Whistress: Enrich-
+ R., Qiao, Y., and Loy, C. C. Mead: A large-scale audio-                ing transcriptions with sentence stress detection. arXiv
+ visual dataset for emotional talking-face generation. In               preprint arXiv:2505.19103, 2025.
+ European conference on computer vision, pp. 700–717.
+ Springer, 2020.                                                      Yu, Z. and Ananiadou, S. Locate-then-merge: Neuron-level
+                                                                        parameter fusion for mitigating catastrophic forgetting
+Wang, X., Li, Y., Fu, C., Shen, Y., Xie, L., Li, K., Sun,               in multimodal llms. arXiv preprint arXiv:2505.16703,
+ X., and Ma, L. Freeze-omni: A smart and low latency                    2025.
+ speech-to-speech dialogue model with frozen llm. arXiv
+ preprint arXiv:2411.00774, 2024.                                     Zeng, A., Du, Z., Liu, M., Wang, K., Jiang, S., Zhao, L.,
+                                                                        Dong, Y., and Tang, J. Glm-4-voice: Towards intelli-
+Wang, Y., Chen, D., Zhang, X., Zhang, J., Li, J., and                   gent and human-like end-to-end spoken chatbot. arXiv
+ Wu, Z. Tadicodec: Text-aware diffusion speech tok-                     preprint arXiv:2412.02612, 2024.
+ enizer for speech language modeling. arXiv preprint
+ arXiv:2508.16790, 2025b.                                             Zhang, D., Li, S., Zhang, X., Zhan, J., Wang, P., Zhou,
+                                                                        Y., and Qiu, X. Speechgpt: Empowering large language
+Wei, H., Cao, X., Dan, T., and Chen, Y. Rmvpe: A robust                 models with intrinsic cross-modal conversational abili-
+ model for vocal pitch estimation in polyphonic music.                  ties. In Findings of the Association for Computational
+ arXiv preprint arXiv:2306.15412, 2023.                                 Linguistics: EMNLP 2023, pp. 15757–15773, 2023.
+Wortsman, M., Ilharco, G., Gadre, S. Y., Roelofs, R.,                 Zhang, Z., Li, H., Hu, J., Li, W., and Xie, L. Histyle: Hierar-
+ Gontijo-Lopes, R., Morcos, A. S., Namkoong, H.,                        chical style embedding predictor for text-prompt-guided
+ Farhadi, A., Carmon, Y., Kornblith, S., et al. Model                   controllable speech synthesis. In National Conference
+ soups: averaging weights of multiple fine-tuned models                 on Man-Machine Speech Communication, pp. 522–535.
+ improves accuracy without increasing inference time. In                Springer, 2025.
+ International conference on machine learning, pp. 23965–
+ 23998. PMLR, 2022.                                                   Zhao, X., Xiang, H., Ye, S., Li, S., Tian, Z., Chen, G.,
+                                                                        Ding, K., and Wan, G. Longcat-audio-codec: An
+Wu, B., Yan, C., Hu, C., Yi, C., Feng, C., Tian, F., Shen,
+                                                                        audio tokenizer and detokenizer solution designed for
+ F., Yu, G., Zhang, H., Li, J., et al. Step-audio 2 technical
+                                                                        speech large language models, 2025. URL https://arxiv.
+ report. arXiv preprint arXiv:2507.16632, 2025.
+                                                                        org/abs/2510.15227.
+Xie, Z. and Wu, C. Mini-omni: Language models can
+                                                                      Zhao, X., Xiang, H., Ye, S., Li, S., Tian, Z., Chen, G.,
+  hear, talk while thinking in streaming. arXiv preprint
+                                                                        Ding, K., and Wan, G. Longcat-audio-codec: An audio
+  arXiv:2408.16725, 2024.
+                                                                        tokenizer and detokenizer solution designed for speech
+Xu, J., Guo, Z., He, J., Hu, H., He, T., Bai, S., Chen, K.,             large language models. arXiv preprint arXiv:2510.15227,
+ Wang, J., Fan, Y., Dang, K., Zhang, B., Wang, X., Chu,                 2025.
+ Y., and Lin, J. Qwen2.5-omni technical report. arXiv
+  preprint arXiv:2503.20215, 2025a.                                   Zhou, K., Sisman, B., Liu, R., and Li, H. Emotional voice
+                                                                        conversion: Theory, databases and esd. Speech Commu-
+Xu, J., Guo, Z., Hu, H., Chu, Y., Wang, X., He, J., Wang,               nication, 137:1–18, 2022.
+ Y., Shi, X., He, T., Zhu, X., et al. Qwen3-omni technical
+  report. arXiv preprint arXiv:2509.17765, 2025b.
+Yan, R., Li, X., Chen, W., Niu, Z., Yang, C., Ma, Z., Yu, K.,
+  and Chen, X. Uro-bench: A comprehensive benchmark
+  for end-to-end spoken dialogue models. arXiv preprint
+  arXiv:2502.17810, 2025.
+Yang, A., Li, A., Yang, B., Zhang, B., Hui, B., Zheng, B.,
+  Yu, B., Gao, C., Huang, C., Lv, C., et al. Qwen3 technical
+  report. arXiv preprint arXiv:2505.09388, 2025a.
+Yang, S.-w., Kim, B., Huang, K.-P., Tang, Q., Phan, H., Lu,
+  B.-R., Sundar, H., Ghosh, S., Lee, H.-y., Kao, C.-C., et al.
+  Generative audio language modeling with continuous-
+  valued tokens and masked next-token prediction. arXiv
+  preprint arXiv:2507.09834, 2025b.
+
+                                                                 12
+                           Instruction-Following Speech Language Models without Instruction Tuning
+
+A. Additional Algorithm Details
+A.1. Speech Pre-training
+Special Tokens. Certain special tokens play a crucial role during instruction-following, but they do not appear in the data
+for the speech continuous pre-training. As a result, S PEECH C OMBINE will forget the ability to output these special tokens
+during inference, leading to formatting failures. These tokens include <|im end|> which marks the end of the answer, and
+</think>, which marks the outset of the long thinking section3 . To prevent forgetting of these tokens, we randomly insert
+them at the end of each [text] section in our training data with probability p. p is set to 0.2 for <|im end|>, and 0.02 for
+</think>.
+Data Interleaving. Our pre-training data are mostly audiobooks, which consist of very long segments of speech utterances
+by a single speaker, with consistent prosody styles. However, during inference, the model is applied to a user-agent
+interaction setting, which involves alternating speakers and speaking styles. To make the model aware of the speaker’s
+turn-taking, we chop the audiobooks into small segments containing 5-7 sentences, and piece together small segments from
+different audiobooks. An alternative approach is to use conversational speech corpora instead of audiobooks, which we will
+explore as a future direction.
+
+A.2. Speech Caption
+We describe how we derive each attribute below.
+Average Pitch Level. We use RMVPE Wei et al. (2023) to extract the fundamental frequency (F0 ), and quantize it into
+three pitch classes: Low, Medium, and High. Since pitch ranges vary substantially across speakers and genders, we define
+relative thresholds based on median pitch statistics at both the speaker and gender levels.
+Specifically, we compute the median pitch ms for each speaker and the median pitch mg for each gender group, and apply
+the following criteria:
+
+   • Low: F0 < 0.75ms (speaker-level) or F0 < 0.85mg (gender-level),
+   • High: F0 > 1.30ms (speaker-level) or F0 > 1.20mg (gender-level),
+   • Medium: otherwise.
+
+The final pitch class is determined by an OR-based fusion of the speaker-level and gender-level decisions, i.e., a frame is
+labeled as Low or High if either criterion is satisfied; otherwise, it is labeled as Medium.
+Average Speaking Rate. Following Jin et al. (2024), we use the open-sourced Python package g2p en to convert transcripts
+into phonemes and compute the average time per phoneme Sr. We then compute the median value m. For each utterance,
+we apply the following criteria:
+
+   • Low: Sr > 1.3m,
+   • High: Sr < 0.85m,
+   • Medium: otherwise.
+
+Emphasized Words. We utilize Whistress Yosha et al. (2025) as our emphasized words extractor.
+Emotional arousal. We use whisper-large-v3-msp-podcast-emotion-dim model introduce in Feng et al. (2025) as our
+arousal extractor. Due to the model only support audio input with length of 3 to 15 seconds, we adopt sliding window
+technique to compute the arousal score A of any unqualified audio. For each utterance, we apply the following criteria:
+
+   • Low: A < 0.282,
+   • High: A > 0.54,
+    3
+      Special tokens that mark the outset of answering sections do not produce as much negative impact, because they are always hard-coded
+in the answer template, rather than generated by the model.
+
+                                                                   13
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+   • Medium: otherwise.
+
+Sampling Strategy. During the caption generation phase, we uniformly sample one attribute from the full set of available
+attributes. If the sampled attribute is text, it is dropped with a probability of 90%. For emotion-related datasets, the emotion
+attribute is always guaranteed to be sampled.
+
+A.3. Prosody Tokenization
+For better explanation, consider an example where the content of a speech utterance is “How are you?” The corresponding
+[speech] section takes the following format.
+
+<speech><spk f0 med>
+<SIL><Dur> how<Dur><f0 range><f0 med><f0 slope><energy>
+<SIL><Dur> are<Dur><f0 range><f0 med><f0 slope><energy>
+<SIL><Dur> you<Dur><f0 range><f0 med><f0 slope><energy>
+<SIL><Dur> </speech>
+
+where <SIL> represents the silence in between words. <Dur> represents the duration of the word (in frames) of the word or
+silence in between words. <f0 range> represents the the difference between the 95% and 5% percentiles of the frame-level
+Log-F0 contour of the word. <f0 med> represents the median of the frame-level Log-F0 contour of the word. <f0 slope>
+represents the slope of the straight line that best fits the Log-F0 contour of the word. <energy> represents the log-norm of
+the mel-spectrogram of the word. <spk f0 med> represents the median of the frame-level Log-F0 contour the speaker.
+As can be seen, the speech token sequence consists of two alternating patterns: ❶ A <SIL> followed by a <Dur> which
+specifies the duration of the silence in between two words, or at the start/end of the sentence; and ❷ a word followed by five
+values depicting the prosodic properties of the word.
+All the prosodic properties are extracted by the decoder module of a pre-trained ProsodyLM (Qian et al., 2025), which is
+modified from a StyleTTS2 TTS synthesizer. It comes with an F0 contour extractor, an energy extractor, and a force-aligner
+(which can be used to extract duration information). All prosodic properties are quantized into 512 levels, forming new
+prosdy token vocabulary for size 512. A complete explanation of the tokenization scheme can be found in Qian et al. (2025).
+
+A.4. Inference
+System Prompt. Since our method is designed for building an audio assistant, a system prompt will help the text-based
+LLM better understand its role and task. We therefore adopt the following system prompt:
+You are a helpful assistant. Always follow the user’s instructions precisely and respond
+with what is required. Please read the instructions carefully before answering. Your
+responses must strictly align with the user’s intent and constraints.
+
+Format Forcing. During inference, we apply several format-forcing logits processors to ensure stable and well-structured
+generation:
+
+
+   • Speaker F0-Median Processor. To stabilize speech token generation, we enforce the model to emit the <spk f0
+     med> token immediately after <speech>. In addition, we constrain the first generated token to be non-speech.
+
+   • Thinking Processor. To ensure that the reasoning phase consists purely of text, we prohibit the model from generating
+     any speech tokens while producing thinking content.
+
+   • Deep Format-Forcing Processor. After the model completes text generation, we enforce the output of speech tokens
+     in a predefined format, which further stabilizes speech generation and ensures structural consistency.
+
+   • Temperature Processor. To encourage expressive audio generation, this processor applies different temperature values
+     to the text and speech segments during decoding.
+
+
+
+                                                              14
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+A.5. Long Thinking
+We empirically observed that even if a <think> token is provided as the context, S PEECH C OMBINE may not start the
+reasoning process, because it is unclear whether to perform reasoning, which is inherited from the text LLM’s weight, or to
+perform text continuation behavior, which is strengthened during speech continuous pre-training. To disambiguate that, we
+will append “Okay” right after <think>, which is a common starting word of the long thinking process for QWEN models,
+to enhance the signal for long thinking.
+During the thinking process, we ban the generation from the prosody token vocabulary, as we want the thinking process
+to be silent. Generation to verbalized thinking is easily achievable by removing the ban. Also, to prevent the model from
+aborting prematurely, we also ban the </think> token until the thinking reaches a pre-determined minimum length, which
+is set to 160 tokens in our experiments.
+
+B. Additional Experiment Details
+B.1. Text-Oriented Tasks
+Datasets. We provide a brief introduction of the benchmark datasets on text-oriented tasks.
+
+   • OpenbookQA (Voicebench): A speech-based multiple-choice science QA task evaluating knowledge-intensive
+     reasoning under speech input, with performance measured by answer accuracy.
+   • MMSU (VoiceBench): A speech-based multiple-choice understanding dataset covering diverse domains, evaluating
+     a model’s multimodal speech comprehension and reasoning ability, measured by answer accuracy.
+   • Gsm8kEval (URO Bench): A speech-based math dataset evaluating multi-step numerical problem solving from
+     spoken queries, measured using LLM-as-a-judge.
+   • MLCpro-en (URO Bench): A speech logic and reasoning dataset assessing complex reasoning and instruction
+     understanding, measured using LLM-as-a-judge.
+   • TruthfulEval (URO Bench): A speech dataset measuring a model’s ability to generate truthful and non-
+     misleading answers under spoken prompts, measured using LLM-as-a-judge.
+   • MLC (URO Bench): A speech-based benchmark evaluating general reasoning and comprehension, measured using
+     LLM-as-a-judge.
+
+Task Prompts. We find that many of the above benchmarks have very rigid evaluation schemes. If the output format
+deviates from their pre-defined templates, the answers will
+                                                         √ be considered incorrect, even though the output answers are still
+very reasonable. For example, on the math benchmarks, 3 is considered an incorrect answer whereas 1.732 is considered
+correct. While baseline models, which has been extensively trained to get accustomed to such hidden requirements,
+S PEECH C OMBINE is not familiar with any of such rules. Therefore, we need to introduce the following task prompt to
+regulate the output format of S PEECH C OMBINE.
+
+   • OpenbookQA (Voicebench), and MMSU (VoiceBench): Please answer the following question. Please
+     indicate which option (a, b, c, or d) is correct. Please put your answer in the format “The correct answer is: .”
+   • MLCpro-en (URO Bench), TruthfulEval (URO Bench), and MLC (URO Bench): Please answer the
+     question very carefully and produce complete answers. If the answer contains any square root, convert it to decimal
+     format.
+
+B.2. Speech Understanding Tasks
+Datasets. We provide a brief introduction of the benchmark datasets on speech understanding tasks.
+
+   • UnderEmotion-en (URO Bench): A speech dataset that assess model’s capability on emotion understanding
+     task, measured using LLM-as-a-judge.
+
+                                                            15
+                         Instruction-Following Speech Language Models without Instruction Tuning
+
+   • EmphAssess Understanding: Since the original EmphAssess contains four different speakers saying the sentences
+     with same emphasized words. To keep our inference cost tractable, we only keep speaker ex04’s audio for evaluation.
+     This dataset evaluates model’s capability on emphasized words detection, measured by precision, Recall, and F1 Score.
+
+Task Prompts. We adopt the following task prompts for the speech understanding tasks.
+
+   • UnderEmotion-en (URO Bench): Please answer the question in the second person point of view. Please use
+     an empathetic tone to answer the question.
+
+   • EmphAssess Understanding: Answer the question from the user. Put your answer in the format Emphasized
+     word(s):
+
+For EmphAssess Understanding, the same prompt is applied to all models. For UnderEmotion-en, the task
+prompt provides more information than the format to elicit the prosody reasoning mode, as discussed in Section 4.3.
+
+B.3. Speech Generation Tasks
+Datasets. We provide a brief introduction of the benchmark datasets on speech generation tasks.
+
+   • GenEmotion (URO Bench): A speech-based emotion generation benchmark evaluating a model’s ability to
+     generate speech with target emotional characteristics. The metric is defined as the target emotion probability predicted
+     by an E MOTION 2V EC classifier, weighted by (1 − WER) to account for content intelligibility.
+
+   • EmphAssess Generation: Since the original EmphAssess contains four different speakers saying the sentences
+     with same emphasized words. We only keep speaker ex04’s label to construct the EmphAssess Generation
+     dataset. We then use C OSY VOICE to synthesis text question Please read the sentence: xxx with emphasis on the word:
+     xxx to audio. This datasets evluated model’s emphasized word generation. We use EmphAssess’s evaluation pipeline to
+     compute the overall precision, recall, and F1 Score.
+
+Task Prompts. For speech generation tasks, a strict word error rate is computed as part of the evaluation score. Any
+deviation from the requested content will be considered incorrect. For example, when the task requests uttering the sentence
+“How are you?”. If the model answers “Sure, here is the utterance...”, which is still a reasonable answer, it will still be
+considered incorrect. Therefore, we adopt the following task prompts for the speech generation tasks to regulate the output
+format.
+
+   • GenEmotion (URO Bench): In this task, you are asked to read a sentence in a given emotion. You MUST output
+     only the exact sentence that should be spoken. The arousal level should be high.
+
+   • EmphAssess Generation: In this task, you are asked to read a sentence with emphasized words. You MUST
+     output only the exact sentence that should be spoken. Please normalize number in your output.
+
+C. Additional Experiment Results
+C.1. Ablation Study on λ on more tasks
+To further study the performance of S PEECH C OMBINE under different λ values, we evaluate the performance on more tasks,
+shown in Tables 4 and 5. These results provide insights into the optimal selection of λ. Specifically –
+
+   • If the deployment goal focuses more on factual knowledge, reasoning, and other text-oriented skills, we recommend
+     setting a λ value between 0.6 and 0.85. A λ below 0.6 would result in the model not recognizing the [speech]
+     sections in its context; a λ above 0.85 would result in the model starting to forget the text LLM’s original knowledge.
+
+   • If the deployment goal focuses more on speech understanding and generation, we recommend setting a λ value between
+     0.8 to 1. A λ below 0.8 would result in compromised speech knowledge.
+
+
+                                                             16
+                            Instruction-Following Speech Language Models without Instruction Tuning
+
+                                        Table 4. Results on text-oriented tasks with different λ.
+
+                                            λ        OpenBookQA           MMSU            MLCPro
+                                            0.60        89.89             77.78            90.10
+                                            0.65        88.35             76.41            91.57
+                                            0.70        88.13             76.64            89.37
+                                            0.75        87.03             76.35            93.04
+                                            0.80        86.81             74.26            90.84
+
+                            Table 5. Results on speech understanding and generation tasks with different λ.
+
+                           (a) Speech Understanding                                         (b) Speech Generation
+                    UnderEmo        Emph Detection                            GenEmo               Emph Generation
+            λ           Acc. ↑     Prec. ↑         Recall ↑       F1 ↑         Score ↑       Prec. ↑     Recall ↑    F1 ↑
+            0.80        62.04       49.51           63.90        55.79            37.91       22.15       35.13      27.17
+            0.85        50.75       55.11           67.89        60.84            45.42       26.16       40.17      31.68
+            0.90        50.99       59.25           70.93        64.57            41.95       27.23       39.36      32.19
+            0.95        37.76       52.69           70.93        60.47            43.50       28.07       39.20      32.72
+            1.00        29.87       52.69           70.93        60.47            43.22       26.81       34.64      30.23
+
+C.2. Removing Format Forcing
+To study the effect of removing format forcing, we performed an experiment on three representative tasks where we removed
+the format forcing. Note that the deep thinking section tends to degenerate into meaningless prosody tokens without format
+forcing. Hence, we disabled the thinking mode and evaluated the output stability of the rest of the output sequence. Table 6
+shows the results.
+As can be observed, removing format forcing produces almost no impact on the performance, except for the speech
+understanding task. This result suggests that while output instability is an issue for SpeechCombine, it is not devastating for
+most output segments. The major instability problem comes from the thinking section, which we will seek to address as a
+future direction.
+                                  Table 6. Effect of removing format forcing on representative tasks.
+
+                                                              OpenBook GenEmo                         Emph Detect
+                Model                                           Acc. ↑        Score ↑       Prec. ↑     Recall ↑    F1 ↑
+                S PEECH C OMBINE (no think)                     64.83         36.37         42.90        69.78      53.14
+                S PEECH C OMBINE (no format forcing)            65.71         36.36         20.38        43.34      27.73
+
+
+
+C.3. Generalization Across Other Model Families
+To study S PEECH C OMBINE’s generalization across non-QWEN model families, we performed experiments on (1) O LMO -3-
+7B-T HINK, (2) L LAMA -3.1-8B. The results on representative tasks in the three task types are shown in Table 7.
+As can be observed, the generalization to other model families is successful, bounded by the capability constraint of
+the corresponding text model (the text models of O LMO and L LAMA are significantly weaker than QWEN. Hence the
+corresponding SpeechCombine model underperforms QWEN as well). The only exception is the GenEmo performance
+of O LMO, for which we observed a convergence issue on the prosody token loss during the continuous pre-training.
+Nevertheless, these results confirm the generality of the S PEECH C OMBINE framework.
+
+
+
+
+                                                                         17
+    Instruction-Following Speech Language Models without Instruction Tuning
+
+
+
+
+        Table 7. Generalization of S PEECH C OMBINE to different text model families.
+
+                               OpenBook GenEmo                      Emph Detect
+Model                            Acc. ↑      Score ↑      Prec. ↑     Recall ↑      F1 ↑
+S PEECH C OMBINE-QWEN            86.59        45.42       55.11        67.89        60.84
+S PEECH C OMBINE-O LMO           72.52        21.35       28.18        37.88        32.32
+S PEECH C OMBINE-L LAMA          62.85        32.34       22.79        59.92        33.02
+
+
+
+
+                                             18
+
