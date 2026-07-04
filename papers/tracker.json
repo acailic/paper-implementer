@@ -632,7 +632,48 @@
       "status": "done",
       "folder": "papers/2026-gui-vs-cli-execution-bottlenecks-in",
       "finished_at": "2026-06-30"
+    },
+    {
+      "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
+      "authors": [
+        "Xixi Wu",
+        "Qianguo Sun",
+        "Ruiyang Zhang",
+        "Chao Song",
+        "Junlong Wu",
+        "Yiyan Qi",
+        "Hong Cheng"
+      ],
+      "year": "2026",
+      "arxiv_id": "2603.21972",
+      "arxiv_url": "https://arxiv.org/abs/2603.21972",
+      "pdf_url": "https://arxiv.org/pdf/2603.21972.pdf",
+      "code_url": "https://github.com/WxxShirley/Agent-STAR",
+      "project_page": "",
+      "abstract": "Reinforcement Learning (RL) is essential for evolving Large Language Models (LLMs) into autonomous agents capable of long-horizon planning, yet a practical recipe for scaling RL in complex, multi-turn environments remains elusive. This paper presents a systematic empirical study using TravelPlanner, a challenging testbed requiring tool orchestration to satisfy multifaceted constraints. We decompose the agentic RL design space along 5 axes: reward shaping, model scaling, data composition, algorithm selection, and environmental stability. Our controlled experiments yield 7 key takeaways, e.g., (1) reward and algorithm choices are scale-dependent as smaller models benefit from staged rewards and enhanced exploration, whereas larger models converge efficiently with simpler dense rewards, (2) ~1K training samples with a balanced difficulty mixture mark a sweet spot for both in-domain and out-of-domain performance, and (3) environmental stability is critical to prevent policy degradation. Based on our distilled recipe, our RL-trained models achieve state-of-the-art performance on TravelPlanner, significantly outperforming leading LLMs.",
+      "ai_keywords": [
+        "reinforcement learning",
+        "long-horizon agents",
+        "tool use",
+        "TravelPlanner",
+        "reward shaping",
+        "model scaling",
+        "data composition",
+        "GRPO",
+        "curriculum reward",
+        "environmental stability",
+        "STAR pipeline"
+      ],
+      "popularity": null,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2603.21972",
+      "rank": 11,
+      "status": "done",
+      "folder": "papers/2026-demystifying-rl-long-horizon-tool-using-agents",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "note": "Added iter 29 (gnhf). Fresh source-first breakdown built from arXiv PDF; all 9 tables verbatim. New subarea for repo (long-horizon tool-use RL)."
     }
   ],
-  "updated_at": "2026-06-29T20:29:37.223259+00:00"
+  "updated_at": "2026-07-04T01:33:48.046984+00:00"
 }

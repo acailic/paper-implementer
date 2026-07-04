@@ -66,8 +66,8 @@
   "hotPaths": [
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 33,
-      "lastAccessed": 1783128156189,
+      "accessCount": 35,
+      "lastAccessed": 1783128438787,
       "type": "file"
     },
     {
@@ -161,6 +161,12 @@
       "type": "file"
     },
     {
+      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
+      "accessCount": 7,
+      "lastAccessed": 1783128447154,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/paper_layout.txt",
       "accessCount": 6,
       "lastAccessed": 1783124190134,
@@ -170,12 +176,6 @@
       "path": "papers/2026-translation-as-a-bridging-action-transferring/paper_layout.txt",
       "accessCount": 6,
       "lastAccessed": 1783124764162,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
-      "accessCount": 6,
-      "lastAccessed": 1783125173777,
       "type": "file"
     },
     {
@@ -203,6 +203,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-demystifying-rl-long-horizon-tool-using-agents/paper_layout.txt",
+      "accessCount": 4,
+      "lastAccessed": 1783128642636,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-are-we-ready-for-an-agent/paper_layout.txt",
       "accessCount": 3,
       "lastAccessed": 1783124934269,
@@ -210,8 +216,8 @@
     },
     {
       "path": "papers/tracker.json",
-      "accessCount": 2,
-      "lastAccessed": 1783117954492,
+      "accessCount": 3,
+      "lastAccessed": 1783128457805,
       "type": "file"
     },
     {
@@ -272,6 +278,12 @@
       "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/paper_full.txt",
       "accessCount": 1,
       "lastAccessed": 1783121981765,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-demystifying-rl-long-horizon-tool-using-agents/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783128787386,
       "type": "file"
     }
   ],
