@@ -951,6 +951,40 @@
       "rank": 19,
       "subarea": "sparse-autoencoder architecture / dictionary learning for mechanistic interpretability (combinatorial compressed sensing, expander-graph dictionaries)",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1990 lines). All 10 explicit tables (1-10) transcribed verbatim with line-range sourcing. Source-free reconciliation passed: storage ratio = m/d for every cell (Pythia 512/{7,50,200} -> 73/10/2.6x; Qwen/Llama 2048/{7,30,102} -> 293/68/20x); 84% = 0.828/0.983 (Qwen L12 d=7 vs Dense CE-rec); 293x = 33,554,432/114,688; Table 5 throughput doubles per L-doubling; Table 10 d=50 == Table 2 == Table 1 Pythia d=50 (cross-table). Theorem 3.1 (beta=1 -> epsilon<1/2 lossless-expander). 22 distinctive cells grep-confirmed in source. Figures 1-13 NOT back-filled (only prose-confirmed ranges + figure-printed coherence means). No prose-vs-table numeric inconsistency found; the one phrasing nuance (abstract 84% = ratio of two CE-rec values, not CE-rec itself) clarified inline."
+    },
+    {
+      "title": "Conditional Co-Ablation: Recovering Self-Repair Backups in Transformer Circuits",
+      "authors": [
+        "Zhiren Gong",
+        "Zihao Zeng",
+        "Chau Yuen",
+        "Wei Yang Bryan Lim"
+      ],
+      "year": "2026",
+      "arxiv_id": "2607.01940",
+      "arxiv_url": "https://arxiv.org/abs/2607.01940",
+      "pdf_url": "https://arxiv.org/pdf/2607.01940",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Mechanistic interpretability often relies on component-level interventions to discover how a model produces a behavior. This guides attribution, capability knockout, and model pruning downstream to operate by scoring each unit by the effect of ablation in isolation. Such first-order scoring is natural when component importance is additive, but becomes misleading when a transformer self-repairs: after a primary component is removed, a dormant backup can take over, muting the primary's measured effect while the backup itself appears irrelevant on the intact model. We recast this failure as a recovery task, conditional circuit completion, and introduce Conditional Co-Ablation (CoAx), a label-free, output-grounded score that asks how much each remaining unit's ablation effect grows once a primary set has been removed. This conditional growth exposes the second-order interaction that single-unit scores discard. On the GPT-2-small IOI circuit, CoAx raises backup-head recovery from 0.33 to 0.91 ROC-AUC, outperforming all baselines, including self-repair-aware gradient scores (best 0.82); counterfactual patching verifies that the recovered heads causally carry the repair. The same label-free procedure transfers to induction across eight models. Beyond discovery, the recovered backups correct self-repair-masked attribution, identify the components required for capability knockout, and yield repair-aware structured pruning scaling from 124M to 7B.",
+      "ai_keywords": [
+        "mechanistic interpretability",
+        "self-repair",
+        "Hydra effect",
+        "conditional component importance",
+        "circuit discovery",
+        "attention head ablation",
+        "Fisher information geometry",
+        "second-order interaction / synergy",
+        "redundancy and backups",
+        "capability knockout",
+        "structured head pruning",
+        "indirect-object-identification (IOI) circuit"
+      ],
+      "folder": "papers/2026-conditional-co-ablation-self-repair-backup-circuits",
+      "rank": 20,
+      "subarea": "mechanistic interpretability / conditional component importance under self-repair (recovering dormant backup circuits). A second-order conditional importance score; sibling-in-spirit to expander-sparse-autoencoders (both mech-interp) but about circuit redundancy/conditional importance, not dictionary architecture.",
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 2778 lines, 12pp + appendices). All main results tables verbatim with sourcing line-ranges: Table 1 backup-discovery AUC (6 signals, lines 343-358), Table 2 completion module (3 finders, 344-352), Table 3 attribution recovery (646-650), Table 4 capability knockout (688-693), Table 6 wall-clock/memory (1148-1153), Table 7 per-method FPE cost (1227-1233), Table 8 hyperparams (1266-1278), Table 9 ablation-value robustness (1293-1295), Table 12 controlled-redundancy synthetic (1605-1609), Table 21 induction 3-scale (2317-2325), Table 22 cross-architecture 8-model (2367-2375), Table 26 GPT-2-small pruning sweep (2545-2555), Table 27 3-model pruning sweep (2582-2609). Propositions 1-3 transcribed. Source-free reconciliation PASSED: 30+ distinctive cells grep-confirmed in paper_layout.txt (0.91/0.82/0.63/0.70/0.60/0.33 AUCs, 3.11/3.73/1.71 completion, 1.76/0.22 attribution, 80.6/201.4/112.6 pruning, 12.1x/2.1x induction factors, 23155/119377 PPL outliers). NO paper-internal numeric inconsistency found (all prose deltas recompute from tables: 0.97->0.70 knockout, 0.22->1.76 attribution, 80.6<201.4 pruning)."
     }
   ],
   "updated_at": "2026-07-04T04:25:55.861944"

@@ -241,7 +241,7 @@
     {
       "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/paper_layout.txt",
       "accessCount": 3,
-      "lastAccessed": 1783133469535,
+      "lastAccessed": 1783133436251,
       "type": "file"
     },
     {
@@ -356,12 +356,6 @@
       "path": "papers/2026-expander-sparse-autoencoders-parameter-efficient-dictionaries/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783133114239,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783133630688,
       "type": "file"
     }
   ],

@@ -221,6 +221,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/paper_layout.txt",
+      "accessCount": 4,
+      "lastAccessed": 1783133486012,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-are-we-ready-for-an-agent/paper_layout.txt",
       "accessCount": 3,
       "lastAccessed": 1783124934269,
@@ -236,12 +242,6 @@
       "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/breakdown.md",
       "accessCount": 3,
       "lastAccessed": 1783132041718,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/paper_layout.txt",
-      "accessCount": 3,
-      "lastAccessed": 1783133469535,
       "type": "file"
     },
     {
@@ -356,12 +356,6 @@
       "path": "papers/2026-expander-sparse-autoencoders-parameter-efficient-dictionaries/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783133114239,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783133630688,
       "type": "file"
     }
   ],
