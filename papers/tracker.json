@@ -798,6 +798,48 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "note": "Added iter 32 (gnhf). Fresh source-first breakdown from arXiv PDF (10pp, 1170 layout lines); all 3 explicit tables verbatim (T1 operation mappings across ShadowKV/RetroInfer/SeerAttention-R, T2 workload characteristics LongBench-v2/LongGenBench, T3 Spin-powered system configs). NEW SUBAREA for repo: long-context serving / sparse-attention runtime — sibling to inference-efficiency papers jetspec (token-level spec-decode) + speculating-experts (expert-level offload); Spin attacks the attention + KV-memory level. Headline (prose-confirmed, no figure back-fill): 1.66-5.66x throughput, 7-9x lower TTFT, 8.4-58% decode-latency reduction vs original sparse impl (up to 2.39x), 49-78x metadata HBM reduction. Models Qwen3-14B/32B + Llama-3.1-70B on A100 + B200. 1 paper-internal wording note: abstract spells 'hierachical' once (body uses 'hierarchical') — transcribed uniformly; the 49-78x figure is consistent across abstract+body+Fig-15 derivation (13.9-17.4x x 3.5-4.5x). Figure bar values not back-filled."
+    },
+    {
+      "title": "Reasoning in Trees: Improving Retrieval-Augmented Generation for Multi-Hop Question Answering",
+      "authors": [
+        "Yuling Shi",
+        "Maolin Sun",
+        "Zijun Liu",
+        "Mo Yang",
+        "Yixiong Fang",
+        "Tianran Sun",
+        "Xiaodong Gu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2601.11255",
+      "arxiv_url": "https://arxiv.org/abs/2601.11255",
+      "pdf_url": "https://arxiv.org/pdf/2601.11255",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Retrieval-Augmented Generation (RAG) has demonstrated significant effectiveness in enhancing large language models (LLMs) for complex multi-hop question answering (QA). For multi-hop QA tasks, current iterative approaches predominantly rely on LLMs to self-guide and plan multi-step exploration paths during retrieval, leading to substantial challenges in maintaining reasoning coherence and accurate query decomposition. We propose Reasoning Tree Guided RAG (RT-RAG), a hierarchical framework that first decomposes the complex question into a consensus-validated tree structure with explicit entity analysis, then retrieves evidence through bottom-up traversal with query refinement and rejection sampling, and finally integrates information hierarchically to maintain coherence across multiple hops. Experiments on MuSiQue, 2WikiMQA, and HotpotQA show RT-RAG achieves state-of-the-art results, leading every dataset and metric: GPT-4o-mini 64.92 F1 / 52.33 EM (+7.58 / +8.33 over LongRAG) and Qwen2.5-14B-Instruct 63.32 F1 / 51.33 EM (+9.93 / +9.00 over LongRAG).",
+      "ai_keywords": [
+        "retrieval-augmented generation",
+        "multi-hop question answering",
+        "reasoning tree",
+        "question decomposition",
+        "consensus-based tree selection",
+        "iterative retrieval",
+        "query rewriting",
+        "rejection sampling",
+        "answer aggregation",
+        "MuSiQue",
+        "2WikiMQA",
+        "HotpotQA"
+      ],
+      "popularity": null,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2601.11255",
+      "rank": 15,
+      "status": "done",
+      "folder": "papers/2026-reasoning-trees-rt-rag-multi-hop-qa",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "note": "Added iter 33 (gnhf). Fresh source-first breakdown from arXiv PDF (8pp, WWW '26). NEW SUBAREA for repo: retrieval-augmented generation / multi-hop QA reasoning — unrelated to inference-efficiency lineage and a retrieval+reasoning-structure counterpart to the agentic-RL lineage. All 4 numeric tables verbatim (T1 dataset stats MuSiQue/2WikiMQA/HotpotQA, T2 main results 2 models x up to 13 methods, T3 ablation 4 components, T5 max-tree-depth 1-4); T4+T6 qualitative reasoning-chain examples summarized. Headline (every cell RT-RAG leads): GPT-4o-mini 64.92 F1/52.33 EM, Qwen2.5-14B 63.32 F1/51.33 EM; largest per-dataset gain 2WikiMQA +12.69 F1. Method: consensus-validated reasoning tree T=(V,E) + post-order retrieval + adaptive leaf conversion on [none] + rejection sampling + query rewriting. Hyperparams: embedding text-embedding-3-small, reranker bge-reranker-base, k=45/15, consensus=5, rejection=5, refine<=3. Source-free reconciliation passed: T2 Avg col reproduces (RT-RAG (54.42+75.08+65.26)/3=64.92 etc.); T3 deltas recompute; T5 depth-4 row == T2/T3 RT-RAG (main config = max-depth-4). NO paper-internal numeric inconsistency (unlike iter 30/31); only mild tension = 'depth-3 optimal' prose vs depth-4 main config, flagged in Limitations."
     }
   ],
   "updated_at": "2026-07-04T04:30:00+00:00"
