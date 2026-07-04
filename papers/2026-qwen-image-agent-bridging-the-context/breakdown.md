@@ -297,7 +297,7 @@ Source Table 1 reports **two metric families** per model: Checklist Accuracy (CA
 | **Closed-source (direct)** | | | | | |
 | GPT-Image-1.5 | 23.3 | 36.7 | 35.0 | **72.0** | 35.7 |
 | Nano Banana | 42.0 | 43.3 | 42.2 | 48.0 | 43.1 |
-| Nano Banana Pro | 32.7 | **44.3** | 47.8 | 52.0 | 42.6 |
+| Nano Banana Pro | 32.7 | **44.3** | **47.8** | 52.0 | 42.6 |
 | Seedream-5.0-Lite | 46.0 | 37.0 | 21.1 | 48.0 | 36.0 |
 | Qwen-Image-2.0 (direct base) | 20.0 | 27.7 | 6.7 | 11.0 | 17.4 |
 | **Open-source (direct)** | | | | | |
@@ -311,7 +311,7 @@ Source Table 1 reports **two metric families** per model: Checklist Accuracy (CA
 | Qwen-Image (v1) | 4.7 | 17.7 | 6.1 | 9.0 | 9.4 |
 | **Agentic** | | | | | |
 | GenSearcher | 9.3 | 20.3 | 24.4 | 11.0 | 17.3 |
-| GEMS | 41.3 | 18.3 | **46.7** | 13.0 | 24.9 |
+| GEMS | 41.3 | 18.3 | 18.9 | 13.0 | 24.9 |
 | MindBrush | 28.0 | 32.7 | 35.6 | 13.0 | 30.2 |
 | SCOPE | **46.7** | 30.0 | 23.3 | 9.0 | 30.9 |
 | **Qwen-Image-Agent** | 45.3 | 43.7 | 46.1 | 49.0 | **45.4** |
@@ -341,7 +341,7 @@ Source Table 1 reports **two metric families** per model: Checklist Accuracy (CA
 
 > **Key takeaways:**
 > - Qwen-Image-Agent achieves the highest **IA-score (45.4)**, ahead of Nano Banana (43.1), Nano Banana Pro (42.6), Seedream-5.0-Lite (36.0) and GPT-Image-1.5 (35.7) — confirming SOTA among both closed-source and agentic systems.
-> - Qwen-Image-Agent does **not** lead any single PR dimension: SCOPE leads Plan PR (46.7), Nano Banana Pro leads Reason PR (44.3), GEMS leads Search PR (46.7), and GPT-Image-1.5 leads Memory PR (72.0). It wins the composite precisely because it is the only **balanced** system — every per-dimension leader fails badly on another axis (e.g. SCOPE Plan 46.7 but Memory 9.0; GPT-Image-1.5 Memory 72.0 but Plan 23.3).
+> - Qwen-Image-Agent does **not** lead any single PR dimension: SCOPE leads Plan PR (46.7), Nano Banana Pro leads both Reason PR (44.3) and Search PR (47.8), and GPT-Image-1.5 leads Memory PR (72.0). It wins the composite precisely because it is the only **balanced** system — every per-dimension leader fails badly on another axis (e.g. SCOPE Plan 46.7 but Memory 9.0; GPT-Image-1.5 Memory 72.0 but Plan 23.3).
 > - On **Memory**, Qwen-Image-Agent (49.0) vastly outperforms the other *agentic* baselines (SCOPE 9.0, GenSearcher 11.0, GEMS 13.0, MindBrush 13.0 — none has an explicit memory module), but closed-source models still lead Memory overall (GPT-Image-1.5 72.0, Nano Banana Pro 52.0) — exactly the paper's stated "closed-source advantage in Memory."
 > - Direct open-source renderers (SD-3.5, FLUX.2-dev, Bagel, Echo-4o) score near-zero on Plan PR (0.0–5.3) and IA-score (1.4–10.0) — they lack any planning capability.
 > - Adding the agentic framework to Qwen-Image-2.0 lifts IA-score from **17.4 → 45.4** (+161%), demonstrating the value of context construction.
@@ -356,6 +356,8 @@ Source Table 1 reports **two metric families** per model: Checklist Accuracy (CA
 | Qwen-Image-2.0 | 79.54 | 82.19 | 65.00 | 89.92 | 79.17 | 80.00 | 74.79 |
 
 > Source Table 2 reports scores on a 0–1 scale (e.g. 0.9020); shown here as percentages. The full source table lists 23 models (incl. Bagel, Janus series, FLUX series, SD series, Qwen-Image-2512, UniWorld-V1, Z-Image); the four above are the Qwen-Image-Agent / closed-source-contender / direct-base comparison set.
+>
+> **Tie note:** Qwen-Image-Agent and Nano Banana Pro **tie** on two domains — Space (both 0.9333 = 93.33) and Physics (both 0.8667 = 86.67). Only QIA is bolded above per the paper's "best in bold" convention, but on these two columns the two models are equal.
 
 > Qwen-Image-Agent achieves **90.20** overall, beating even strong closed-source systems. The improvement from bare Qwen-Image-2.0 (79.54) to Qwen-Image-Agent (90.20) shows the agentic framework adds +10.7 points on world-knowledge-heavy generation tasks.
 
@@ -366,8 +368,8 @@ Source Table 3 groups its 10 subtasks as Knowledge-Driven (SE, Wth, MC, IP, WK, 
 | Model | Overall | SE | Wth | MC | IP | WK | SL | Poem | LifeR | GU | Math |
 |-------|:-------:|:--:|:---:|:--:|:--:|:--:|:--:|:----:|:-----:|:--:|:----:|
 | **Qwen-Image-Agent** | **42** | 60 | 28 | 70 | 16 | 28 | 58 | 82 | 24 | 20 | 34 |
-| Nano Banana Pro | 41 | 50 | 36 | 40 | 16 | 56 | 62 | 68 | 24 | 16 | 46 |
-| GPT-Image-1.5 | 21 | 36 | 18 | 22 | 4 | 30 | 34 | 8 | 24 | 10 | 2 |
+| Nano Banana Pro | 41 | 50 | 36 | 40 | 16 | 56 | 62 | 68 | 30 | 16 | 46 |
+| GPT-Image-1.5 | 21 | 36 | 18 | 22 | 4 | 30 | 34 | 8 | 34 | 10 | 2 |
 | Qwen-Image-2.0 | 23 | 19 | 24 | 23 | 4 | 12 | 42 | 58 | 12 | 2 | 28 |
 
 > **Correction:** an earlier version of this table reported Qwen-Image-Agent at 82 and Qwen-Image-2.0 at 42 — those were transposition errors (82.0 is Qwen-Image-Agent's *Poem* sub-column, not its Overall; 42.0 is Qwen-Image-Agent's true Overall, mis-assigned to Qwen-Image-2.0). The verified Overalls are **Qwen-Image-Agent 42** vs **Qwen-Image-2.0 23**. MindBench stresses dynamic/external knowledge; the agentic framework lifts the base model by **+82.6% relative** (0.23 → 0.42, exactly the improvement the paper states in §5.2), confirming the search/reasoning grounding is critical for temporally-sensitive tasks. Note Nano Banana Pro (41) nearly matches Qwen-Image-Agent (42) overall, and the bare Qwen-Image-2.0 (23) edges GPT-Image-1.5 (21).

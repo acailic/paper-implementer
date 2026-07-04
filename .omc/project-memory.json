@@ -72,8 +72,14 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 23,
-      "lastAccessed": 1783126352838,
+      "accessCount": 25,
+      "lastAccessed": 1783126683073,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
+      "accessCount": 18,
+      "lastAccessed": 1783126930189,
       "type": "file"
     },
     {
@@ -110,12 +116,6 @@
       "path": "papers/2026-improved-large-language-diffusion-models/breakdown.md",
       "accessCount": 11,
       "lastAccessed": 1783125192701,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
-      "accessCount": 9,
-      "lastAccessed": 1783123965988,
       "type": "file"
     },
     {
@@ -218,6 +218,12 @@
       "path": "papers/2026-improved-large-language-diffusion-models/paper_layout.txt",
       "accessCount": 2,
       "lastAccessed": 1783125199505,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-qwen-image-agent-bridging-the-context/paper_layout.txt",
+      "accessCount": 2,
+      "lastAccessed": 1783126725839,
       "type": "file"
     },
     {
