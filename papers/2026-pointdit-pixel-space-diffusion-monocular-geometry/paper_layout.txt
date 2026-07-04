@@ -1,0 +1,956 @@
+                                                  PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+
+                                               Haofei Xu 1 2 3 Rundi Wu 1 Philipp Henzler 1 Nikolai Kalischek 1 Michael Oechsle 1 Fabian Manhardt 1
+                                                             Marc Pollefeys 2 4 Andreas Geiger 3 5 Federico Tombari 1 6 Michael Niemeyer 1
+
+                                                                                     https://haofeixu.github.io/pointdit
+
+
+                                                                  Abstract                                                 Noisy Point Map                      Input Image
+arXiv:2607.02515v1 [cs.CV] 2 Jul 2026
+
+
+
+
+                                               State-of-the-art single-image 3D reconstruction
+                                               methods often rely on complex hybrid architec-
+                                               tures and loss functions, or compress geometry
+                                               into latent spaces in order to leverage pre-trained
+                                               latent diffusion models. In this work, we show                                      Patchify                            DINOv3
+                                                                                                                                                   Point
+                                               that such architectural overhead and intricate loss                                                …
+                                                                                                                                                  Tokens
+
+                                               formulations are unnecessary. We introduce a                                                       DINOv3
+                                               minimalist pixel-space Diffusion Transformer,                                                      …
+                                                                                                                                                  Tokens
+
+
+                                               built on a plain ViT, that operates directly on raw
+                                               3D point map patches and is conditioned on im-                                                 Linear Embed
+                                               age tokens from a pre-trained DINOv3. Unlike
+                                               existing latent diffusion approaches, we train our                                        Transformer Block
+                                                                                                                                                                         ×L
+                                               diffusion backbone entirely from scratch, elimi-
+                                               nating the need for point map tokenizers. Despite                                              Linear Predict
+
+                                               its simplicity, our approach surpasses complex
+                                               latent-based diffusion models while remaining                                                       …
+                                               significantly simpler than hybrid alternatives. No-                                                    Unpatchify
+                                               tably, it produces sharper geometric structure and
+                                               is more robust in highly ambiguous regions, such
+                                               as transparent objects.                                                                                         Clean Point Map
+
+
+
+
+                                        1. Introduction                                                          Figure 1. PointDiT. A minimalist pixel-space Diffusion Trans-
+                                                                                                                 former operating directly on raw point map patches, conditioned
+                                        Monocular geometry estimation is a fundamental building                  on image tokens from a pre-trained DINOv3. The 3D point map
+                                        block of 3D scene understanding, bridging 2D visual inputs               (H × W × 3) is visualized as an RGB image, with color encoding
+                                        and 3D spatial structure. In this work, we focus on predict-             the spatial (X, Y, Z) coordinates.
+                                        ing dense 3D point maps from single RGB images (Wang
+                                        et al., 2025b; Piccinelli et al., 2025). Unlike depth maps,              3D representation remains ill-posed, owing to the inherent
+                                        which capture only scalar distance and require camera in-                scale and depth ambiguities of perspective projection.
+                                        trinsics to recover 3D structure, point maps represent scene
+                                        geometry directly in the camera coordinate system, enabling              Existing approaches to this challenge fall broadly into two
+                                        immediate 3D reconstruction without knowing the camera’s                 categories. The first comprises deterministic regression
+                                        calibration. However, mapping a single 2D image to a dense               models (Yang et al., 2024; Bochkovskii et al., 2025; Pic-
+                                                                                                                 cinelli et al., 2025). These methods often rely on complex
+                                           1
+                                            Google 2 ETH Zurich 3 University of Tübingen, Tübingen AI          hybrid architectures (Wang et al., 2025b;c;a; Lin et al., 2026)
+                                        Center 4 Microsoft 5 KE:SAI 6 Technical University of Munich. Cor-       that combine Vision Transformers (ViT) (Dosovitskiy, 2020)
+                                        respondence to: Haofei Xu <haofei.xu@inf.ethz.ch>.                       with convolutions (Ranftl et al., 2021), and require intricate
+                                        Proceedings of the 43 rd International Conference on Machine             loss functions (Wang et al., 2025b) to regularize training.
+                                        Learning, Seoul, South Korea. PMLR 306, 2026. Copyright 2026             Moreover, because of the task’s inherent ambiguity, deter-
+                                        by the author(s).                                                        ministic regressors tend to predict the mean of the output
+
+                                                                                                             1
+                             PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+distribution, often yielding over-smoothed geometry that
+lacks high-frequency detail, particularly in complex scene
+regions (Figure 2b).
+The second category seeks to resolve this ambiguity with
+Latent Diffusion Models (LDMs) (Rombach et al., 2022),
+such as GeometryCrafter (Xu et al., 2025b). Although these                         GT Point Cloud                        Point VAE Output
+
+methods exploit generative priors, they require compressing          (a) Point VAE reconstruction. Even without diffusion, the VAE-
+point maps into a latent space via a Variational Autoencoder         reconstructed point cloud exhibits substantial noise, which funda-
+(VAE) (Kingma & Welling, 2014). Building an expressive               mentally limits the quality attainable by latent diffusion models.
+latent space for geometric data (e.g., point clouds) is non-
+trivial: their unbounded range and the relative scarcity of
+geometric data can limit the autoencoder’s reconstruction
+quality and out-of-distribution generalization. In addition,
+constructing such a space often demands sophisticated tok-
+enizer designs (Xu et al., 2025b). As a result, these methods              Input              GeometryCrafter   MoGe-2                PointDiT
+
+frequently lose information during encoding and decoding,            (b) Structural details. PointDiT recovers intricate, thin structures
+struggling to reconstruct fine geometric structures accurately       such as the chair more faithfully than GeometryCrafter (latent dif-
+(Figure 2a). Furthermore, a fundamental trade-off exists             fusion) and MoGe-2 (deterministic regression). Here we visualize
+between VAE reconstruction fidelity and diffusion genera-            the z-depth from the predicted 3D point maps.
+tion capabilities due to their conflicting optimization objec-       Figure 2. Comparison with latent diffusion and regression. The
+tives (Black Forest Labs, 2025), which inherently bounds             two dominant paradigms each have an inherent limitation: (a) the
+the potential of latent diffusion models for geometric tasks.        VAE in latent diffusion models introduces reconstruction noise
+                                                                     that caps the attainable quality, while (b) deterministic regression
+In this work, we show that such architectural overhead and           over-smooths fine geometric structures. PointDiT avoids both.
+intricate loss formulations are unnecessary. Inspired by
+JiT (Li & He, 2026), we introduce a minimalist pixel-space
+diffusion framework that trains directly on the raw point            resolving depth in highly ambiguous scenarios, such as
+map space. This lets us exploit the probabilistic nature of          transparent objects. PointDiT achieves highly competitive
+diffusion to model ambiguous regions, without the signal             results with just one-step diffusion, and its structural details
+degradation introduced by VAEs. Our architecture is simple           improve further with additional sampling steps. Beyond this
+by design: a plain Vision Transformer (ViT) operating on             specific task, our results suggest that pixel-space diffusion
+point map patches. A key element of our training recipe is           extends naturally beyond natural images to structured ge-
+the x-prediction objective, i.e., predicting the clean point         ometric signals such as 3D point maps, pointing toward a
+map directly, rather than the v-prediction target commonly           simpler paradigm for future 3D and 4D generation models.
+used in flow matching (Salimans & Ho, 2022; Xu et al.,
+2025a). Extending the findings of JiT (Li & He, 2026)
+beyond image generation, we show that this objective is              2. Related Work
+highly effective for geometric data and yields substantially         Latent Diffusion Models. Latent Diffusion Models
+better point map estimation.                                         (LDMs) (Rombach et al., 2022) have become the dominant
+To guide geometry prediction, our diffusion model is condi-          paradigm for high-resolution image synthesis, decoupling
+tioned on the input RGB image. Although it already works             the modeling of semantic content from perceptual detail
+well with naive linear patchification (Dosovitskiy, 2020), we        by operating in a compressed latent space. Following this
+find that injecting strong priors substantially improves per-        success, recent works adapt LDMs to geometric tasks (Ke
+formance. Specifically, we adopt DINOv3 (Siméoni et al.,            et al., 2024; He et al., 2024; Szymanowicz et al., 2025;
+2025) as a robust general-purpose feature extractor. Condi-          Hu et al., 2025). For instance, GeometryCrafter (Xu et al.,
+tioning our plain ViT backbone on DINOv3 tokens bridges              2025b) and generative depth estimators (Ke et al., 2024) use
+powerful priors from representation learning with diffusion          Variational Autoencoders (VAEs) to encode geometric maps
+training (Yu et al., 2025; Zheng et al., 2025).                      into latent tokens. Although this reduces computational
+                                                                     cost, the compression is fundamentally lossy: constructing
+We show that this streamlined approach surpasses complex             a tokenizer that preserves the high-frequency precision re-
+latent-based diffusion models (Xu et al., 2025b) while re-           quired for 3D geometry is non-trivial, and standard image
+maining significantly simpler than hybrid deterministic al-          VAEs often smooth away fine structural details or introduce
+ternatives (Wang et al., 2025b; Lin et al., 2026). Our model         artifacts during decoding (Figure 2a). In contrast, our ap-
+further excels at generating sharp geometric boundaries and          proach bypasses the latent space entirely (Li & He, 2026).
+
+                                                                 2
+                             PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+By avoiding this architectural overhead and the associated            priors, they remain fundamentally limited by the quality of
+information loss, we recover substantially sharper geometric          VAEs. Moreover, there is often a trade-off between VAE
+boundaries (Figure 2b).                                               reconstruction and diffusion generation, and balancing the
+                                                                      two requires additional effort (Black Forest Labs, 2025).
+Pixel-Space Diffusion Models. Early diffusion models                  More recently, PPD (Xu et al., 2025a) applies pixel-space
+operate directly in pixel space (Ho et al., 2020). Latent Dif-        diffusion to monocular depth estimation. However, PPD
+fusion Models (LDMs) subsequently shift generation into               still uses the v-prediction target, which performs worse than
+the latent space, and the Diffusion Transformer (DiT) (Pee-           x-prediction in our controlled comparisons (Table 3(a)).
+bles & Xie, 2023) replaces the conventional U-Net backbone
+with a Vision Transformer (ViT), achieving state-of-the-art           Monocular Point Map Estimation. To overcome the lim-
+class-conditional image generation. More recently, JiT (Li            itations of scalar depth, point map estimation predicts dense
+& He, 2026) shows that a ViT can be trained directly in               3D coordinates xyz directly in the camera coordinate sys-
+pixel space, using direct data prediction (x-prediction) to           tem, enabling holistic 3D reconstruction without intrinsic
+cope with the high dimensionality of pixel space. While               calibration. The current state of the art is dominated by de-
+these advances have focused primarily on 2D image syn-                terministic feed-forward models such as MoGe (Wang et al.,
+thesis, we extend this minimalist pixel-space philosophy to           2025b;c). These methods typically employ complex hybrid
+dense 3D geometry estimation. By treating 3D point maps               architectures that fuse ViTs with convolutional layers and
+as multi-channel images and training a plain ViT backbone             rely on intricate loss functions to enforce geometric consis-
+from scratch, we show that pixel-space diffusion is not only          tency. Despite their efficacy, deterministic regressors suffer
+computationally feasible for 3D geometry but also superior            from the inherent ambiguity of monocular projection, tend-
+to complex alternatives in reconstructing sharp details and           ing to predict the mean of the distribution. This often yields
+resolving ambiguities.                                                over-smoothed geometry, particularly in regions of high un-
+                                                                      certainty or transparency (Figure 5b). We address this by
+Representation Learning and Generative Models. A re-                  casting point map estimation as a probabilistic generation
+cent line of work connects representation learning with gen-          task, allowing our model to capture sharp, high-frequency
+erative models. REPA (Yu et al., 2025) and VA-VAE (Yao                detail that deterministic baselines fail to resolve.
+et al., 2025) observe that pre-trained vision encoders can dra-
+matically improve generative diffusion models by regulariz-           3. Approach
+ing their latent space. RAE (Zheng et al., 2025) replaces the
+VAE in latent diffusion models with pre-trained representa-           We address dense point map prediction from a single RGB
+tion autoencoders (e.g., DINOv2). At a high level, PointDiT           image. Formally, given an input image c ∈ RH×W ×3 ,
+shares this spirit, connecting DINOv3 with diffusion models.          our goal is to estimate the corresponding point map x ∈
+However, there are several key differences. First, RAE must           RH×W ×3 , in which each pixel encodes its 3D spatial (X, Y ,
+be trained in two stages (reconstruction decoder and diffu-           Z) coordinates. To model the inherent ambiguities of this
+sion), whereas PointDiT is end-to-end. Second, RAE uses               single-image setting, we propose a flow matching frame-
+v-prediction, which requires scaling up the Transformer               work parameterized by a Vision Transformer (ViT) (Doso-
+width, whereas PointDiT uses x-prediction, allowing us to             vitskiy, 2020; Peebles & Xie, 2023). Our method learns to
+train a smaller variant, PointDiT-B. Third, RAE requires 50           transport a simple Gaussian noise distribution to the data
+sampling steps for image synthesis, whereas PointDiT can              distribution of point maps, conditioned on the input image.
+perform one-step or few-step generation.
+                                                                      3.1. Point Map Generation with Flow Matching
+Monocular Depth Estimation. Estimating dense geome-                   Flow Matching. We adopt the flow matching formulation
+try from a single image is a longstanding problem in com-             to model point map generation from a single image. Flow
+puter vision. Traditional discriminative approaches cast this         matching learns an Ordinary Differential Equation (ODE)
+as a regression task, using Convolutional Neural Networks             that continuously transforms a prior noise distribution p0
+(CNNs) (Eigen et al., 2014) or, more recently, Transformers           into the data distribution p1 .
+such as DPT (Ranftl et al., 2021) and Depth Anything (Yang
+et al., 2024) to predict scalar depth maps. However, depth            Let zt denote the state at time t ∈ [0, 1], defined by a linear
+maps are 2.5D representations that require known camera               interpolation between a noise sample ϵ ∼ p0 = N (0, I)
+intrinsics to be lifted into 3D, which are often unavailable          and a ground-truth data sample x ∼ p1 :
+in unconstrained settings. Generative approaches such as                                zt = t · x + (1 − t) · ϵ.                (1)
+Marigold (Ke et al., 2024) instead repurpose pre-trained
+image diffusion models (e.g., Stable Diffusion) for depth es-         In this formulation, t = 0 corresponds to pure noise (z0 =
+timation. Although these methods exploit strong generative            ϵ) and t = 1 to the clean data (z1 = x). The vector field
+
+                                                                  3
+                                PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+vt (zt ) that generates this probability path is given by the          the optimization. This, in turn, enables stable joint training
+time derivative of the state:                                          across heterogeneous indoor and outdoor datasets. At infer-
+                                                                       ence, we discard predicted 3D points whose norm exceeds
+                            dzt
+                     vt =       = x − ϵ.                    (2)        2.9, a small margin below the sky sphere of radius 3.
+                            dt
+This linear path induces a constant velocity for each sam-             3.2. Architecture
+ple pair (x, ϵ), ensuring straight-line transport between the
+noise and data distributions.                                          We implement Fθ as a Vision Transformer (ViT), which
+                                                                       serves as our pixel-space Diffusion Transformer. The net-
+                                                                       work takes the noisy point map zt , the current time step t,
+Image Conditioned Flow Matching. We extend this
+                                                                       and the conditioning image c as input. Crucially, unlike
+framework to model the conditional distribution p(x|c),
+                                                                       previous flow matching models that typically predict the ve-
+where c is the input RGB image and x is the target dense
+                                                                       locity, our network is trained to predict the clean point map.
+point map. Specifically, we learn a conditional vector field
+                                                                       Inspired by JiT (Li & He, 2026) for 2D image generation,
+vθ (zt , t|c) that predicts the target velocity defined in Equa-
+                                                                       we show that this clean data prediction target is likewise
+tion (2). By conditioning on c, the model exploits the im-
+                                                                       crucial for 3D point map data. Figure 1 shows an overview
+age’s spatial context to resolve geometric ambiguity, steer-
+                                                                       of our architecture.
+ing the flow toward the target point map.
+
+Point Map Normalization. Unlike standard RGB images                    Point Map Patchification. The noisy point map zt ∈
+bounded within [0, 1], dense point maps exhibit varying co-            RH×W ×3 has the same spatial resolution as the input im-
+ordinate ranges depending on the scene domain (e.g., indoor            age, so applying a ViT directly at the pixel level would
+vs. outdoor scenes). In our flow matching formulation, the             be prohibitively expensive. We therefore patchify it, par-
+training target relies on the interpolation zt = tx + (1 − t)ϵ,        titioning the map into a regular grid of non-overlapping
+where the noise ϵ follows a fixed standard normal distribu-            p × p patches to reduce the ViT sequence length from pixels
+tion N (0, I). If the scale of the point data x far exceeds            to patches. This yields N = (H/p) × (W/p) patches,
+that of the noise, the data signal dominates the interpolation         each flattened into a vector of size 3p2 . These vectors
+path even at near-zero time steps. This prevents the noise             are then mapped to the embedding dimension D by a
+from destroying the data structure, destabilizing diffusion            learnable linear projection ϕ, giving the point map tokens
+training. To mitigate this, we standardize the point maps be-          Tz = ϕ(Patchify(zt )) ∈ RN ×D .
+fore training. For each point map, we compute the centroid
+µ and a scalar scale factor s, defined as the mean Euclidean           Image Conditioning. The conditioning image c provides
+distance of the points from the centroid. The normalized               structural guidance for generation. Since c is clean, unlike
+data x̃ is given by:                                                   the noisy zt , we can exploit powerful pre-trained represen-
+                                                                       tations to encode it. Although a standard learnable linear
+                                x−µ                                    patch embedding (Dosovitskiy, 2020) already works well,
+                         x̃ =       .                       (3)
+                                 s                                     we find that extracting patch tokens with a frozen DINOv3
+This normalization brings the data to a scale comparable               encoder (Siméoni et al., 2025) leads to better performance.
+to the noise prior, facilitating stable flow matching. Our             Unlike RAE (Zheng et al., 2025), which uses only the last
+model is trained in this normalized space, and thus its point          layer, we find it beneficial to combine DINOv3 features
+map predictions are affine-invariant, i.e., recovered up to an         from multiple layers. In particular, we use four uniformly
+unknown scale and shift.                                               spaced intermediate layers, following the layer selection of
+                                                                       the DPT (Ranftl et al., 2021) head. Unlike DPT, which re-
+Sky Processing. To accommodate the effectively infinite                lies on sophisticated convolutions to fuse these features, we
+depth of the sky in outdoor scenes, we exclude sky points              simply concatenate the tokens along the channel dimension,
+when computing the normalization statistics µ and s, and               capturing a rich feature hierarchy that ranges from low-level
+then, in the resulting normalized frame, project them onto             details to high-level abstractions. This yields a composite
+a virtual sphere of fixed radius 3 (corresponding to 3σ of             image representation Tc ∈ RN ×4D , where D is the per-
+the standard normal noise prior). Since this radius is only a          layer feature dimension. To ensure spatial alignment, we
+synthetic proxy for the true depth, we down-weight sky pix-            use the same patch size p = 16 and embedding dimension
+els in the training loss rather than masking them out entirely         D for both the point map and DINOv3 branches.
+(Section 3.3). Retaining a small but nonzero weight keeps
+the sky supervised as a distant background, so its geometry            Image and Point Map Fusion. Given the spatial align-
+does not become arbitrary in the absence of supervision,               ment between Tc and Tz , we fuse the two modalities
+while preventing its pseudo-depth values from dominating               by channel-wise concatenation, forming the input Tin =
+
+                                                                   4
+                               PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Concat(Tc , Tz ) ∈ RN ×5D to the Diffusion Transformer.                target ut = x − ϵ:
+A linear layer projects this from 5D to the embedding di-                                   "                                  #
+                                                                                                   M
+mension D. The sequence is then processed by a stack of                                         1 X                          2
+Transformer blocks (Dosovitskiy, 2020; Li & He, 2026),                      Lfm = Ex,t,ϵ              wi ∥v̂t,i − (xi − ϵi )∥2 ,   (5)
+                                                                                                M i=1
+each comprising multi-head self-attention and an MLP.
+                                                                       where i indexes the M pixels and wi is a per-pixel weight
+Clean Point Map Prediction. The Diffusion Transformer                  that down-weights sky pixels (wi = 0.01 for sky pixels and
+outputs a sequence of refined tokens Tout ∈ RN ×D . To                 wi = 1 otherwise), as motivated in Section 3.1.
+recover the dense point map, we apply a linear prediction
+head that projects each token from D back to the flattened             Relative Point Loss. The flow matching loss alone al-
+                                                       2
+patch dimension 3p2 , yielding patch vectors in RN ×3p . An            ready yields an effective model. Nonetheless, because our
+unpatchification operation then rearranges these vectors into          model predicts the clean output directly in the original data
+the original spatial grid (H/p) × (W/p) × p × p × 3 and                space, without a VAE, it is straightforward to impose aux-
+permutes the dimensions to form the full-resolution tensor             iliary losses on this output when necessary. To show this
+x̂ ∈ RH×W ×3 . This tensor is the model’s estimate of the              flexibility, we add a relative point loss. Point maps span
+clean point map at the current step.                                   a high dynamic range: distant points have large coordi-
+                                                                       nate norms that dominate standard error metrics, leaving
+3.3. Training                                                          nearby details under-weighted. We therefore normalize each
+                                                                       per-pixel error by the magnitude of the target point, which
+Noise Schedule. To sample the time step t ∈ [0, 1] during              emphasizes the reconstruction of local detail:
+training, we use a logit-normal distribution (Esser et al.,                                       "                       #
+                                                                                                         M
+2024), following JiT (Li & He, 2026). Specifically, we                                                1 X ∥x̂i − xi ∥1
+draw z ∼ N (µ, σ 2 ) with µ = −0.8 and σ = 0.8, and                              Lrel = Ex,t,ϵ              wi              ,      (6)
+                                                                                                      M i=1    ∥xi ∥2 + ξ
+map it to the time domain through the sigmoid function,
+t = sigmoid(z).                                                        where wi is the same per-pixel sky weight as in Equation (5)
+In our point map generation task, we observe that the sig-             and ξ is a small stability constant.
+moid only asymptotically approaches its boundaries, so the
+model is never trained on the exact pure-noise state (t = 0).          Total Loss. The final optimization objective is the
+This creates a train-test discrepancy, since inference always          weighted sum:
+starts at t = 0, and the model may then struggle to initiate                           L = Lfm + λLrel ,                (7)
+the flow trajectory from the prior (Lin et al., 2024). To
+resolve this, we adopt a rectified sampling strategy: with             where λ = 0.1 is the loss weight. We train the full model
+probability pzero = 0.1, we override the logit-normal sample           end-to-end. Unlike existing methods (e.g., MoGe (Wang
+and set t = 0 explicitly. This calibrates the model to the             et al., 2025b)) that typically rely on several regularization
+pure-noise distribution it encounters at the start of inference.       losses, our training is driven primarily by the flow matching
+                                                                       loss, with only a single lightweight auxiliary term.
+
+Velocity Loss. Although our network Fθ is parameterized                3.4. Inference
+to predict the clean point map x̂, we optimize it in velocity
+space (v-loss), following JiT (Li & He, 2026). In our exper-           During inference, we recover x from pure noise z0 ∼
+iments, this performs slightly better than computing the loss          N (0, I), conditioned on the input image c, by solving the
+directly on x̂ (x-loss). During training, we construct the             ODE dzt = vθ (zt , t | c) dt from t = 0 to t = 1. We use a
+noisy input zt (Equation (1)) and obtain the network predic-           standard Euler solver with step size ∆t. At each step t, we
+tion x̂ = Fθ (zt , t, c). We then convert x̂ into an estimated         predict the clean data x̂, derive the velocity v̂t , and update
+velocity v̂t by rearranging the interpolation path:                    the state:
+                                                                                         zt+∆t ← zt + ∆t · v̂t .                   (8)
+                                      x̂ − zt                          This iterative process transports the sample along the learned
+                     v̂t (zt , t) =           .             (4)
+                                       1−t                             linear trajectory to reconstruct the final point map.
+                                                                       Surprisingly, our model can perform single-step inference
+To ensure numerical stability as t → 1, we clip the denomi-
+                                                                       with competitive results, while additional steps further im-
+nator (1 − t) to a minimum threshold δ = 0.05.
+                                                                       prove quality using the same model (Figure 3). We attribute
+We minimize the Mean Squared Error (MSE) between this                  this to the per-pixel alignment between the predicted point
+estimated velocity v̂t and the constant ground-truth velocity          map and the conditioning image: each output location is
+
+                                                                   5
+                            PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+largely determined by its corresponding image feature, mak-         Table 1. Comparisons. Average results on 7 real-world evaluation
+                                                                    datasets with 3,444 samples. The image resolution is 512 × 512.
+ing the transport from noise to the target geometry nearly a        Relp and δ1p are point map metrics, while Reld and δ1d are depth
+direct mapping that is accurate even in one step, with addi-        map metrics. BF1 measures boundary sharpness. PointDiT-H
+tional steps mainly refining details. We further observe that       attains the best depth accuracy (Reld and δ1d ) and PointDiT the
+our model can serve as a deterministic estimator at inference       sharpest boundaries (BF1) among all methods, while being far
+time, by initializing from all zeros instead of random noise        more efficient than the latent diffusion model GeometryCrafter (72
+                                                                    vs. 1,178 ms for single-step inference). Even a single sampling
+(Table 2). A similar behavior was reported for diffusion-
+                                                                    step already surpasses all prior methods on BF1, and additional
+based depth estimation (Garcia et al., 2025), likely because        steps further sharpen boundaries at a modest cost.
+the model learns to be robust to the input noise, or even to
+constant zeros.                                                      Method                 Relp ↓ δ1p ↑ Reld ↓ δ1d ↑ BF1 ↑
+                                                                                                                                 Param Time
+                                                                                                                                  (M) (ms)
+                                                                     GeometryCrafter        5.45   96.75   3.52   97.84   4.64 1,937 1,178
+4. Experiments                                                       PPD                    5.54   96.59   3.88   97.78   9.28 804 402
+                                                                     Depth Pro              5.71   96.71   3.84   97.63   9.41 952    68
+4.1. Datasets                                                        UniDepthV2             4.45   97.35   2.86   98.52   6.94 354    26
+                                                                     DA3                    4.77   96.63   3.22   97.81   6.33 1,356 82
+We adopt a two-stage training strategy for efficient train-          MoGe                   4.21   97.45   3.10   98.01   5.61 314     34
+ing. The model is first pre-trained at 256 × 256 resolu-             MoGe-2                 4.53   97.46   2.90   98.45   7.40 326    24
+tion and then fine-tuned at 512 × 512, using only syn-               PointDiT-B (1 step)    5.84   96.71   3.70   97.84   8.18    223   31
+thetic data throughout. For 256 × 256 pre-training, we use           PointDiT-B (2 steps)   5.81   96.77   3.64   97.86   8.88    223   47
+SceneNet-RGBD (McCormac et al., 2017), which provides                PointDiT-B (3 steps)   5.83   96.79   3.64   97.86   9.09    223   63
+approximately 5.36 million photorealistic RGB-D samples.             PointDiT-B (4 steps)   5.85   96.80   3.64   97.86   9.16    223   79
+The 512 × 512 fine-tuning stage uses a high-fidelity mix-            PointDiT-L (1 step)    4.90   97.42   3.15   98.22 9.56      771    65
+                                                                     PointDiT-L (2 steps)   4.84   97.52   3.09   98.24 10.11     771    87
+ture of 11 synthetic datasets: Hypersim (Roberts et al.,
+                                                                     PointDiT-L (3 steps)   4.85   97.54   3.09   98.25 10.36     771   109
+2021), VKITTI2 (Cabon et al., 2020), UrbanSyn (Gómez                PointDiT-L (4 steps)   4.85   97.55   3.09   98.25 10.50     771   131
+et al., 2025), Synscapes (Wrenninge & Unger, 2018), Tar-             PointDiT-H (1 step)    4.45   97.93   2.81   98.51 9.79 1,807 72
+tanAir (Wang et al., 2020), OmniWorldGame (Zhou et al.,              PointDiT-H (2 steps)   4.38   97.99   2.75   98.54 10.31 1,807 116
+2025), EDEN (Lê et al., 2021), IRS (Wang et al., 2019),             PointDiT-H (3 steps)   4.39   98.01   2.75   98.54 10.44 1,807 160
+Dynamic Replica (Karaev et al., 2023), MVSSynth (Huang               PointDiT-H (4 steps)   4.40   98.02   2.75   98.54 10.49 1,807 204
+et al., 2018), and TartanGround (Wang et al., 2025d), to-
+taling approximately 6.22 million samples. As all of these          scaling its capacity with each variant (e.g., ViT-L features
+datasets are RGB-D, we convert their raw depth maps into            for PointDiT-L). Apart from this frozen encoder, all Trans-
+point maps using the provided camera intrinsics. More               former layers and prediction heads are trained from scratch.
+dataset details are provided in the appendix (Table 4).             We use the same patch size of 16 for all variants.
+We train exclusively on synthetic data for two reasons. 1)          Training Schedule. Our training curriculum consists of
+Geometric precision: synthetic environments provide “pixel-         large-scale pre-training followed by high-resolution fine-
+perfect” ground-truth point maps, which are essential for           tuning. We use the AdamW optimizer (Loshchilov & Hutter,
+learning high-quality, dense 3D distributions. 2) Domain ag-        2019), with a learning rate schedule and hyperparameters
+nosticism: because our architecture models the underlying           consistent with JiT (Li & He, 2026). More implementation
+geometry (point maps) rather than low-level image textures,         details are provided in the appendix (Section A.3).
+the synthetic-to-real appearance gap matters less for our
+task. To further bridge the gap between synthetic and real-         All variants are pre-trained at 256 × 256 for 30 epochs (in-
+world distributions, we incorporate frozen features from a          cluding a 5-epoch warmup) and then fine-tuned at 512×512,
+pre-trained DINOv3 backbone. These self-supervised repre-           scaling the number of GPUs with resolution and model ca-
+sentations provide robust, domain-invariant visual cues that        pacity. Interestingly, we observe that larger models converge
+allow our model to focus on geometric reconstruction while          faster and require fewer fine-tuning epochs. We report the
+generalizing to natural images.                                     detailed per-variant training cost (GPU count and wall-clock
+                                                                    time) in the appendix (Table 6).
+4.2. Implementation Details
+                                                                    4.3. Evaluation Setup and Metrics
+Model Configurations. We implement three scale variants
+                                                                    To assess the zero-shot generalization of our model, we
+of our architecture: PointDiT-B (Base), PointDiT-L (Large),
+                                                                    evaluate on seven commonly used real-world datasets:
+and PointDiT-H (Huge), following the configurations of
+                                                                    DIODE (Vasiljevic et al., 2019), KITTI (Geiger et al., 2012),
+JiT (Li & He, 2026). For the visual backbone, we use a
+                                                                    NYUv2 (Silberman et al., 2012), ETH3D (Schöps et al.,
+frozen DINOv3 encoder to extract patch-level embeddings,
+                                                                    2017), HAMMER (Jung et al., 2022), iBims-1 (Koch et al.,
+
+                                                                6
+                               PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Table 2. Single-step feed-forward inference. Single-step results
+of PointDiT-H from random noise (three seeds) or an all-zeros
+input. Performance is nearly invariant to the noise, with all-zeros
+matching or slightly exceeding stochastic sampling, indicating the
+model learns to be robust to different noise realizations.
+                                                                                 Input          GeometryCrafter          MoGe-2                  GT
+ Method                 Relp ↓ δ1p ↑ Reld ↓ δ1d ↑ BF1 ↑
+ rand noise (seed 1) 4.454 97.928 2.815 98.505 9.772
+ rand noise (seed 2) 4.452 97.938 2.811 98.513 9.778
+ rand noise (seed 3) 4.454 97.921 2.812 98.513 9.772
+ all zeros (no rand) 4.446 97.934 2.806 98.508 9.792
+
+2018), and Booster (Zama Ramirez et al., 2022). These
+span diverse environments, from indoor rooms to complex
+outdoor driving scenes. More details are provided in the ap-
+pendix (Table 5). Consistent with our training, we evaluate                 PointDiT (1 step)   PointDiT (2 steps)   PointDiT (3 steps)   PointDiT (4 steps)
+at both 256 × 256 and 512 × 512 resolutions. Given the het-
+erogeneous aspect ratios and resolutions of the original test             Figure 3. Different diffusion sampling steps. Our single-step
+sets, we adopt a standardized preprocessing pipeline: each                diffusion already significantly outperforms prior works, and in-
+                                                                          creasing the sampling steps further enhances reconstruction details
+input image is rescaled so that its shorter side matches the
+                                                                          (see the zoomed-in region).
+target resolution (256 or 512 pixels) and then center-cropped
+to the square input required by the model. For a fair compari-
+son, we benchmark against several state-of-the-art baselines,             The improvement is most pronounced on BF1: PointDiT
+evaluating their publicly available pre-trained weights under             raises boundary sharpness from 9.41 (the best baseline) to
+the same preprocessing and cropping protocol.                             10.50, reflecting markedly sharper geometry (Figure 4). On
+Our model predicts affine-invariant point maps, from which                Relp , MoGe remains slightly ahead (4.21 vs. 4.40), yet
+affine-invariant depth maps are obtained by extracting the                PointDiT is more accurate on every depth metric. PointDiT-
+z-component of each point. For evaluation, we follow the                  L attains comparable boundary quality at lower cost, and
+alignment procedure of MoGe (Wang et al., 2025b), deter-                  our smallest variant, PointDiT-B, stays competitive with
+mining the optimal scale and shift by solving a least-squares             fewer parameters. Compared with PPD (Xu et al., 2025a),
+problem that minimizes the discrepancy between the pre-                   the most closely related pixel-space diffusion model, Point-
+diction and the ground truth. We assess prediction quality                DiT is substantially better across all metrics and runs faster
+in both the point map and depth domains using standard                    thanks to its fewer sampling steps. As PPD predicts only
+metrics (Wang et al., 2025b):                                             monocular depth, we compute its point map metrics by
+                                                                          recovering camera intrinsics with MoGe-2 (Wang et al.,
+• Accuracy (δ1 ): the percentage of pixels for which the                  2025c), following the official PPD repository.
+  ratio between prediction and ground truth is below 1.25.
+                                        P |y−ŷ|                          Sharper Local Structures. Figure 4 shows qualitative com-
+• Relative absolute error (Rel): N1          y , the scale-               parisons with previous methods. PointDiT produces notice-
+  normalized error.                                                       ably sharper local structures while preserving high-quality
+• Geometric edge fidelity (BF1): a local boundary met-                    overall geometry. Unlike the latent-diffusion method Geom-
+  ric, following Depth Pro (Bochkovskii et al., 2025), that               etryCrafter, our approach avoids the lossy VAE compression
+  assesses the recovery of fine structural details and sharp              that degrades fine detail, particularly at object boundaries
+  depth discontinuities.                                                  (Figure 2a). By removing the VAE entirely, PointDiT recov-
+                                                                          ers substantially more accurate local structures, as reflected
+We report metrics in both domains, using Relp and δ1p for                 in the BF1 metric (Table 1).
+point maps and Reld and δ1d for depth.
+                                                                          Single-Step Feed-Forward Inference. Although our model
+4.4. Evaluation Results                                                   is trained with flow matching, we find that it can perform
+                                                                          single-step feed-forward inference, as also observed for
+Main Comparisons. Table 1 reports average results over                    diffusion-based monocular depth estimation (Garcia et al.,
+the seven evaluation datasets at 512 × 512. Our largest                   2025). In Table 2, we study the model’s sensitivity to noise
+model, PointDiT-H, achieves the best depth accuracy (Reld                 sampling in single-step inference, and find it highly robust
+and δ1d ) and the best point map δ1p , while PointDiT achieves            across stochastic initializations. Across different random
+the highest boundary sharpness (BF1) among all methods.                   noise seeds, performance fluctuations are negligible, with
+
+                                                                      7
+                              PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+
+
+
+         Input                       GT                GeometryCrafter                  MoGe-2                  PointDiT
+
+Figure 4. Point map comparisons. Our PointDiT is significantly better in terms of reconstructing thin structures (1st row), transparent
+objects (2nd rows), and maintaining a more accurate relative scale across the global scene (3rd and 4th rows). We show additional depth
+comparisons in the appendix (Figure 7).
+
+
+Relp and δ1p remaining nearly constant. More notably, the             Supporting a variable number of inference steps with one
+model maintains high-fidelity predictions even under de-              network underscores the flexibility of our approach.
+terministic sampling, where the input noise is set to all
+zeros. This “all-zeros” configuration not only matches but            4.5. Ablation and Analysis
+occasionally exceeds stochastic sampling. These results
+suggest that our model has learned a robust mapping from              In this section, we evaluate the design choices of our model
+the DINOv3-encoded image patch tokens to the geometric                with controlled experiments. By default we train on the
+point map. Remarkably, even with a single step, PointDiT-H            256 × 256 SceneNet-RGBD dataset and report the aver-
+already outperforms prior methods (Table 1), at a fraction            age metrics on the seven unseen test sets with single-step
+of the inference cost of latent diffusion models.                     inference.
+
+Multi-Step Refinement. Thanks to its flow matching formu-             Generative Flow Matching vs. Deterministic Regression.
+lation, PointDiT can also benefit from additional inference           To further demonstrate the benefits of the generative flow
+steps using the same model. As shown in Table 1, more steps           matching formulation, we train a deterministic regressor by
+steadily improve the boundary metric BF1, while Rel and δ1            fixing both the time step and the noise to 0, while keeping
+remain stable, since a single step already yields high-quality        exactly the same network architecture, training data, and
+results. Figure 3 shows the corresponding visual refinement.          training procedure. Figure 5a shows the validation curves
+
+
+                                                                  8
+                                       PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+                 28
+                 26                      Generative Flow Matching
+                                         Deterministic Regression
+                 24
+                 22
+Relative Error
+
+
+
+
+                 20
+                 18
+                 16
+                 14
+                 12
+                 10
+                      1 2 3 4 5 6 7 8 9 10 11 12 13 14 15                         Input
+                                                                                                   Deterministic          Generative
+                                   Epoch                                                            Regression          Flow Matching
+
+                              (a) Validation curves.                             (b) Structural details and transparent objects.
+Figure 5. Generative flow matching vs. deterministic regression. (a) The deterministic regressor converges faster at first but soon
+overfits, while the generative model trains stably and reaches lower error. (b) The generative model recovers sharper boundaries, thin
+structures, and transparent objects than the deterministic regressor. Overall, the generative formulation improves the boundary metric BF1
+from 10.90 to 13.92 under this controlled comparison.
+
+
+of the two models. The deterministic regressor converges                  timestep to exactly 0 with 10% probability, a simple fix that
+faster at first but soon overfits, whereas the generative model           substantially improves quality.
+remains stable and ultimately reaches lower error. The
+gain in boundary quality is especially large, with a BF1                  Image Patch Embeddings. In Table 3(c), we compare
+of 13.92 (generative) vs. 10.90 (deterministic). Figure 5b                different patch embedding methods. Even without any pre-
+shows the corresponding visual comparison: the determinis-                trained image backbone (i.e., with plain linear embeddings),
+tic regressor produces blurry boundaries and fails to recover             our model already achieves decent results. Pre-trained em-
+thin structures and transparent objects, while the generative             beddings nonetheless help: comparing the last-layer features
+model reconstructs much sharper boundaries and handles                    of DINOv2 and DINOv3, DINOv3 performs slightly bet-
+transparent objects more robustly. This controlled experi-                ter. Uniformly sampling 4 intermediate layers improves
+ment confirms that the generative formulation learns sharper              the results further, especially the BF1 metric, indicating the
+geometry and better handles ambiguous regions.                            benefit of integrating different levels of abstraction from
+                                                                          pre-trained backbones. We additionally evaluate the em-
+Prediction Target: x-Prediction vs. v-Prediction. Key                     beddings of MoGe-2 (Wang et al., 2025c) and DA3 (Lin
+to our method’s success is predicting the clean point map                 et al., 2026), which are specifically fine-tuned for monocular
+(x-prediction) rather than the velocity (v-prediction). Ta-               geometry estimation. They further improve the accuracy
+ble 3(a) shows that v-prediction fails catastrophically, con-             metrics (Rel and δ1 ), confirming that our model readily ben-
+sistent with the findings of JiT (Li & He, 2026) for image                efits from geometry-aware features. Interestingly, however,
+generation. We demonstrate that x-prediction is equally                   DINOv3 still attains the best boundary sharpness (BF1 of
+crucial for 3D point map generation.                                      13.47 vs. 11.75 for MoGe-2 and 12.58 for DA3). We hy-
+                                                                          pothesize that, because MoGe-2 and DA3 are trained with
+Noise Schedule. The original JiT for image generation uses                regression objectives that tend to over-smooth geometry,
+a logit-normal noise schedule. However, we find that this                 their representations retain less high-frequency boundary in-
+alone yields unsatisfactory results for point map generation,             formation, despite encoding more accurate global structure.
+where we measure per-point accuracy. Because the logit-                   We do not, however, use any of these features in our main re-
+normal sampler maps the timestep through a sigmoid, it                    sults, as our focus is to demonstrate the effectiveness of the
+is nearly impossible to draw an exact 0 during training.                  pure pixel-space diffusion framework. Since both MoGe-2
+As a result, the model rarely sees pure noise, causing a                  and DA3 are themselves fine-tuned from pre-trained DINO
+train-test discrepancy that hurts performance (Lin et al.,                features, we deliberately keep the same pre-trained model
+2024). Shifting the schedule toward high-noise regions                    for a controlled comparison, so that our improvements can
+with a smaller mean partially alleviates this, but the issue              be attributed to the framework itself rather than to stronger,
+remains (Table 3(b)). We instead randomly set the sampled                 task-specific features.
+
+
+                                                                      9
+                                 PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Table 3. Ablation experiments. Trained on 256 × 256 SceneNet
+RGB-D and averaged over the seven unseen test sets with single-
+step inference (PointDiT-L). Our default setting is highlighted in
+gray.
+
+  Setting               Relp ↓     δ1p ↑   Reld ↓   δ1d ↑   BF1 ↑
+  (a) Prediction target
+  v-pred                35.44 30.03 24.07 58.21 0.46                             Input             Patch Size 32        Patch Size 16
+  x-pred                 9.29 91.18 5.54 95.08 13.47
+  (b) Noise schedule (t-shift)                                            Figure 6. Effect of patch size. At 512 × 512 resolution, a patch
+  −0.8                   12.19    84.82    7.80     91.34   8.05          size of 16 recovers sharper boundaries and finer local structures
+  −1.2                   11.86    85.53    7.46     91.87   8.11          than a patch size of 32.
+  −1.6                   10.73    88.06    6.74     93.09   7.31
+  −0.8 & rand zero       9.68     90.54    6.00     94.64   7.24
+  (c) Image patch embedding                                               with notably sharper boundaries and supports both single-
+  Linear               13.32      82.56    9.64     88.09 9.68            step and multi-step inference. By showing that dense geom-
+  DINOv2 (last layer) 9.80        90.07    5.99     94.34 5.11            etry can be modeled effectively in pixel space, we bridge
+  DINOv3 (last layer) 9.68        90.54    6.00     94.64 7.24            the gap between standard image generation and 3D recon-
+  DINOv3 (4 layers)    9.29       91.18    5.54     95.08 13.47
+                                                                          struction, paving the way for VAE-free, end-to-end 3D and
+  MoGe-2 (4 layers)    8.29       93.35    4.93     96.19 11.75
+  DA3 (4 layers)       8.26       93.09    4.74     96.47 12.58           4D generation that relies solely on direct diffusion to model
+                                                                          complex structural distributions.
+  (d) Training loss
+  v-loss                 9.29     91.18    5.54     95.08 13.47           Limitation. While our framework delivers robust geomet-
+  v-loss & point loss    9.10     91.48    5.53     94.88 13.92
+                                                                          ric estimation, it is currently trained at fixed resolutions
+  (e) Patch size (512 × 512)                                              (256 × 256 and 512 × 512); mixed-resolution training is
+  32                     5.35     96.88    3.48     97.78 6.17            a promising direction for generalizing seamlessly across
+  16                     5.01     97.34    3.06     98.17 10.37
+                                                                          image resolutions. In addition, our model still has room
+                                                                          for improvement on outdoor scenes (Table 7) due to the
+                                                                          relatively limited scale and diversity of the training data.
+Training Loss. The ablation results discussed so far use                  Further scaling of the training set, particularly with more
+only the flow matching loss (Equation (5)), which is al-                  outdoor data, will likely be key to realizing the model’s
+ready highly effective at recovering high-quality geometry.               full potential. Finally, our model currently predicts geom-
+Adding the relative loss (Equation (6)), specifically designed            etry alone. However, since the backbone is a plain ViT,
+for point map data, further improves the results, as shown                extending it to jointly output additional modalities, such
+in Table 3(d).                                                            as RGB appearance, would be straightforward and require
+                                                                          minimal architectural changes. The same flexibility makes it
+Patch Size. We further evaluate the impact of patch size                  natural to explore multi-view generation, alternative 3D rep-
+on high-resolution images by fine-tuning the 256 × 256 pre-               resentations, and richer conditioning signals (e.g., camera
+trained model to 512 × 512 resolution. To save compute,                   parameters), which we view as exciting avenues for future
+the 512 × 512 models in this part are fine-tuned on a 6-                  work.
+dataset subset (Hypersim, VKITTI2, UrbanSyn, Synscapes,
+TartanAir, and OmniWorldGame; 1.48M samples) rather                       Acknowledgements. We thank Nando Metzger, Weirong
+than the full training set. Comparing patch sizes 16 and                  Chen, Felix Wimbauer, Haiwen Huang, Gene Chou, Luca
+32, we find that 16 yields better overall results and sharper             Zanella, Erik Sandström, Keisuke Tateno, Goutam Bhat,
+boundaries (Table 3(e)). This is expected, since point map                Mattia Segu, Vasile Lup, Tobias Fischer, Shaohui Liu and
+prediction requires pixel-perfect accuracy, and a larger patch            Bingxin Ke for the insightful discussions and support.
+size tends to discard more high-frequency detail. Figure 6
+shows the corresponding qualitative comparison.                           Impact Statement
+5. Conclusion                                                             This paper presents work whose goal is to advance the field
+                                                                          of machine learning and computer vision by simplifying
+We presented a minimalist pixel-space diffusion model for                 the paradigm for monocular 3D reconstruction. There are
+monocular point map prediction that removes the architec-                 some potential societal consequences of our work, ranging
+tural overhead of VAEs and hybrid networks. A plain Vision                from advancements in robotics to spatial intelligence, none
+Transformer trained directly on raw point maps, conditioned               of which we feel must be specifically highlighted here from
+on DINOv3 features, already produces accurate geometry                    an ethical standpoint.
+
+                                                                     10
+                              PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+References                                                              Jung, H., Ruhkamp, P., Zhai, G., Brasch, N., Li, Y., Verdie,
+                                                                          Y., Song, J., Zhou, Y., Armagan, A., Ilic, S., et al. Is my
+Black Forest Labs. FLUX.2: Analyzing and enhanc-
+                                                                          depth ground-truth good enough? hammer – highly ac-
+  ing the latent space of FLUX – representation compar-
+                                                                          curate multi-modal dataset for dense 3d scene regression.
+  ison, 2025. URL https://bfl.ai/research/
+                                                                          arXiv preprint arXiv:2205.04565, 2022.
+  representation-comparison.
+                                                                        Karaev, N., Rocco, I., Graham, B., Neverova, N., Vedaldi,
+Bochkovskii, A., Delaunoy, A., Germain, H., Santos, M.,                   A., and Rupprecht, C. Dynamicstereo: Consistent dy-
+  Zhou, Y., Richter, S. R., and Koltun, V. Depth pro: Sharp               namic depth from stereo videos. In CVPR, 2023.
+  monocular metric depth in less than a second. In ICLR,
+  2025.                                                                 Ke, B., Obukhov, A., Huang, S., Metzger, N., Daudt, R. C.,
+                                                                          and Schindler, K. Repurposing diffusion-based image
+Cabon, Y., Murray, N., and Humenberger, M. Virtual kitti 2.               generators for monocular depth estimation. In CVPR,
+  arXiv preprint arXiv:2001.10773, 2020.                                  2024.
+
+Dosovitskiy, A. An image is worth 16x16 words: Trans-                   Kingma, D. P. and Welling, M. Auto-encoding variational
+  formers for image recognition at scale. arXiv preprint                  bayes. 2014.
+  arXiv:2010.11929, 2020.
+                                                                        Koch, T., Liebel, L., Fraundorfer, F., and Körner, M. Evalua-
+Eigen, D., Puhrsch, C., and Fergus, R. Depth map prediction               tion of cnn-based single-image depth estimation methods.
+  from a single image using a multi-scale deep network.                   In ECCV Workshops, 2018.
+  NIPS, 27, 2014.                                                       Lê, H.-Â., Mensink, T., Das, P., and Gevers, T. Eden:
+                                                                           Multimodal synthetic dataset of enclosed garden scenes.
+Esser, P., Kulal, S., Blattmann, A., Entezari, R., Müller, J.,            In WACV, 2021.
+  Saini, H., Levi, Y., Lorenz, D., Sauer, A., Boesel, F., et al.
+  Scaling rectified flow transformers for high-resolution               Li, T. and He, K. Back to basics: Let denoising generative
+  image synthesis. In ICML, 2024.                                         models denoise. In CVPR, 2026.
+
+Garcia, G. M., Zeid, K. A., Schmidt, C., De Geus, D., Her-              Lin, H., Chen, S., Liew, J., Chen, D. Y., Li, Z., Shi, G., Feng,
+  mans, A., and Leibe, B. Fine-tuning image-conditional                   J., and Kang, B. Depth anything 3: Recovering the visual
+  diffusion models is easier than you think. In WACV, 2025.               space from any views. In ICLR, 2026.
+                                                                        Lin, S., Liu, B., Li, J., and Yang, X. Common diffusion
+Geiger, A., Lenz, P., and Urtasun, R. Are we ready for
+                                                                          noise schedules and sample steps are flawed. In WACV,
+  autonomous driving? the kitti vision benchmark suite. In
+                                                                          2024.
+  CVPR, 2012.
+                                                                        Loshchilov, I. and Hutter, F. Decoupled weight decay regu-
+Gómez, J. L., Silva, M., Seoane, A., Borrás, A., Noriega,               larization. 2019.
+  M., Ros, G., Iglesias-Guitian, J. A., and López, A. M.
+  All for one, and one for all: Urbansyn dataset, the third             McCormac, J., Handa, A., Leutenegger, S., and Davison,
+  musketeer of synthetic driving scenes. Neurocomputing,                 A. J. Scenenet rgb-d: Can 5m synthetic images beat
+  637:130038, 2025.                                                      generic imagenet pre-training on indoor segmentation?
+                                                                         In ICCV, 2017.
+He, J., Li, H., Yin, W., Liang, Y., Li, L., Zhou, K., Zhang, H.,
+  Liu, B., and Chen, Y.-C. Lotus: Diffusion-based visual                Peebles, W. and Xie, S. Scalable diffusion models with
+  foundation model for high-quality dense prediction. arXiv               transformers. In ICCV, 2023.
+  preprint arXiv:2409.18124, 2024.                                      Piccinelli, L., Sakaridis, C., Yang, Y.-H., Segu, M., Li, S.,
+                                                                          Abbeloos, W., and Van Gool, L. Unidepthv2: Universal
+Ho, J., Jain, A., and Abbeel, P. Denoising diffusion proba-
+                                                                          monocular metric depth estimation made simpler. TPAMI,
+  bilistic models. NIPS, 33, 2020.
+                                                                          2025.
+Hu, W., Gao, X., Li, X., Zhao, S., Cun, X., Zhang, Y., Quan,            Ranftl, R., Bochkovskiy, A., and Koltun, V. Vision trans-
+  L., and Shan, Y. Depthcrafter: Generating consistent long               formers for dense prediction. In ICCV, 2021.
+  depth sequences for open-world videos. In CVPR, 2025.
+                                                                        Roberts, M., Ramapuram, J., Ranjan, A., Kumar, A.,
+Huang, P.-H., Matzen, K., Kopf, J., Ahuja, N., and Huang,                 Bautista, M. A., Paczan, N., Webb, R., and Susskind,
+ J.-B. Deepmvs: Learning multi-view stereopsis. In CVPR,                  J. M. Hypersim: A photorealistic synthetic dataset for
+  2018.                                                                   holistic indoor scene understanding. In ICCV, 2021.
+
+                                                                   11
+                             PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Rombach, R., Blattmann, A., Lorenz, D., Esser, P., and                Wang, W. et al. Tartanground: A large-scale dataset for
+  Ommer, B. High-resolution image synthesis with latent                ground robot perception and navigation. arXiv preprint
+  diffusion models. In CVPR, 2022.                                     arXiv:2505.10696, 2025d.
+
+Salimans, T. and Ho, J. Progressive distillation for                  Wrenninge, M. and Unger, J. Synscapes: A photorealistic
+  fast sampling of diffusion models. arXiv preprint                    synthetic dataset for street scene parsing. arXiv preprint
+  arXiv:2202.00512, 2022.                                              arXiv:1810.08705, 2018.
+
+Schöps, T., Schönberger, J. L., Galliani, S., Sattler, T.,          Xu, G., Lin, H., Luo, H., Wang, X., Yao, J., Zhu, L., Pu, Y.,
+  Schindler, K., Pollefeys, M., and Geiger, A. A multi-                 Chi, C., Sun, H., Wang, B., et al. Pixel-perfect depth with
+  view stereo benchmark with high-resolution images and                 semantics-prompted diffusion transformers. In NeurIPS,
+  multi-camera videos. In CVPR, 2017.                                   2025a.
+
+Silberman, N., Hoiem, D., Kohli, P., and Fergus, R. Indoor            Xu, T.-X., Gao, X., Hu, W., Li, X., Zhang, S.-H., and Shan,
+   segmentation and support inference from rgbd images. In             Y. Geometrycrafter: Consistent geometry estimation for
+  ECCV, 2012.                                                           open-world videos with diffusion priors. In ICCV, 2025b.
+
+Siméoni, O., Vo, H. V., Seitzer, M., Baldassarre, F., Oquab,         Yang, L., Kang, B., Huang, Z., Xu, X., Feng, J., and Zhao,
+  M., Jose, C., Khalidov, V., Szafraniec, M., Yi, S.,                   H. Depth anything: Unleashing the power of large-scale
+  Ramamonjisoa, M., et al. Dinov3. arXiv preprint                       unlabeled data. In CVPR, 2024.
+  arXiv:2508.10104, 2025.                                             Yao, J., Yang, B., and Wang, X. Reconstruction vs. gener-
+                                                                        ation: Taming optimization dilemma in latent diffusion
+Szymanowicz, S., Zhang, J. Y., Srinivasan, P., Gao, R.,
+                                                                        models. In CVPR, 2025.
+  Brussee, A., Holynski, A., Martin-Brualla, R., Barron,
+  J. T., and Henzler, P. Bolt3d: Generating 3d scenes in              Yu, S., Kwak, S., Jang, H., Jeong, J., Huang, J., Shin, J., and
+  seconds. In ICCV, 2025.                                               Xie, S. Representation alignment for generation: Training
+                                                                        diffusion transformers is easier than you think. 2025.
+Vasiljevic, I., Kolkin, N., Zhang, S., Luo, R., Wang, H., Dai,
+  F. Z., Daniele, A. F., Mostajabi, M., Basart, S., Walter,           Zama Ramirez, P., Tosi, F., Poggi, M., Salti, S., Di Stefano,
+  M. R., and Shakhnarovich, G. Diode: A dense indoor and                L., and Mattoccia, S. Open challenges in deep stereo:
+  outdoor depth dataset. arXiv preprint arXiv:1908.00463,               The booster dataset. In CVPR, 2022.
+  2019.
+                                                                      Zheng, B., Ma, N., Tong, S., and Xie, S. Diffusion trans-
+Wang, J., Chen, M., Karaev, N., Vedaldi, A., Rupprecht,                 formers with representation autoencoders. arXiv preprint
+ C., and Novotny, D. Vggt: Visual geometry grounded                     arXiv:2510.11690, 2025.
+ transformer. In CVPR, 2025a.
+                                                                      Zhou, Y. et al. Omniworld: A multi-domain and multi-
+Wang, Q., Zheng, S., Yan, Q., Deng, F., Zhao, K., and Chu,              modal dataset for 4d world modeling. arXiv preprint
+ X. Irs: A large synthetic indoor robotics stereo dataset for           arXiv:2509.12201, 2025.
+ disparity and surface normal estimation. arXiv preprint
+ arXiv:1912.09632, 2019.
+
+Wang, R., Xu, S., Dai, C., Xiang, J., Deng, Y., Tong, X., and
+ Yang, J. Moge: Unlocking accurate monocular geometry
+ estimation for open-domain images with optimal training
+ supervision. In CVPR, 2025b.
+
+Wang, R., Xu, S., Dong, Y., Deng, Y., Xiang, J., Lv, Z., Sun,
+ G., Tong, X., and Yang, J. Moge-2: Accurate monocu-
+ lar geometry with metric scale and sharp details. arXiv
+ preprint arXiv:2507.02546, 2025c.
+
+Wang, W., Zhu, D., Wang, X., Hu, Y., Qiu, Y., Wang, C., Hu,
+ Y., Kapoor, A., and Scherer, S. Tartanair: A dataset to
+ push the limits of visual slam. In IEEE/RSJ International
+ Conference on Intelligent Robots and Systems (IROS),
+ 2020.
+
+                                                                 12
+                             PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Appendix
+
+A. Experimental Details
+We train our PointDiT on synthetic datasets that provide dense, accurate ground-truth depth together with known camera
+intrinsics, and we evaluate zero-shot on unseen real-world benchmarks. From each image we back-project the depth map
+through the intrinsics into a per-pixel 3D point map, which is the prediction target of the model. Training proceeds in two
+stages: a 256 × 256 pre-training stage on a single large indoor dataset, followed by a 512 × 512 fine-tuning stage on a
+diverse multi-dataset mixture.
+
+A.1. Training Datasets
+Table 4 lists the training data of both stages.
+
+Stage 1 (Pre-Training, 256 × 256). We first pre-train on SceneNet-RGBD (McCormac et al., 2017), a single large-scale
+synthetic indoor dataset (≈ 5.36M samples). Its scale and clean indoor geometry let the model cheaply acquire a strong
+image-to-point prior at low resolution.
+
+Stage 2 (Fine-Tuning, 512 × 512). We then fine-tune at 512 × 512 on a mixture of 11 synthetic datasets (≈ 6.22M
+samples) spanning indoor, outdoor ground-level, and aerial/diverse domains, which adds the outdoor, large-scale, and
+high-detail geometry absent fromPStage 1. We combine these datasets through weighted sampling. Each dataset d is assigned
+a mixing weight wd (Table 4, d wd =1); every sample of dataset d receives the per-sample probability wd /Nd , where
+Nd is the number of samples in d. After global normalization, the probability that a drawn sample comes from dataset
+d is therefore exactly wd , independent of the corpus size Nd . This decouples the effective data mixture from the highly
+imbalanced raw corpus sizes: e.g. TartanGround accounts for 67.1% of all samples but is sampled only 15% of the time,
+while small high-quality sets such as Synscapes (25k samples) are upsampled to 9%.
+
+A.2. Evaluation Datasets
+We evaluate zero-shot on seven real-world depth benchmarks, none of which overlaps the (synthetic) training datasets of
+either stage; this measures synthetic-to-real generalization. We report the full-set sample counts in Table 5. They span
+indoor, outdoor, and mixed scenes, including three challenging boundary-focused sets with transparent/specular surfaces
+and sharp planar discontinuities (HAMMER, iBims-1, Booster), on which we additionally measure boundary sharpness.
+
+A.3. Training Details
+Data Augmentation. We apply two groups of augmentations: geometric operations, applied jointly to the image and the
+point map (with intrinsics updated accordingly), and photometric operations, applied to the image only.
+
+• Geometric (image and point map):
+  (a) Resize to the working resolution. In Stage 2 this is aspect-ratio-preserving so the image height is 512 (smaller images
+      are upscaled; larger images are downscaled with probability 0.5, otherwise cropped at native resolution); in Stage 1
+      the image height is set to 256.
+  (b) A square random crop to the working resolution (center crop at test time).
+  (c) A random horizontal flip (p=0.5), which also negates the point X-coordinate to keep the geometry consistent with
+      the flipped image.
+• Photometric (image only): color jitter (brightness/contrast/saturation 0.1, hue 0.05) applied to every sample, plus
+  appearance augmentations each applied independently with probability 0.2: Gaussian blur, autocontrast, histogram
+  equalization, random channel permutation, JPEG compression (q ∈ [40, 100]), and grayscale conversion.
+
+Optimization. Both stages use AdamW (β1 =0.9, β2 =0.95, weight decay 0) in bf16 mixed precision, the linear learning-
+rate scaling rule lr = blr · (global batch)/256, no gradient clipping or accumulation, and two exponential moving averages of
+the weights (decays 0.9999 and 0.9996); the 0.9999 EMA is used for all evaluations. Stage 1 (256 × 256) uses blr=5×10−5 ,
+a 5-epoch linear warmup followed by a constant learning rate, for 30 epochs. Stage 2 (512 × 512) is initialized from the
+
+                                                             13
+                                PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Table 4. Training datasets. All sources are synthetic and provide dense depth with known camera intrinsics. Weight is the Stage-2 dataset
+mixing (sampling) probability, applied independently of the corpus size. Stage 1 pre-trains on a single dataset.
+
+                     Dataset                                      Domain              #Samples Weight Website
+                     Stage 1 — pre-training (256 × 256)
+                     SceneNet-RGBD (McCormac et al., 2017) indoor                   5,359,500      1.00          link
+                     Stage 2 — fine-tuning (512 × 512) mixture
+                     Hypersim (Roberts et al., 2021)           indoor                   70,647     0.12          link
+                     Virtual KITTI 2 (Cabon et al., 2020)      driving                  42,520     0.14          link
+                     UrbanSyn (Gómez et al., 2025)            urban driving             7,539     0.05          link
+                     Synscapes (Wrenninge & Unger, 2018)       urban driving            25,000     0.09          link
+                     TartanAir (Wang et al., 2020)             diverse                 306,637     0.10          link
+                     OmniWorld-Game (Zhou et al., 2025)        diverse (game)        1,024,252     0.19          link
+                     EDEN (Lê et al., 2021)                   garden/outdoor          368,663     0.05          link
+                     IRS (Wang et al., 2019)                   indoor                   39,342     0.02          link
+                     Dynamic Replica (Karaev et al., 2023)     indoor                  150,900     0.03          link
+                     MVS-Synth (Huang et al., 2018)            urban                    12,000     0.06          link
+                     TartanGround (Wang et al., 2025d)         diverse               4,170,178     0.15          link
+                     Total (Stage 2)                                                6,217,678      1.00
+
+Table 5. Zero-shot evaluation datasets. All are real captured data and disjoint from training. “Boundary” marks the datasets on which
+the scale-invariant boundary F1 is additionally reported.
+
+                     Dataset                                 Domain                          #Samples      Boundary
+                     DIODE (Vasiljevic et al., 2019)         indoor + outdoor                      771
+                     KITTI (Geiger et al., 2012)             outdoor (driving)                     652
+                     NYUv2 (Silberman et al., 2012)          indoor                                654
+                     ETH3D (Schöps et al., 2017)            indoor + outdoor                      454
+                     HAMMER (Jung et al., 2022)              indoor (multi-modal)                  775           ✓
+                     iBims-1 (Koch et al., 2018)             indoor                                100           ✓
+                     Booster (Zama Ramirez et al., 2022)     indoor (transparent/specular)          38           ✓
+                     Total                                                                       3,444
+
+
+
+Stage-1 checkpoint (the fixed positional embeddings are bicubically interpolated from the 16 × 16 to the 32 × 32 grid)
+and uses blr=1×10−4 , a constant learning rate (no warmup). We report the per-variant epoch counts, GPU counts, and
+wall-clock times for both stages in Table 6.
+
+Table 6. Training cost. Number of epochs, H100 GPUs, and wall-clock time for the pre-training (256 × 256) and fine-tuning (512 × 512)
+stages of each variant.
+
+                                                           Pre-train (256 × 256)     Fine-tune (512 × 512)
+                             Model        Param (M)
+                                                         Epoch     GPUs     Time     Epoch    GPUs       Time
+                             PointDiT-B       223          30       16       12h       8        64        2.5h
+                             PointDiT-L       771          30       16       21h       5        64         7h
+                             PointDiT-H      1,807         30       64       22h       3       128        5.5h
+
+
+
+B. More Evaluation Results
+B.1. Per-Dataset Metrics
+Table 1 in the main paper reports metrics averaged over all seven evaluation datasets. For completeness, we provide the full
+per-dataset breakdown here: Table 7 for point map accuracy (Relp , δ1p ), Table 8 for depth accuracy (Reld , δ1d ), and Table 9 for
+boundary sharpness (BF1). We split the point map and depth metrics into separate tables for readability, and report BF1 only
+on the three datasets whose ground truth supports boundary evaluation (HAMMER, iBims-1, Booster); per-dataset sample
+counts are given in Table 5. PointDiT variants use 4 sampling steps, and the Avg column is the sample-weighted mean
+over all evaluation samples. Overall, PointDiT-H attains the best average depth accuracy, PointDiT achieves the sharpest
+
+                                                                   14
+                              PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Table 7. Per-dataset point map results. Relp ↓ and δ1p ↑ for each of the seven evaluation datasets at 512 × 512 resolution. PointDiT
+variants use 4 sampling steps. The Avg column is the sample-weighted mean over all 3,444 samples.
+
+                      DIODE          KITTI           NYUv2           ETH3D         HAMMER            iBims-1         Booster              Avg
+ Method
+                       p
+                   Rel ↓   δ1p ↑      p
+                                   Rel ↓   δ1p ↑      p
+                                                   Rel ↓   δ1p ↑      p
+                                                                   Rel ↓   δ1p ↑      p
+                                                                                   Rel ↓   δ1p ↑      p
+                                                                                                   Rel ↓   δ1p ↑      p
+                                                                                                                   Rel ↓   δ1p ↑      p
+                                                                                                                                   Rel ↓    δ1p ↑
+ GeometryCrafter    5.88   95.06   4.84    97.97   4.10    98.64   5.46    97.03   6.75    95.46   5.50    97.23   3.73    99.31   5.45     96.75
+ PPD                6.35   93.68   7.04    96.16   4.10    98.27   5.08    97.36   5.19    97.69   4.55    97.97   3.32    98.73   5.54     96.59
+ Depth Pro          6.36   94.11   7.33    95.97   4.08    98.48   5.90    96.85   5.27    98.03   4.54    98.11   2.87    99.81   5.71     96.71
+ UniDepthV2         6.02   94.35   4.03    98.26   3.29    98.52   4.02    98.79   4.57    97.53   4.07    98.34   3.78    98.90   4.45     97.35
+ DA3                5.47   93.68   6.37    96.72   3.67    98.20   3.44    98.20   4.60    96.95   4.08    97.81   2.92    99.03   4.77     96.63
+ MoGe               4.25   96.37   4.10    98.10   3.48    98.63   3.35    98.99   5.51    95.95   3.95    97.82   2.74    99.06   4.21     97.45
+ MoGe-2             4.57   95.28   5.87    97.86   3.13    98.83   3.73    98.71   5.19    97.19   4.00    98.27   2.59    99.90   4.53     97.46
+ PointDiT-B         6.62 93.83 5.65 97.08 5.05 97.54 6.67 96.97 5.67 98.52 4.87 97.69 3.81 99.58 5.85 96.80
+ PointDiT-L         5.69 95.05 5.18 97.55 4.35 98.08 4.95 97.96 4.26 99.18 4.25 98.14 3.15 99.88 4.85 97.55
+ PointDiT-H         5.12 95.97 5.09 97.86 3.95 98.40 4.56 98.30 3.52 99.54 3.91 98.57 3.01 99.87 4.40 98.02
+
+
+Table 8. Per-dataset depth map results. Reld ↓ and δ1d ↑ for each of the seven evaluation datasets at 512 × 512 resolution. PointDiT
+variants use 4 sampling steps. The Avg column is the sample-weighted mean over all 3,444 samples.
+
+                      DIODE          KITTI           NYUv2           ETH3D         HAMMER            iBims-1         Booster              Avg
+ Method
+                       d
+                   Rel ↓   δ1d ↑      d
+                                   Rel ↓   δ1d ↑      d
+                                                   Rel ↓   δ1d ↑      d
+                                                                   Rel ↓   δ1d ↑      d
+                                                                                   Rel ↓   δ1d ↑      d
+                                                                                                   Rel ↓   δ1d ↑      d
+                                                                                                                   Rel ↓   δ1d ↑      d
+                                                                                                                                   Rel ↓    δ1d ↑
+ GeometryCrafter    3.74   96.89   3.73    98.20   2.99    98.82   3.26    98.38   3.86    97.24   2.95    98.06   2.25    99.14   3.52     97.84
+ PPD                4.69   95.86   4.81    97.47   3.57    98.38   4.15    97.69   2.57    99.33   3.11    98.44   2.56    99.21   3.88     97.78
+ Depth Pro          4.57   95.85   4.36    97.18   3.37    98.65   4.34    97.45   3.00    98.81   2.87    98.60   1.88    99.92   3.84     97.63
+ UniDepthV2         3.62   97.11   3.25    98.44   2.60    98.84   2.65    99.00   2.23    99.42   2.46    98.49   2.27    98.98   2.86     98.52
+ DA3                3.73   96.26   3.96    97.40   2.96    98.46   2.74    98.45   2.74    98.63   2.54    98.35   2.22    99.42   3.22     97.81
+ MoGe               3.17   97.32   3.26    98.33   2.64    98.90   2.53    99.17   3.75    96.92   2.57    98.14   2.21    99.16   3.10     98.01
+ MoGe-2             2.99   97.61   3.16    98.36   2.58    98.95   2.71    99.03   3.13    98.52   2.26    98.83   1.77    99.75   2.90     98.45
+ PointDiT-B         3.98 96.71 4.33 97.38 3.50 98.02 3.22 98.00 3.22 98.99 2.91 98.65 2.55 99.70 3.64 97.86
+ PointDiT-L         3.37 97.26 4.00 97.67 3.02 98.47 2.77 98.40 2.42 99.31 2.46 98.80 1.98 99.87 3.09 98.25
+ PointDiT-H         2.90 97.79 3.88 97.94 2.75 98.61 2.46 98.69 1.91 99.53 2.33 98.73 1.79 99.87 2.75 98.54
+
+
+
+boundaries on average, and PointDiT leads on the challenging HAMMER set across point map, depth, and boundary metrics.
+A notable exception is the datasets containing outdoor scenes: across KITTI, DIODE, and ETH3D, PointDiT is inferior to
+the strongest regression baselines such as MoGe and UniDepthV2. We attribute this gap mainly to the limited coverage of
+outdoor scenes in our synthetic training mixture, and we expect that introducing more outdoor datasets for training would
+further narrow it.
+
+B.2. More Visualizations
+We show additional depth comparisons in Figure 7, and our PointDiT is significantly better in terms of reconstructing thin
+structures, transparent objects, and maintaining a more accurate relative scale across the global scene.
+We provide more results in our project page: https://haofeixu.github.io/pointdit
+
+
+
+
+                                                                     15
+                               PointDiT: Pixel-Space Diffusion for Monocular Geometry Estimation
+
+Table 9. Per-dataset boundary sharpness (BF1 ↑). BF1 is reported only on the three datasets whose ground truth supports boundary
+evaluation (HAMMER, iBims-1, Booster). PointDiT variants use 4 sampling steps. The Avg column is the sample-weighted mean over
+these 913 boundary-annotated samples.
+
+                                Method                 HAMMER            iBims-1      Booster        Avg
+                                GeometryCrafter            3.34           11.25        13.78         4.64
+                                PPD                        7.60           16.95        22.78         9.26
+                                Depth Pro                  7.87           15.01        25.91         9.41
+                                UniDepthV2                 6.22            9.54        14.91         6.94
+                                DA3                        5.33           11.64        12.77         6.33
+                                MoGe                       4.28           11.87        16.39         5.61
+                                MoGe-2                     5.97           14.36        18.28         7.40
+                                PointDiT-B                 7.82           14.29        22.95         9.16
+                                PointDiT-L                 9.13           14.94        26.58        10.50
+                                PointDiT-H                 9.03           14.85        28.66        10.49
+
+
+
+
+          Input                        GT                 GeometryCrafter                   MoGe-2                     PointDiT
+
+Figure 7. Depth comparisons. Our PointDiT is significantly better in terms of reconstructing thin structures (1st row), transparent objects
+(2nd rows), and maintaining a more accurate relative scale across the global scene (3rd and 4th rows). The corresponding point map
+comparisons are provided in the main paper (Figure 4).
+
+
+                                                                    16
+
