@@ -391,10 +391,10 @@ This means OPID can learn even from trajectories that are equally rewarding but 
 |-----------|------|------|----------|
 | ALFWorld Avg | 75.0 | **84.3** | +9.3 |
 | Search QA Avg | 36.4 | **45.0** | +8.6 |
-| WebShop Score | 63.3 | **74.2** | +10.9 |
-| WebShop Succ. | 49.0 | **68.0** | +19.0 |
+| WebShop Score | 79.8 | **85.0** | +5.2 |
+| WebShop Succ. | 63.3 | **74.2** | +10.9 |
 
-OPID provides consistent improvements across all three benchmarks, with the largest absolute gain on WebShop success rate (+19.0 percentage points).
+OPID provides consistent improvements across all three benchmarks, with the largest absolute gain on WebShop success rate (+10.9 percentage points).
 
 ### 6.2 Comparison with Skill-GRPO
 
@@ -404,10 +404,10 @@ A critical finding: OPID avoids the train-test mismatch that cripples Skill-GRPO
 |--------|-------------|-------|
 | GRPO | 75.0 | No skills, baseline |
 | Skill-GRPO (inference skills removed) | 60.2 | **Collapses** — train-test mismatch |
-| Skill-GRPO* (inference skills kept) | 73.4 | External skills at test time |
+| Skill-GRPO* (inference skills kept) | 80.5 | External skills at test time |
 | **OPID** | **84.3** | Skills distilled into weights |
 
-Skill-GRPO without inference skills is 14.1 points *worse* than plain GRPO, demonstrating that relying on external skills at training then removing them is actively harmful. OPID's distillation approach entirely avoids this by absorbing skill knowledge into model parameters.
+Skill-GRPO without inference skills is 14.8 points *worse* than plain GRPO, demonstrating that relying on external skills at training then removing them is actively harmful. OPID's distillation approach entirely avoids this by absorbing skill knowledge into model parameters.
 
 ### 6.3 Key ablation findings
 
@@ -430,6 +430,8 @@ Both skill levels contribute, but episode-level skills carry more weight on ALFW
 
 OPID at 60% of training data approximately matches GRPO at 100%. This demonstrates that dense token-level supervision from skill distillation extracts significantly more learning signal per rollout than sparse outcome rewards alone.
 
+> **Sourcing note (§6.4):** The 100% row (GRPO 75.0 / OPID 84.3) is from Table 1. The 60% (71.9) and 80% (78.9) OPID values are **Figure 4 bar-height readings** — they appear in no table, and the paper states only the qualitative claim that OPID "approaches full-data GRPO performance using about 60% of the data." Treat the 60%/80% absolutes as approximate.
+
 ### 6.5 Cross-Domain Generalization (ALFWorld Unseen)
 
 | Setting | GRPO | OPID | $\Delta$ |
@@ -439,6 +441,8 @@ OPID at 60% of training data approximately matches GRPO at 100%. This demonstrat
 | — Heat task | 60.0 | **78.5** | +18.5 |
 
 OPID's learned skills generalize to unseen task types, with particularly large gains on Look (+26.7) and Heat (+18.5). This suggests the distilled skills capture generalizable decision principles rather than task-specific memorization.
+
+> **Sourcing note (§6.5):** The entire ALFWorld-Unseen grid (Avg 70.9→78.6 and every per-task Look/Heat cell) comes from **Figure 5 bar-height readings** — the paper provides no numeric unseen-split table. The Avg (70.9→78.6, +7.7) and the "particularly large gains on Look and Heat" ordering are corroborated by the figure's Avg-column bars and the §4.2 prose; the per-task absolutes (52.0/78.7, 60.0/78.5) are approximate bar readings.
 
 ### 6.6 Training Dynamics
 
@@ -451,10 +455,10 @@ OPID's learned skills generalize to unseen task types, with particularly large g
 | Backbone | ALFWorld Avg (GRPO → OPID) |
 |----------|---------------------------|
 | Qwen2.5-3B-Instruct | 75.0 → **84.3** (+9.3) |
-| Qwen2.5-7B-Instruct | 78.2 → **87.1** (+8.9) |
-| Qwen3-1.7B-Instruct | 68.5 → **77.6** (+9.1) |
+| Qwen2.5-7B-Instruct | 81.2 → **90.0** (+8.8) |
+| Qwen3-1.7B-Instruct | 46.1 → **58.9** (+12.8) |
 
-Gains are consistent across all tested backbone sizes, from 1.7B to 7B parameters.
+Gains are consistent across all tested backbone sizes, from 1.7B to 7B parameters, and are most pronounced on the smallest Qwen3-1.7B backbone (+12.8).
 
 ## 7. Limitations
 
@@ -465,7 +469,7 @@ Gains are consistent across all tested backbone sizes, from 1.7B to 7B parameter
 - Skill extraction prompt is hand-designed and domain-specific.
 - Training overhead: analyzer LLM call + paired forward pass per trajectory step.
 - Theoretical analysis relies on common-support and bounded-range assumptions.
-- On Search-based QA with Qwen3-1.7B, OPID gains are marginal (35.9 vs 35.5 for GRPO).
+- On Search-based QA with Qwen3-1.7B, OPID is marginally below GRPO (40.4 vs 40.8 average accuracy).
 - $\lambda_{\mathrm{skill}} = 0.001$ is the only value reported — sensitivity analysis is absent.
 
 ## 8. Open Questions / Ideas
