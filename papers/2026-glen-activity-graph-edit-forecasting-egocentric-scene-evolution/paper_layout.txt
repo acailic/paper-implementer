@@ -1,0 +1,1078 @@
+                                         Learning to Evolve Scenes: Reasoning about Human
+                                                    Activities with Scene Graphs
+
+
+                                                           Francesca Pistilli                           Simone Alberto Peirone
+                                                          Politecnico di Torino                           Politecnico di Torino
+                                                              Torino, Italy                                   Torino, Italy
+                                                    francesca.pistilli@polito.it                      simone.peirone@polito.it
+arXiv:2607.02425v1 [cs.CV] 2 Jul 2026
+
+
+
+
+                                                                                  Giuseppe Averta
+                                                                                Politecnico di Torino
+                                                                                    Torino, Italy
+                                                                            giuseppe.averta@polito.it
+
+
+
+                                                                                        Abstract
+                                                    Understanding human behavior while interacting with the surrounding world is
+                                                    crucial for many applications of embodied AI. First-person videos are particularly
+                                                    informative for this problem, as they well capture how activities reshape the
+                                                    scene over time. However, existing approaches often rely on implicit visual or
+                                                    language-aligned representations, disregarding structured reasoning over the scene
+                                                    dynamic. We argue that explicit, compositional and editable representations of
+                                                    human-environment interactions can play a crucial role for rich grounded activity
+                                                    understanding. To this end, we introduce SG-Ego, a large scale annotation set
+                                                    extending Ego4D with spatio-temporal scene graphs, where relations triplets are
+                                                    consolidated over time into explicit time-evolving descriptions of the scene state.
+                                                    To reason over this representation, we propose GLEN, a graph-based model that
+                                                    operates over scene graph sequences to both align them with textual actions and
+                                                    model their temporal evolution. In addition, we formulate the activity-driven graph-
+                                                    edit forecasting (A-GEF) problem, a novel task that casts scene dynamics as a
+                                                    sequence of structured transformations conditioned on ongoing actions, enabling
+                                                    explicit reasoning about how scenes change over time. We validate our approach
+                                                    across multiple downstream tasks, spanning retrieval benchmarks as EgoMCQ and
+                                                    EgoCVR, as well as long-horizon reasoning benchmarks as EXPLORE-Bench
+                                                    and the newly introduced A-GEF. GLEN achieves strong results compared to raw
+                                                    video baselines and it excels in reasoning settings, typically addressed only with
+                                                    MLLMs, while enabling controllable and structured predictions of scene dynamics
+                                                    driven by human activities. We believe our results establish spatio-temporal scene
+                                                    graphs, together with models that reason over them, as strong compositional
+                                                    and interpretable representations for video understanding and potentially beyond.
+                                                    Project page with code at https://francescapistilli.github.io/GLEN.
+
+
+                                        1    Introduction
+                                        Despite rapid progress in video understanding, modeling how scenes evolve under human actions
+                                        remains a fundamental challenge. Reasoning over these transformations is crucial for embodied AI
+                                        systems that have to plan, forecast and act in shared dynamic environments [1, 2].
+                                        First-person videos [3] are particularly suited to support this kind of reasoning, thanks to their
+                                        interaction-centered focus on how actions reshape the scene status over time. Despite significant
+
+                                        Preprint.
+Figure 1: Reasoning over evolving scenes. Different activities induce structured changes in a scene
+over time. We formulate this process as activity-conditioned graph edit forecasting (A-GEF), where
+the temporal evolution of a scene is modeled as graph edits conditioned on an activity description.
+
+
+interest of the community on this topic [4–7], current approaches typically handle egocentric video
+understanding similarly to other computer vision tasks, relying on large-scale trainings to learn
+compact latent representations from raw pixels or dense visual features. While effective in many
+practical cases, such approaches entangle objects, interactions, and their temporal dynamics into a
+single embedding space, making it difficult to reason about how and why a scene changes over time.
+Approaches that include textual narrations like [5, 6] move from purely visual to visual and semantic
+features, but still rely on implicit representations. The core limitation of these works is not merely a
+lack of semantics, but rather the absence of an explicit, editable and compositional representation of
+the human-scene interaction. Without such structure, it remains challenging to attribute changes in
+the scene to specific actions or to reason about how the scene evolves under different activities.
+We argue that this can be addressed by structured representations in the form of sequences of scene
+graphs, where objects and the human are represented as nodes and their functional or spatial relation
+as edges. This recasts video understanding tasks from a passive feature extraction to an explicit
+activity-conditioned reasoning over scene structure, with temporal dynamics expressed as structured
+transformations of scene state rather than implicit shifts in latent embeddings. In other words,
+sequences of scene graphs provide an interpretable, compositional and editable representation that
+naturally supports reasoning about what changed, why, and how the scene evolves over time.
+While scene graphs have been studied in other contexts like generation from image or video [8–
+10] or future scene anticipation [11–13], prior works remain fundamentally passive and limited to
+existing benchmarks, disregarding the activity that generates the scene change. In this work we go
+beyond existing paradigms and introduce activity-driven graph edit forecasting, a novel approach for
+activity understanding that maps the dynamic evolution of a scene conditioned by human activities
+as edits on a scene graph, see Fig. 1. First, we introduce SG-Ego, a large-scale annotation set for
+Ego4D of spatio-temporal scene graphs, where relational triplets are automatically annotated and
+then consolidated over time to deliver time-controlled evolving scene descriptions. Then, we propose
+GLEN (Graph-Language Edit Network), a graph neural network trained for graph-language alignment
+and activity-conditioned graph edits predictions to model scene evolution. Finally, we introduce
+activity-driven graph-edit forecasting (A-GEF), a novel formulation that models scene dynamics
+as a sequence of structured transformations over scene graphs conditioned on the ongoing actions,
+enabling explicit and interpretable reasoning about how scenes evolve over time. We validate the
+quality and completeness of our scene graph annotations on EgoSchema [7], showing that scene
+graph sequences provide rich semantic information. Then, we demonstrate that such representations
+can be exploited with minimal loss of information compared to raw videos, achieving competitive or
+state-of-the-art performance on retrieval tasks such as EgoMCQ [5] and Ego-CVR [14], a challenging
+compositional video retrieval benchmark. Finally, GLEN achieves state-of-the-art results on reasoning
+tasks, including EXPLORE-Bench [15] and A-GEF, showing that explicit structured representations
+can effectively replace or complement black-box MLLMs.
+Our results highlight how structured representations improve both language grounding and temporal
+reasoning, while enabling a new class of tasks centered on predicting and manipulating scene
+dynamics. More broadly, our work advocates for a shift toward structured, explicit representations in
+egocentric video understanding - moving from describing what is observed to reasoning about how
+actions transform the scene state.
+
+
+                                                   2
+2   Related Works
+
+Video Scene Graph. Scene Graph Generation (SGG) aims to represent visual scenes as graphs
+where objects are the nodes and their relationships are the edges. Recent progress has been driven
+by transformer-based architectures, which enable end-to-end relational reasoning and have become
+a dominant paradigm in image-based SGG [16, 17]. Alongside architectural advances, substantial
+effort has addressed the long-tailed distribution of predicates through debiasing and knowledge-aware
+methods [18] and on scaling structured supervision. Synthetic Visual Genome [19] and its video
+extension [20] enable large-scale extraction of scene graphs from images and videos, improving data
+availability for relational learning. In parallel, large language models have been leveraged to improve
+weakly supervised SGG via better triplet extraction and alignment [21]. Extending SGG to videos
+introduces the challenge of modeling temporal dynamics. Action Genome [8] formalized video
+scene graph generation (VidSGG), followed by approaches using spatio-temporal transformers and
+relational reasoning for dynamic interactions [9, 10]. Recent work further improves robustness and
+expressivity through bias mitigation [22] and richer structures such as hierarchical and hypergraph
+representations [11, 23]. Beyond generation, scene graph anticipation methods predict future graphs
+from past observations, modeling temporal evolution directly in graph space [11, 12]. However, these
+approaches remain unconditioned, relying solely on past visual input and failing to model the human
+activity driving scene changes, limiting controllability over future outcomes. Recently, scene graphs
+have been adopted as structured representations for downstream video understanding tasks. For
+long-horizon reasoning tasks, graph-based representations enable more effective compositional and
+relational reasoning [24–27]. Recent approaches further explore graph-based memory and reasoning
+mechanisms for long-video understanding [11, 28, 29]. Despite their success, these methods primarily
+use scene graphs as auxiliary structures for reasoning or question answering, rather than as a unified
+representation of scene dynamics. In contrast, we treat scene graphs as a controllable and evolving
+state, introducing an activity-conditioned formulation where temporal changes are explicitly modeled
+through graph edit operations.
+Graph Edit Models. Graph Edit Distance (GED) [30] is a classical framework for measuring dissim-
+ilarity between graphs by computing the minimum-cost sequence of edit operations, as node/edge
+insertions, deletions, and substitutions, required to transform one graph into another. Since the exact
+computation of GED is NP-hard, a range of approximations have been proposed, including heuristics
+strategies [31, 32], bipartite matching [33, 34], and learning-based methods [35–37]. Recently, Graph
+Edit Networks (GENs) [37] have reformulated graph transformation as a learning problem, where
+neural networks are trained to predict sequences of edit operations between graph pairs. In partic-
+ular, GENs employ a linear output layer over node representations to produce local edit decisions,
+including node-level insertions, deletions, and attribute modifications. This formulation enables
+efficient inference of graph transformations through independent per-node predictions, and leverages
+learned representations to parameterize edit operations in a data-driven manner. However, existing
+GEN formulations primarily address unconditional graph-to-graph transformation, where edits are
+inferred solely from the source and target graphs. In contrast, our setting considers conditioned graph
+evolution, where graph transformations are explicitly influenced by high-level contextual information,
+requiring the model to adapt its edit decisions based on external conditions.
+
+
+3   SG-Ego
+
+Notation.      We define a spatio-temporal scene graph as a directed multi-edge graph
+Gi = (Vi , Ei , Xi , Yi ), where Vi is the set of object nodes and Ei ⊆ Vi × Vi is the set of
+directed edges representing pairwise relations. Each node v ∈ Vi corresponds to an object instance
+in the scene, to which it is associated a set of attributes Xi ∈ R|Vi |×d , including its visual features
+(extracted from the object crop), the corresponding bounding box, and a semantic label describing
+the category of the object. Each edge (u, v) ∈ Ei captures a spatial or functional relation from u to v
+and it is associated with a set of attributes Yi ∈ R|Ei |×r comprising the semantic label describing
+the relation. Each scene graph Gi covers a variable temporal window, summarizing all the relations
+within the window. In particular, we define Gt as the spatial scene graphs associated with frame t and
+Gt:t+T as the spatio-temporal scene graph associated with the temporal window from frame t to t+T .
+
+
+
+                                                   3
+Dataset Collection. We collect SG-Ego, a large scale annotation set of spatio-temporal scene graphs
+from videos of human activities, based on the Ego4D [3] dataset, consisting of 3.8M spatio-temporal
+scene graphs annotated through a training-free pipeline. We define a set of Nobj = 1480 node labels
+and Nrel = 387 relations labels. Each sample spans a temporal window [t, t + T ] and is associated
+with the initial spatial scene graph Gt , a spatio-temporal scene graph over the entire temporal window
+Gt:t+T and a textual narration actt . For Graph-Text Alignment, we define a training split consisting
+of 3.8M spatio-temporal scene graphs (SG-Ego Align). For A-GEF, we define a training set and a
+validation set of approximately 360k and 7.2k tuples (Gt , actt , Gt:t+T ). We name this split SG-Ego
+Edit. These samples are taken from a broad set of videos, following the same scenario distribution of
+the Ego4D dataset to ensure diversity.
+
+3.1   Annotation Pipeline
+
+SG-Ego implements a training-free VidSGG strategy divided into three stages. Our pipeline maps
+a sequence of T frames into a single temporally consistent spatio-temporal scene graphs Gt:t+T ,
+capturing all the spatial and functional relations in the video. We follow a bottom-up approach to
+extract a rich set of frame-level relations, ground them with a open vocabulary detection model and
+build a temporally consistent scene graph of the temporal window. Here, we provide a description of
+the annotation process, see Sec. A for further implementation details and qualitative visualizations.
+Stage 1: Frame-level relations extraction. Given a video V, we first extract frames at a constant
+sampling rate τ = 5 fps. Then, we prompt a MLLM (Qwen3.5 9B [38]) to describe the spatial and
+functional relations appearing in the frame, avoiding unnecessary details related to the appearance
+of the object or the environments. We instruct the model to directly produce (subject_x, relation,
+object_y) triplets, where the _x and _y track the specific instances of the entities. Then, we use
+rule-based filtering to remove malformed or duplicated triplets. For each frame, the captioning
+pipeline outputs a list of candidate frame-level triplets Ti .
+Stage 2: Frame-level relations grounding. We use GroundingDINO [39] to ground each candidate
+frame-level triplet Ti in the image. Specifically, we concatenate the subject, predicate, and object
+into a single sentence and feed it to the detector. We then extract the queries aligned with the textual
+spans corresponding to the subject and object, and use them to obtain candidate detections for each
+entity in the triplet. We use the tracking suffixes from the captions to merge multiple detections from
+the same object, and apply a set of heuristics to drop duplicates and filter invalid spatial relations
+(e.g., to the right, inside, etc...). The resulting objects and relations define the nodes and edges of the
+frame-level graph, respectively. From the valid detections, we extract the node attributes consisting
+of the bounding box and semantic label of the object. Objects and relations from the captions are
+mapped to a fixed set of Nobj = 1480 object and Nrel = 387 classes respectively. The output of the
+grounding stage at frame t is a frame-level spatial scene graph Gt = (Vt , Et , Xt , Yt ).
+Stage 3: Graph consolidation across frames. Each frame-level scene graph provides a partial
+view of the ongoing interactions in the video, due to occlusions or omitted triplets by the captioner.
+Given a sequence Gt , . . . , Gt+T , the consolidation process C merge them into a single spatio-
+temporal scene graph that includes all nodes and relations observed during the timespan [40].
+Objects correspondences are established via a semantic tracking pipeline based on SAM2 [41]
+and DINOv2 [42]. More specifically, starting from a pair of graphs Gt and Gt+1 , we extract object
+masks with SAM2 and propagate them from Gt to Gt+1 . We compute IoU between propagated and
+detected masks at each frame, and use Hungarian matching to associate tracked and detected objects
+with IoU > 0.5. To improve robustness, we additionally match objects based on DINOv2 feature
+similarity when tracking fails. The merged graph includes all matched and unmatched nodes and
+inherits relations from both graphs. This process is repeated sequentially over time to obtain the final
+consolidated graph Gt:t+T .
+
+4     Method
+We formulate the dynamic evolution of a scene as a novel setting called activity-conditioned graph
+edit forecasting (A-GEF), in which we ask a model to forecast how a spatial scene graph Gt will
+change based on the activity described in actt . To do this, we consider a conditional formulation in
+which future graph edits are predicted given both the current graph and the upcoming activity. Our
+approach Graph-Language Edit Network (GLEN), see Fig. 2, consists of three main components.
+
+
+                                                    4
+Figure 2: The GLEN architecture for Action-conditioned Graph Edit Forecasting (A-GEF).
+The model takes a spatial graph Gt and a conditioning action actt and predicts the necessary edit to
+evolve the scene graph into the consolidated Gt+T . For Graph-Text Alignment (GTA), we extract a
+graph embedding from Gt+T and align it with the text embedding of actt .
+The Graph Encoder FG : G 7→ Rd maps from the space of scene graphs Gt to d-dimensional
+embeddings, while the Text Encoder FT : T 7→ Rd maps actt from the text space T into the same
+embedding space. By leveraging a Graph-Text Alignment (GTA), the model can learn a versatile
+representation that summarizes the state of the scene and enable spatially grounded reasoning about
+the objects and relations in the scene. Finally, the Graph Edit Model E : (G, T ) 7→ G defines
+text-conditioned transformations over the scene graph Gt , allowing structured modifications based on
+the given activity description.
+We represent an action as a triplet (Gt , actt , Gt:t+T ), where Gt is the initial scene graph at times-
+tamp t, actt is a textual description of the activity starting at t, and Gt:t+T is the final scene graph
+after the activity concludes. Given such triplets, GLEN is trained to (i) align the embedding of Gt:t+T
+with the embedding of the action textual description actt via an alignment objective (GTA) and (ii)
+transform Gt into the final graph Gt:t+T through the Graph Edit Model E (A-GEF).
+
+4.1   Graph-Text Alignment
+
+We formulate the Graph-Text Alignment task as the problem of learning a joint embedding space
+in which a spatio-temporal scene graph is aligned with the textual description of the activities
+occurring within the corresponding temporal window. We train GLEN with Graph-Text Contrastive
+Alignment (GTCA) and Graph-Text Matching (GTM). Our goal is to learn a versatile representation
+that summarizes the scene graph in a single text-aligned embedding, enabling grounded reasoning
+about the spatial and functional relations in the scene.
+Embeddings extraction. We define a Graph Encoder FG : G 7→ Rd that maps from the space of
+scene graphs G into d-dimensional embeddings, and a Text Encoder FT : G 7→ Rd that maps the
+textual narrations into the same embedding space. For a scene-graph activity pair (G, act), we define
+their corresponding embeddings as hg and hact . FG is composed of L TripletGCN layers [43], where
+                                                    (l)
+each layer at depth l updates the node embeddings xj through message passing:
+                            (l+1)
+                           xj       = xj + ϕ2 ( mean ϕ1 (xi ||yi→j ||xj )),                         (1)
+                                               i∈Neigh(j)
+
+where ϕ1 and ϕ2 are MLPs and Neigh(j) is the set of neighbors of node j. A similar update rule
+applies to the edge embeddings yi . By jointly updating node and edge features, the Graph Encoder
+learns context-aware representations that capture the spatial and semantic structure of the current
+scene. We alternate message passing and cross attention layers to update the node embeddings X(l)
+with the text tokens Hact from the narrations:
+                                        h                              i
+                         X̃(l+1) = LN X(l+1) + αCA(X(l+1) , Hact ) ,                            (2)
+where LN is the layer norm operator and α controls the contribution of the CA. Finally, the
+encoder outputs a single graph embedding hg,i by average pooling all the node X(L) and edge Y(L)
+embeddings at the final layer, followed by a MLP projection. Depending on the task, we enable or
+disable the cross attention modules. For Graph-Text Alignment, we train only the Graph Encoder FG
+and Text Encoder FT to align the graph embedding of Gt:t+T to the textual embedding of actt .
+                                                                                 |B|
+Graph-Text Contrastive Alignment (GTCA). Given a batch B = {(G, act)i }i=1 , consisting of |B|
+scene graphs paired with their corresponding textual narrations, we push the model to map close in
+
+
+                                                   5
+the embedding space paired graph-text samples, while pushing unpaired samples further apart. We
+define the batches such that there are at least two samples from the same video to make the model
+more robust to subtle variations in the scene graphs extracted from the same video. Formally, we
+define the graph-to-text contrastive alignment loss Lg2t as:
+                                      1 X k∈Pi exp(hTg,i hact,k /τ )
+                                              P
+                            Lg2t =            P             T
+                                                                           ,                  (3)
+                                     |B|         k∈Ni exp(hg,i hact,k /τ )
+                                             i∈B
+
+where Pi is the set of positive samples for the anchor sample i, defined as the samples from the batch
+that share at least one verb and noun labels from the narration actt , and Ni is the set of negative
+samples from the same video as sample i. We define the symmetric text-to-graph contribution Lt2g in
+a similar way. For GTCA, we disable the Cross Attention layers, keeping the two encoders separate.
+Graph-Text Matching (GTM). To encourage the network to distinguish subtle differences in the
+scene graphs, we introduce an additional Graph-Text Matching objective [6, 44]. Specifically, we
+mine hard positive pairs and negative pairs from the batch based on the similarity of their graph and
+text embeddings, enable the CA layers and feed them to the encoders. The resulting embeddings are
+then passed to a MLP h to predict whether the pair is positive or negative.
+
+4.2   Activity-conditioned Graph Edit Forecasting (A-GEF)
+
+Problem formulation. Given a sequence of graphs {Gt , Gt+1 , . . . , Gt+T }, a Graph Edit Network
+takes as input a spatial graph Gt and predict a set of edits that transform it into Gt+1 [37]. A graph
+edit function δ : G → G is defined as a composition of elementary edit operations which includes node
+deletion (removing node i and its incident edges), node insertion (adding a new node with attribute
+x), node replacement (updating the attribute of node i to x), edge deletion (removing edge (i, j)), and
+edge insertion (adding edge (i, j)). These operations form the basis of the graph edit formulation. In
+our setting, we extend this formulation to action-conditioned graph edit forecasting. Given the initial
+scene graph Gt and a textual description of the activity actt starting at timestamp t, the goal is to
+predict the final scene graph Gt:t+T . Unlike standard graph edit networks [37], which model graph
+evolution purely as a function of the current graph, in our case the dynamic evolution of the graph is
+conditioned by the activity. This conditioning is crucial in our setting, as scene evolution is inherently
+driven by human actions and the same scene graph will likely evolve differently depending on the
+activity being performed. Differently from the standard formulation, we do not explicitly model node
+replacement operations. Instead, we restrict the edit space to node deletions and node insertions, and
+express changes in node attributes through a delete-and-insert mechanism.
+The Graph Edit Model. We design a Graph Edit Model E : (G, T ) 7→ G that predicts graph
+transformations explicitly conditioned on the future activity. We first encode the initial graph Gt
+using the Graph Encoder FG described in Sec. 4.1, obtaining node Znt and edge Zet embeddings.
+For the editing objective, the cross-attention layers between node embeddings and text tokens and
+the graph pooling are disabled; therefore, both node and edge representations correspond directly
+to the output of the L-layer TripletGCN module. We then augment the graph structure by adding a
+fixed number K of learnable node queries, which act as candidate slots for potential future objects.
+These queries are initialized as learnable embeddings and appended to the set of node features, taking
+inspiration from [17]. Next, we construct a fully connected graph over this augmented node set. Edges
+involving the newly introduced query nodes are initialized with noisy features, providing no prior
+structural bias and allowing the model to freely infer their connectivity and semantics. After this step,
+we obtain a noised graph G̃t = (Ṽt , Ẽt , Z̃nt , Z̃et ), with Ṽt = |Vt | + K nodes and |Ṽt | × |Ṽt | edges.
+We condition the augmented graph on the text embedding of the action hact = FT (actt ) through a
+Cross-Attention layer, allowing both node and edge features to be conditioned by the action:
+                Z̃n,cond
+                  t      = Z̃nt + CA(Z̃nt , hact ),        Z̃e,cond
+                                                             t      = Z̃et + CA(Z̃et , hact ).              (4)
+
+This allows the model to modulate the entire graph based on the conditioning action, effectively
+injecting activity-dependent signals into the relational structure. The conditioned graph is then
+processed by a second graph encoder, called Graph Edit Encoder FEdit , built as a stack of TripletGCN
+layers, which propagates the activity-aware information via edge-aware message passing. The graph
+encoder FEdit maps G̃t into a set of graph edits. Specifically, the node embeddings at the last layer
+of the model Znt are fed to a node update head, which outputs a object category score yi ∈ RNobj +1 .
+
+
+                                                       6
+This score assigns each node to one of Nobj categories or to a special no object class. Assigning a
+node from Gt to the no object class corresponds to a node deletion, while assigning a valid class to a
+query node corresponds to node insertion with a specific node label. Edge edits are processed trough
+two separate heads to predict the edge deletion score zidel ∈ R1 and its semantic labels zicls ∈ RNrel ,
+possibly more than one. This jointly captures edge deletion (by suppressing existing edges) and edge
+insertion (by activating edges involving query nodes with predicted relation labels).
+We train the network by directly supervising graph edit operations. Ground-truth correspondences are
+established between nodes in Gt and Gt:t+T using visual features and node labels with a one-to-one
+mapping, while the additional K query nodes are matched via Hungarian assignment based on label
+costs. Unmatched predictions are assigned to the no object class. Based on these matches, we
+supervise edge updates and deletions by comparing predicted edges with ground-truth edges between
+matched node pairs. Given directed multi-edge graphs, edge classification is modeled as a multi-label
+task over Nrel classes per node pair. Edge deletion is formulated as a binary task indicating whether
+at least one edge exists between two nodes. We use cross-entropy for node classification and binary
+cross-entropy for edge update and deletion.
+
+
+5      Experiments
+
+We validate SG-Ego and GLEN on several benchmark. On EgoSchema [7], we demonstrate that the
+proposed scene graph annotations provide a structured and complete representation of the scene that
+can support long range reasoning about human activities. On EgoMCQ [5] and EgoCVR [45], we
+show that the graph embeddings produced by GLEN are well aligned with the textual description of
+the corresponding ongoing human activities. Finally, on A-GEF and EXPLORE-Bench, we assess
+the capability of GLEN to predict the dynamic evolution of a scene given an activity.
+Implementation details. For the Graph-Text Alignment tasks (EgoMCQ and EgoCVR), we extract
+the visual and semantic embeddings of nodes and edges using the Perception-Encoder [46] backbone.
+For A-GEF and EXPLORE-Bench, we use DINOv2 [42] for the visual embeddings and MiniLM [47]
+for the semantic embeddings. We initialize the Text Encoder FT from the EgoVLP [5] text encoder
+and keep it frozen. We use three and two TripletGCN layers for FG , and FEdit , respectively. The
+embedding size is set to d = 512 for the FG and d = 256 for FEdit . For GTA, we mine n = 3
+negative samples for each anchor in the batch. For A-GEF, we set K = 128 node queries. Ablations
+are reported in Sec. B. The backbones used to initialize the node and edge embeddings are kept frozen
+and we train only the Graph Encoders and a small projection head on top of the Text Encoder. We
+train our models on a single A100 GPU for approx. 24 hours.
+
+5.1     Long-Range Reasoning and Summarization on EgoSchema
+
+The scene graphs produced by SG-Ego capture the relevant spatial and functional interactions in the
+scene and provide a compact, compositional and editable summary of the ongoing activities happening
+in the video. We validate the quality and completeness of our scene graphs on EgoSchema [7], a
+diagnostic benchmark used to evaluate long-horizon temporal, causal, and intent reasoning over
+first-person video sequences, by providing a Large Language Model (Qwen3.5-9B[38]) uniformly
+sampled scene graphs from the video. Specifically, we convert the graph triplets into textual form and
+prompt the model to answer questions based solely on the scene state described by these graphs. This
+configuration achieves close performance compared to the model with full access to the raw frames
+(66.0% v. 72.8%), showing that the scene graphs encode sufficient details about the scene to let the
+model understand extended, temporally complex video content, as shown in Table 1(left).
+
+
+Table 1: Long-Range Rseasoning on EgoSchema [7] and Graph-Text Alignment on EgoMCQ [5].
+On EgoSchema, we validate the quality and completeness of SG-Ego. On EgoMCQ, we show that
+the graph embeddings from GLEN are well-aligned with the caption of the ongoing activities.
+      Method                         EgoSchema (val) Acc.       Method                EgoMCQ Inter   EgoMCQ Intra
+      EgoThinker [48]                        71.8               EgoVLP [5]                90.6           57.2
+                                                                HierVL [49]               90.5           52.4
+      Qwen3.5-9B (Blind)                     38.2               EgoVLPv2 [6]              91.0           60.9
+      Qwen3.5-9B (Frames)                    72.8               HiERO (EgoVLP) [50]       91.6           59.6
+      Qwen3.5-9B (SG-Ego)                    66.0
+      Qwen3.5-9B (Frames + SG-Ego)           73.2               GLEN (Perc. Enc.)         91.2           56.2
+
+
+                                                            7
+Table 2: Composed Video Retrieval on EgoCVR [14], measured in terms of Recall@k. Candidate
+clips are either from the same (local) or different videos (global) as the query.
+                                  Method                   Global                 Local
+                                                    R@1    R@5      R@10   R@1     R@2    R@3
+                       Random                       0.01   0.05      0.1   25.3    38.2   50.7
+                       CLIP                          7.4   33.2     55.3   26.1    43.4   57.7
+                       BLIPCoV R [51]†               5.4   15.2     24.3   33.1    49.5   62.9
+                       BLIPCoV R−ECDE [45]†          6.0   14.8     24.3   33.4    49.3   63.0
+                       CIReVL [52]                   2.0    6.8     10.2   21.6    35.1   46.0
+                       TFR-CVR [14]                 14.1   39.5     54.4   44.2    61.0   73.2
+                       Thawakar et.al [53]†         14.6   41.3     54.9   44.8    61.7   74.0
+                       GLEN                         15.3   40.3     56.9   47.7    64.8   76.3
+                       †
+                           Finetuned on WebVid-CoVR or Dense-WebVid-CoV for CVR.
+
+5.2   Graph-Text Alignment on EgoMCQ
+
+EgoMCQ [5] consists of 39k multiple-choice text-to-video questions where, given a textual narration,
+the model has to select the correct video clip between five candidates. We report Inter-Video accuracy,
+where clips are from different videos, and Intra-Video accuracy, where they are from the same video
+in in Table 1(right). We achieve performance comparable to video-language models end-to-end
+fine-tuned for multimodal contrastive alignment, despite relying on a significantly more compact and
+structured representation of the video input.
+
+5.3   Composed Video Retrieval on EgoCVR
+
+In Composed Video Retrieval (CVR), the model is tasked to retrieve a video that matches a reference
+clip after applying a textual modification, i.e., given a source video and a query describing a change
+in its content, the model must identify the correct video among a set of candidates that matches the
+modified scene. We approach this task by directly leveraging the graph–text alignment branch of
+GLEN. Unlike EgoMCQ, which is focused on action-level dynamics, CVR requires more fine-grained
+reasoning about the compositional structure of the scene and how the instruction query changes it.
+Notably, our approach is entirely training-free as we do not train or fine-tune for this downstream task.
+We validate GLEN on EgoCVR [14], a CVR benchmark with 2295 samples, each consisting of
+a query clip, an instruction representing the intended modification and a set of candidate clips to
+choose from. We follow the original EgoCVR formulation, extracting a text embedding from the
+query clip caption augmented with the modification instructions. Then, we seek for the best match
+among the available candidates through cosine similarity with their graph embeddings. To preserve
+visual consistency between the query and candidate clips, which can otherwise be overshadowed
+by semantic similarity, we follow TFR-CVR [14] and introduce a preliminary visual filtering step
+that selects the top-nc candidates based on similarity to the reference clip. We chose to implement it
+with CLIP features, ensuring generality without introducing task-specific bias. Results in Table 2
+show that GLEN achieves state-of-the-art results, outperforming even methods specifically trained
+for CVR. We argue that the scene graph based structure of GLEN allows the model to better reason
+about the spatial and functional relations in the input clips, which is crucial for reasoning about the
+fine-grained modifications induced by the query.
+
+5.4   Scene Evolution on A-GEF benchmark
+
+We evaluate the scene evolution capabilities of GLEN on A-GEF built on SG-Ego, see Sec. 4.2.
+Following standard scene graph evaluation protocols, we evaluate the quality of the predicted graph
+Ĝt:t+T using triplet Recall@K over (subject, relation, object) tuples. We introduce an entropy-
+based filtering strategy to handle uncertainty in node generation, where we remove nodes for which
+predicted class entropy exceeds a threshold of 0.5. This reduces noise from ambiguous object
+assignments and provides a more reliable evaluation on confident predictions. We compare GLEN
+with two baselines: a static approach that replicates Gt as the Ĝt:t+T prediction, and a baseline based
+on Qwen 3.5[38]. For the latter, we provide the model with the list of triplets from the start graph in a
+textual format, along with the list of possible objects and relations, and ask the model to predict the
+triplets of the target scene. We observe that the LLM predicts few triplets, which leaves the recall
+unchanged at different K values. Our model consistently outperforms both baselines, as shown in
+Table 3, demonstrating the effectiveness of explicitly modeling activity-conditioned graph edits for
+
+
+                                                           8
+    Table 3: A-GEF on SG-Ego. The static approach replicates Gt as the final Ĝt:t+T prediction.
+                                                                Triplet Recall
+                                      Method
+                                                        R@20       R@50      R@100
+                                      Qwen3.5-9B [38]   9.14        9.14     9.14
+                                      Gt (static)       23.17      23.17    23.17
+                                      GLEN              35.06      43.92    48.49
+
+
+         Table 4: Long horizon reasoning on EXPLORE-Bench [15]. Full table in Sec B.3
+                                           Short           Medium              Long             Full
+             Methods
+                                        Sobj   Srel     Sobj    Srel       Sobj    Srel     Sobj    Srel
+
+             GPT-5.2-Chat               59.91    2.70   59.88      2.65    58.06     2.61   59.69   2.67
+             Gemini-3-Pro               61.29    2.77   60.99      2.74    59.17     2.70   60.94   2.75
+             LLaVA-OneVision-1.5-8B     53.25    2.51   51.21      2.44    47.62     2.41   51.87   2.47
+             Qwen3-VL-8B-Instruct       61.34    2.84   60.78      2.81    56.83     2.71   60.63   2.82
+             Qwen3-VL-8B-Thinking       63.77    2.85   62.61      2.78    58.02     2.63   62.70   2.80
+             GLEN                       66.12    2.67   66.71      2.73    59.37     2.67   65.59   2.69
+
+capturing scene evolution. Notably, the gap with the static baseline highlights that a large portion of
+scene dynamics cannot be explained by persistence alone, but requires modeling how objects and
+relations change under actions. At the same time, the improvement over the Qwen-based baseline
+suggests that operating in a structured graph space provides a stronger inductive bias than purely
+language-driven predictions. Overall, these results validate our formulation of scene evolution as a
+sequence of activity-conditioned graph transformations, enabling more accurate and interpretable
+predictions of future scene structure.
+
+5.5    Long Horizon Reasoning on EXPLORE-Bench
+
+We evaluate the generalization capabilities of our activity-conditioned graph edit forecasting frame-
+work on EXPLORE-Bench [15], a benchmark designed to assess long-horizon reasoning over
+sequences of actions. The task requires predicting the final scene resulting from the sequential
+application of atomic actions to an initial state. We cast this problem within our framework by first
+extracting a scene graph from the initial scene (Sec. 3.1), and conditioning GLEN on the sequence
+of actions to predict the resulting scene graph, which serves as a structured representation of the
+final state. Notably, we do not train our model on this benchmark. Instead, we directly apply the
+model trained on A-GEF, demonstrating its ability to transfer to long-horizon reasoning without any
+task-specific supervision. This is particularly significant because such long-horizon compositional
+reasoning tasks are typically addressed using MLLMs only. In contrast, we show that a structured,
+graph-based formulation alone is sufficient to model long multi-step scene evolution under actions.
+We follow the evaluation protocol of [15], measuring both object and relation level accuracy. For
+object evaluation, Sentence-BERT embeddings are used to compute a similarity matrix between
+predicted and ground-truth objects, yielding a soft coverage score Sobj . For relations, a standardized
+prompting strategy is used to guide a large language model in scoring predicted relations on a 0–5
+scale against ground-truth annotations, resulting in the Srel metric. As shown in Table. 4, our
+method achieves state-of-the-art performance on Sobj and competitive results on Srel compared
+to MLLMs baselines. These results highlight the strong generalization ability of our structured,
+activity-conditioned formulation for modeling long-horizon scene evolution, and demonstrate that
+graph-based reasoning provides a viable alternative to purely language-based approaches for compo-
+sitional temporal understanding.
+
+6     Future directions
+Our formulation models evolving scenes as editable graphs, enabling explicit reasoning over how
+actions transform the state of the environment. While this is valuable for human activity understanding,
+a particularly promising direction lies in embodied-AI and especially robotics. By extending GLEN
+with spatial prediction, it naturally becomes a structured scene transition model particularly suited to
+let a robotic agent reason not only about what changes, but also about where such changes occur and
+why. This provides a direct bridge between perception and action, supporting grounded planning and
+control through explicit predictions of future scene states, and may also serve as rich intermediate
+representation for visual policy learning trained from graph-based expert demonstrations.
+
+
+                                                          9
+7   Conclusion
+We introduce a new paradigm for egocentric video understanding by modeling scenes as structured
+graphs and their evolution as activity-conditioned graph edits. This enables explicit reasoning
+over how actions transform the environment, unifying representation learning, language alignment,
+and temporal prediction within a single framework. Our results show that operating in structured
+space improves language grounding and temporal reasoning, while providing interpretability and
+controllability. More broadly, this work highlights editable, structured representations as a promising
+foundation bridging perception and action.
+
+Acknowledgments
+This study was carried out within the FAIR - Future Artificial Intelligence Research and received
+funding from the European Union Next-GenerationEU (PIANO NAZIONALE DI RIPRESA E
+RESILIENZA (PNRR) – MISSIONE 4 COMPONENTE 2, INVESTIMENTO 1.3 – D.D. 1555
+11/10/2022, PE00000013). This manuscript reflects only the authors’ views and opinions, neither
+the European Union nor the European Commission can be considered responsible for them. We
+acknowledge the CINECA award under the ISCRA initiative, for the availability of high performance
+computing resources and support.
+
+References
+ [1] Abrar Anwar, John Welsh, Joydeep Biswas, Soha Pouya, and Yan Chang. Remembr: Building and
+     reasoning over long-horizon spatio-temporal memory for robot navigation. In ICRA, 2025.
+
+ [2] Yue Fan, Xiaojian Ma, Rongpeng Su, Jun Guo, Rujie Wu, Xi Chen, and Qing Li. Embodied videoagent:
+     Persistent memory from egocentric videos and embodied sensors enables dynamic scene understanding. In
+     ICCV, 2025.
+
+ [3] Kristen Grauman, Andrew Westbury, Eugene Byrne, Zachary Chavis, Antonino Furnari, Rohit Girdhar,
+     Jackson Hamburger, Hao Jiang, Miao Liu, Xingyu Liu, et al. Ego4d: Around the world in 3,000 hours of
+     egocentric video. In CVPR, 2022.
+
+ [4] Baoxiong Jia, Ting Lei, Song-Chun Zhu, and Siyuan Huang. Egotaskqa: Understanding human tasks in
+     egocentric videos. In NeurIPS, 2022.
+
+ [5] Kevin Qinghong Lin, Jinpeng Wang, Mattia Soldan, Michael Wray, Rui Yan, Eric Z XU, Difei Gao,
+     Rong-Cheng Tu, Wenzhe Zhao, Weijie Kong, et al. Egocentric video-language pretraining. In NIPS, 2022.
+
+ [6] Shraman Pramanick, Yale Song, Sayan Nag, Kevin Qinghong Lin, Hardik Shah, Mike Zheng Shou, Rama
+     Chellappa, and Pengchuan Zhang. Egovlpv2: Egocentric video-language pre-training with fusion in the
+     backbone. In ICCV, 2023.
+
+ [7] Karttikeya Mangalam, Raiymbek Akshulakov, and Jitendra Malik. Egoschema: A diagnostic benchmark
+     for very long-form video language understanding. In NeurIPS, 2023.
+
+ [8] Jingwei Ji, Ranjay Krishna, Li Fei-Fei, and Juan Carlos Niebles. Action genome: Actions as compositions
+     of spatio-temporal scene graphs. In CVPR, 2020.
+
+ [9] Yuren Cong, Wentong Liao, Hanno Ackermann, Bodo Rosenhahn, and Michael Ying Yang. Spatial-
+     temporal transformer for dynamic scene graph generation. In ICCV, 2021.
+
+[10] Jingkang Yang, Wenxuan Peng, Xiangtai Li, Zujin Guo, Liangyu Chen, Bo Li, Zheng Ma, Kaiyang Zhou,
+     Wayne Zhang, Chen Change Loy, et al. Panoptic video scene graph generation. In CVPR, 2023.
+
+[11] Trong-Thuan Nguyen, Pha Nguyen, Jackson Cothren, Alper Yilmaz, and Khoa Luu. Hyperglm: Hypergraph
+     for video scene graph generation and anticipation. In CVPR, 2025.
+
+[12] Rohith Peddi, Saksham Singh, Saurabh, Parag Singla, and Vibhav Gogate. Towards scene graph anticipation.
+     In ECCV, 2024.
+
+[13] Antonio Alliegro, Francesca Pistilli, Tatiana Tommasi, and Giuseppe Averta. Forescene: Forecasting
+     human activity via latent scene graphs diffusion. arXiv preprint arXiv:2503.06182, 2025.
+
+
+                                                    10
+[14] Thomas Hummel, Shyamgopal Karthik, Mariana-Iuliana Georgescu, and Zeynep Akata. Egocvr: An
+     egocentric benchmark for fine-grained composed video retrieval. In ECCV, 2024.
+
+[15] Chengjun Yu, Xuhan Zhu, Chaoqun Du, Pengfei Yu, Wei Zhai, Yang Cao, and Zheng-Jun Zha. Explore-
+     bench: Egocentric scene prediction with long-horizon reasoning. arXiv preprint arXiv:2603.09731,
+     2026.
+
+[16] Rongjie Li, Songyang Zhang, and Xuming He. Sgtr: End-to-end scene graph generation with transformer.
+     In CVPR, 2022.
+
+[17] Jinbae Im, JeongYeon Nam, Nokyung Park, Hyungmin Lee, and Seunghyun Park. Egtr: Extracting graph
+     from transformer for scene graph generation. In CVPR, 2024.
+
+[18] Zhanwen Chen, Saed Rezayi, and Sheng Li. More knowledge, less bias: Unbiasing scene graph generation
+     with explicit ontological adjustment. In WACV, 2023.
+
+[19] Jae Sung Park, Zixian Ma, Linjie Li, Chenhao Zheng, Cheng-Yu Hsieh, Ximing Lu, Khyathi Chandu,
+     Quan Kong, Norimasa Kobori, Ali Farhadi, et al. Synthetic visual genome. In CVPR, 2025.
+
+[20] Ziqi Gao, Jieyu Zhang, Wisdom Oluchi Ikezogwo, Jae Sung Park, Tario G You, Daniel Ogbu, Chenhao
+     Zheng, Weikai Huang, Yinuo Yang, Winson Han, et al. Synthetic visual genome 2: Extracting large-scale
+     spatio-temporal scene graphs from videos. arXiv preprint arXiv:2602.23543, 2026.
+
+[21] Kibum Kim, Kanghoon Yoon, Jaehyeong Jeon, Yeonjun In, Jinyoung Moon, Donghyun Kim, and Chany-
+     oung Park. Llm4sgg: Large language models for weakly supervised scene graph generation. In CVPR,
+     2024.
+
+[22] Sayak Nag, Kyle Min, Subarna Tripathi, and Amit K Roy-Chowdhury. Unbiased scene graph generation
+     in videos. In CVPR, 2023.
+
+[23] Trong-Thuan Nguyen, Pha Nguyen, and Khoa Luu. Hig: Hierarchical interlacement graph approach to
+     scene graph generation in video understanding. In CVPR, 2024.
+
+[24] Jianguo Mao, Wenbin Jiang, Xiangdong Wang, Zhifan Feng, Yajuan Lyu, Hong Liu, and Yong Zhu.
+     Dynamic multistep reasoning based on video scene graph for video question answering. In HLT-NAACL,
+     2022.
+
+[25] Ivan Rodin, Antonino Furnari, Kyle Min, Subarna Tripathi, and Giovanni Maria Farinella. Action scene
+     graphs for long-form understanding of egocentric videos. In CVPR, 2024.
+
+[26] Haiyi Qiu, Minghe Gao, Long Qian, Kaihang Pan, Qifan Yu, Juncheng Li, Wenjie Wang, Siliang Tang,
+     Yueting Zhuang, and Tat-Seng Chua. Step: Enhancing video-llms’ compositional reasoning by spatio-
+     temporal graph-guided self-training. In CVPR, 2025.
+
+[27] Linlin Zong, Xinyu Zhai, Xinyue Liu, Wenxin Liang, Xianchao Zhang, and Bo Xu. Structuring video
+     semantics with temporal triplets for zero-shot video question answering. In CIKM, 2025.
+
+[28] Sergey Linok, Vadim Semenov, Anastasia Trunova, Oleg Bulichev, and Dmitry Yudin. Dygenc: Encoding
+     a sequence of textual scene graphs to reason and answer questions in dynamic scenes. Technologies, 2026.
+
+[29] Tatiana Zemskova, Solomon Andryushenko, Ilya Obrubov, Viktoriia Khoruzhaia, Ekaterina Eroshenko,
+     Ekaterina Derevyanka, and Dmitry Yudin. Focusgraph: Graph-structured frame selection for embodied
+     long video question answering. arXiv preprint arXiv:2603.04349, 2026.
+
+[30] Alberto Sanfeliu and King-Sun Fu. A distance measure between attributed relational graphs for pattern
+     recognition. IEEE Transactions on Systems, Man, and Cybernetics, 1983.
+
+[31] Michel Neuhaus, Kaspar Riesen, and Horst Bunke. Fast suboptimal algorithms for the computation of
+     graph edit distance. In Joint IAPR International Workshops on Statistical Techniques in Pattern Recognition
+     (SPR) and Structural and Syntactic Pattern Recognition (SSPR), 2006.
+
+[32] Kaspar Riesen, Stefan Fankhauser, and Horst Bunke. Speeding up graph edit distance computation with a
+     bipartite heuristic. In MLG, 2007.
+
+[33] Kaspar Riesen and Horst Bunke. Approximate graph edit distance computation by means of bipartite graph
+     matching. Image and Vision computing, 2009.
+
+[34] Francesc Serratosa. Fast computation of bipartite graph matching. Pattern Recognition Letters, 2014.
+
+
+                                                      11
+[35] Yunsheng Bai, Hao Ding, Song Bian, Ting Chen, Yizhou Sun, and Wei Wang. Simgnn: A neural network
+     approach to fast graph similarity computation. In Proceedings of the twelfth ACM international conference
+     on web search and data mining, 2019.
+
+[36] Yujia Li, Chenjie Gu, Thomas Dullien, Oriol Vinyals, and Pushmeet Kohli. Graph matching networks for
+     learning the similarity of graph structured objects. In ICML, 2019.
+
+[37] Benjamin Paassen, Daniele Grattarola, Daniele Zambon, Cesare Alippi, and Barbara Hammer. Graph edit
+     networks. In ICLR, 2021.
+[38] Qwen3.5: Towards native multimodal agents, 2026. URL https://qwen.ai/blog?id=qwen3.5.
+
+[39] Shilong Liu, Zhaoyang Zeng, Tianhe Ren, Feng Li, Hao Zhang, Jie Yang, Qing Jiang, Chunyuan Li,
+     Jianwei Yang, Hang Su, et al. Grounding dino: Marrying dino with grounded pre-training for open-set
+     object detection. In ECCV, 2024.
+
+[40] Sanghyeok Chu, Seonguk Seo, and Bohyung Han. Fine-grained captioning of long videos through scene
+     graph consolidation. arXiv preprint arXiv:2502.16427, 2025.
+
+[41] Nikhila Ravi, Valentin Gabeur, Yuan-Ting Hu, Ronghang Hu, Chaitanya Ryali, Tengyu Ma, Haitham Khedr,
+     Roman Rädle, Chloe Rolland, Laura Gustafson, Eric Mintun, Junting Pan, Kalyan Vasudev Alwala, Nicolas
+     Carion, Chao-Yuan Wu, Ross Girshick, Piotr Dollar, and Christoph Feichtenhofer. SAM 2: Segment
+     anything in images and videos. In ICLR, 2025.
+[42] Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy V. Vo, Marc Szafraniec, Vasil Khalidov,
+     Pierre Fernandez, Daniel HAZIZA, Francisco Massa, Alaaeldin El-Nouby, Mido Assran, Nicolas Ballas,
+     Wojciech Galuba, Russell Howes, Po-Yao Huang, Shang-Wen Li, Ishan Misra, Michael Rabbat, Vasu
+     Sharma, Gabriel Synnaeve, Hu Xu, Herve Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr
+     Bojanowski. DINOv2: Learning robust visual features without supervision. Transactions on Machine
+     Learning Research, 2024.
+[43] Johanna Wald, Helisa Dhamo, Nassir Navab, and Federico Tombari. Learning 3D Semantic Scene Graphs
+     from 3D Indoor Reconstructions. In CVPR, 2020.
+
+[44] Junnan Li, Dongxu Li, Silvio Savarese, and Steven Hoi. Blip-2: Bootstrapping language-image pre-training
+     with frozen image encoders and large language models. In ICML, 2023.
+
+[45] Omkar Thawakar, Muzammal Naseer, Rao Muhammad Anwer, Salman Khan, Michael Felsberg, Mubarak
+     Shah, and Fahad Shahbaz Khan. Composed video retrieval via enriched context and discriminative
+     embeddings. In CVPR, 2024.
+
+[46] Daniel Bolya, Po-Yao Huang, Peize Sun, Jang Hyun Cho, Andrea Madotto, Chen Wei, Tengyu Ma, Jiale
+     Zhi, Jathushan Rajasegaran, Hanoona Abdul Rasheed, Junke Wang, Marco Monteiro, Hu Xu, Shiyu Dong,
+     Nikhila Ravi, Shang-Wen Li, Piotr Dollar, and Christoph Feichtenhofer. Perception encoder: The best
+     visual embeddings are not at the output of the network. In NIPS, 2025.
+
+[47] Wenhui Wang, Hangbo Bao, Shaohan Huang, Li Dong, and Furu Wei. Minilmv2: Multi-head self-
+     attention relation distillation for compressing pretrained transformers. In Findings of the Association for
+     Computational Linguistics: ACL-IJCNLP 2021, 2021.
+
+[48] Baoqi Pei, Yifei Huang, Jilan Xu, Yuping He, Guo Chen, Fei Wu, Yu Qiao, and Jiangmiao Pang. Egothinker:
+     Unveiling egocentric reasoning with spatio-temporal cot. arXiv preprint arXiv:2510.23569, 2025.
+
+[49] Kumar Ashutosh, Rohit Girdhar, Lorenzo Torresani, and Kristen Grauman. Hiervl: Learning hierarchical
+     video-language embeddings. In CVPR, 2023.
+
+[50] Simone Alberto Peirone, Francesca Pistilli, and Giuseppe Averta. Hiero: understanding the hierarchy of
+     human behavior enhances reasoning on egocentric videos. In ICCV, 2025.
+
+[51] Lucas Ventura, Antoine Yang, Cordelia Schmid, and Gül Varol. CoVR: Learning composed video retrieval
+     from web video captions. In AAAI, 2024.
+[52] Shyamgopal Karthik, Karsten Roth, Massimiliano Mancini, and Zeynep Akata. Vision-by-language for
+     training-free compositional image retrieval. In ICLR, 2024.
+
+[53] Omkar Thawakar, Dmitry Demidov, Ritesh Thawkar, Rao Muhammad Anwer, Mubarak Shah, Fahad Shah-
+     baz Khan, and Salman Khan. Beyond simple edits: Composed video retrieval with dense modifications. In
+     ICCV, 2025.
+
+
+
+                                                      12
+Appendix
+
+
+A    The SG-Ego dataset
+
+SG-Ego Examples. We show some examples from our dataset in Figure 3, Figure 4 and Figure 5,
+reporting the spatial scene graph at the start of the action (Gt ), the textual narration describing
+the human action and the final consolidated spatio-temporal scene graph over the entire temporal
+window Gt:t+T .
+SG-Ego-Align. The Align dataset approx. 3.8M spatio-temporal graphs from 7297 unique videos.
+Each video is paired with its corresponding textual narration from Ego4D. We leverage the EgoClip [5]
+annotations to define a temporal window around each annotated action. These graphs have 10.97 ±
+6.58 nodes and 16.06 ± 12.24 edges on average.
+SG-Ego-Edit. The Edit dataset consists of 360k training and 7.2k validation samples. Samples are
+taken from 6537 and 181 unique videos for the train and validation splits, respectively. In the train
+split, the start graphs have 5.10 ± 3.36 nodes and 4.05 ± 3.24 edges on average. The spatio-temporal
+graphs consolidated over the entire window have 11.71 ± 6.62 nodes and 17.34 ± 12.34 edges on
+average. In the validation split, the start graphs have 5.10 ± 3.36 nodes and 4.05 ± 3.24 edges on
+average. The spatio-temporal graphs consolidated over the entire window have 12.32 ± 7.18 nodes
+and 20.35 ± 15.45 edges on average.
+Object and relation vocabularies. We define a closed set vocabulary of node and edge labels.
+Specifically, we mine node labels from the Ego4D nouns taxonomy and remove synonyms by
+clustering the corresponding text embeddings. Similarly, relations are taken from the Ego4D verbs
+taxonomy and from the relations labels of PVSG [10]. Following this process, we obtain a set of
+Nobj = 1480 objects and Nrel = 387 relations. We report node and edges distributions in Figure 6.
+Note that we label the node relative to the camera wearer, i.e., the human recording the video and
+performing the main actions, as the "main actor", in order to differentiate it with other possible people
+in the scene, labeled as "person".
+
+
+
+
+Figure 3:        Qualitative examples from the SG-Ego dataset.                      Video UID:
+a1b43a0c-cfaa-44df-adcc-531697ce1f8c, from second 70.4 to 71.6. Notice that in
+Gt+T , multiple crochet hook nodes appear because the graph tracks the main actor while knitting,
+and the crochet hook bounding box changes significantly over time as the action progresses.
+
+
+                                                  13
+Figure 4:       Qualitative examples from the SG-Ego dataset.                         Video UID:
+727ffce8-20ec-4111-af26-698eb306e8c7, from second 74.6 to 75. Interestingly, by ag-
+gregating information across the temporal action window, Gt:t+T captures a richer representation of
+the scene than the frame-level graph Gt . For example, the two knife nodes correspond to distinct
+knives both present in the environment but not captured in a single frame-level observation.
+
+
+
+
+Figure 5:       Qualitative examples from the SG-Ego dataset.                          Video UID:
+31d6fe77-da70-42da-8f47-66bb79b9285b, from second 89.8 to 90.8. Notice that the
+temporal aggregation in Gt:t+T enriches the scene representation by incorporating objects and
+relations observed at different moments of the action sequence. While the initial graph Gt only
+captures a limited subset of the environment, the consolidated spatio-temporal graph reveals
+additional objects (e.g., bowls, garlic and plant) together with evolving interactions involving the
+main actor.
+
+
+                                                14
+                                          Most common node labels
+
+         200k
+
+            0
+
+
+
+
+                clotd
+             per tor
+
+
+
+
+          con card
+                tab n
+                     le
+                  cup
+               bot wl
+
+
+
+
+             t br k
+             gro ush
+                 flooe
+                cha r
+                platir
+              pho e
+                    ne
+                  bag
+
+                knif r
+                       e
+                  box
+        pain booer
+
+
+                hanh
+                      d
+              sp l
+            cou oon
+                       r
+                    jar
+                  wal
+                     e
+
+
+
+
+                  nte
+                    tl
+
+
+
+
+                  un
+                   so
+
+
+
+
+               tain
+
+               pap
+                bo
+             n ac
+      mai
+
+
+
+
+                                        Most common relation labels
+        2000k
+
+        1000k
+
+            0
+                       of
+
+             conange
+
+
+
+
+                       ss
+                   holdn
+                 sit och
+                        n
+            stan in
+              nex on
+                abo to
+                 stanve
+                        d
+           in fr wear
+
+             sup sit
+           rear port
+
+                 cov ct
+                 lie oer
+                        n
+                attacut
+                put ch
+               lo on
+             benok at
+                   eath
+
+                  pre n
+             pos see
+                       o
+
+
+
+
+                   itio
+                   ne
+                 tou
+
+
+
+
+                ont
+                     t
+                   d
+
+
+
+
+                 r
+Figure 6: Node and edge label distribution in SG-Ego-Edit. We define a vocabulary of object
+relation labels by mining the Ego4D taxonomy and the PVSG relation labels. Following this process,
+we obtain a set of Nobj = 1480 objects and Nrel = 387 relations.
+
+
+A.1     Annotation Pipeline
+
+For frame-level triplets extraction, we use Qwen3.5-9B [38]. We prompt the model with one frame at
+the time, disable thinking and set the generation temperature to t = 0.7. We report the full prompt
+used to extract the frame-level triplets in the box "Triplets extraction prompt".
+
+      Triplets extraction prompt
+
+      You are an expert in human-object and object-object interaction analysis.
+      You are given an image corresponding to a frame coming from an egocentric video and your
+      final goal is to generate a good description of the interactions in the image.
+
+      Output the relations as a list of triplets "subject, predicate, object", one per line.
+
+    Indications YOU MUST FOLLOW:
+   - Strictly follow the output format required and only include human-object or object-object
+    interactions. For example, do not output "(wall, white)" because it’s not an object-object
+    interaction.
+   - Be exhaustive about all the spatial and functional interactions in the scene.
+   - Be specific in the relation types and avoid vague predicates like ’is’, ’has’ or ’near’.
+   - Refer to the human wearing the egocentric camera as "camera_wearer", and use "human_x"
+    for any other people in the scene.
+   - DO NOT repeat the same triplet more than once.
+   - DO NOT include attributes about the objects, such as their color, size, or other visual details.
+    Focus only on the interactions between them.
+   - Include spatial relations between human and objects and between objects (such as "cup_1,
+    on, table_1").
+   - Include functional relations only between the human and the objects in the scene (such as
+    "human_1, holding, cup_2").
+   - DO NOT include functional relations between objects in the scene (such as "cup_1, used for,
+
+
+
+                                                      15
+    drinking"). Use only spatial relations for object-object interactions.
+    - Keep track of multiple instances of the same object category in the scene using numerical
+    indices (e.g., "cup_1", "cup_2") and use these indices consistently across all triplets to refer
+    to the same instance.
+    - For objects that are not involved in any interaction, do not describe them.
+    - DO NOT describe what the human is wearing.
+
+
+
+B     GLEN Ablations and extended results
+
+B.1    Graph-Text Alignment
+
+
+Table 5: Ablations on EgoMCQ. We compare different configurations of GLEN using the Graph-
+Text Alignment (GTA) and Graph-Text Matching (GTM) objectives. For prediction, we can use
+either the GTA head (trained with the contrastive objective), the GTM head (trained for graph-text
+matching) or an ensemble of the two heads. We indicate with n the number of negative samples for
+each anchor in the batch.
+
+    Configuration         EgoMCQ Inter EgoMCQ Intra
+    GTCA (n = 1)              89.3           53.2
+                                                               Mode                EgoMCQ Inter   EgoMCQ Intra
+    GTCA (n = 3)              90.6           53.9
+                                                               GTCA head               91.0           54.9
+    GTCA (n = 1) + GTM        89.6           53.3
+    GTCA (n = 3) + GTM        91.0           54.4              GTM† head               80.8           54.0
+                                                               GTCA + GTM† heads       91.2           56.2
+    GTCA (n = 1) + GTM†       89.4           53.7
+    GTCA (n = 3) + GTM†       91.0           54.9
+
+
+
+We report in Table 5 (left) the impact of different training objectives for the Graph-Text Alignment
+task on EgoMCQ. Here, n denotes the number of negatives sampled for each anchor within the batch.
+We observe that hard negative mining significantly improves graph-text alignment performance. Since
+scene graphs provide a high-level abstraction of the evolving scene, this strategy encourages the
+model to distinguish between actions occurring in visually similar scenes while capturing different
+underlying actions. The GTM objective further helps the model better distinguish between similar
+scene graphs. The GTM† variant further restricts sampling to the same video.
+For the evaluation in Table 5 (right), we use either the cross-modal similarity between the graph and
+text embeddings (GTA head), the output of the GTM head or a combination of the two.
+
+B.2    Action-conditioned graph edit forecasting
+
+We show in Table 6 the impact of the number of node queries on the A-GEF task. Increasing the
+number of queries allows the model to specialize each query on different objects which is particularly
+helpful on the large consolidated graphs from SG-Ego-Edit.
+
+B.3    Long-Horizon Reasoning on EXPLORE-Bench
+
+We present the full results for Explore-Bench in Table 7.
+
+
+              Table 6: Action-conditioned graph edit forecasting (A-GEF) on SG-Ego.
+                                                            Triplet Recall
+                                     Num queries
+                                                    R@20       R@50      R@100
+                                     Gt (static)    23.17     23.17    23.17
+                                     64             34.98     42.19    44.73
+                                     72             35.12     42.84    45.89
+                                     100            35.05     43.71    47.84
+                                     128            35.06     43.92    48.49
+
+
+
+
+                                                       16
+Table 7: Evaluation results on EXPLORE-Bench. Short, Medium and Long mean the subsets with
+short (11-99), medium (100-199) and long (200-694) atomic-action sequences, respectively.
+                             Short               Medium               Long                Full
+Methods
+                       Sobj Satt Srel Suni Sobj Satt Srel Suni Sobj Satt Srel Suni Sobj Satt Srel Suni
+                                     Proprietary Multimodal Foundation Models (API)
+GPT-5.2-Chat           59.91 1.74 2.70 48.71 59.88 1.67 2.65 47.85 58.06 1.65 2.61 46.91 59.69 1.70 2.67 48.19
+Gemini-3-Flash         60.31 1.84 2.78 50.27 59.33 1.76 2.71 48.84 58.27 1.72 2.69 48.18 59.72 1.80 2.75 49.51
+Gemini-3-Pro           61.29 1.81 2.77 50.11 60.99 1.75 2.74 49.44 59.17 1.70 2.70 48.31 60.94 1.77 2.75 49.66
+                               Open-source Non-thinking Multimodal Foundation Models
+Qwen2.5-VL-3B-Instruct 48.17 1.36 2.27 39.70 44.19 1.22 2.17 36.92 39.92 1.09 2.08 34.28 45.78 1.28 2.21 38.07
+Qwen2-VL-7B-Instruct   47.64 1.34 2.23 39.14 46.04 1.27 2.16 37.73 43.79 1.22 2.15 36.73 46.62 1.30 2.20 38.35
+Keye-VL-1.5-8B#        49.70 1.34 2.24 39.78 49.49 1.34 2.24 39.69 46.15 1.25 2.17 37.68 49.23 1.33 2.23 39.51
+LLaVA-OneVision-1.5-4B 51.15 1.42 2.33 41.37 49.17 1.33 2.28 39.85 46.35 1.28 2.26 38.64 49.88 1.37 2.31 40.50
+Qwen3-VL-2B-Instruct   52.18 1.48 2.55 43.77 49.03 1.37 2.45 41.38 43.27 1.18 2.28 37.34 50.02 1.40 2.48 42.17
+Qwen2.5-VL-7B-Instruct 52.80 1.52 2.46 43.58 51.25 1.46 2.41 42.32 47.78 1.34 2.36 40.22 51.67 1.48 2.43 42.74
+LLaVA-OneVision-1.5-8B 53.25 1.54 2.51 44.13 51.21 1.47 2.44 42.63 47.62 1.38 2.41 40.83 51.87 1.49 2.47 43.21
+Ovis2.5-2B#            55.65 1.60 2.56 45.64 51.70 1.44 2.43 42.49 47.96 1.33 2.35 40.13 53.33 1.51 2.49 43.86
+InternVL3.5-2B         57.51 1.64 2.62 46.80 55.35 1.53 2.50 44.60 52.40 1.42 2.41 42.32 56.14 1.58 2.55 45.48
+InternVL3.5-8B         57.85 1.65 2.62 47.00 55.77 1.56 2.55 45.30 53.30 1.51 2.51 43.99 56.57 1.60 2.58 46.04
+MiMo-VL-7B-RL-2508# 56.13 1.67 2.60 46.53 55.82 1.64 2.59 46.14 53.42 1.58 2.54 44.68 55.71 1.65 2.59 46.18
+MiniCPM-V-4.5 (8B)#    58.86 1.70 2.63 47.67 57.45 1.64 2.58 46.49 54.69 1.56 2.55 44.95 57.87 1.66 2.60 46.93
+Ovis2.5-9B#            59.51 1.74 2.72 48.85 57.84 1.65 2.63 47.01 53.83 1.55 2.50 44.32 58.26 1.68 2.66 47.66
+Qwen3-VL-8B-Instruct   61.34 1.88 2.84 51.23 60.78 1.85 2.81 50.64 56.83 1.73 2.71 48.00 60.63 1.85 2.82 50.65
+                                   Open-source Thinking Multimodal Foundation Models
+Ovis2.5-2B∗            51.10 1.40 2.43 42.02 44.52 1.17 2.20 36.89 40.70 1.04 2.10 34.25 47.50 1.28 2.31 39.25
+Qwen3-VL-2B-Thinking   59.23 1.47 2.63 46.13 57.02 1.19 2.53 42.79 48.82 1.02 2.30 37.81 57.26 1.32 2.56 43.97
+Ovis2.5-9B∗            55.92 1.61 2.59 45.95 53.79 1.51 2.50 44.03 49.71 1.39 2.41 41.48 54.44 1.55 2.54 44.74
+Keye-VL-1.5-8B∗        56.58 1.58 2.55 45.64 56.54 1.54 2.53 45.14 53.13 1.62 2.43 44.09 56.18 1.57 2.53 45.28
+MiMo-VL-7B-RL-2508∗    57.32 1.64 2.56 46.26 56.85 1.59 2.53 45.63 56.58 1.57 2.50 45.17 57.06 1.61 2.54 45.90
+MiniCPM-V-4.5 (8B)∗    58.87 1.74 2.67 48.25 57.79 1.69 2.63 47.33 54.16 1.54 2.52 44.46 57.95 1.70 2.64 47.49
+GLM-4.6V-Flash (9B)    60.70 1.78 2.71 49.32 58.44 1.70 2.65 47.67 54.95 1.60 2.60 45.75 59.22 1.73 2.67 48.31
+Step3-VL-10B           61.32 1.76 2.78 49.87 60.06 1.62 2.71 48.01 59.11 1.60 2.64 47.09 60.61 1.69 2.74 48.87
+Qwen3-VL-8B-Thinking   63.77 1.91 2.85 52.08 62.61 1.81 2.78 50.56 58.02 1.64 2.63 47.07 62.70 1.84 2.80 50.96
+                                        Embodied/Egocentric Multimodal Models
+Embodied-Reasoner (7B) 39.74 1.00 1.96 32.65 39.69 0.99 1.96 32.56 37.22 0.97 2.02 32.23 39.44 1.00 1.97 32.57
+EgoThinker (7B)        48.22 1.36 2.23 39.39 45.88 1.28 2.19 37.89 42.42 1.16 2.08 35.36 46.71 1.31 2.20 38.38
+                                                      Graph Edits
+GLEN                   66.12   -     2.67    -   66.71   -     2.73   -   59.37   -    2.67   -   65.59   -   2.69   -
+
+
+
+
+                                                          17
+
