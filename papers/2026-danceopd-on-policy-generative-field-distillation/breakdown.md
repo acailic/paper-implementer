@@ -374,9 +374,10 @@ Closes **85.3%** of the student-to-teacher reward gap while preserving T2I capab
 | **Best composition (α=3.5, β=2.0)** | 7.0 | **5.833** |
 | Eval-only CFG (α=1.0, β=7.0) | 7.0 | 5.751 |
 | Train-only absorption (α=3.5, β=1.0) | 3.5 | 5.422 |
+| Over-guided (α=2.0, β=7.0) | 14.0 | 4.563 |
 | Over-guided (α=7.0, β=7.0) | 49.0 | 4.015 |
 
-Best measured composition: **+7.6%** over train-only absorption, **+1.4%** over eval-only CFG. Over-guided drops by **31.2%**.
+Best measured composition: **+7.6%** over train-only absorption, **+1.4%** over eval-only CFG. Over-guidance degrades monotonically with effective scale — **−21.8%** at αβ=14 (4.563) and **−31.2%** at αβ=49 (4.015) — confirming the §4.6 caveat that absorbed $\alpha$ and inference $\beta$ compose as $\alpha\beta$ and over-guide.
 
 ### 6.2 Key Ablations That Matter
 
@@ -456,7 +457,59 @@ Dense same-step accumulation ($K=2, G=3$) drops by **22.8%**, with subject remov
 
 SDE rollout rescues **18.4%** of the degradation, confirming trajectory-query correlation as the failure mode, but still **8.6%** below $K=1$ default.
 
+#### Training Rollout-Step Sensitivity (Table 9)
+
+All rows hold everything fixed (hard-routed MSE, ODE, $K{=}1$, $G{=}1$, low-$t$ Beta(5,2) query) and vary **only the number of stop-gradient student-rollout steps** used to generate training query states. The benchmark *evaluation* sampler is held fixed (28 steps), so the rows are NOT a sampling-step budget sweep — they test whether a longer *training* rollout refines the clean-side query grid. Both GEditBench-EN (6 categories + Avg) and GenEval Overall are reported because rollout discretization can affect edit quality and T2I preservation differently.
+
+Full grid (verbatim source Table 9; 4 rollout lengths × 4 training-step budgets):
+
+| Rollout Steps | Train Step | Subj-Add | Subj-Rep | Bg-Chg | Style-Chg | Color-Alt | Subj-Rem | GEditBench Avg | GenEval Overall |
+|---------------|-----------|----------|----------|--------|-----------|-----------|----------|----------------|-----------------|
+| 8  | 500  | 5.067 | 5.237 | 4.372 | 4.184 | 4.564 | 3.611 | 4.506 | 0.833 |
+| 8  | 1000 | 5.237 | 5.819 | 4.735 | 4.500 | 4.962 | 4.271 | 4.921 | 0.855 |
+| 8  | 1500 | 5.500 | 5.788 | 5.559 | 4.846 | 5.079 | 4.642 | 5.236 | 0.866 |
+| 8  | 2000 | 6.514 | 6.137 | 5.532 | 5.163 | 6.346 | 4.744 | **5.739** | 0.852 |
+| **16 (default)** | 500  | 5.776 | 5.759 | 5.371 | 4.148 | 5.033 | 4.728 | 5.136 | 0.821 |
+| **16 (default)** | 1000 | 5.543 | 5.725 | 5.327 | 4.515 | 5.445 | 5.586 | 5.357 | 0.862 |
+| **16 (default)** | 1500 | 5.233 | 5.787 | 5.198 | 4.394 | 5.208 | 5.161 | 5.163 | 0.854 |
+| **16 (default)** | 2000 | 6.266 | 6.181 | 5.924 | 5.060 | 5.716 | 5.357 | **5.751** | 0.858 |
+| 20 | 500  | 6.045 | 5.678 | 5.089 | 4.180 | 4.838 | 6.144 | 5.329 | 0.832 |
+| 20 | 1000 | 5.995 | 5.660 | 6.109 | 4.733 | 5.833 | 5.570 | **5.650** | 0.855 |
+| 20 | 1500 | 5.339 | 5.603 | 4.958 | 5.034 | 5.237 | 3.916 | 5.014 | 0.846 |
+| 20 | 2000 | 5.889 | 5.899 | 5.440 | 5.042 | 5.696 | 5.531 | 5.583 | 0.842 |
+| 28 | 500  | 4.208 | 5.271 | 4.338 | 3.686 | 4.323 | 2.779 | 4.101 | 0.849 |
+| 28 | 1000 | 3.983 | 5.175 | 3.996 | 3.120 | 4.228 | 2.527 | 3.838 | 0.866 |
+| 28 | 1500 | 4.523 | 5.409 | 4.699 | 4.220 | 4.697 | 3.157 | 4.451 | 0.851 |
+| 28 | 2000 | 6.544 | 6.147 | 5.618 | 5.393 | 6.475 | 4.008 | **5.697** | 0.834 |
+
+**Best GEditBench Avg per rollout length** (over the 4 training budgets): 8-step → **5.739**, **16-step → 5.751 (best overall, the default)**, 20-step → 5.650, 28-step → 5.697.
+
+**Takeaways:**
+- **Rollout length is not monotonic in edit quality.** The 16-step default is the best overall (5.751); doubling to 28 steps does *not* help (best 5.697) and at low training budgets is the *worst* config (28@500 = 4.101, 28@1000 = 3.838). This is the key practical result: a longer training rollout is a query-state generator, not a trajectory-compression target, so more steps do not automatically improve GEditBench.
+- **GenEval Overall is remarkably flat (0.821–0.866) across all 16 configs**, confirming that rollout discretization barely perturbs base T2I preservation — the variation is concentrated in edit quality, exactly as the §7.5 caveat predicts.
+- **8-step is surprisingly competitive** (8@2000 = 5.739, within 0.2% of the 16-step default), so a shorter rollout is a viable compute-reduction knob when edit quality matters more than the last fraction of a point.
+- The 16-step / 2000-step / 5.751 cell is the shared ablation anchor that recurs as the "$K{=}1$ default" throughout §6.2 (hard routing, query position, objective, init) — same control, not an independent run.
+
 ### 6.3 Baselines
+
+**Method positioning (verbatim source Table 1; ✓ = full support, ◦ = partial):**
+
+| Method | Domain | Teacher Signal | Objective | FM-OPD | Multi-Cap. | Design Study | Func. Absorp. |
+|--------|--------|----------------|-----------|--------|------------|--------------|---------------|
+| MiniLLM [30] | LLM | logits | reverse KL | – | – | – | – |
+| GKD [1] | LLM | logits | forward KL | – | – | – | – |
+| AOPD [45] | LLM | logits and top-K | asymmetric KL | – | – | – | – |
+| G-OPD [103] | LLM | scalar feedback | policy optimization | – | ◦ | – | – |
+| StableOPD [64] | LLM | scalar reward | PPO with KL anchor | – | ◦ | – | – |
+| ROPD [23] | LLM | rubric reward | reward optimization | – | ◦ | – | – |
+| DiffusionOPD [53] | Flow | velocity field | KL or MSE-style | ✓ | ◦ | ◦ | – |
+| D-OPSD [46] | Diffusion | predicted distribution | self-distillation | ◦ | – | – | – |
+| Flow-OPD [24] | Flow | dense scalar reward | PPO clip-min | ✓ | task-routed | – | – |
+| **★ DanceOPD** | **Flow** | **routed velocity field** | **MSE** | **✓** | **✓** | **✓** | **✓** |
+
+DanceOPD is the only method that simultaneously combines flow-matching OPD, multi-capability composition, a design-space study, and functional field absorption (CFG/realism). The LLM-OPD family (MiniLLM/GKD/AOPD/G-OPD/StableOPD/ROPD) lacks flow-matching support entirely; among flow/diffusion OPD methods only DiffusionOPD and Flow-OPD share FM-OPD, and both only partially address multi-capability composition (◦ / task-routed).
+
+**Baseline implementations compared in Tables 2/6:**
 
 | Baseline | Key Difference from DanceOPD |
 |----------|------------------------------|
