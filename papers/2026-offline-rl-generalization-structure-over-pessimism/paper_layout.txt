@@ -1,0 +1,1775 @@
+                                        Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+
+
+                                        Generalization in offline RL: The structure is more
+                                        important than the amount of pessimism
+                                        Max Weltevrede1 , Matthijs T. J. Spaan1 , Wendelin Böhmer1
+                                        m.r.weltevrede@tudelft.nl
+
+                                        1
+                                            Delft University of Technology, Delft, The Netherlands
+
+
+                                                                                      Abstract
+arXiv:2607.02288v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                                While pessimism counteracts overestimation bias in offline reinforcement learning
+                                                (RL), being overly conservative has been associated with hindering certain forms of
+                                                generalization. However, in this paper we demonstrate that being overly pessimistic does
+                                                not inherently prevent optimal generalization in contextual MDPs (CMDPs). Instead, we
+                                                argue successful generalization depends not on the amount of pessimism, but whether
+                                                the pessimistic structure respects the underlying symmetries of the optimal solution. We
+                                                prove that a mildly pessimistic, non-symmetric value function can generalize worse than
+                                                an overly pessimistic, symmetric one. In offline RL, the structure of the pessimism is
+                                                determined by the structure of the dataset coverage. As such, enforcing a symmetric
+                                                value function can be non-trivial, and might require techniques such as data augmentation
+                                                (DA). Inspired by our theoretical results, we argue that DA can best be applied through a
+                                                consistency loss during policy extraction, rather than the common practice of (regular)
+                                                offline training on an augmented dataset. This is empirically validated using IQL and
+                                                CQL on a rotationally symmetric reacher environment.
+
+
+                                        1      Introduction
+
+                                        The objective of offline reinforcement learning (RL) is to find a policy that maximizes expected
+                                        returns in an environment, by only training on a given, fixed dataset of collected experiences
+                                        (Levine et al., 2020). In order to avoid common offline RL pathologies, many methods employ
+                                        pessimistic value learning or other forms of conservatism (Kumar et al., 2020; Kostrikov et al., 2022;
+                                        Fujimoto & Gu, 2021; An et al., 2021). However, being overly conservative has been associated with
+                                        hindering generalization to out-of-distribution actions or impeding trajectory stitching in continuous
+                                        environments (Wang et al., 2024; Ma et al., 2023; Mediratta et al., 2024; Park et al., 2024). Recently,
+                                        several approaches have tried to reduce the level of conservatism in order to improve generalization
+                                        (Mao et al., 2024; Lyu et al., 2022; Shimizu et al., 2024), even claiming that, while some level of
+                                        conservatism is necessary to find the best policy, it should be as mild as possible to improve this kind
+                                        of generalization (Lyu et al., 2022). However, it is not yet clear whether this notion also holds for
+                                        generalization to new scenarios or environments.
+                                        In this paper, we argue that it is not the amount of pessimism, but its structure that is inherently
+                                        important for generalization in the zero-shot policy transfer (ZSPT, Kirk et al., 2023) setting to new
+                                        and unseen testing environments. Fundamentally, we argue that generalization is about learning the
+                                        underlying structure of the optimal policy or value function over training and testing states, often
+                                        formalized as symmetries. For the theoretical analysis in this paper, we use the generalization-through-
+                                        invariance ZSPT (GTI-ZSPT, Weltevrede et al., 2025) setting, in which optimal generalization is
+                                        achieved by learning the correct symmetry from the training data. In this setting, we prove that as long
+                                        as the pessimistic value learning is symmetric, optimal generalization performance can be achieved
+                                        even with arbitrary large levels of pessimism. Furthermore, we prove that for certain instances of the
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                2026
+
+
+GTI-ZSPT problem, there exists mild forms of pessimism, that violate this symmetric structure, that
+are guaranteed to generalize arbitrarily worse than overly pessimistic, but symmetric ones.
+As such, we argue that optimal generalization is not determined by how pessimistic the agent is, but by
+whether the pessimism breaks the symmetries the optimal solution should have. Although this notion
+is to some extent true in general, we argue it is especially important in offline RL, where pessimistic
+structure can be induced by non-symmetric dataset coverage, and where current techniques are known
+to not generalize well (Mediratta et al., 2024). If the dataset-induced pessimism explicitly contradicts
+the required symmetries, optimal generalization might only be achievable through techniques such as
+data augmentation (DA), highlighting its use for offline RL in particular. Our theory demonstrates
+that for generalization the symmetry of the learned value function is more important than its accuracy
+(i.e., how pessimistic it is). As such, we argue that applying DA through a consistency loss during
+policy extraction (Bachman et al., 2014; Yang et al., 2023b; Raileanu et al., 2021; Hansen & Wang,
+2021), which emphasizes symmetry over accuracy, should improve generalization the most. This
+contrasts to previous work on DA for offline RL, which exclusively uses DA only to generate a larger,
+augmented dataset, followed by regular offline training (Pinneri et al., 2023; Corrado et al., 2024;
+Sinha et al., 2021; Cho et al., 2022; Jang et al., 2023; Huang et al., 2025; Lee et al., 2024; Yang &
+Wang, 2025). We empirically validate several ways of applying DA for rotational invariance in a
+rotationally symmetric continuous control environment (rotational reacher), for two common offline
+RL algorithms (IQL (Kostrikov et al., 2022) and CQL (Kumar et al., 2020)), and demonstrate that the
+consistency loss improves generalization the most.
+
+
+2   Background
+
+In offline RL, the agent receives a fixed dataset of transitions D = {s, a, s′ , r}n , collected by an
+effective behavior policy πβ in a Markov decision process (MDP) M = (S, A, T, R, p0 , γ). The
+MDP is defined by a state space S, an action space A, a transition function T : S × A → ∆|S|
+(where ∆n refers to the n-simplex), a reward function R : S × A → R, a starting state distribution
+p0 : ∆|S| , and a discount factor γ ∈ [0, 1).
+                                           P∞ The goal is to find a policy π : S → ∆|A| , that maximizes
+the expected return in M, J = Eπ [ t=0 γ t rt ], defined as the sum of discounted rewards rt .
+                                π
+
+Eπ denotes an expectation over the Markov chain {s0 , a0 , r0 , s1 , a1 , r1 , ...} induced by the policy
+π in M (Akshay et al., 2013). Instead of directly findingP        the optimal policy π ∗ = argmaxπ J π ,
+                                                                    ∞
+some approaches learn a Q-value function Q (s, a) = Eπ [ t=0 γ t rt |sa00=s
+                                                π
+                                                                               =a ], from which a greedy
+policy πQ (s) = argmaxa∈A Q(s, a) can be derived. A useful construct to define is the on-policy
+distribution ρπM , which denotes the distribution over states that a policy π would visit in the MDP M.
+Additionally, we define the optimality gap as the difference between the optimal return and the return
+                                   ∗
+for some policy π: J ∆ (π) = J π − J π ≥ 0.
+In a contextual MDP (CMDP, Hallak et al., 2015) the state space can, in principle, be decomposed
+(S = S ′ × C) into an underlying state space S ′ and context space C, where c ∈ C is sampled at
+the start of an episode and cannot change thereafter. Since c is part of the state s, it can influence
+the starting state distribution p0 , transition function T , and reward function R. As such, a context c
+can be thought of as defining a specific task or environment. In the zero-shot policy transfer (ZSPT,
+Kirk et al., 2023) setting for a CMDP M|C with context space C, the agent gets to train in a fixed
+set of training contexts Ctrain ⊂ C and is evaluated zero-shot on a held-out set of testing contexts
+Ctest ⊂ C, where Ctrain ∩ Ctest = ∅. In our work, we consider in-distribution generalization,
+meaning Ctrain and Ctest are sampled from the same distribution over C.
+Pessimism In order to avoid the overestimation bias for out-of-distribution (OOD) actions (actions not
+observed in D), several offline RL approaches regularize value learning in order to learn a pessimistic
+value function Q̂π , that is a lower bound on the true Q value Qπ : Q̂π (s, a) ≤ Qπ (s, a), ∀s ∈ D, a ∈
+A (Kumar et al., 2019; 2020; An et al., 2021; Fujimoto et al., 2019). How pessimistic a particular
+value function Q̂π is, depends on how close it is to the true Q value Qπ . This can in principle be
+measured in several different ways, for example with the maximal difference between the pessimistic
+and true values: ηmax = max{Qπ (s, a) − Q̂π (s, a)|s ∈ D, a ∈ A}.
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+For the theoretical results, we want to isolate the generalization effect of learning a particular
+pessimistic value function, from the offline RL mechanisms that cause that value function to be
+pessimistic. This can be achieved by minimizing the following Q-value distillation loss:
+                                                1 X                   2
+                            lQ (θ, Ds , Q̂π ) =      qθ (s) − Q̂π (s) 2                        (1)
+                                                n
+                                                             s∈Ds
+
+for a given set of pessimistic value targets Q̂π : S → R|A| . Here, Ds is now a collection of states and
+qθ : S → R|A| is a neural network with parameters θ trained to predict Q̂π on Ds . We consider this
+Q-value distillation setting as a proxy for the effects of pessimism in offline RL, as it can identify the
+consequences associated with learning a given pessimistic value function with a deep neural network.
+Symmetry Groups The theoretical analysis in this paper relies on the concepts of symmetry groups
+and the behavior of neural networks in the infinite width limit. A symmetry group is a set of
+transformations G and a group operation ◦ that satisfy the group axioms: closure, associativity, and
+containing the identity element and the inverse.1 A group is an abstract mathematical structure that
+can be represented in various ways. In particular, the group representation ψX is the representation of
+group G as operating on a vector space X. In this paper, we always assume the group represenation
+is orthogonal: ψ −1 = ψ T . A function f : X → Y is equivariant to a symmetry group G if
+f (ψX (g)x) = ψY (g)−1 f (x), ∀x ∈ X, g ∈ G. Invariance is a special case of equivariance where
+the output representation is the identity operator ψY (g) = I, ∀g ∈ G. A subgroup B ≤ G is a subset
+of G that is itself a group. Finally, a (sub)group is said to be finite if the set has finite size. We refer
+to Appendix 7.1 for more background on symmetry groups.
+Data Augmentation A common way to train a neural network to become equivariant is to perform
+data augmentation under the group G. Full data augmentation for a finite group G corresponds to
+performing regular training on the augmented dataset that is generated by applying every transforma-
+tion from G to each input-output pair in the original dataset. This form of DA has nice theoretical
+properties (Gerken & Kessel, 2024), but can be computationally expensive in practice.
+
+2.1    Generalization-through-invariance
+
+In this paper, we analyze the importance of correctly learning the underlying structures required for an
+optimal value or policy. However, proving whether a neural network learns the underlying structure
+encoded in the data is not easy. For this reason, we formalize the structures as group symmetries
+and use the ZSPT setting introduced in Weltevrede et al. (2025), that defines generalization as the
+ability of an agent to become invariant to these symmetries. In this generalization-through-invariance
+ZSPT (GTI-ZSPT) the agent has to become invariant to a symmetry group G, by only training on
+data conforming to a subgroup B ≤ G:2
+Definition 1 (Generalisation through invariance ZSPT). Let M|C be a CMDP and let Ctrain , Ctest ⊂
+C be a set of training and testing contexts that define a ZSPT problem. Additionally, let π ∗ be the
+                            π∗                  ∗
+optimal policy in M|C , SM|    C
+                                 = {s ∈ S|ρπM|C (s) > 0} denote the set of states with non-zero
+                                              ∗
+support under the on-policy distribution ρπM|C in CMDP M|C . In the generalisation through
+                                         π∗          π∗
+invariance ZSPT (GTI-ZSPT), the sets SM|    C
+                                              and SM|   C
+                                                             admit a symmetric structure:
+                                                                          train
+
+                                          π∗
+                                         SM| C
+                                               = {ψS (g)s|g ∈ G, s ∈ S̄}
+                                     ∗
+                                   π
+                                  SM|C
+                                                  = {ψS (b)s|b ∈ B, s ∈ S̄},        B≤G
+                                          train
+
+                   ∗                                         ∗
+            π                                          π
+where S̄ ⊂ SM|                  is a proper subset of SM|                 and G is a non-trivial symmetry group (and
+                       Ctrain                                    Ctrain
+
+B ≤ G a finite subgroup) that leaves the optimal Q vector invariant: Q∗ (s) = Q∗ (ψS (g)s), ∀s ∈
+S̄ and ∀g ∈ G.
+   1We abuse notation by omitting the operation in this paper: g ◦ g → g g .
+                                                                   1   2      1 2
+   2We slightly adapt the definition so that the entire vector of optimal Q values Q∗ (s) : S → R|A| satisfies the symmetry
+
+G, rather than just the policy π ∗ as in Weltevrede et al. (2025)
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                 2026
+
+
+This defines a non-trivial generalization setting since the agent has to achieve full symmetry under G,
+by only witnessing limited examples of this symmetry in the training contexts (corresponding to a
+subgroup B). In Weltevrede et al. (2025), they demonstrate the group symmetric structure of this
+ZSPT setting allows for theoretically proving upper bounds on the optimality gap achieved in the
+testing contexts. They also demonstrate empirically that the insights from the theoretical analysis in
+the GTI-ZSPT setting can hold more broadly, in particular when the environment no longer satisfies
+this strict group symmetric structure. Note that the theoretical analyses in Weltevrede et al. (2025) and
+this paper assume optimality in the training contexts to isolate the contribution of generalization to the
+test performance. As a result, the optimality gap in the testing contexts is equal to the generalization
+gap. This is the reason why the symmetric structure of the GTI-ZSPT setting is defined only over the
+optimal state distributions (rather than any policy’s state distribution).
+Example An example of the GTI-ZSPT setting is the Rotational Reacher problem in Figure 1. Here,
+the states encountered in the four training contexts can be generated from the states in context 1 and
+the application of the subgroup B = C4 of 90◦ rotations. The agent’s goal is to become invariant
+to any rotation (corresponding to the full group G = SO(2)), after only training on this subgroup
+B = C4 . See Weltevrede et al. (2025) for more details on why this example satisfies the GTI-ZSPT
+assumptions.
+
+                                          Training                                 Testing
+
+
+
+
+          Context:     1              2                3           4
+
+Figure 1: This Rotational Reacher CMDP has four training contexts, defined by the location of
+the shoulder (red) along a circle (dotted). The goal of the agent is to apply torque to the shoulder
+and elbow so that the hand (black) reaches the center (green). The training contexts satisfy the C4
+(90◦ rotation) symmetry, and the agent is tested on the full group of rotations SO(2). Figure with
+permission taken from Weltevrede et al. (2025).
+
+
+3   Theoretical analysis of pessimism and generalization
+
+The main goal of our theoretical analysis is to argue that it does not necessarily matter how pessimistic
+the agent is, but rather that the pessimism does not violate the structure (i.e., symmetry) that the
+optimal solution should have. To do this, we analyze the generalization effects of different pessimistic
+structures by proving the generalization performance of an infinitely wide neural network trained
+with Q-value distillation in the GTI-ZSPT setting:
+Definition 2 (Q-value distillation in the GTI-ZSPT). Consider Q-value distillation (Equation (1)
+in Section 2) in the GTI-ZSPT setting with an infinitely wide neural network qθ : S → R|A| with
+Lipschitz continuous derivatives with respect to its parameters. Let qθ be distilled on the set of
+                                                   π∗
+states Ds corresponding to the on-policy states SM|          for the optimal policy in the training
+                                                      Ctrain
+contexts. These on-policy states correspond to a subgroup B ≤ G of the full symmetry G the agent
+                                         π∗
+has to learn in order to generalize: SM|          = {ψS (b)s|b ∈ B, s ∈ S̄} (see Definition 1 of
+                                              Ctrain
+
+the GTI-ZSPT setting). Let Q̂∗ be a set of pessimistic Q-value targets for Ds and let the argmax
+policy πQ̂∗ over Q̂∗ be optimal in the training contexts Ctrain . This is the case if for any state
+      π∗
+s ∈ SM|        encountered by the optimal policy, the largest pessimistic value for any of the optimal
+         Ctrain
+
+actions maxa∈Aopt (s) Q̂∗ (s, a) is still higher than the largest value for any of the suboptimal actions
+maxa∈ACopt (s) Q̂∗ (s, a), where the optimality of the actions is defined with respect to the true optimal
+Q-value: Aopt (s) = {a ∈ A|Q∗ (s, a) = maxa′ ∈A Q∗ (s, a′ )} and AC         opt (s) = A\Aopt (s). Let δQ
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+denote the minimal difference:
+                         max       Q̂∗ (s, a) −     max        Q̂∗ (s, a) ≥ δQ , ∀s ∈ Ds
+                      a∈Aopt (s)                  a∈AC
+                                                     opt (s)
+
+
+Formally, we require δQ > 0 for the policy πQ̂∗ to be optimal in the training contexts.
+
+3.1   The importance of symmetric pessimism
+
+Our main theorem proves that as long as the pessimistic value function is symmetric, the level of
+pessimism can be arbitrarily large without hurting generalization performance.
+Theorem 1. Consider Q-value distillation in the GTI-ZSPT setting as defined in Definition 2, with
+pessimistic Q-value targets Q̂∗sym that satisfy the symmetry group B ≤ G in the training contexts:
+Q̂∗sym (s) = Q̂∗sym (ψS (b)s), ∀b ∈ B, s ∈ Ds . If the minimal distance between the largest pessimistic
+optimal value, and largest pessimistic suboptimal value (δQ ), satisfies δQ ≥ CΘ (ϵ), the performance
+of the argmax policy πqθ is guaranteed to be optimal in the testing CMDP M|Ctest with probability
+1 − ϵ, for arbitrarily large levels of pessimism ηmax . The condition CΘ (ϵ) depends on the NTK Θ
+(i.e., network architecture), the dataset Ds , the optimal Q-value Q∗ and the confidence level ϵ, but
+notably, is independent of ηmax .
+Proof. The proof relies on a result from Gerken & Kessel (2024) that proves that an infinitely
+large ensemble of infinitely wide neural networks is perfectly equivariant to a symmetry group G
+when trained with full data augmentation. We use this result to instead bound the deviation from
+equivariance for ensembles trained only on a subgroup B ≤ G. Additionally, in the infinite width
+limit the output of a single network can be bounded to the output of the infinite ensemble using
+standard results for multivariate Gaussian random variables. These two bounds are used to prove that,
+under the right conditions, the deviation from the (perfectly equivariant) infinite ensemble is bounded
+enough to not alter the argmax policy for the single network qθ . The proof is in Appendix 8.1.
+
+3.2   The consequences of violating the symmetry
+
+Our main theoretical result from Theorem 1 proves that in the GTI-ZSPT setting a network that learns
+a symmetric value function can still be guaranteed to generalize optimally, even for arbitrarily large
+levels of pessimism ηmax . In this section, we argue for the opposite case: if the pessimistic value
+targets violate the symmetry of the environment, this can hurt generalization. Moreover, just because
+one value function is less pessimistic than another, does not mean it is guaranteed to generalize better:
+
+Theorem 2. Consider Q-value distillation in a GTI-ZSPT setting as defined in Definition 2, with two
+pessimistic value target functions Q̂1 and Q̂2 , with levels of pessimism η1 and η2 < η1 respectively,
+that both produce optimal performance in the training CMDP M|Ctrain . For certain instances of
+the GTI-ZSPT setting, there exists Q̂1 and Q̂2 , where Q̂1 is arbitrarily more pessimistic than Q̂2
+(η1 ≫ η2 ), but where πQ̂1 is guaranteed to have optimal performance in the testing CMDP M|Ctest ,
+whereas πQ̂2 is guaranteed to be suboptimal.
+Proof. Proving a negative (a value function that is guaranteed to be suboptimal) requires a bit more
+assumptions than what we had for Theorem 1. Essentially, we first have to define a set of counter-
+example instances Z of the GTI-ZSPT setting, for which we prove that certain non-symmetric value
+targets Q̂∗asym are guaranteed to produce optimal performance in the training contexts, but are also
+guaranteed to be arbitrarily suboptimal in the testing contexts. We then assume the setting Z, define
+Q̂2 = Q̂∗asym , and Q̂1 = Q̂∗sym as in Theorem 1. As Theorem 1 holds for arbitrarily large ηmax , we
+can satisfy η1 ≫ η2 by taking η1 → ∞.
+
+3.3   Empirical validation of the theoretical results
+
+Obtaining tight generalization bounds for neural networks is notoriously difficult (Jiang et al.,
+2020; Gastpar et al., 2024), which is why our theoretical results require several strict assumptions.
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                   2026
+
+
+However, we believe the implications of the theorems can apply more broadly. As such, we validate
+our theoretical results in the Rotational Reacher example GTI-ZSPT instance from Figure 1 (see
+Appendix 9.1 for details). For both theorems, we demonstrate the results still hold for neural networks
+of finite width. Furthermore, the Rotational Reacher does not exactly conform to the instances for
+which Counter-example 2 was proven. Nevertheless, in Table 1, we show that for the symmetric
+pessimistic targets Q̂∗sym from Theorem 1, above a certain level of pessimism, the generalization
+performance remains close to optimal, even as the pessimism becomes an order of magnitude larger
+than the maximum return. Furthermore, for the (incorrectly equivariant) asymmetric pessimistic
+targets Q̂∗asym from Counter-example 2, the generalization performance is never higher than for the
+symmetric targets Q̂∗sym , and instead reduces as the level of pessimism increases.
+
+Table 1: Performance of a neural network qθ trained on pessimistic value targets Q̂∗sym or Q̂∗asym
+in the Rotational Reacher problem from Figure 1. Below are the train and test returns for different
+levels of pessimism ηmax . Shown are the mean and standard deviation for 50 seeds, and in bold are
+the best returns per row including those with overlapping 95% confidence intervals.
+
+          Q̂∗sym                 ηmax = 0.01       ηmax = 0.1       ηmax = 1        ηmax = 10
+          Train Performance       0.98 ± 0.07       1.0 ± 0.00      1.0 ± 0.00      1.0 ± 0.00
+          Test Performance        0.76 ± 0.11      0.92 ± 0.08     0.99 ± 0.02     0.99 ± 0.02
+          Q̂∗asym
+          Train Performance       0.98 ± 0.07       1.0 ± 0.00      1.0 ± 0.00     0.51 ± 0.24
+          Test Performance        0.76 ± 0.11      0.73 ± 0.11     0.68 ± 0.09     0.23 ± 0.09
+
+4   Data augmentation experiments
+
+Our theoretical and empirical results for the Q-value distillation setting demonstrate that generalization
+to new contexts in the ZSPT setting can be optimal with very large levels of pessimism, as long as
+the pessimism satisfies the symmetries of the system. Furthermore, they demonstrate that a milder
+pessimistic value function is not guaranteed to generalize better. In this section, we investigate the
+full offline RL setting, where the agent does not distill on a given set of value targets, but rather has to
+learn these from the data. In offline RL, pessimism is used to avoid overestimation of OOD actions.
+As such, the exact shape of that pessimism, and whether it satisfies the symmetries of the system,
+heavily depends on the data sampling process, i.e., the behavior policy. A suboptimal behavior policy,
+or a non-symmetric data sampling process (e.g., the data is a mixture of different behavior policies
+collected in different states), could force the agent to learn a non-symmetric value or policy. This
+differentiates offline RL from the Q-value distillation from the previous section, and motivates the
+use of additional tools to enforce the symmetry of the agent.
+For this reason, we argue for the importance of DA in offline RL, as a tool to enforce symmetry
+and improve the generalization performance of the agent, even if the dataset is not symmetric.
+Moreover, we argue that, for offline RL in particular, DAC regularization can be particularly effective
+at improving generalization performance, as it mitigates the issues discussed above by directly
+enforcing the symmetry of the value or policy. Moreover, DAC puts more emphasis on symmetry
+over accuracy, by enforcing the network output is the same for the original and augmented inputs,
+independent of whether that output is accurate or not. This is in line with our theoretical results that
+argue the symmetry of the agent is more important than how pessimistic (i.e., how accurate) the
+value function is. Note that our goal with DAC is not to reduce the need for pessimism, which is the
+motivation of most previous work on DA for offline RL (Pinneri et al., 2023; Corrado et al., 2024;
+Sinha et al., 2021; Cho et al., 2022; Jang et al., 2023; Huang et al., 2025; Lee et al., 2024; Yang &
+Wang, 2025), but rather to enforce symmetry regardless of how pessimistic the agent is.
+To demonstrate this, we perform an empirical study of different DA techniques in combination with
+different offline RL algorithms in the Rotational Reacher environment from Figure 1. The agent
+receives an expert, mixed or suboptimal dataset collected in context 1 in Figure 1. We then perform
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+DA under the C4 group of 90◦ rotations. For IQL, the agent learns a a critic and an actor, and we
+consider the following DA approaches applied to the actor only:
+• Aug-D: For each minibatch, train on the unaugmented and randomly augmented observations:
+  [ot , oaug
+         t   ]B , where []B denotes concatenation in the batch dimension.
+• Aug-D-Online: Similar to Almuzairee et al. (2024), only augment the observations for the actor
+  input: [ot , oaug
+                  t ]B . The value function weights used for advantage weighted regression use the
+  original observations: [ot , ot ]B .
+• DAC-Latent: Following Yang et al. (2023b), we train on the unaugmented data, and add an
+  additional loss that minimizes the difference between the latent representation (last hidden layer)
+  of the original ot and the augmented observation oaugt   .
+• DAC-Output: Following Raileanu et al. (2021), we train on the unaugmented data, and add an
+  additional loss that minimizes the difference between the network output on ot and oaug
+                                                                                        t   .
+In appendix 10.2 we demonstrate that applying DA to only the actor is equal or better than applying
+it to the critic or both. See Appendix 9.2 for more experimental details. Table 2 shows that the
+additional consistency loss on the output (DAC-Output) of the neural network is the most effective
+DA approach in terms of generalization in the Rotational Reacher environment. The DAC-Latent
+only enforces the symmetry on the latent space, and never actually trains the last linear transformation
+for the augmented observations. As such, it still leaves room for symmetry-breaking correlations
+to manifest in the last network layer. Additionally, we see that simply training on augmented data,
+as is standard practice in the offline RL literature, improves over no DA, but roughly equals or
+underperforms the consistency loss. In Appendix 10.1 we show qualitatively similar results for CQL.
+
+Table 2: IQL test performance for various DA approaches in the Rotational Reacher problem from
+Figure 1. The agent trains on expert, mixed, and suboptimal datasets collected from context 1, with
+DA under the 90◦ rotations. Shown are the mean and standard deviation for 20 seeds, and in bold are
+the best returns per row including those with overlapping 95% confidence intervals.
+
+    IQL            No DA           Aug-D:       Aug-D-Online:       DAC-Latent:      DAC-Output:
+    Expert       0.49 ± 0.10     0.94 ± 0.06      0.99 ± 0.02        0.95 ± 0.11       0.98 ± 0.02
+    Mixed        0.34 ± 0.10     0.68 ± 0.15      0.71 ± 0.14        0.67 ± 0.16       0.96 ± 0.07
+    Suboptimal   0.32 ± 0.07     0.61 ± 0.11      0.59 ± 0.11        0.61 ± 0.16       0.85 ± 0.22
+
+
+
+5    Conclusion & limitations
+
+In this paper, we investigated the relationship between pessimism and generalization in the zero-shot
+policy transfer (ZSPT) setting for offline RL. We theoretically proved that overly pessimistic value
+functions do not inherently hinder optimality, provided the structure of the pessimism respects the
+underlying symmetries of the environment. Conversely, we also proved that even mild pessimism
+can lead to arbitrarily poor generalization if it violates these symmetric structures. Our empirical
+results using IQL and CQL in a rotationally symmetric reacher environment validate these insights,
+showing that enforcing symmetries through data augmentation consistency (DAC) regularization is
+more effective than the standard practice of regular offline training on augmented datasets. DAC
+directly emphasizes symmetry over accuracy, aligning with our theoretical result that symmetric
+pessimism allows for optimal generalization regardless of the degree of conservatism.
+However, several limitations of this work remain to be addressed in future research. Our paper focused
+on group symmetries that were intrinsically consistent with the training and testing data distribution.
+It remains to be seen whether these conclusions translate to extrinsic or inconsistent transformations,
+such as applying random convolutions or noise solely for regularization purposes. If the same results
+do not extend to these cases, the practical application of this method may be limited to scenarios
+where the system’s symmetries are known a priori. Furthermore, the effectiveness of DAC should be
+validated in more complex environments and across a broader range of offline RL algorithms to ensure
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                           2026
+
+
+the findings generalize beyond the rotational reacher task and the two approaches we tested. Lastly,
+our theoretical results assume the infinite width limit for neural networks. While our finite-width
+experiments in the Rotational Reacher environment support the theory, the full implications of the
+infinite width assumption on the validity of the theoretical results in the finite-width, real-world
+networks are important avenues of future research.
+
+Acknowledgments
+
+We thank Caroline Horsch, Laurens Engwegen and Moritz Zanger for fruitful discussions and
+feedback. The project was partially funded by the Dutch Research Council (NWO) project Re-
+liable Out-of-Distribution Generalization in Deep Reinforcement Learning with project number
+OCENW.M.21.234. The computational resources for empirical work were provided by the Delft AI
+Cluster (DAIC) (2024) and the Delft High Performance Computing Centre (DHPC) (2024).
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+References
+S. Akshay, Nathalie Bertrand, Serge Haddad, and Loïc Hélouët. The Steady-State Control Problem
+   for Markov Decision Processes. In Kaustubh R. Joshi, Markus Siegle, Mariëlle Stoelinga, and
+   Pedro R. D’Argenio (eds.), Quantitative Evaluation of Systems - 10th International Conference,
+   QEST 2013, Buenos Aires, Argentina, August 27-30, 2013. Proceedings, volume 8054 of Lecture
+   Notes in Computer Science, pp. 290–304. Springer, 2013. DOI: 10.1007/978-3-642-40196-1_26.
+   URL https://doi.org/10.1007/978-3-642-40196-1_26.
+Abdulaziz Almuzairee, Nicklas Hansen, and Henrik I. Christensen. A Recipe for Unbounded
+  Data Augmentation in Visual Reinforcement Learning. RLJ, 1:130–157, 2024. URL https:
+ //rlj.cs.umass.edu/2024/papers/Paper26.html.
+Gaon An, Seungyong Moon, Jang-Hyun Kim, and Hyun Oh Song. Uncertainty-Based Of-
+  fline Reinforcement Learning with Diversified Q-Ensemble. In Marc’Aurelio Ranzato, Alina
+  Beygelzimer, Yann N. Dauphin, Percy Liang, and Jennifer Wortman Vaughan (eds.), Ad-
+  vances in Neural Information Processing Systems 34: Annual Conference on Neural In-
+  formation Processing Systems 2021, NeurIPS 2021, December 6-14, 2021, virtual, pp.
+  7436–7447, 2021. URL https://proceedings.neurips.cc/paper/2021/hash/
+  3d3d286a8d153a4a58156d0e02d8570c-Abstract.html.
+Philip Bachman, Ouais Alsharif, and Doina Precup. Learning with Pseudo-Ensembles. In Zoubin
+  Ghahramani, Max Welling, Corinna Cortes, Neil D. Lawrence, and Kilian Q. Weinberger (eds.),
+  Advances in Neural Information Processing Systems 27: Annual Conference on Neural In-
+  formation Processing Systems 2014, December 8-13 2014, Montreal, Quebec, Canada, pp.
+  3365–3373, 2014. URL https://proceedings.neurips.cc/paper/2014/hash/
+  66be31e4c40d676991f2405aaecc6934-Abstract.html.
+Peng Cheng, Xianyuan Zhan, Zhi-Hao Wu, Wenjia Zhang, Youfang Lin, Shoucheng Song, Han Wang,
+  and Li Jiang. Look Beneath the Surface: Exploiting Fundamental Symmetry for Sample-Efficient
+  Offline RL. In Alice Oh, Tristan Naumann, Amir Globerson, Kate Saenko, Moritz Hardt, and
+  Sergey Levine (eds.), Advances in Neural Information Processing Systems 36: Annual Conference
+  on Neural Information Processing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December
+  10 - 16, 2023, 2023. URL http://papers.nips.cc/paper_files/paper/2023/
+  hash/181a027913d36bc0a8857c0da661d621-Abstract-Conference.html.
+Daesol Cho, Dongseok Shim, and H. Jin Kim. S2P: State-conditioned Image Synthesis
+  for Data Augmentation in Offline Reinforcement Learning. In Sanmi Koyejo, S. Mo-
+  hamed, A. Agarwal, Danielle Belgrave, K. Cho, and A. Oh (eds.), Advances in Neural
+  Information Processing Systems 35: Annual Conference on Neural Information Process-
+  ing Systems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - December 9,
+  2022, 2022. URL http://papers.nips.cc/paper_files/paper/2022/hash/
+  4b32c2943a02331792877cc6b5205f49-Abstract-Conference.html.
+Nicholas E. Corrado, Yuxiao Qu, John U. Balis, Adam Labiosa, and Josiah P. Hanna. Guided Data
+  Augmentation for Offline Reinforcement Learning and Imitation Learning. RLJ, 1:198–215, 2024.
+  URL https://rlj.cs.umass.edu/2024/papers/Paper33.html.
+Delft AI Cluster (DAIC). The Delft AI Cluster (DAIC), RRID:SCR_025091, 2024. URL https:
+ //doc.daic.tudelft.nl/.
+Delft High Performance Computing Centre (DHPC). DelftBlue Supercomputer (Phase 2), 2024.
+  URL https://www.tudelft.nl/dhpc/ark:/44463/DelftBluePhase2.
+Scott Fujimoto and Shixiang Shane Gu. A Minimalist Approach to Offline Reinforcement Learning. In
+  Marc’Aurelio Ranzato, Alina Beygelzimer, Yann N. Dauphin, Percy Liang, and Jennifer Wortman
+  Vaughan (eds.), Advances in Neural Information Processing Systems 34: Annual Conference on
+  Neural Information Processing Systems 2021, NeurIPS 2021, December 6-14, 2021, virtual, pp.
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                          2026
+
+
+  20132–20145, 2021. URL https://proceedings.neurips.cc/paper/2021/hash/
+  a8166da05c5a094f7dc03724b41886e5-Abstract.html.
+
+Scott Fujimoto, David Meger, and Doina Precup. Off-Policy Deep Reinforcement Learning without
+  Exploration. In Kamalika Chaudhuri and Ruslan Salakhutdinov (eds.), Proceedings of the 36th
+  International Conference on Machine Learning, ICML 2019, 9-15 June 2019, Long Beach, Cali-
+  fornia, USA, volume 97 of Proceedings of Machine Learning Research, pp. 2052–2062. PMLR,
+  2019. URL http://proceedings.mlr.press/v97/fujimoto19a.html.
+
+Michael Gastpar, Ido Nachum, Jonathan Shafer, and Thomas Weinberger. Fantastic Generalization
+ Measures are Nowhere to be Found. In The Twelfth International Conference on Learning
+ Representations, ICLR 2024, Vienna, Austria, May 7-11, 2024. OpenReview.net, 2024. URL
+ https://openreview.net/forum?id=NkmJotfL42.
+
+Jan E. Gerken and Pan Kessel. Emergent Equivariance in Deep Ensembles. In Forty-first International
+  Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024. OpenReview.net,
+  2024. URL https://openreview.net/forum?id=plXXbXjvQ9.
+
+Assaf Hallak, Dotan Di Castro, and Shie Mannor. Contextual Markov Decision Processes. CoRR,
+  abs/1502.02259, 2015. URL http://arxiv.org/abs/1502.02259. arXiv: 1502.02259.
+
+Nicklas Hansen and Xiaolong Wang. Generalization in Reinforcement Learning by Soft Data
+  Augmentation. In IEEE International Conference on Robotics and Automation, ICRA 2021, Xi’an,
+  China, May 30 - June 5, 2021, pp. 13611–13617. IEEE, 2021. DOI: 10.1109/ICRA48506.2021.
+  9561103.
+
+Xingshuai Huang, Di Wu, and Benoit Boulet. Goal-Conditioned Data Augmentation for Offline
+  Reinforcement Learning. Trans. Mach. Learn. Res., 2025, 2025. URL https://openreview.
+  net/forum?id=8K16dplpE0.
+
+Arthur Jacot, Clément Hongler, and Franck Gabriel. Neural Tangent Kernel: Convergence
+  and Generalization in Neural Networks. In Samy Bengio, Hanna M. Wallach, Hugo
+  Larochelle, Kristen Grauman, Nicolò Cesa-Bianchi, and Roman Garnett (eds.), Advances
+  in Neural Information Processing Systems 31: Annual Conference on Neural Information
+  Processing Systems 2018, NeurIPS 2018, December 3-8, 2018, Montréal, Canada, pp.
+  8580–8589, 2018. URL https://proceedings.neurips.cc/paper/2018/hash/
+  5a4be1fa34e62bb8a6ec6b91d2462f5a-Abstract.html.
+
+Junwoo Jang, Jungwoo Han, and Jinwhan Kim. K-mixup: Data augmentation for offline reinforce-
+  ment learning using mixup in a Koopman invariant subspace. Expert Syst. Appl., 225:120136,
+  2023. DOI: 10.1016/J.ESWA.2023.120136. URL https://doi.org/10.1016/j.eswa.
+  2023.120136.
+
+Yiding Jiang, Behnam Neyshabur, Hossein Mobahi, Dilip Krishnan, and Samy Bengio. Fantastic
+  Generalization Measures and Where to Find Them. In 8th International Conference on Learning
+  Representations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020. OpenReview.net, 2020.
+  URL https://openreview.net/forum?id=SJgIPJBFvH.
+
+Robert Kirk, Amy Zhang, Edward Grefenstette, and Tim Rocktäschel. A Survey of Zero-shot
+  Generalisation in Deep Reinforcement Learning. J. Artif. Intell. Res., 76:201–264, 2023. DOI:
+ 10.1613/JAIR.1.14174. URL https://doi.org/10.1613/jair.1.14174.
+
+Ilya Kostrikov, Ashvin Nair, and Sergey Levine. Offline Reinforcement Learning with Implicit
+   Q-Learning. In The Tenth International Conference on Learning Representations, ICLR 2022,
+   Virtual Event, April 25-29, 2022. OpenReview.net, 2022. URL https://openreview.net/
+   forum?id=68n2s9ZJWF8.
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+Aviral Kumar, Justin Fu, Matthew Soh, George Tucker, and Sergey Levine. Stabilizing Off-Policy
+  Q-Learning via Bootstrapping Error Reduction. In Hanna M. Wallach, Hugo Larochelle, Alina
+  Beygelzimer, Florence d’Alché Buc, Emily B. Fox, and Roman Garnett (eds.), Advances in
+  Neural Information Processing Systems 32: Annual Conference on Neural Information Pro-
+  cessing Systems 2019, NeurIPS 2019, December 8-14, 2019, Vancouver, BC, Canada, pp.
+  11761–11771, 2019. URL https://proceedings.neurips.cc/paper/2019/hash/
+  c2073ffa77b5357a498057413bb09d3a-Abstract.html.
+Aviral Kumar, Aurick Zhou, George Tucker, and Sergey Levine. Conservative Q-Learning for Offline
+  Reinforcement Learning. In Hugo Larochelle, Marc’Aurelio Ranzato, Raia Hadsell, Maria-Florina
+  Balcan, and Hsuan-Tien Lin (eds.), Advances in Neural Information Processing Systems 33:
+  Annual Conference on Neural Information Processing Systems 2020, NeurIPS 2020, December
+  6-12, 2020, virtual, 2020. URL https://proceedings.neurips.cc/paper/2020/
+  hash/0d2b2061826a5df3221116a5085a6052-Abstract.html.
+Jaehoon Lee, Lechao Xiao, Samuel S. Schoenholz, Yasaman Bahri, Roman Novak, Jascha
+  Sohl-Dickstein, and Jeffrey Pennington. Wide Neural Networks of Any Depth Evolve as
+  Linear Models Under Gradient Descent. In Hanna M. Wallach, Hugo Larochelle, Alina
+  Beygelzimer, Florence d’Alché Buc, Emily B. Fox, and Roman Garnett (eds.), Advances in
+  Neural Information Processing Systems 32: Annual Conference on Neural Information Pro-
+  cessing Systems 2019, NeurIPS 2019, December 8-14, 2019, Vancouver, BC, Canada, pp.
+  8570–8581, 2019. URL https://proceedings.neurips.cc/paper/2019/hash/
+  0d1a9651497a38d8b1c3871c84528bd4-Abstract.html.
+Jaewoo Lee, Sujin Yun, Taeyoung Yun, and Jinkyoo Park. GTA: Generative Trajectory Aug-
+  mentation with Guidance for Offline Reinforcement Learning. In Amir Globersons, Lester
+  Mackey, Danielle Belgrave, Angela Fan, Ulrich Paquet, Jakub M. Tomczak, and Cheng Zhang
+  (eds.), Advances in Neural Information Processing Systems 38: Annual Conference on Neural
+  Information Processing Systems 2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 -
+  15, 2024, 2024. URL http://papers.nips.cc/paper_files/paper/2024/hash/
+  67ea314d1df751bbf99ab664ae3049a5-Abstract-Conference.html.
+Sergey Levine, Aviral Kumar, George Tucker, and Justin Fu. Offline Reinforcement Learning:
+  Tutorial, Review, and Perspectives on Open Problems. CoRR, abs/2005.01643, 2020. URL
+  https://arxiv.org/abs/2005.01643. arXiv: 2005.01643.
+Jiafei Lyu, Xiaoteng Ma, Xiu Li, and Zongqing Lu.     Mildly Conservative Q-Learning
+   for Offline Reinforcement Learning.    In Sanmi Koyejo, S. Mohamed, A. Agar-
+   wal, Danielle Belgrave, K. Cho, and A. Oh (eds.), Advances in Neural Informa-
+   tion Processing Systems 35: Annual Conference on Neural Information Processing Sys-
+   tems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - December 9,
+   2022, 2022. URL http://papers.nips.cc/paper_files/paper/2022/hash/
+   0b5669c3b07bb8429af19a7919376ff5-Abstract-Conference.html.
+Yi Ma, Hongyao Tang, Dong Li, and Zhaopeng Meng. Reining Generalization in Of-
+  fline Reinforcement Learning via Representation Distinction. In Alice Oh, Tristan Nau-
+  mann, Amir Globerson, Kate Saenko, Moritz Hardt, and Sergey Levine (eds.), Advances
+  in Neural Information Processing Systems 36: Annual Conference on Neural Informa-
+  tion Processing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December 10 - 16,
+  2023, 2023. URL http://papers.nips.cc/paper_files/paper/2023/hash/
+  802a4350ca4fced76b13b8b320af1543-Abstract-Conference.html.
+Yixiu Mao, Qi Wang, Yun Qu, Yuhang Jiang, and Xiangyang Ji. Doubly Mild Generaliza-
+  tion for Offline Reinforcement Learning. In Amir Globersons, Lester Mackey, Danielle
+  Belgrave, Angela Fan, Ulrich Paquet, Jakub M. Tomczak, and Cheng Zhang (eds.), Ad-
+  vances in Neural Information Processing Systems 38: Annual Conference on Neural Infor-
+  mation Processing Systems 2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 -
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                       2026
+
+
+  15, 2024, 2024. URL http://papers.nips.cc/paper_files/paper/2024/hash/
+  5c14b3ee78d09e8b3240ffb1fb6cc819-Abstract-Conference.html.
+
+Bogdan Mazoure, Ilya Kostrikov, Ofir Nachum, and Jonathan Tompson. Improving Zero-Shot
+  Generalization in Offline Reinforcement Learning using Generalized Similarity Functions. In
+  Sanmi Koyejo, S. Mohamed, A. Agarwal, Danielle Belgrave, K. Cho, and A. Oh (eds.), Ad-
+  vances in Neural Information Processing Systems 35: Annual Conference on Neural Information
+  Processing Systems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - December
+  9, 2022, 2022. URL http://papers.nips.cc/paper_files/paper/2022/hash/
+  9fbdfded5c4d2969d889efc72f85c644-Abstract-Conference.html.
+
+Ishita Mediratta, Qingfei You, Minqi Jiang, and Roberta Raileanu. The Generalization Gap in
+   Offline Reinforcement Learning. In The Twelfth International Conference on Learning Rep-
+   resentations, ICLR 2024, Vienna, Austria, May 7-11, 2024. OpenReview.net, 2024. URL
+   https://openreview.net/forum?id=3w6xuXDOdY.
+
+Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G.
+  Bellemare, Alex Graves, Martin A. Riedmiller, Andreas Fidjeland, Georg Ostrovski, Stig Pe-
+  tersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran,
+  Daan Wierstra, Shane Legg, and Demis Hassabis. Human-level control through deep rein-
+  forcement learning. Nat., 518(7540):529–533, 2015. DOI: 10.1038/NATURE14236. URL
+  https://doi.org/10.1038/nature14236.
+
+Seohong Park, Kevin Frans, Sergey Levine, and Aviral Kumar. Is Value Learning Re-
+  ally the Main Bottleneck in Offline RL? In Amir Globersons, Lester Mackey, Danielle
+  Belgrave, Angela Fan, Ulrich Paquet, Jakub M. Tomczak, and Cheng Zhang (eds.), Ad-
+  vances in Neural Information Processing Systems 38: Annual Conference on Neural Infor-
+  mation Processing Systems 2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 -
+  15, 2024, 2024. URL http://papers.nips.cc/paper_files/paper/2024/hash/
+  8ffb4e3118280a66b192b6f06e0e2596-Abstract-Conference.html.
+
+Cristina Pinneri, Sarah Bechtle, Markus Wulfmeier, Arunkumar Byravan, Jingwei Zhang, William F.
+  Whitney, and Martin A. Riedmiller. Equivariant Data Augmentation for Generalization in Offline
+  Reinforcement Learning. CoRR, abs/2309.07578, 2023. DOI: 10.48550/ARXIV.2309.07578. URL
+  https://doi.org/10.48550/arXiv.2309.07578. arXiv: 2309.07578.
+
+Roberta Raileanu, Maxwell Goldstein, Denis Yarats, Ilya Kostrikov, and Rob Fergus. Auto-
+  matic Data Augmentation for Generalization in Reinforcement Learning. In Marc’Aurelio
+  Ranzato, Alina Beygelzimer, Yann N. Dauphin, Percy Liang, and Jennifer Wortman Vaughan
+  (eds.), Advances in Neural Information Processing Systems 34: Annual Conference on Neu-
+  ral Information Processing Systems 2021, NeurIPS 2021, December 6-14, 2021, virtual, pp.
+  5402–5415, 2021. URL https://proceedings.neurips.cc/paper/2021/hash/
+  2b38c2df6a49b97f706ec9148ce48d86-Abstract.html.
+
+Yutaka Shimizu, Joey Hong, Sergey Levine, and Masayoshi Tomizuka. Strategically Conservative
+  Q-Learning. CoRR, abs/2406.04534, 2024. DOI: 10.48550/ARXIV.2406.04534. URL https:
+  //doi.org/10.48550/arXiv.2406.04534. arXiv: 2406.04534.
+
+Samarth Sinha, Ajay Mandlekar, and Animesh Garg. S4RL: Surprisingly Simple Self-Supervision
+  for Offline Reinforcement Learning in Robotics. In Aleksandra Faust, David Hsu, and Gerhard
+  Neumann (eds.), Conference on Robot Learning, 8-11 November 2021, London, UK, volume
+  164 of Proceedings of Machine Learning Research, pp. 907–917. PMLR, 2021. URL https:
+  //proceedings.mlr.press/v164/sinha22a.html.
+
+Roman Vershynin. High-dimensional probability. Cambridge University Press Cambridge, UK,
+  2009.
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+Da Wang, Lin Li, Wei Wei, Qixian Yu, Jianye Hao, and Jiye Liang. Improving Generalization
+  in Offline Reinforcement Learning via Adversarial Data Splitting. In Forty-first International
+  Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024. OpenReview.net,
+  2024. URL https://openreview.net/forum?id=CV9PiQGt0i.
+Zhiyong Wang, Chen Yang, John C. S. Lui, and Dongruo Zhou. Provable Zero-Shot Generalization in
+  Offline Reinforcement Learning. In Forty-second International Conference on Machine Learning,
+  ICML 2025, Vancouver, BC, Canada, July 13-19, 2025. OpenReview.net, 2025. URL https:
+  //openreview.net/forum?id=1jx6bgemqg.
+
+Max Weltevrede, Moritz A. Zanger, Matthijs T. J. Spaan, and Wendelin Böhmer. How Ensembles
+ of Distilled Policies Improve Generalisation in Reinforcement Learning. CoRR, abs/2505.16581,
+ 2025. DOI: 10.48550/ARXIV.2505.16581. URL https://doi.org/10.48550/arXiv.
+ 2505.16581. arXiv: 2505.16581.
+Qianlan Yang and Yu-Xiong Wang. RTDiff: Reverse Trajectory Synthesis via Diffusion for
+  Offline Reinforcement Learning. In The Thirteenth International Conference on Learning
+  Representations, ICLR 2025, Singapore, April 24-28, 2025. OpenReview.net, 2025. URL
+  https://openreview.net/forum?id=0FK6tzqV76.
+Rui Yang, Lin Yong, Xiaoteng Ma, Hao Hu, Chongjie Zhang, and Tong Zhang. What is Essential for
+  Unseen Goal Generalization of Offline Goal-conditioned RL? In Andreas Krause, Emma Brunskill,
+  Kyunghyun Cho, Barbara Engelhardt, Sivan Sabato, and Jonathan Scarlett (eds.), International
+  Conference on Machine Learning, ICML 2023, 23-29 July 2023, Honolulu, Hawaii, USA, volume
+  202 of Proceedings of Machine Learning Research, pp. 39543–39571. PMLR, 2023a. URL
+  https://proceedings.mlr.press/v202/yang23q.html.
+Shuo Yang, Yijun Dong, Rachel A. Ward, Inderjit S. Dhillon, Sujay Sanghavi, and Qi Lei. Sample
+  Efficiency of Data Augmentation Consistency Regularization. In Francisco J. R. Ruiz, Jennifer G.
+  Dy, and Jan-Willem van de Meent (eds.), International Conference on Artificial Intelligence and
+  Statistics, 25-27 April 2023, Palau de Congressos, Valencia, Spain, volume 206 of Proceedings of
+  Machine Learning Research, pp. 3825–3853. PMLR, 2023b. URL https://proceedings.
+  mlr.press/v206/yang23c.html.
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                               2026
+
+
+
+                           Supplementary Materials
+                  The following content was not necessarily subject to peer review.
+
+
+6     Related works
+
+Generalization in offline RL has been studied from several perspectives, such as meta-learning a
+train/validation split (Wang et al., 2024), mild conservatism (Mao et al., 2024), or analyzing value
+learning versus policy extraction (Park et al., 2024). However, these approaches focus on improving
+generalization along the boundary of the dataset distribution in a single environment, rather then
+generalization to new environments or tasks. Mazoure et al. (2022) show improved performance in
+the ZSPT setting with a representation learning approach, Yang et al. (2023a) perform reweighing
+and relabeling to improve generalization to unseen goals, and Mediratta et al. (2024) demonstrate
+empirically that popular single-task offline RL algorithms do not outperform simple behavior cloning.
+Most closely related to our paper, Wang et al. (2025) also argue that pessimism can facilitate better
+generalization rather than hinder it. However, they consider a different ZSPT structure where the agent
+always starts in the same state and the context (influencing rewards and transitions) is unobserved.
+Data augmentation in offline RL is broadly done to improve generalization or improve the coverage
+of the dataset. Some approaches learn the distribution over a symmetry group (Pinneri et al., 2023),
+exploiting a time-reversal symmetry (Cheng et al., 2023), or evaluate several non-group structured
+DA techniques (Sinha et al., 2021) to improve generalization. Others improve the coverage of the
+dataset using state-dependent image synthesis (Cho et al., 2022), generative modeling (Yang & Wang,
+2025; Huang et al., 2025; Lee et al., 2024), or human guidance (Corrado et al., 2024). All these
+works exclusively use DA for generating a larger dataset for regular offline training. In this paper, we
+additionally evaluate consistency regularization techniques that can be applied more generally and
+have increased emphasis on enforcing the symmetric structure of the function.
+
+7     Extended background
+
+7.1   Algebraic group theory and symmetry
+
+A group is defined as a non-empty set G paired with a binary operator ·. For G to constitute a group,
+the following four axioms must be satisfied:
+
+                                           a · b ∈ G,       ∀a, b ∈ G    (Closure)
+                          (a · b) · c = a · (b · c),    ∀a, b, c ∈ G     (Associativity)
+                        ∃e ∈ G,      e · a = a · e = a,        ∀a ∈ G    (Identity)
+                               −1               −1        −1
+                  ∀a ∈ G, ∃a        ∈ G,   a·a         =a      ·a=e      (Inverse)
+
+
+As is common, we abuse notation and use G to refer to both the algebraic structure and its underlying
+set.
+To describe how these symmetries interact with the vector space X, we define a group representation
+ψX . This is a group homomorphism ψ : G → GL(X), mapping elements of G to the general linear
+group GL(X) of invertible n × n matrices (assuming dim(X) = n). As a homomorphism, the
+map preserves the group structure: ψ(a · b) = ψ(a)ψ(b) for all a, b ∈ G. Within this framework, a
+function f is considered equivariant if it commutes with the group action:
+
+                            f (ψX (g)x) = ψY (g)f (x)           ∀x ∈ X, g ∈ G
+
+When performing full data augmentation for a group G, a key observation is that transforming a
+sample from the augmented training set TG via an element of G is equivalent to a permutation pg of
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+the dataset’s indices:
+
+               ψX (g)xi = xpg (i) and ψY (g)yi = ypg (i) ,             where i ∈ {1, ..., |TG |}   (2)
+
+7.2   Neural networks in the infinite width limit
+
+As the width of neural network layers tend towards infinity, an ensemble of networks initialized
+randomly converges to a Gaussian process. This process is governed by the Neural Tangent Kernel
+(NTK, Jacot et al., 2018), which is defined as:
+                                       L                            T 
+                                                                           ∂fθ (x′ )
+                                                                                     
+                                  ′
+                                       X                  ∂fθ (x)
+                          Θ(x, x ) =         Eθ∼µ                                           ,
+                                       l=1
+                                                           ∂θ(l)            ∂θ(l)
+
+where fθ represents an L-layer network and θ(l) denotes the weights at layer l. Following (Lee et al.,
+2019), the evolution of this Gaussian process at time t is described by its mean mt and covariance Σt :
+
+                         mt (x) = Θ(x, xi )[Θ−1 Tt ]ij yj
+                                                    (1)                (2)
+                     Σt (x, x′ ) = K(x, x′ ) + Σt (x, x′ ) − (Σt (x, x′ ) + h.c.)
+
+In these expressions, we adopt Einstein notation for implicit summation over dataset indices i, j,
+and use h.c. for the Hermitian conjugate. Additionally, Tt = (I − exp(−ηΘt)), and K(x, x′ ) =
+                                                                                           (1)
+Eθ∼µ [fθ (x) ⊗ fθ (x′ )] represent the neural network Gaussian process (NNGP) kernel. The Σt and
+  (2)
+Σt terms are defined as:
+                           (1)
+                          Σt (x, x′ ) = Θ(x, xi )[Θ−1 Tt KTt Θ−1 ]ij Θ(xj , x′ )
+                           (2)
+                          Σt (x, x′ ) = Θ(x, xi )[Θ−1 Tt ]ij K(xj , x′ ).
+
+
+Where we denote the variance as Σt (x, x) = Σt (x).
+The output of an infinite ensemble, f¯t , corresponds exactly to the mean of the Gaussian process:
+f¯t (x) = mt (x). Additionally, in the limit t → ∞, the ensemble’s predictions on the training set X
+perfectly recover the ground truth targets Y:
+
+                         f¯∞ (X ) = m∞ (X ) = Θ(X , X )Θ(X , X )−1 T∞ Y = Y
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                        2026
+
+
+8     Proofs
+
+In this section, we will go through the steps for the proof of the theorems in section 3. We first repeat
+the definition of the GTI-ZSPT setting from Section 2.
+Definition 1 (Generalisation through invariance ZSPT). Let M|C be a CMDP and let Ctrain , Ctest ⊂
+C be a set of training and testing contexts that define a ZSPT problem. Additionally, let π ∗ be the
+                            π∗                  ∗
+optimal policy in M|C , SM|    C
+                                 = {s ∈ S|ρπM|C (s) > 0} denote the set of states with non-zero
+                                              ∗
+support under the on-policy distribution ρπM|C in CMDP M|C . In the generalisation through
+                                         π∗          π∗
+invariance ZSPT (GTI-ZSPT), the sets SM|    C
+                                              and SM|   C
+                                                             admit a symmetric structure:
+                                                                      train
+
+                                       ∗
+                                      π
+                                     SM|C
+                                          = {ψS (g)s|g ∈ G, s ∈ S̄}
+                                 ∗
+                               π
+                              SM|C
+                                              = {ψS (b)s|b ∈ B, s ∈ S̄},        B≤G
+                                      train
+
+               ∗                                         ∗
+            π                                      π
+where S̄ ⊂ SM|              is a proper subset of SM|                 and G is a non-trivial symmetry group (and
+                   Ctrain                                    Ctrain
+
+B ≤ G a finite subgroup) that leaves the optimal Q vector invariant: Q∗ (s) = Q∗ (ψS (g)s), ∀s ∈
+S̄ and ∀g ∈ G.
+
+8.1   Proof of Theorem 1
+
+In order to prove Theorem 1, we first prove a theorem analogous to Lemma 6.2 from Gerken & Kessel
+(2024) but for equivariance of vector-valued functions instead of just for invariance of scalar-valued
+functions. This theorem bounds the equivariance of an infinitely large ensemble of infinitely wide
+neural networks trained with full data augmentation on some finite subgroup B ≤ G:
+Lemma 1. Let fθ : S → Y = Rd be an infinitely wide neural network with parameters θ and with
+Lipschitz continuous derivatives with respect to the parameters. Furthermore, let f¯t be an infinite
+ensemble f¯t (s) = Eθ∼µ [fLt θ (s)], where the initial weights θ are sampled from a distribution µ and
+the operator Lt maps θ to its corresponding value after t steps of gradient descent with respect to a
+MSE loss function. Define the error κS and κY as a measures of discrepancy between representations
+from the group G and its finite subgroup B acting on S and Y respectively:
+
+                                      κS = max min ||ψS (g) − ψS (b)||op                                     (3)
+                                               g∈G b∈B
+
+                                      κY = max min ||ψY (g) − ψY (b)||op                                     (4)
+                                               g∈G b∈B
+
+
+The prediction of an infinite ensemble trained with full data augmentation on B ≤ G deviates from
+equivariance by
+
+                      f¯t s − ψY (g)⊤ f¯t ψS (g)s p ≤ DΘ (s, y),
+                                                 
+                                                                        ∀g ∈ G                 (5)
+
+for any time t. Here s ∈ S can by any state, || · ||p denotes a vector p-norm on Rd (p = 1, 2, or ∞).
+
+Proof. The proof can be found in 8.4.
+
+Since this lemma holds for equivariance, it also holds for invariance if we choose ψY (g) = ψY (e) = I
+as the identity operator, and set κY = 0 in DΘ (s, y), to get:
+
+                           f¯t s − f¯t ψS (g)s p ≤ CΘ (s, y),
+                                              
+                                                                        ∀g ∈ G.
+
+
+Next, we prove a lemma that bounds the prediction error between a single neural network and an
+infinite ensemble in the infinite width limit:
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+Lemma 2. The difference between the infinite ensemble f¯t and a single network ft , is bounded by
+                                      ||f¯t (s) − ft (s)||∞ < C(ϵ)                                        (6)
+with probability at least 1 − ϵ.
+
+Proof. The proof can be found in 8.5.
+
+Now, we can prove Theorem 1:
+Theorem 1. Consider Q-value distillation in the GTI-ZSPT setting as defined in Definition 2, with
+pessimistic Q-value targets Q̂∗sym that satisfy the symmetry group B ≤ G in the training contexts:
+Q̂∗sym (s) = Q̂∗sym (ψS (b)s), ∀b ∈ B, s ∈ Ds . If the minimal distance between the largest pessimistic
+optimal value, and largest pessimistic suboptimal value (δQ ), satisfies δQ ≥ CΘ (ϵ), the performance
+of the argmax policy πqθ is guaranteed to be optimal in the testing CMDP M|Ctest with probability
+1 − ϵ, for arbitrarily large levels of pessimism ηmax . The condition CΘ (ϵ) depends on the NTK Θ
+(i.e., network architecture), the dataset Ds , the optimal Q-value Q∗ and the confidence level ϵ, but
+notably, is independent of ηmax .
+
+Proof. In order to prove that the greedy argmax policy πqθ is guaranteed to be optimal in the
+testing CMDP M|Ctest , we need to show that for any state the agent encounters in M|Ctest , the
+argmax over the Q-values selects one of the optimal actions a ∈ Aopt . That is, we need that
+                                                          π∗
+maxa∈Aopt (s) qθ (s, a) > maxa∈ACopt (s) qθ (s, a), ∀s ∈ SM| C
+                                                               . This can be guaranteed if we have
+                                                                 test
+
+a bound for how much the neural network qθ deviates from the pessimistic targets Q̂∗sym on the
+testing states.
+In order to get this bound, we use the two lemmas derived above. Our first insight is that in the
+                                     π∗
+GTI-ZSPT setting, any state s ∈ SM|     C
+                                           encountered by the optimal policy in the CMDP M|C , is
+related to a state s̄ ∈ S̄ encountered in the training contexts, through a transformation g ∈ G that
+leaves the Q-values invariant:
+                      ∗
+                   π
+             ∀s ∈ SM| C
+                        ∃s̄ ∈ S̄ and g ∈ G,         s.t. Q∗ (s) = Q∗ (ψS (g −1 )s) = Q∗ (s̄)
+                                        ∗
+                                   π
+Since this holds for any state in SM| C
+                                        it also holds for any state in the testing contexts since
+   ∗            ∗
+ π            π
+SM|  C
+          ⊂ SM|C  .
+      test
+                                                ∗
+                                            π
+Now, we can use Lemma 1 for a state s ∈ SM|   Ctest
+                                                    as follows:
+                                                   
+                            q̄θt s̄ − q̄θt ψS (g)s̄ ∞ ≤ CΘ (s̄, y)
+                                                   
+                                    q̄θt s̄ − q̄θt s ∞ ≤ CΘ (s, y)
+where we set f = qθ and q̄θt denotes an infinite ensemble of qθt and θt are the weights at training
+                                                                                       π∗
+time t, and we use the fact that CΘ (s̄, y) can be redefined to be a function of s ∈ SM|  Ctest
+                                                                                                due to the
+existence of the transformation g ∈ G linking the two. Now, because the above holds for any time t,
+and the set S̄ is a subset of the training states Ds , we can use the fact that the infinite ensemble of
+infinitely wide neural networks will converge to the training targets at t → ∞: q̄θ∞ (s̄) = Q̂∗sym (s̄)
+to get:
+                                                                           π∗
+                         Q̂∗sym s̄ − q̄θ∞ s ∞ ≤ CΘ (s, y), ∀s ∈ SM|
+                                             
+                                                                              Ctest
+
+Now we can use Lemma 2 to bound the following:
+    Q̂∗sym s̄ − qθ∞ s ∞ = Q̂∗sym s̄ − q̄θ∞ s + q̄θ∞ s − qθ∞ s ∞
+                                                        
+
+                          ≤ Q̂∗sym s̄ − q̄θ∞ s ∞ + q̄θ∞ s − qθ∞ s ∞
+                                                              
+                                                                                               ∗
+                                                                                         π
+                                < CΘ (s, y) + C(ϵ),      with probability ≥ 1 − ϵ, ∀s ∈ SM|C       test
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                                               2026
+
+
+By definition of the || · ||∞ norm, the condition that
+                                                                                                   ∗
+                                                                                            π
+                             max       qθ∞ (s, a) >         max           qθ∞ (s, a), ∀s ∈ SM| C
+                                                                                                              ,
+                          a∈Aopt (s)                     a∈AC
+                                                            opt (s)
+                                                                                                       test
+
+
+
+
+will be true (with probability ≥ 1 − ϵ) if ∀s̄ ∈ Ds
+
+  max         Q̂∗sym (s̄, a) −     max
+                                    ∗
+                                               CΘ (s, y) − C(ϵ) >              max         Q̂∗sym (s̄, a) +         max
+                                                                                                                     ∗
+                                                                                                                               CΘ (s, y) + C(ϵ),
+a∈Aopt (s̄)                         π
+                                 s∈SM|                                       a∈AC
+                                                                                opt (s̄)
+                                                                                                                     π
+                                                                                                                  s∈SM|
+                                       Ctest                                                                           Ctest
+
+
+              max     Q̂∗sym (s̄, a) −     max         Q̂∗sym (s̄, a) >         max
+                                                                                 ∗
+                                                                                             2CΘ (s, y) + 2C(ϵ),
+        a∈Aopt (s̄)                      a∈AC
+                                            opt (s̄)
+                                                                                π
+                                                                             s∈SM|
+                                                                                     Ctest
+
+
+
+In other words, we need that δQ > maxs∈S π∗                              2CΘ (s, y) + 2C(ϵ).
+                                                          M|C
+                                                             test
+
+
+Finally, CΘ (s, y) depends on the targets y with which the function is trained, which is Q̂∗sym in our
+case. But this term can be upper bounded so that it no longer depends on Q̂∗sym in any way:
+                                                X                     X
+                      CΘ (s, y) = κS Ĉ(s)             ||si || · ||         Θ−1
+                                                                             ij yj ||∞
+                                                  i                   j,k
+                                                X                  X
+                                  ≤ κS Ĉ(s)           ||si || ·         ||Θ−1
+                                                                            ij ||∞ ||yj ||∞
+                                                  i                j,k
+                                                X                  X
+                                  ≤ κS Ĉ(s)           ||si || ·         ||Θ−1          ∗
+                                                                            ij ||∞ ||(Q̂sym )j ||∞
+                                                  i                j,k
+                                                X                  X
+                                  ≤ κS Ĉ(s)           ||si || ·         ||Θ−1         ∗
+                                                                            ij ||∞ ||(Q )j ||∞ = CΘ (s)                             (7)
+                                                  i                j,k
+
+
+where we used the definition of a pessimistic value function Q̂π .
+In conclusion, the network qθ that is distilled with pessimistic value targets Q̂∗sym is guaranteed (with
+                                                            π∗
+probability ≥ 1 − ϵ) to be optimal in the testing CMDP SM|      C
+                                                                     if δQ > maxs∈S π∗         2CΘ (s) +
+                                                                                   test                            M|C
+                                                                                                                       test
+2C(ϵ) = CΘ (ϵ), where CΘ (ϵ) depends on the NTK Θ (i.e., network architecture), the dataset Ds ,
+the optimal Q-value Q∗ and the confidence level ϵ. This δQ is guaranteed to exist, since the CΘ (s)
+and C(ϵ) terms are positive and finite. Furthermore, as long as Q̂∗sym satisfies this constraint on
+δQ , its level of pessimism ηmax = max{Q∗ (s, a) − Q̂∗sym (s, a)|s ∈ Ds , a ∈ A} can be arbitrarily
+large.
+
+8.2   Proof of Theorem 2
+
+With this theorem, we attempt to demonstrate that if the pessimistic value targets violate the symmetry
+of the environment, this can hurt generalization. Although we believe this often holds in practice,
+proving it theoretically is more challenging than the positive result from Theorem 1. One of the
+reasons for this, is that a policy that is identical to the optimal one, is guaranteed to perform optimally.
+However, a policy that deviates from an optimal one, is not guaranteed to be suboptimal (it can still
+be equal to a distinct, but equally optimal policy). Therefore, we instead have to prove Theorem 2 by
+first providing a specific counter-example instance of the GTI-ZSPT setting for which we can prove
+suboptimal generalization performance.
+Counter-example 1. Consider Q-value distillation in the GTI-ZSPT setting as defined in Definition
+2, with pessimistic Q-value targets Q̂∗asym that do not satisfy the correct invariant symmetry of
+the GTI-ZSPT instance. Instead, Q̂∗asym satisfies an incorrect equivariance under the group B ≤
+                    −1
+G: Q̂∗asym (s) = ψQ    (b)Q̂∗asym (ψS (b)s), ∀b ∈ B, s ∈ Ds , for some non-trivial equivariance
+transformations ψQ over the Q values. Note that this equivariance is incorrect, since the true optimal
+Q-values are invariant to the group B: Q∗ (s) = Q∗ (ψS (b)s), ∀b ∈ B, s ∈ Ds .
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+There exist instances of the GTI-ZSPT setting Z, and choices of ψQ , where training the Q-network
+qθ with pessimistic targets Q̂∗asym guarantees (with probability 1 − ϵ) that the performance of the
+argmax policy πqθ is suboptimal in the testing CMDP M|Ctest (while being optimal in the training
+CMDP M|Ctrain ). Furthermore, depending on the specific CMDP, the optimality gap J ∆ (πqθ ) can
+be arbitrarily large.
+
+
+Proof. The proof uses the same bounds on the deviation from the perfectly equivariant infinite
+ensemble as Theorem 1. However, this time the deviation is with respect to the incorrect equivariance
+of Q̂∗asym , rather than the correct invariance as observed in Q̂∗sym . We present a specific one-step
+instance of the GTI-ZSPT setting for which it is easy to prove that an incorrect equivariance that
+rotates the Q-values of suboptimal actions, rotates these values in such a way that they become larger
+than the values of the optimal actions in at least one of the test states. As such, we can prove that the
+greedy argmax policy πqθ is guaranteed to be suboptimal (with probability ≥ 1 − ϵ) in those states,
+given a sufficient level of pessimism ηmax . The proof is in Appendix 8.3.
+
+
+With this counter-example instance, it is very straightforward to prove Theorem 2:
+Theorem 2. Consider Q-value distillation in a GTI-ZSPT setting as defined in Definition 2, with two
+pessimistic value target functions Q̂1 and Q̂2 , with levels of pessimism η1 and η2 < η1 respectively,
+that both produce optimal performance in the training CMDP M|Ctrain . For certain instances of
+the GTI-ZSPT setting, there exists Q̂1 and Q̂2 , where Q̂1 is arbitrarily more pessimistic than Q̂2
+(η1 ≫ η2 ), but where πQ̂1 is guaranteed to have optimal performance in the testing CMDP M|Ctest ,
+whereas πQ̂2 is guaranteed to be suboptimal.
+
+
+Proof. This can be proven by simply taking a GTI-ZSPT instance from Counter-example 1, and
+defining Q̂1 = Q̂∗sym as in Theorem 1, and Q̂2 = Q̂∗asym as in Counter-example 1. As Theorem 1
+holds for arbitrarily large ηmax , we can simply make η1 − η2 → ∞ by taking η1 → ∞.
+
+8.3   Proof of Counter-example 1
+
+Counter-example 1. Consider Q-value distillation in the GTI-ZSPT setting as defined in Definition
+2, with pessimistic Q-value targets Q̂∗asym that do not satisfy the correct invariant symmetry of
+the GTI-ZSPT instance. Instead, Q̂∗asym satisfies an incorrect equivariance under the group B ≤
+                    −1
+G: Q̂∗asym (s) = ψQ    (b)Q̂∗asym (ψS (b)s), ∀b ∈ B, s ∈ Ds , for some non-trivial equivariance
+transformations ψQ over the Q values. Note that this equivariance is incorrect, since the true optimal
+Q-values are invariant to the group B: Q∗ (s) = Q∗ (ψS (b)s), ∀b ∈ B, s ∈ Ds .
+There exist instances of the GTI-ZSPT setting Z, and choices of ψQ , where training the Q-network
+qθ with pessimistic targets Q̂∗asym guarantees (with probability 1 − ϵ) that the performance of the
+argmax policy πqθ is suboptimal in the testing CMDP M|Ctest (while being optimal in the training
+CMDP M|Ctrain ). Furthermore, depending on the specific CMDP, the optimality gap J ∆ (πqθ ) can
+be arbitrarily large.
+
+
+Proof. In order to prove this in a straightforward way, we present a simple instance of the GTI-ZSPT
+setting Z as depicted in Figure 2. In this instance, the agent starts in a state s0 ∈ {(x, y)|x2 + y 2 = c}
+along a circle of radius c. There are four training contexts, defined by a starting state s0 and
+its four 90◦ rotations: Ds = {s0 , s90 , s180 , s270 }. During testing, the agent can encounter any
+starting state along the circle. The agent only has three actions: irrespective of state, action one
+terminates the episode and produces a reward r > 0, and the other two actions do not terminate
+the episode and reward nothing. In this CMDP, the optimal value function is easily derived to be
+Q∗ (s) = [a1 , a2 , a3 ] = [r, γr, γr], ∀s ∈ S for some discount factor γ ∈ [0, 1). Since this Q-value is
+the same for any of the states along the circle, it is rotationally invariant.
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                 2026
+
+
+Now, we choose pessimistic targets Q̂∗asym of the following form:
+
+                                  Q̂∗asym (s0 ) = [r, γr, γr]
+                                  Q̂∗asym (s90 ) = [r, γr − η, γr]
+                                  Q̂∗asym (s180 ) = [r, γr − η, γr − η]
+                                  Q̂∗asym (s270 ) = [r, γr, γr − η]
+
+
+
+This Q̂∗asym can be generated by taking the optimal Q-value in s0 , and for state sθ , rotating the
+Q-values of the two suboptimal actions by an angle θ around the vector [0, γr − η2 , γr − η2 ]. In other
+words, the equivariance transformations ψQ are defined as ψQ (θ) = T (γr − η2 , γr − η2 )R(θ)T (−γr +
+η          η
+2 , −γr + 2 ), where T (x, y) refers to the translation and R(θ) the rotation operation in the (a2 , a3 )
+space. Note that this Q̂∗asym has a level of pessimism equal to ηmax = η which is determined by the
+choice of ψQ .
+The key insight is that for the testing state s45 (generated from s0 by rotating by 45 degrees), the
+rotated value function is equal ψQ (45)Q̂∗asym (s0 ) = [r, 0, γr + 0.21η]. So, for certain choices of
+ψQ (and therefore of the level of pessimism η), γ and r, the suboptimal action a3 in s45 has a higher
+value than the optimal action a1 . Since the suboptimal actions do not change the state, at the next
+timestep they will be chosen over the optimal one again. This means the rotated value function in s45
+results in 0 return, compared to the optimal return of r.
+Now, we prove that for large enough values of η, the network qθ trained on Q̂∗asym is guaranteed to
+choose a suboptimal action in state s45 . We use Lemma 1 to write:
+
+                   ||q̄θ∞ (s45 ) − ψQ (−45)⊤ q̄θ∞ (ψQ (−45)s45 )||∞ ≤ DΘ (s45 , y)
+                                   ||q̄θ∞ (s45 ) − ψQ (45)q̄θ∞ (s0 )||∞ ≤ DΘ (s45 , y)
+                               ||q̄θ∞ (s45 ) − ψQ (45)Q̂∗asym (s0 )||∞ ≤ DΘ (s45 , y)
+
+
+
+where we used the fact that for q̄θ∞ (s) = Q̂∗asym (s), ∀s ∈ Ds . Now using Lemma 2:
+
+||qθ∞ (s45 ) − ψQ (45)Q̂∗asym (s0 )||∞ = ||qθ∞ (s45 ) − q̄θ∞ (s45 ) + q̄θ∞ (s45 ) − ψQ (45)Q̂∗asym (s0 )||∞
+                                       ≤ ||qθ∞ (s45 ) − q̄θ∞ (s45 )||∞ + ||q̄θ∞ (s45 ) − ψQ (45)Q̂∗asym (s0 )||∞
+                                       < DΘ (s45 , y) + C(ϵ), with probability ≥ 1 − ϵ
+
+
+
+We use the above bound to prove that the argmax policy πqθ chooses a suboptimal action with
+probability 1 − ϵ (and receives return 0) in the state s45 if the following relation holds:
+
+    ψQ (45)Q̂∗asym (s0 ) (a2 ) − ψQ (45)Q̂∗asym (s0 ) (a0 )
+                                                    
+                                                               > DΘ (s45 , y) + C(ϵ)
+                               2
+                                            γr + 0.21η − r
+                                                               > DΘ (s45 , y) + C(ϵ)
+                                                    2
+                                                                  (1 − γ)r + 2DΘ (s45 , y) + 2C(ϵ)
+                                                            η>
+                                                                                 0.21
+                                                            η > DΘ,Z (ϵ)
+
+Where we used a derivation like in (7) to bound the term DΘ (s45 , y) → DΘ (s45 ) so that it no longer
+depends on y = Q̂∗asym , and we define a new constant DΘ,Z (ϵ) that depends only on the NTK Θ
+(i.e., network architecture), the particular GTI-ZSPT instance Z and the confidence level ϵ. Since r,
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+DΘ (s45 ) and C(ϵ) are all finite, there always exists a choice of ψQ , and therefore a level of pessimism
+η, for which the above constraint holds. In this case, the policy πqθ is guaranteed (with probability
+1 − ϵ) to be suboptimal in at least one test state. Now, let’s say that the contribution of state s45 to the
+testing performance is given by ws45 > 0, the optimality gap is lower bounded by:
+                                              ∗
+                              J ∆ (πqθ ) = J π − J πqθ ≥ r − (1 − ws45 )r
+                                                         ≥ ws45 r
+
+which goes to J ∆ (πqθ ) → ∞ as r → ∞.
+
+                                                        a2, a3
+
+
+
+                                                             S1 = (x,y)
+                                                        a1
+                                                  S2
+
+
+
+
+Figure 2: Illustration of the one-step, rotationally invariant GTI-ZSPT instance used in the proof of
+Counter-example 2.
+
+
+8.4   Equivariance of an ensemble
+
+We need to prove bounds on the equivariance of an infinitely large ensemble of infinitely wide neural
+networks trained with full data augmentation on some finite subgroup B ≤ G:
+Lemma 1. Let fθ : S → Y = Rd be an infinitely wide neural network with parameters θ and with
+Lipschitz continuous derivatives with respect to the parameters. Furthermore, let f¯t be an infinite
+ensemble f¯t (s) = Eθ∼µ [fLt θ (s)], where the initial weights θ are sampled from a distribution µ and
+the operator Lt maps θ to its corresponding value after t steps of gradient descent with respect to a
+MSE loss function. Define the error κS and κY as a measures of discrepancy between representations
+from the group G and its finite subgroup B acting on S and Y respectively:
+
+                                  κS = max min ||ψS (g) − ψS (b)||op                                    (8)
+                                         g∈G b∈B
+
+                                 κY = max min ||ψY (g) − ψY (b)||op                                     (9)
+                                         g∈G b∈B
+
+The prediction of an infinite ensemble trained with full data augmentation on B ≤ G deviates from
+equivariance by
+
+                      f¯t s − ψY (g)⊤ f¯t ψS (g)s p ≤ DΘ (s, y),
+                                                 
+                                                                        ∀g ∈ G                (10)
+
+for any time t. Here s ∈ S can by any state, || · ||p denotes a vector p-norm on Rd (p = 1, 2, or ∞).
+
+Proof. Lets denote a set of states with D = {si }ni=1 and a training dataset T = {(si , yi )|∀si ∈
+D, yi ∈ Y} where yi ∈ Y indicates the target for sample si . The function f¯t is trained on the
+augmented dataset TB = (DB , YB ) = {(ψS (b)s, ψY (b)y)|∀(s, y) ∈ T , b ∈ B} where B ≤ G.
+Since f¯t is trained on a dataset with data augmentation for subgroup B, it is fully equivariant to
+any transformation b ∈ B (Theorem 5.3, Gerken & Kessel, 2024). Therefore, we can rewrite the
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                             2026
+
+
+expression ∆f := f¯t s − ψY (g)⊤ f¯t ψS (g)s p :
+                                           
+
+
+
+
+∆f = ψY (b)⊤ f¯t ψS (b)s − ψY (g)⊤ f¯t ψS (g)s p
+                                              
+
+   = ψY (b)⊤ f¯t ψS (b)s − ψY (b)⊤ f¯t ψS (g)s + ψY (b)⊤ f¯t ψS (g)s − ψY (g)⊤ f¯t ψS (g)s p
+                                                                                       
+
+   ≤ ψY (b)⊤ f¯t ψS (b)s − ψY (b)⊤ f¯t ψS (g)s p + ψY (b)⊤ f¯t ψS (g)s − ψY (g)⊤ f¯t ψS (g)s p
+                                                                                          
+                                                                   
+            ⊤ ¯               ¯                          ⊤           ⊤ ¯
+                                                                                 
+   = ψY (b) ft ψS (b)s − ft ψS (g)s          p
+                                               +  ψY (b) − ψY (g) ft ψS (g)s p
+
+   ≤ f¯t ψS (b)s − f¯t ψS (g)s p + ψY (b)⊤ − ψY (g)⊤ op f¯t ψS (g)s p
+                                                                        
+
+   ≤ f¯t ψS (b)s − f¯t ψS (g)s p + κY max ||f¯t (ψS (g)s)||p
+                             
+                                           g
+      ¯              ¯
+                             
+   = ft ψS (b)s − ft ψS (g)s p + DΘ (s)
+
+
+
+
+where we used the definition of the operator norm, the definition of κY , the triangle inequality, and
+the fact that the operator norm of an orthogonal operator is equal to 1 (||ψY || = 1).
+Now, in order to evaluate the first term, we can use the definition of the mean of the NNGP mt to
+write for any s ∈ S and any b ∈ B, g ∈ G
+
+
+
+
+||f¯t ψS (b)s − f¯t ψS (g)s ||p = ||mt ψS (b)s − mt ψS (g)s ||p
+                                                        
+
+                                = ||(Θ(ψS (b)s, DB ) − Θ(ψS (g)s, DB ))Θ−1 (I − exp(−ηΘt))YB ||p
+                                     X                                     X
+                                                                             Θ−1
+                                                                                                      
+                                = ||   (Θ(ψS (b)s, si ) − Θ(ψS (g)s, si ))     ij (I − exp(−ηΘt))jk yk ||p
+                                        i                                             j,k
+                                     X                                        X
+                                      (Θ(s, ψS−1 (b)si ) − Θ(s, ψS−1 (g)si ))   Θ−1
+                                                                                                        
+                                = ||                                             ij (I − exp(−ηΘt))jk yk ||p
+                                        i                                                   j,k
+                                    X                                                   X
+                                            ||(Θ(s, ψS−1 (b)si ) − Θ(s, ψS−1 (g)si ))             Θ−1
+                                                                                                                          
+                                ≤                                                                  ij (I − exp(−ηΘt))jk yk ||p
+                                    i                                                       j,k
+                                    X                                                             X
+                                ≤           ||(Θ(s, ψS−1 (b)si ) − Θ(s, ψS−1 (g)si ))||p,p ||           Θ−1
+                                                                                                         ij (I − exp(−ηΘt))jk yk ||p
+                                    i                                                             j,k
+
+
+
+
+where we used the invariance of the NTK Θ(s, s′ ) (Theorem 5.1, Gerken & Kessel, 2024), the
+consistency of the p-norm induced matrix norm || · ||p,p and the triangle inequality. We now show for
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+the following expression:
+
+      ∆Θ(s′ , s, s̄) = ||Θ(s′ , s) − Θ(s′ , s̄)||p,p
+                          L
+                                           ∂fθ (s′ ) ∂fθ (s) X ∂fθ (s′ ) ∂fθ (s̄)
+                         X          X                                            
+                     =       Eθ∼µ                    ⊗       −           ⊗
+                         l=1          (l)
+                                             ∂θ(l)     ∂θ(l)   (l)
+                                                                   ∂θ(l)   ∂θ(l)     p,p
+                                             θ                                            θ
+                         L            X                       ′
+                                                                                                       
+                         X                           ∂fθ (s )                ∂fθ (s) ∂fθ (s̄)
+                    =          Eθ∼µ                           ⊗                     −
+                         l=1                     (l)
+                                                      ∂θ(l)                   ∂θ(l)   ∂θ(l)                       p,p
+                                             θ
+                        L
+                                                   ∂fθ (s′ )
+                                     X                                                                          
+                        X                                                    ∂fθ (s) ∂fθ (s̄)
+                    ≤         Eθ∼µ                           ⊗                      −
+                        l=1
+                                                    ∂θ(l)                     ∂θ(l)   ∂θ(l)                  p,p
+                                      θ (l)
+                        L
+                                                   ∂fθ (s′ )
+                                     X                                                    
+                        X                                                 ∂fθ (s) ∂fθ (s̄)         1 1
+                    =         Eθ∼µ                                               −          , where + = 1
+                        l=1
+                                                    ∂θ(l)            p     ∂θ(l)   ∂θ(l) q         p q
+                                      θ (l)
+                        L
+                                                   ∂fθ (s′ )
+                        X            X                                                             
+                                                                              (l)
+                    ≤         Eθ∼µ                                       L(θ )||s − s̄||
+                        l=1
+                                                    ∂θ(l)            p
+                                      θ (l)
+                                   L
+                                                                    ∂fθ (s′ )
+                                   X                X                                       
+                                                                                              (l)
+                    = ||s − s̄||         Eθ∼µ                                           L(θ )
+                                   l=1
+                                                                     ∂θ(l)          p
+                                                       θ (l)
+                                         ′
+                    = ||s − s̄||Ĉ(s )
+
+where L(θ(l) ) is the Lipschitz constant of ∂θ(l) fθ , and we used the following property for the matrix
+norm of the outer product of two vectors: ||a ⊗ b||p,p = ||a||p ||b||q , where p1 + 1q = 1.
+Plugging this into the previous expression gives us:
+                               X                                        X
+ f¯t ψS (b)s − f¯t ψS (g)s p ≤   Ĉ(s)||ψS−1 (b)si − ψS−1 (g)si || · ||   Θ−1
+                         
+                                                                           ij (I − exp(−ηΘt))jk yk ||p
+                                             i                                                              j,k
+                                         X                                                X
+                                                   Ĉ(s)|| ψS−1 (b) − ψS−1 (g) si || · ||   Θ−1
+                                                                              
+                                     =                                                       ij (I − exp(−ηΘt))jk yk ||p
+                                             i                                                              j,k
+                                         X                                                                    X
+                                     ≤             Ĉ(s)||ψS−1 (b) − ψS−1 (g)||op ||si || · ||                          Θ−1
+                                                                                                                         ij (I − exp(−ηΘt))jk yk ||p
+                                             i                                                                    j,k
+                                                        X                         X
+                                     ≤ κS Ĉ(s)                    ||si || · ||         Θ−1
+                                                                                         ij (I − exp(−ηΘt))jk yk ||p = CΘ (s, y)
+                                                           i                      j,k
+
+
+Finally, we have
+
+          f¯t s − ψY (g)⊤ f¯t ψS (g)s p ≤ CΘ (s, y) + DΘ (s) = DΘ (s, y),
+                                    
+                                                                                                                           ∀g ∈ G      (11)
+
+
+
+
+8.5   Difference between infinite ensemble and single network
+
+Lemma 2. The difference between the infinite ensemble f¯t and a single network ft , is bounded by
+
+                                                 ||f¯t (s) − ft (s)||∞ < C(ϵ)                                                           (6)
+
+with probability at least 1 − ϵ.
+
+
+Proof. We use the following result from Vershynin (2009):
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                           2026
+
+
+Lemma. The probability that the infinite ensemble f¯t and a single network ft differ by more than a
+given threshold δ is bounded by
+                                                                    2
+                             P ||f¯t (s) − ft (s)||∞ < δ ≥ 1 − 2decδ ,
+                                                       
+
+
+where d is the output dimension of f and c is an absolute constant.
+
+Proof. This follows from Proposition 2.7.6 from Vershynin (2009).
+
+We would like to have an expression for ϵ so that:
+
+                               P ||f¯t (s) − ft (s)||∞ < δ ≥ 1 − ϵ
+                                                         
+
+                       2
+This gives us ϵ = 2decδ . Next, we rewrite δ in terms of the given confidence level ϵ:
+                                                            2
+                                                ϵ = 2decδ
+                                     s          
+                                         ln ϵ/2d
+                                                 = δ = C(ϵ)
+                                             c
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+9     Experimental Details
+
+9.1   Theoretical validation
+
+The theoretical results are validated by performing value distillation in the Rotational Reacher
+environment from Weltevrede et al. (Figure 1, 2025) (where we use the C4 training tasks and test on
+any rotation). The environment has a 2 dimensional, continuous action space consisting of the torque
+applied to the shoulder and elbow joint. However, in order to ease the construction of pessimistic
+value functions, we discretize the action space into 9 actions, evenly spaced over the full range of
+allowed torques (from [−2, −2] to [2, 2]).
+We compare a symmetric pessimistic value function with a non-symmetric (incorrectly equivariant)
+pessimistic value function for varying degrees of pessimism ηmax . A ground truth optimal value
+function or policy is not known, and so we train a deep Q network agent Mnih et al. (DQN, 2015)
+(hyperparameters can be found in Table 3). We train DQN only on the first training context in Figure
+1, and then (symmetrically) use the learned value and policy for the other three training contexts. The
+reason for this is to ensure the rotational symmetry of our approximate optimal policy (which likely
+would not be exactly symmetric if we simply trained DQN on all four training contexts).
+We create the distillation datasets by collecting the ’on-policy states for the optimal policy’ by
+unrolling the (approximately optimal) greedy Q value policy in the training contexts, and then
+combining those states with two pessimistic value function targets Q̂∗sym and Q̂∗asym . Q̂∗sym is
+constructed by taking the learned Q value from DQN as an approximation for the ground truth
+optimal Q-values and subtracting a constant pessimism factor equal to ηmax from the Q-value of
+each suboptimal action. The suboptimal actions for a state are defined as all the actions except the
+one that the greedy policy chooses (the one with highest Q-value) in that state.
+The construction of Q̂∗asym is a bit more involved. In theory, if the pessimistic targets Q̂∗asym have
+at least one optimal action with higher value than any of the suboptimal ones, for each state in Ds
+(in other words, δQ > 0), the infinitely wide neural network qθ∞ trained for infinite steps will be
+perfectly optimal in the training contexts. This is because the infinitely wide neural network will
+perfectly learn to predict the training targets at t → ∞, without approximation error. However,
+a finite width neural network, trained for finite steps, will have some non-zero approximation
+error. This approximation error could cause the argmax policy to select a suboptimal action if δQ
+is smaller than the approximation error. To ensure the finite network qθt will in practice choose
+the optimal actions in the training contexts, we use a baseline level of symmetric pessimism for
+the Q̂∗asym targets equal to ηbase = 0.01. This effectively sets δQ to be large enough so that the
+approximation error will not cause the greedy policy to be suboptimal in the training contexts. We
+then construct the equivariant pessimism on top of this baseline level of pessimism. Specifically,
+the equivariant pessimistic targets are defined as Q̂∗sym for η = 0.01, plus a rotation of suboptimal
+actions 1 and 5 (we found these actions to be suboptimal in each state in Ds ). Mathematically,
+this comes down to, for a state s ∈ Ds , rotating action 1 and 5 around the vector [Q∗ (s, a1 ) −
+ηmax −0.01
+     2     , 0, 0, 0, Q∗ (s, a5 ) − ηmax2−0.01 , 0, 0, 0, 0] (similar to the equivariant rotation in the proof
+of Counter-example 2 in Appendix 8.2), and then subtracting 0.01 from all the suboptimal actions
+(including the rotated ones). The result is a pessimistic value function Q̂∗asym , that for ηmax = 0.01
+is actually the same as Q̂∗sym , but for all ηmax > 0.01 is an equivariant function where the Q-values
+for action 1 and 5 are rotated by 90 degrees.
+We then perform Q-value distillation on these datasets (according to equation (1)) with the hyper-
+parameters detailed in Table 4. The resulting network qθ is greedily evaluated on the four training
+contexts, and a set of 100 testing contexts, constructed by uniformly randomly sampling shoulder
+rotations from the integers in the range [0, 360) (excluding the training rotations [0, 90, 180, 270]).
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                 2026
+
+
+                                 Table 3: Hyper-parameters for DQN
+
+                                                 DQN
+                          Hyper-parameter                      Value
+                          Total timesteps                      1 500 000
+                          Vectorised environments              1
+                          Buffer size                          500 000
+                          Warmup                               50 000
+                          Batch size                           512
+                          Discount factor γ                    0.95
+                          Max. gradient norm                   1
+                          Gradient steps                       1
+                          Train frequency (steps)              50
+                          Target update interval (steps)       100
+                          Target soft update coefficient       0.01
+                          E-greedy exploration initial ϵ       1
+                          E-greedy exploration final ϵ         0.1
+                          E-greedy exploration fraction ϵ      0.66
+                                                 Adam
+                          Learning rate                        5 × 10−5
+                                                Network
+                          Architecture                         MLP
+                          Activation function                  ReLU
+                          Hidden dimensions                    [512, 256, 128]
+
+
+                           Table 4: Hyper-parameters for Value Distillation
+
+                                          Value Distillation
+                                Hyper-parameter         Value
+                                Epochs                  2000
+                                Batch size              6
+                                                 Adam
+                                Learning rate           5 × 10−4
+                                              Network
+                                Architecture        MLP
+                                Activation function ReLU
+                                Hidden dimensions [512, 256, 128]
+
+
+
+9.2   Data augmentation experiments
+
+For the offline RL experiments we collect three datasets the Rotational Reacher experiment from
+Weltevrede et al. (Figure 1, 2025). Just as in the value distillation experiments, we discretize the
+action space into 9 evenly spaced actions. We collect data only in the first training context in Figure 1,
+and then perform different DA approaches using the C4 group of 90◦ rotations. As our expert policy,
+we use the same DQN agent as was used in the value distillation experiments described in Appendix
+9.1. We then use this policy to construct three datasets with varying degrees of optimality:
+• Expert: The expert dataset consists of 10 trajectories of the greedy DQN policy in context 1 in
+  Figure 1.
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+• Suboptimal: The suboptimal dataset consists of 10 trajectories from the first training context in
+  Figure 1 obtained by rolling out the ϵ-greedy DQN policy with ϵ = 0.6. The ϵ-greedy DQN policy
+  follows a random action with probability ϵ and the greedy DQN policy with probability 1 − ϵ.
+• Mixed: The mixed dataset consists of 5 trajectories of the greedy DQN policy, and 5 trajectories of
+  the ϵ-greedy DQN policy.
+We train a CQL and IQL agent on these datasets and evaluate them on the single training contexts and
+100 randomly sampled testing contexts (where testing angles are sampled from the integers in the
+range [0, 360)). Note that for CQL, the data augmentation is applied to the value function, whereas
+for IQL it can be applied to the actor, the critic, or both (see Appendix 10.2 for more results and
+discussion on this).
+
+9.2.1   CQL
+
+We first perform hyperparameter tuning for a baseline (no DA) CQL agent by performing a grid
+search over the following values (5 seeds per hyperparameter combination):
+• Learning rate: {1 ∗ 10−4 , 5 ∗ 10−4 , 1 ∗ 10−3 }
+• Batch size: {16, 64, 128}
+• CQL loss coefficient: {0.5, 5, 10}
+and selecting the hyperparameters with highest train and validation performance (from a separately
+sampled set of 100 validation contexts).
+We fix these tuned hyperparameters across all our CQL experiments and train 20 seeds (different
+from the tuning seeds) on 20 newly generated datasets (different from the tuning datasets) for our
+final results. For the Aug-D and Aug-D-Online experiments we simply run baseline CQL, but on a
+minibatch twice as large due to concatenation of the randomly augmented observations [ot , oaug t   ]B
+(random 90◦ rotations), and randomly augmented next-observations [ot+1 , oaug  t+1 ]B or original next-
+observations [ot+1 , ot+1 ]B respectively. This means the difference between Aug-D and Aug-D-online
+is that the former also augments the observations used for the bootstrapped next-state value in the
+DQN loss of CQL.
+For the DAC-Latent and DAC-Output experiments we simply run baseline CQL but with an additional
+consistency loss, that simply minimizes the mean-squared error (MSE) between the latent (last hidden
+layer, DAC-Latent) or output (Q-values, DAC-Output) for the original and augmented observations.
+This additional loss introduces an additional hyperparameter: the consistency coefficient. We perform
+a small search over this additional hyperparameter by taking the tuned hyperparameters for the
+baseline CQL, and additionally searching over 5 seeds each for the consistency coefficient values
+{1, 10, 100}. We then choose the best coefficient based on a train and validation performance, and
+perform the final experiment with 20 new seeds and an independently sampled test set. The final
+hyperparameters that we used can be found in Table 5.
+
+9.2.2   IQL
+
+Similar to the CQL experiments, we first perform a grid search for the baseline (no DA) IQL agent
+over the following values:
+• Learning rate: {1 ∗ 10−4 , 5 ∗ 10−4 , 1 ∗ 10−3 }
+• Batch size: {16, 64, 128}
+• IQL expectile: {0.7, 0.8, 0.9}
+• IQL temperature: {3, 7, 10}
+and selecting the hyperparameters with highest train and validation performance (from a separately
+sampled set of 100 validation contexts).
+We fix these tuned hyperparameters across all our IQL experiments and train 20 seeds (different from
+the tuning seeds) on 20 newly generated datasets (different from the tuning datasets) for our final
+results. For the Aug-D and Aug-D-Online experiments, we run baseline IQL, but on a minibatch
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                             2026
+
+
+twice as large due to concatenation of the randomly augmented observations [ot , oaug
+                                                                                  t   ]B (random 90◦
+                                                                 aug
+rotations), and randomly augmented next-observations [ot+1 , ot+1 ]B or original next-observations
+[ot+1 , ot+1 ]B respectively. For the -C variant, we only perform this DA during the value learning
+of the Q and state value functions. The only difference between Aug-D-C and Aug-D-Online-C
+is that the former also augments the inputs to next-state value targets bootstrapped from the state-
+value function during training of the Q-value. For the -A variant, we only perform DA during the
+policy extraction phase (which uses Advantage Weighted Regression, a form of Weighted Behavior
+Cloning). This means that both approaches perform weighted behavior cloning on both the original
+and augmented samples. The only difference between Aug-D-A and Aug-D-Online-A is that the
+former calculates the weights by bootstrapping values on the augmented observations, and the later
+always uses the weights derived from the original observations. The -AC approach simply uses both
+these approaches in parallel.
+For the DAC-Latent and DAC-Output experiments we again perform a small search over the consis-
+tency coefficient values {1, 10, 100} and choose the best ones. For the -C variant, the consistency
+loss is added to the state and Q value learning, implemented a an MSE loss on the last hidden layer or
+on the state/Q value output of the networks. The -A variant adds the consistency loss on policy during
+policy extraction, which is implemented as an MSE loss on the last hidden layer or the logits over
+actions. The -AC variant adds the consistency loss to both the value learning and policy extraction.
+The final hyperparameters can be found in Table 6.
+
+                                Table 5: Hyper-parameters for CQL
+
+                                               CQL
+                             Hyper-parameter            Value
+                             Epochs                     2000
+                             Architecture               MLP
+                             Activation function        ReLU
+                             Hidden dimensions          [512, 256, 128]
+                             Target update frequency    100
+                                              Expert
+                             Batch size                 128
+                             Learning rate              1 × 10−4
+                             CQL loss coefficient       5
+                             DAC-Latent coefficient     100
+                             DAC-Output coefficient     100
+                                              Mixed
+                             Batch size                 128
+                             Learning rate              1 × 10−4
+                             CQL loss coefficient       10
+                             DAC-Latent coefficient     100
+                             DAC-Output coefficient     100
+                                           Suboptimal
+                             Batch size              128
+                             Learning rate           5 × 10−4
+                             CQL loss coefficient    5
+                             DAC-Latent coefficient 100
+                             DAC-Output coefficient 10
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+                                Table 6: Hyper-parameters for IQL
+
+                                               IQL
+                          Hyper-parameter                 Value
+                          Epochs                          2000
+                          Architecture                    MLP
+                          Activation function             ReLU
+                          Hidden dimensions               [512, 256, 128]
+                          Target update frequency         100
+                                            Expert
+                          Batch size                      64
+                          Learning rate                   1 × 10−3
+                          IQL expectile                   0.8
+                          IQL temperature                 7
+                          DAC-Latent coefficient -C       10
+                          DAC-Output coefficient -C       1
+                          DAC-Latent coefficient -A       100
+                          DAC-Output coefficient -A       10
+                          DAC-Latent coefficient -AC      1, 10
+                          DAC-Output coefficient -AC      1, 1
+                                             Mixed
+                          Batch size                      64
+                          Learning rate                   1 × 10−3
+                          IQL expectile                   0.7
+                          IQL temperature                 7
+                          DAC-Latent coefficient -C       1
+                          DAC-Output coefficient -C       10
+                          DAC-Latent coefficient -A       10
+                          DAC-Output coefficient -A       10
+                          DAC-Latent coefficient -AC      100, 100
+                          DAC-Output coefficient -AC      100, 100
+                                          Suboptimal
+                          Batch size                      16
+                          Learning rate                   1 × 10−3
+                          IQL expectile                   0.8
+                          IQL temperature                 3
+                          DAC-Latent coefficient -C       100
+                          DAC-Output coefficient -C       10
+                          DAC-Latent coefficient -A       100
+                          DAC-Output coefficient -A       100
+                          DAC-Latent coefficient -AC      10, 100
+                          DAC-Output coefficient -AC      1, 10
+
+
+
+10     Additional Results
+
+10.1   CQL
+
+Here are the additional results for applying the different DA techniques to the CQL learned value
+function in the Rotational Reacher problem from Figure 1. We see qualitatively similar results as we
+did for our main results for IQL in Table 2.
+Reinforcement Learning Conference - Finding The Frame 2026 Workshop                                             2026
+
+
+Table 7: CQL test performance for various DA approaches in the Rotational Reacher problem from
+Figure 1. The agent trains on expert, mixed, and suboptimal datasets collected from context 1, with
+DA under the 90◦ rotations. Shown are the mean and standard deviation for 20 seeds, and in bold are
+the best returns per row including those with overlapping 95% confidence intervals.
+
+  CQL                 No DA              Aug-D:           Aug-D-Online:           DAC-Latent:         DAC-Output:
+  Expert           0.54 ± 0.08        0.89 ± 0.11           0.88 ± 0.09               0.90 ± 0.07      0.96 ± 0.04
+  Mixed            0.36 ± 0.09        0.76 ± 0.18           0.76 ± 0.14               0.69 ± 0.17      0.78 ± 0.16
+  Suboptimal       0.30 ± 0.09        0.60 ± 0.13           0.57 ± 0.15               0.45 ± 0.12      0.60 ± 0.12
+
+
+10.2   IQL
+
+In this section we denote with -C when applying DA to the critic, -A when applying to the actor
+(omitted in the main results in the main text), or -AC when applying to both. In Table 8, we see that
+applying DA to only the critic does not improve over the no DA baseline. This is because only the
+actor is used during testing, and it is extracted by evaluating critic on only the original dataset. As
+such, a symmetric critic has no impact on the testing performance 3 . Additionally, Table 9 shows that
+applying DA to both the critic and actor, achieves roughly the same performance applying it only to
+the actor.
+
+Table 8: IQL test performance for various DA approaches in the Rotational Reacher problem from
+Figure 1. The agent trains on expert, mixed, and suboptimal datasets collected from context 1, with
+DA under the 90◦ rotations. Shown are the mean and standard deviation for 20 seeds, and in bold are
+the best returns per row including those with overlapping 95% confidence intervals.
+
+ IQL                 No DA            Aug-D-C:           Aug-D-Online-C:              DAC-Latent-C:      DAC-Output-C:
+ Expert           0.49 ± 0.10         0.49 ± 0.10            0.49 ± 0.12                0.55 ± 0.10         0.52 ± 0.09
+ Mixed            0.34 ± 0.10         0.35 ± 0.06            0.34 ± 0.09                0.36 ± 0.09         0.33 ± 0.09
+ Suboptimal       0.32 ± 0.07         0.30 ± 0.09            0.31 ± 0.07                0.31 ± 0.09         0.32 ± 0.09
+
+
+Table 9: IQL test performance for various DA approaches in the Rotational Reacher problem from
+Figure 1. The agent trains on expert, mixed, and suboptimal datasets collected from context 1, with
+DA under the 90◦ rotations. Shown are the mean and standard deviation for 20 seeds, and in bold are
+the best returns per row including those with overlapping 95% confidence intervals.
+
+ IQL                 No DA            Aug-D-AC:          Aug-D-Online-AC:               DAC-Latent-AC:       DAC-Output-AC:
+ Expert           0.49 ± 0.10         0.98 ± 0.03              1.0 ± 0.01                  0.97 ± 0.04          0.98 ± 0.02
+ Mixed            0.34 ± 0.10         0.71 ± 0.12             0.67 ± 0.16                  0.71 ± 0.15          0.96 ± 0.09
+ Suboptimal       0.33 ± 0.07         0.62 ± 0.12             0.62 ± 0.11                  0.56 ± 0.16          0.91 ± 0.10
+
+
+
+
+  3 In our experiments, the critic and actor are trained with independent networks.
+Generalization in offline RL: The structure is more important than the amount of pessimism
+
+
+
+
+Table 10: Performance in the training contexts for various DA approaches in the Rotational Reacher
+problem from Figure 1. The agent trains on expert, mixed, and suboptimal datasets collected from
+context 1, with DA under the 90◦ rotations. Shown are the mean and standard deviation for 20 seeds,
+and in bold are the best returns per row including those with overlapping 95% confidence intervals.
+
+ CQL              No DA         Aug-D:         Aug-D-Online:          DAC-Latent:            DAC-Output:
+ Expert          1.0 ± 0.0      1.0 ± 0.0         1.0 ± 0.0             1.0 ± 0.0              1.0 ± 0.0
+ Mixed           1.0 ± 0.0      1.0 ± 0.0         1.0 ± 0.0            0.95 ± 0.22            0.95 ± 0.22
+ Suboptimal      1.0 ± 0.0      1.0 ± 0.0        0.95 ± 0.22           0.85 ± 0.36            0.85 ± 0.36
+ IQL              No DA        Aug-D-A:       Aug-D-Online-A:        DAC-Latent-A:        DAC-Output-A:
+ Expert         1.0 ± 0.0       1.0 ± 0.0         1.0 ± 0.0             1.0 ± 0.0              1.0 ± 0.0
+ Mixed          1.0 ± 0.0       1.0 ± 0.0         1.0 ± 0.0             1.0 ± 0.0              1.0 ± 0.0
+ Suboptimal    0.75 ± 0.43     0.9 ± 0.30        0.95 ± 0.22           0.90 ± 0.30            0.80 ± 0.40
+ IQL              No DA        Aug-D-C:       Aug-D-Online-C:        DAC-Latent-C:        DAC-Output-C:
+ Expert         1.0 ± 0.0      1.0 ± 0.0          1.0 ± 0.0             1.0 ± 0.0              1.0 ± 0.0
+ Mixed          1.0 ± 0.0      1.0 ± 0.0          1.0 ± 0.0             1.0 ± 0.0              1.0 ± 0.0
+ Suboptimal    0.75 ± 0.43    0.85 ± 0.36        0.90 ± 0.30           0.95 ± 0.22            0.95 ± 0.22
+ IQL              No DA       Aug-D-AC:      Aug-D-Online-AC:       DAC-Latent-AC:       DAC-Output-AC:
+ Expert         1.0 ± 0.0       1.0 ± 0.0         1.0 ± 0.0             1.0 ± 0.0              1.0 ± 0.0
+ Mixed          1.0 ± 0.0       1.0 ± 0.0        0.95 ± 0.22            1.0 ± 0.0              1.0 ± 0.0
+ Suboptimal    0.75 ± 0.43      1.0 ± 0.0        0.80 ± 0.40           0.85 ± 0.36            0.95 ± 0.22
+
