@@ -387,8 +387,13 @@ weights (weight sharing at initialization, then independently trained).
 | **CLIP-I** ↑ | 0.672 | 0.695 | 0.685 | 0.673 | 0.701 | 0.682 | 0.681 | 0.662 | 0.679 | **0.703** | 0.690 |
 
 **Key takeaways (all deltas recomputed from the cells above):**
-- **CD-Score = 0.861 (Ours-W2.2)**: +54.3% vs FFGO-W2.2 (0.558, the strongest baseline),
-  +18.8% vs Kling 1.6 (0.725). Headline cross-domain result.
+- **CD-Score = 0.861 (Ours-W2.2)**: +18.8% vs Kling 1.6 (0.725, the strongest baseline
+  overall — Kling is closed-source), +54.3% vs FFGO-W2.2 (0.558, the strongest *open-source
+  Wan2.2-14B* baseline). The +18.8% vs Kling is the headline cross-domain result and matches
+  the paper's own stated "18.7% improvement in cross-domain (CD) score" (§4.2, computed
+  (0.861−0.725)/0.725). The prior version of this bullet mislabeled FFGO (0.558) as "the
+  strongest baseline" — incorrect, since Kling's 0.725 CD-Score exceeds FFGO's 0.558; FFGO
+  is only the strongest baseline *within the Wan2.2-14B open-source family*.
 - **Qwen-Score = 0.829**: +7.5% vs Kling 1.6 (0.771, the strongest baseline). Second
   cross-domain metric confirms the gain.
 - **Cross-domain sweep**: Ours-W2.2 is the per-column winner on **7 of 9** metrics —
