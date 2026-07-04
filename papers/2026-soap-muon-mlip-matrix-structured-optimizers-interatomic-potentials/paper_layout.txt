@@ -1,0 +1,1427 @@
+                                               Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of
+                                                           Machine Learning Interatomic Potentials
+
+
+                                                     Gil Harari * 1 Yoel Zimmermann * 1 Ola Tangen Kulseng 1 Laura Zichi 1 Chuin Wei Tan 1
+                                                                             Marc L. Descoteaux 1 Boris Kozinsky 1 2
+
+
+                                                                 Abstract                                    invested heavily in two primary directions of improvement.
+                                              Machine learning interatomic potentials (MLIPs)                The first is new architectures, progressing from descriptor-
+arXiv:2607.02499v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                              have become a hallmark of AI for scientific sim-               based (Bartók et al., 2010; Bartók et al., 2013; Shapeev,
+                                              ulation. While efforts on new architectures and                2016; Han et al., 2018; Drautz, 2019) to deep learning ap-
+                                              datasets have led to increasingly accurate and gen-            proaches such as invariant (Schütt et al., 2017) and equiv-
+                                              eral models, the choice of optimizer for training              ariant graph neural networks (Batzner et al., 2022; Bata-
+                                              has largely remained unexplored, defaulting to                 tia et al., 2022; Musaelian et al., 2023; Bochkarev et al.,
+                                              Adam and its variants in the community. Here,                  2024) and attention-based architectures (Liao & Smidt,
+                                              we implement and systematically compare a class                2023; Pozdnyakov & Ceriotti, 2023; Qu & Krishnapriyan,
+                                              of recently proposed matrix-structured optimizers,             2024; Qu et al., 2026). The second direction is new datasets,
+                                              including Muon, SOAP, and the hybrid SOAP-                     with large-scale quantum chemical databases for organic
+                                              Muon, for training NequIP and Allegro MLIP                     molecules (Smith et al., 2017; Eastman et al., 2023; Levine
+                                              models. We find that these optimizers can sub-                 et al., 2025), catalytic systems (Chanussot et al., 2021), and
+                                              stantially outperform Adam in both convergence                 inorganic materials (Deng et al., 2023; Barroso-Luque et al.,
+                                              speed and final accuracy. SOAP and SOAP-Muon                   2024) providing the corpora on which these architectures
+                                              emerge as robust and consistently strong meth-                 are trained and evaluated.
+                                              ods, while Muon only provides partial gains rela-              A third axis of improvement, the training techniques that
+                                              tive to Adam. The improvements are particularly                dictate the dynamics of learning, has received compara-
+                                              pronounced under partial force supervision. Our                tively little attention. Crucially, the choice and configuration
+                                              results indicate that optimizer choice is an over-             of the optimizer used is largely static. The vast majority
+                                              looked yet impactful design axis for MLIPs.                    of MLIP training pipelines default to Adam (Kingma &
+                                                                                                             Ba, 2017) or one of its closely related variants such as
+                                                                                                             AdamW (Loshchilov & Hutter, 2019). Even at the scale
+                                        1. Introduction                                                      of training universal potentials, such as the Universal Mod-
+                                        Machine learning interatomic potentials (MLIPs) (Blank               els for Atoms (UMA) (Wood et al., 2025) and SevenNet-
+                                        et al., 1995; Behler & Parrinello, 2007; Bartók et al., 2010)       Omni (Kim et al., 2026), Adam-family optimizers remain
+                                        have become an indispensable tool for atomistic simulation           the default choice in reported training protocols.
+                                        in chemistry and materials science (Husistein & Reiher,              Meanwhile, the scaling of large language models (LLMs)
+                                        2026). They have enabled studies ranging from the thermo-            has renewed interest in optimizers that go beyond the
+                                        dynamics of water (Cheng et al., 2019) to the properties of          diagonal gradient scaling of Adam by exploiting matrix
+                                        amorphous silicon (Deringer et al., 2021), large-scale mate-         structure in neural-network weight tensors. This broad di-
+                                        rials screening (Merchant et al., 2023), and even all-atom           rection includes explicit structured preconditioners such
+                                        simulations of complex biomolecular assemblies such as the           as Shampoo (Gupta et al., 2018), SOAP (Vyas et al.,
+                                        HIV capsid (Kozinsky et al., 2023).                                  2025a), Kron (Castanyer et al., 2026), SPlus (Frans et al.,
+                                        Motivated by these successes, the MLIP community has                 2026), and DyKAF (Yudin et al., 2025); orthogonalized
+                                                                                                             matrix-update methods such as Muon (Jordan et al., 2024),
+                                          *
+                                            Equal contribution 1 John A. Paulson School of Engineer-         Scion (Pethick et al., 2025), Gluon (Riabinin et al., 2026),
+                                        ing and Applied Sciences, Harvard University, Cambridge, MA,         and PolarGrad (Lau et al., 2025); and hybrid adaptive
+                                        USA 2 Robert Bosch LLC Research and Technology Center,
+                                        Watertown, MA, USA. Correspondence to: Boris Kozinsky                schemes such as SOAP-Muon (Vyas et al., 2025b), COS-
+                                        <bkoz@seas.harvard.edu>.                                             MOS (Liu et al., 2026a), Mousse (Zhang et al., 2026), and
+                                                                                                             Newton-Muon (Du & Su, 2026).
+                                        Accepted at ICML 2026 AI for Science Workshop.
+
+                                                                                                         1
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+In this work, we focus on Muon and SOAP as prominent                      in particular, SOAP-Muon trained with 50% of force
+optimizers, together with SOAP-Muon as a hybrid variant                   labels matches AdamW trained with 100%, suggesting
+combining elements of both. For LLMs, these methods                       a path to reducing force-label requirements in regimes
+have demonstrated faster convergence to competitive loss                  where force labels are expensive.
+values (Jordan et al., 2024; Liu et al., 2025; Vyas et al.,
+2025a). However, their potential for MLIP training remains              • We demonstrate that the resulting MLIPs are physically
+underexplored. Liu et al. (2026b) recently argue that opti-               faithful, reproducing corresponding ab initio calcula-
+mizer choice is an overlooked factor in MLIP fine-tuning,                 tions and experimental observables. Notably, in one
+but restrict their benchmark to optimizers based on diag-                 of the systems studied, SOAP-Muon preserves this
+onal preconditioning methods. Koker et al. (2025) pro-                    fidelity even when trained with only 5% of the force la-
+vided encouraging evidence for this line of inquiry, showing              bels, while the corresponding AdamW model becomes
+that Muon outperforms Adam as an ingredient for budget-                   unstable at the same level of force supervision.
+conscious foundation potential training, though without ex-
+tensive ablations.
+                                                                     2. Background
+We work towards filling this gap by benchmarking Muon,
+                                                                     MLIP Training MLIPs approximate the potential energy
+SOAP, and SOAP-Muon against AdamW on two systems
+                                                                     surface (PES) of an atomistic system by fitting a neural net-
+of physical significance: liquid water (Cheng et al., 2019),
+                                                                     work with weights θ to quantum mechanical reference data,
+modeled with NequIP (Batzner et al., 2022) and the solid
+                                                                     most commonly computed using DFT. The network maps
+acid electrolyte CsH2 PO4 (cesium dihydrogen phosphate,
+                                                                     a set of atomic positions and chemical species {rj , Zj } to
+CDP) (Wang et al., 2025a), important for electrochemical
+                                                                     a total energy Eθ , which decomposes into a sum of local
+energy technologies, modeled with Allegro (Musaelian et al.,
+                                                                     atomic contributions εi,θ to ensure size extensivity,
+2023). We additionally examine optimizer behavior under
+varying levels of force supervision, including energy-only                                           X
+training. Computing force labels in density functional the-                   Eθ ({rj , Zj }) =          εi,θ ({rj , Zj }j∈Ni ),       (1)
+ory (DFT) incurs little additional cost beyond the energy                                            i
+
+evaluation, thanks to the Hellmann–Feynman theorem (Hel-
+                                                                     where Ni denotes the local neighborhood of atom i within
+gaker et al., 2013). Higher levels of theory, however, do
+                                                                     a cutoff radius. Forces are obtained as the negative gradient
+not share this benefit. For coupled cluster methods, force
+                                                                     of the predicted energy with respect to atomic positions via
+computation is costly (Smith et al., 2019). This limitation is
+                                                                     automatic differentiation,
+shared by diffusion Monte Carlo, where energy-only train-
+ing is typically used due to the prohibitive cost of force                                                ∂Eθ
+evaluations (Huang & Rubenstein, 2022). Methods that are                                       Fi,θ = −       ,                        (2)
+                                                                                                          ∂ri
+better suited for sparse-force regimes are thus desirable for
+training more accurate MLIPs on reference data beyond                enforcing energy conservation by construction. Training is
+DFT. Furthermore, even when forces are available, some               performed by minimizing a weighted combination of energy
+works have trained on only a subset to reduce the train-             and force errors over a dataset of N reference configurations
+ing time and memory requirements (López-Zorrilla et al.,            {({rj , Zj }n , En , Fn )}N                   3Natoms
+                                                                                               n=1 , where Fn ∈ R          collects
+2023), highlighting sparse force supervision as a practically        the reference forces on all atoms in configuration n,
+relevant regime.
+                                                                                      N
+Our contributions here are as follows:                                           λE X                           2
+                                                                       L(θ) =          (Eθ ({rj , Zj }n ) − En )
+                                                                                 N n=1
+   • We integrate Muon, SOAP, and SOAP-Muon into
+                                                                                                     N
+     the nequip MLIP framework (Tan et al., 2026) and                                     λF         X                             2
+     benchmark them against AdamW across two systems.                        +       PN        (n)
+                                                                                                         ∥Fθ ({rj , Zj }n ) − Fn ∥ ,
+                                                                                 3    n=1 Natoms n=1
+     We find that SOAP and SOAP-Muon consistently im-
+                                                                                                                                       (3)
+     prove energy and force accuracy and accelerate con-
+     vergence, with SOAP showing the most robust be-
+                                                                     where λE and λF control the relative contribution of energy
+     havior across systems and SOAP-Muon achieving the
+                                                                     and force supervision. Including forces in the training loss
+     strongest results in selected settings. Muon provides
+                                                                     substantially improves accuracy and stability (Batzner et al.,
+     gains over AdamW only in one system.
+                                                                     2022). In the force-sparse setting we study here, the force
+   • We examine how these optimizers behave under re-                loss is computed over only a subset of configurations, with
+     duced force supervision: SOAP and SOAP-Muon re-                 the limiting case λF = 0 corresponding to energy-only
+     tain strong accuracy as force supervision is reduced;           training (see Appendix B for details).
+
+                                                                 2
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+NequIP and Allegro NequIP (Batzner et al., 2022) and                  column covariances of the gradient matrix, updating them
+Allegro (Musaelian et al., 2023) are E(3)-equivariant graph           as L ← L + GGT and R ← R + GT G. The precondition-
+neural networks, in which internal features are geometric             ing power is set to p = 1/4. Later work by Bernstein &
+tensors that transform under rotations, reflections, and trans-       Newhouse (2024) showed that, when the accumulation is
+lations, yielding energy and force predictions that respect           removed, Shampoo simplifies to a semi-orthogonal weight
+the fundamental 3D Euclidean symmetries of atomistic                  update. In this regime, the method can be interpreted as pro-
+systems. Local information is mixed across the network                jecting the gradient matrix onto the nearest semi-orthogonal
+through equivariant tensor products. NequIP propagates                matrix under the Frobenius norm.
+features via message-passing between neighboring atoms,
+                                                                      Muon (Jordan et al., 2024) builds on this perspective,
+while Allegro builds many-body representations through
+                                                                      by first applying a Nesterov-style momentum update and
+iterated tensor products of atom-pairwise features within a
+                                                                      then performing the orthogonalization step using efficient
+strictly local cutoff. Together, these architectures laid the
+                                                                      Newton–Schulz iterations.
+foundations for the most widely used class of equivariant
+MLIPs, known for high accuracy and strong data efficiency             SOAP (Vyas et al., 2025a) is motivated by the observation
+attributed to the inductive bias of equivariance (Batzner             that Shampoo is equivalent to running Adafactor (Shazeer
+et al., 2022; Musaelian et al., 2023). Both are implemented           & Stern, 2018) in the eigenspace of the preconditioner. That
+within the nequip software framework (Tan et al., 2026).              is, the gradient is transformed as G′t ← QT  L GQR where
+                                                                      QL and QR are the eigenvector matrices of the L and R,
+Optimizers Vanilla gradient descent updates parameters                respectively. SOAP replaces the Adafactor update in this
+in the direction of steepest descent. However, the loss sur-          eigenspace with an AdamW step, and then projects the result
+face L(θ) is generally anisotropic, i.e., some directions             back to the original parameter space.
+change the loss more than others per unit step. Precondition-
+                                                                      SOAP-Muon (Vyas et al., 2025b) extends SOAP by adding
+ing addresses this inconsistency by rescaling the gradient to
+                                                                      a Muon-inspired orthogonalization step after the standard
+account for the local geometry of the loss, allowing larger
+                                                                      SOAP step.
+steps in flat directions and smaller steps in steep ones. For a
+vector-valued parameter w with gradient g, a preconditioned
+update takes the form                                                 3. Experimental Setup
+                     w ← w − ηP −1 g,                      (4)        To assess the versatility of the studied optimizers, we evalu-
+                                                                      ate them across different equivariant architectures and chem-
+where P is a positive definite matrix describing the local
+                                                                      ical environments. We consider two representative settings:
+curvature and η is the learning rate. A natural choice is the
+                                                                      homogeneous liquid water (Cheng et al., 2019) modeled
+Hessian, but forming, storing, and inverting the Hessian is
+                                                                      with NequIP, and solid-state CDP (Wang et al., 2025a) mod-
+prohibitively expensive at scale. Practical optimizers there-
+                                                                      eled with Allegro.
+fore choose tractable approximations for P . Additionally,
+most optimizers incorporate momentum, an exponential                  Our chosen model configurations are based on previously re-
+moving average of past gradients, to smooth noisy updates             ported parameters (Batzner et al., 2022; Wang et al., 2025a).
+and accelerate convergence.                                           To ensure a fair comparison across each model, dataset,
+                                                                      and optimizer, we use a systematic hyperparameter tuning
+Adam (Kingma & Ba, 2017) approximates P with a diago-
+                                                                      protocol (see Appendix B for details).
+nal matrix P = diag(v̂t )1/2 , where v̂t is a running estimate
+of the element-wise squared gradient. AdamW (Loshchilov               To probe the limits of each optimizer, we additionally con-
+& Hutter, 2019) decouples the weight decay from the Adam              sider reduced force supervision, including the energy-only
+gradient update.                                                      regime. This setting evaluates how these optimizers per-
+                                                                      form with reduced data. Accordingly, we repeat the tuning
+For a matrix-valued parameter W with gradient G ∈ Rm×n ,
+                                                                      protocol across training sets with varying fractions of force-
+the full preconditioner on vec(W ) would be an mn × mn
+                                                                      labeled frames—75%, 50%, 10%, 5%, and 0% (energy-only
+matrix, which is intractable in practice. An approximation
+                                                                      training)—while retaining all energy labels.
+is to assume Kronecker structure P ≈ LT ⊗ R, which leads
+to the update                                                         We evaluate the resulting models using per-atom energy
+                 W ← W − ηL       −p
+                                       GR   −p
+                                                 ,         (5)        and force mean absolute error (MAE), as well as training
+                                                                      wall-clock time. However, energy and force error metrics
+where L ∈ Rm×m and R ∈ Rn×n are left and right precon-                alone do not fully capture the quality of an MLIP (Fu et al.,
+ditioners, and p is the power of the preconditioner.                  2022). We therefore further assess the physical fidelity of
+Shampoo (Gupta et al., 2018) defines the left and right               the optimal PES identified by each optimizer by perform-
+preconditioners using the accumulated uncentered row and              ing molecular dynamics (MD) simulations using the trained
+
+                                                                  3
+          Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+Table 1. Test MAE, reported as mean ± standard deviation across 5 seeds. Results are shown for the joint energy and force prediction task
+(E+F) and the energy-only task (E). Gray force entries denote quantities not included in the corresponding training objective. Within each
+metric and dataset, the best and second-best mean values are indicated by boldface and underlining, respectively.
+
+                                                          CDP (A LLEGRO )                                   WATER (N EQU IP)
+                TASK       O PTIMIZER
+                                                E [meV/atom] (↓)         F [meV/Å] (↓)          E [meV/atom] (↓)          F [meV/Å] (↓)
+                           A DAM W                0.628±0.0434               32.2±0.615               0.773±0.0713            25.7±1.44
+                           M UON                  0.581±0.0328               29.6±0.617                 1.53±0.317            26.6±2.90
+                E+F
+                           SOAP                   0.569±0.0694               29.6±0.305               0.604±0.0105           20.9±0.698
+                           SOAP-M UON             0.582±0.0469               27.8±0.634               0.590±0.0687            21.0±1.04
+                           A DAM W                  5.16±0.178               503±31.8                  3.21±0.272             306±46.1
+                           M UON                    3.30±0.135               281±9.73                  5.37±0.813             591±59.1
+                E
+                           SOAP                     3.03±0.389               214±25.7                  2.38±0.573             236±54.8
+                           SOAP-M UON               2.75±0.163               201±18.8                  2.77±0.346             269±24.5
+
+
+                                                CDP (Allegro)                                                    H2 O (NequIP)
+
+                 AdamW        8.22      2.58      2.03     1.11       1.06    1.00             4.15      1.95      1.40     1.02       0.95   1.00
+
+
+                    Muon      5.26      2.20      1.69     1.03       0.99    0.93             6.94      1.89      1.48     1.31       1.00   1.97
+     Energy
+
+
+
+
+                    SOAP      4.83   1.84         1.63     1.10       1.00    0.91             3.08      2.10      1.34    0.84        0.78   0.78
+
+
+              SOAP-Muon      4.38       1.92      1.56    1.01        0.95    0.93             3.58      1.99      1.29     0.92       0.78   0.76
+
+
+
+
+                 AdamW       15.62      2.95      2.12     1.16       1.05    1.00             11.94     1.61      1.34     1.05       0.98   1.00
+
+
+                    Muon      8.71      2.61      1.86     1.06       0.97    0.92             23.04     1.70      1.46     1.20       1.06   1.04
+     Force
+
+
+
+
+                    SOAP      6.64      2.15      1.64     1.07       0.97    0.92             9.22      1.63      1.24    0.88        0.82   0.81
+
+
+              SOAP-Muon      6.24    2.11         1.61    1.01        0.93    0.86             10.50     1.61      1.58     0.90       0.84   0.82
+
+
+                              0%        5%        10%      50%        75%     100%              0%       5%        10%      50%        75%    100%
+                                               Force-label fraction                                             Force-label fraction
+
+
+
+
+                                                0.5×        0.7×             1×           2×      3×       5×
+                                                              MAE / MAEAdamW@100%F
+
+Figure 1. Relative test MAE vs AdamW at full (100%) force supervision. Each cell corresponds to MAEoptimizer /MAEAdamW@100%F . Green
+cells are below AdamW@100%F (better), red cells above. Boldface values indicate the best (lowest) MAE within each force-% column.
+
+
+MLIPs and comparing resulting observables against experi-                         perform AdamW, with the magnitude and consistency of the
+mental measurements and ab initio reference data.                                 gains depending on the system (Table 1, Figure 1). On CDP
+                                                                                  with Allegro, all three optimizers improve over AdamW.
+4. Results                                                                        SOAP achieves the best energy accuracy, reducing the en-
+                                                                                  ergy MAE by 9% whereas SOAP-Muon achieves the best
+4.1. Full Supervision                                                             force accuracy, reducing the MAE by 14%. On water with
+                                                                                  NequIP, SOAP and SOAP-Muon again yield lower MAEs
+Accuracy Gains Under full energy and force supervision,
+                                                                                  than AdamW. In this case, however, SOAP-Muon gives
+the matrix-structured optimizers studied substantially out-
+                                                                                  the best energy accuracy, reducing the MAE by 24% while
+
+                                                                              4
+           Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+    (a)                                         CDP (Allegro)                       (b)                              H2 O (NequIP)
+                                   Relative to AdamW (× wall-time)                                        Relative to AdamW (× wall-time)
+                            0.0   0.5         1.0    1.5     2.0          2.5     3.0        0.0     0.2      0.4       0.6    0.8     1.0     1.2
+                                                                                           28
+      Force MAE [meV/Å]
+
+
+
+                                    4.9× faster
+                           32                                                              26             5.8× faster
+
+                           30                                                              24
+
+                           28                                                              22
+
+                                                                                           20
+                            0.0         0.5          1.0            1.5           2.0        0.0    0.5       1.0      1.5    2.0    2.5     3.0     3.5
+                                              Wall-clock time [h]                                                   Wall-clock time [h]
+
+                                                       AdamW               Muon            SOAP             SOAP-Muon
+
+Figure 2. Wall-clock convergence under full force supervision. Validation force MAE versus wall-clock time on CDP (a) and water (b).
+Lines are per-epoch medians and shaded bands are interquartile ranges across three seeds, all executed on NVIDIA A100 GPUs. The
+dashed line marks AdamW’s minimum median force MAE and circles indicate the first wall-clock time at which each optimizer’s median
+curve crosses that level.
+
+
+SOAP provides the best force accuracy, reducing the MAE                                 Sparse Force Supervision The same ranking largely
+by 19%. Muon alone underperforms the AdamW baseline,                                    persists as the number of force-labeled configurations de-
+particularly for energy prediction.                                                     creases, with the gains over AdamW becoming especially
+                                                                                        valuable in the low-label regime (Figure 1). On CDP, SOAP-
+                                                                                        Muon trained with only 50% force supervision achieves
+                                                                                        accuracy comparable to AdamW trained with the full force-
+                                                                                        labeled set, and SOAP shows a similar pattern. Both meth-
+Speedup The accuracy improvements are accompanied                                       ods also remain clearly stronger than AdamW at 10% and
+by substantial reductions in time-to-accuracy. We compare                               5% force supervision. This suggests that improved opti-
+the wall-clock time required for each optimizer to reach                                mization can partially compensate for reduced access to
+AdamW’s minimum median validation force MAE under                                       force labels, lowering the amount of expensive force data
+full force supervision (Figure 2). On CDP, SOAP reaches                                 needed to reach a given level of accuracy. On water, the
+that target 4.9× faster than AdamW, while on water it does                              trend is less regular, with some models trained at 75% and
+so 5.8× faster. These gains are notable because matrix-                                 50% force supervision often outperforming their respective
+structured methods incur additional computation per opti-                               models trained on 100%. Nevertheless, SOAP is the most
+mization step relative to AdamW. The wall-clock advantage                               consistently competitive method across supervision levels
+therefore implies that they reduce the number of epochs                                 and is the strongest single default in our experiments.
+needed by an even larger margin. In practice, improved
+conditioning more than compensates for the higher per-step
+                                                                                        4.3. Physical Fidelity
+cost, making SOAP attractive not only for final accuracy but
+also for training efficiency.                                                           To assess whether the optimizer-dependent differences in
+                                                                                        MAE translate into meaningful differences in the learned
+4.2. Reduced Supervision                                                                PESs, we evaluated the trained MLIPs in MD simulations.
+Energy-Only Supervision In the energy-only training
+regime, where forces are excluded from the training objec-                              CDP We followed the MD protocol of Wang et al. (2025a).
+tive and therefore provide a stringent test of whether the                              All fully force-supervised models faithfully reproduce the
+learned PES captures physically meaningful gradients, the                               ab initio MD (AIMD) results, matching the radial distribu-
+advantage of matrix-structured optimizers becomes more                                  tion functions (RDFs) and showing consistent mean squared
+pronounced. On CDP, all three alternatives substantially out-                           displacement (MSD) behaviors across optimizers (Appendix
+perform AdamW. SOAP-Muon achieves the strongest over-                                   Figure 5). The differences become much more pronounced
+all results, reducing the energy and force MAE by roughly                               in the sparse-label regime. Notably, at 5% force supervision,
+47% and 60%. On water, SOAP performs best, reducing                                     SOAP-Muon remains stable and accurately reproduces the
+both energy and force errors relative to AdamW by 26%                                   AIMD RDFs and MSD. This is in sharp contrast to AdamW
+and 23%, while Muon performs noticeably worse.                                          that exhibits catastrophic instability, with trajectories diverg-
+
+                                                                                    5
+                Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+                                                                        label fractions tested. We note, however, that unlike CDP,
+                                                                        the water case required additional tuning of SOAP-Muon
+        15                                                              (momentum coefficients and singular-value power; see Ap-
+                                                                        pendix B for details) to achieve these results. Taken together,
+                                                                        SOAP and SOAP-Muon outperform AdamW across most
+        10                                                              metrics, training settings, and systems, with SOAP showing
+            6                                                           the most robust behavior across systems. For practition-
+                                         AIMD                           ers choosing a single default optimizer to use instead of
+            5                            AdamW (E, 5% F)
+                                                                        AdamW without further tuning, our results suggest SOAP.
+                                         SOAP-Muon (E, 5% F)
+            4                                                           Muon’s underperformance on water is a notable result that
+  O-H RDF
+
+
+
+
+                                                                        warrants further investigation. The behavior across all three
+            3
+                                                                        matrix-structured variants suggests that the orthogonaliza-
+            2                                                           tion step is the primary source of degradation, with adap-
+                                                                        tive preconditioning mitigating but not eliminating its ef-
+            1                                                           fects. Similar concerns about the stability of Muon have
+                                                                        been raised in the context of physics-informed neural net-
+            0
+                0       1        2        3       4        5            works (Lu et al., 2026), where step-size regulation along
+                                     r (Å)
+                                                                        dominant spectral modes was proposed as a potential rem-
+                                                                        edy.
+Figure 3. Radial distribution functions (RDFs) of O–H pairs in
+CDP obtained from MD simulations using AdamW (blue) and
+SOAP-Muon (pink) models trained on energies and 5% of forces,
+compared against AIMD ground truth (black).
+
+                                                                        Limitations Our work is restricted to training on two sys-
+                                                                        tems and two equivariant architectures. Foundation potential
+                                                                        training and fine-tuning are interesting open directions, and
+ing almost immediately and producing nonphysical results
+                                                                        we expect SOAP to remain effective at the present scale of
+under the same conditions, as shown in Figure 3 (the full
+                                                                        foundation models, though this requires a systematic study.
+set of RDFs and MSD is reported in Appendix Figure 7).
+Moreover, the 5% SOAP-Muon model reproduces experi-
+mental results, yielding a proton diffusion activation energy           6. Conclusion
+of Ea = 0.42 eV (Appendix Figure 7h), in good agreement
+                                                                        Across the systems and training settings studied, matrix-
+with the experimental range of Ea = 0.39–0.43 eV (Haile
+                                                                        structured optimizers consistently outperform AdamW for
+et al., 2007; Ishikawa et al., 2008; Wang et al., 2025b).
+                                                                        MLIP training, with SOAP emerging as the most robust
+                                                                        default with the advantage compounding under sparse force
+Water The fully force-supervised models also generate                   supervision. These accuracy gains translate into substantial
+similar structural and dynamical observables across opti-               wall-clock speedups despite per-step preconditioner over-
+mizers, with RDFs and MSDs broadly consistent with one                  head, and into faithful molecular-dynamics behavior includ-
+another and with the experimental O-O RDF reference (Ap-                ing observables in good agreement with experiment. We
+pendix Figure 6) (Skinner et al., 2014). For all sparsity               argue that training techniques, exemplified by optimizer
+percentages tested, both AdamW and SOAP maintained                      choice in this work, should be treated as a first-class design
+physical fidelity on RDFs and MSD (Appendix Figure 8).                  axis in MLIP training, alongside architecture and dataset,
+                                                                        particularly as the field moves toward universal foundation
+5. Discussion                                                           potentials where label efficiency and convergence speed
+                                                                        become increasingly important.
+The two cases we study differ both in model architecture
+(NequIP vs. Allegro) and in chemical character (liquid water            Code Availability
+vs. multicomponent solid CDP). On CDP, all three matrix-
+based optimizers outperform AdamW, with a clear progres-                All optimizer code used in this work will be
+sion from AdamW to Muon, SOAP and SOAP-Muon. On                         released in future versions of the open-source
+water, SOAP and SOAP-Muon also improve upon AdamW,                      nequip framework and associated repositories, in-
+with SOAP having a slight advantage; by contrast, Muon                  cluding github.com/mir-group/nequip and
+performs consistently worse than AdamW across all force-                github.com/mir-group/allegro.
+
+                                                                    6
+      Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+Acknowledgments                                                     4a36c3c51af11ed9f34615b81edb5bbc-Paper-Conference.
+                                                                    pdf.
+The authors gratefully acknowledge Menghang Wang for
+valuable insights and support regarding the CDP calcu-            Batzner, S., Musaelian, A., Sun, L., Geiger, M., Mailoa,
+lations. The computations in this paper were run on the             J. P., Kornbluth, M., Molinari, N., Smidt, T. E., and
+FASRC Cannon cluster supported by the FAS Division of               Kozinsky, B. E(3)-equivariant graph neural networks for
+Science Research Computing Group at Harvard University.             data-efficient and accurate interatomic potentials. Nature
+An award of computer time was provided by the INCITE                Communications, 13(1), may 4 2022. ISSN 2041-1723.
+program. This research used resources of the Oak Ridge              doi: 10.1038/s41467-022-29939-5. URL http://dx.
+Leadership Computing Facility, which is a DOE Office of             doi.org/10.1038/s41467-022-29939-5.
+Science User Facility supported under Contract DE-AC05-
+00OR22725. L.Z. was supported by the National Science             Behler, J. and Parrinello, M. Generalized Neural-Network
+Foundation Graduate Research Fellowship under Grant No.             Representation of High-Dimensional Potential-Energy
+DGE-2140743. This work was supported by the National                Surfaces. Physical Review Letters, 98(14), apr 2
+Science Foundation through the Harvard University Mate-             2007. ISSN 0031-9007. doi: 10.1103/physrevlett.
+rials Research Science and Engineering Center Grant No.             98.146401. URL http://dx.doi.org/10.1103/
+DMR-2011754.                                                        PhysRevLett.98.146401.
+
+Impact Statement                                                  Bernstein, J. and Newhouse, L. Old optimizer, new norm:
+                                                                    An anthology, 2024. URL https://arxiv.org/
+This paper presents work whose goal is to advance the field         abs/2409.20325.
+of Machine Learning. There are many potential societal
+consequences of our work, none which we feel must be              Bharadwaj, V., Glover, A., Buluç, A., and Demmel, J. An
+specifically highlighted here.                                      efficient sparse kernel generator for o(3)-equivariant deep
+                                                                    networks. In 2025 Proceedings of the Conference on
+References                                                          Applied and Computational Discrete Algorithms (ACDA),
+                                                                    pp. 32–46. Society for Industrial and Applied Mathemat-
+Barroso-Luque, L., Shuaibi, M., Fu, X., Wood, B. M.,                ics, Philadelphia, PA, January 2025.
+  Dzamba, M., Gao, M., Rizvi, A., Zitnick, C. L., and
+  Ulissi, Z. W. Open Materials 2024 (OMat24) Inorganic            Blank, T. B., Brown, S. D., Calhoun, A. W., and Doren, D. J.
+  Materials Dataset and Models. 2024. doi: 10.48550/                Neural network models of potential energy surfaces. The
+  ARXIV.2410.12771. URL https://arxiv.org/                          Journal of Chemical Physics, 103(10):4129–4137, sep 8
+  abs/2410.12771.                                                   1995. ISSN 0021-9606. doi: 10.1063/1.469597. URL
+                                                                    http://dx.doi.org/10.1063/1.469597.
+Bartók, A. P., Payne, M. C., Kondor, R., and Csányi,
+  G. Gaussian Approximation Potentials: The Ac-                   Bochkarev, A., Lysogorskiy, Y., and Drautz, R. Graph
+  curacy of Quantum Mechanics, without the Elec-                    atomic cluster expansion for semilocal interactions be-
+  trons.    Physical Review Letters, 104(13), apr 1                 yond equivariant message passing. Physical Review X,
+  2010. ISSN 0031-9007. doi: 10.1103/physrevlett.104.              14(2):021036, 2024.
+  136403. URL http://dx.doi.org/10.1103/
+  PhysRevLett.104.136403.                                         Castanyer, R. C., Obando-Ceron, J., Li, L., Bacon, P.-L.,
+                                                                    Berseth, G., Courville, A., and Castro, P. S. Stable gra-
+Bartók, A. P., Kondor, R., and Csányi, G. On representing         dients for stable learning at scale in deep reinforcement
+  chemical environments. Physical Review B—Condensed                learning. In The Thirty-ninth Annual Conference on Neu-
+  Matter and Materials Physics, 87(18):184115, 2013.                ral Information Processing Systems, 2026. URL https:
+                                                                    //openreview.net/forum?id=Vqj65VeDOu.
+Batatia, I., Kovacs, D. P., Simm, G., Ortner, C., and
+  Csanyi, G. Mace: Higher order equivariant mes-                  Chanussot, L., Das, A., Goyal, S., Lavril, T., Shuaibi, M.,
+  sage passing neural networks for fast and accurate                Riviere, M., Tran, K., Heras-Domingo, J., Ho, C., Hu, W.,
+  force fields. In Koyejo, S., Mohamed, S., Agarwal,                Palizhati, A., Sriram, A., Wood, B., Yoon, J., Parikh, D.,
+  A., Belgrave, D., Cho, K., and Oh, A. (eds.), Ad-                 Zitnick, C. L., and Ulissi, Z. Open Catalyst 2020 (OC20)
+  vances in Neural Information Processing Systems,                  Dataset and Community Challenges. ACS Catalysis, 11
+  volume 35, pp. 11423–11436. Curran Associates, Inc.,              (10):6059–6072, may 4 2021. ISSN 2155-5435. doi: 10.
+  2022. URL https://proceedings.neurips.                           1021/acscatal.0c04525. URL http://dx.doi.org/
+  cc/paper_files/paper/2022/file/                                   10.1021/acscatal.0c04525.
+
+                                                              7
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+Cheng, B., Engel, E. A., Behler, J., Dellago, C., and Ceriotti,         URL https://proceedings.mlr.press/v80/
+  M. Ab initio thermodynamics of liquid and solid water.                gupta18a.html.
+  Proceedings of the National Academy of Sciences, 116(4):
+  1110–1115, jan 4 2019. ISSN 0027-8424. doi: 10.1073/                Haile, S. M., Chisholm, C. R. I., Sasaki, K., Boysen, D. A.,
+  pnas.1815117116. URL http://dx.doi.org/10.                            and Uda, T. Solid acid proton conductors: from laboratory
+  1073/pnas.1815117116.                                                 curiosities to fuel cell electrolytes. Faraday Discuss.,
+                                                                       134:17–39, 2007. doi: 10.1039/B604311A. URL http:
+Deng, B., Zhong, P., Jun, K., Riebesell, J., Han, K., Bartel,          //dx.doi.org/10.1039/B604311A.
+  C. J., and Ceder, G. Chgnet as a pretrained universal
+  neural network potential for charge-informed atomistic              Han, J., Zhang, L., Car, R., and E, W. Deep potential: A
+  modelling. Nature Machine Intelligence, pp. 1–11, 2023.               general representation of a many-body potential energy
+  doi: 10.1038/s42256-023-00716-3.                                      surface. Communications in Computational Physics, 23
+                                                                        (3):629–639, 2018. ISSN 1991-7120. doi: 10.4208/
+Deringer, V. L., Bernstein, N., Csányi, G., Ben Mah-                   cicp.oa-2017-0213. URL http://dx.doi.org/10.
+  moud, C., Ceriotti, M., Wilson, M., Drabold, D. A.,                   4208/cicp.OA-2017-0213.
+  and Elliott, S. R. Origins of structural and electronic
+  transitions in disordered silicon. Nature, 589(7840):               Helgaker, T., Jorgensen, P., and Olsen, J. Molecular
+  59–64, jan 6 2021. ISSN 0028-0836. doi: 10.1038/                      electronic-structure theory. John Wiley & Sons, 2013.
+  s41586-020-03072-z. URL http://dx.doi.org/                          Huang, C. and Rubenstein, B. M. Machine Learning Dif-
+  10.1038/s41586-020-03072-z.                                           fusion Monte Carlo Forces. The Journal of Physical
+Drautz, R. Atomic cluster expansion for accurate and                   Chemistry A, 127(1):339–355, dec 28 2022. ISSN 1089-
+  transferable interatomic potentials. Phys. Rev. B,                    5639. doi: 10.1021/acs.jpca.2c05904. URL http:
+  99:014104, Jan 2019. doi: 10.1103/PhysRevB.99.                       //dx.doi.org/10.1021/acs.jpca.2c05904.
+  014104. URL https://link.aps.org/doi/10.                            Husistein, R. T. and Reiher, M. A new paradigm for com-
+  1103/PhysRevB.99.014104.                                              putational chemistry, 2026. URL https://arxiv.
+Du, Z. and Su, W. The newton-muon optimizer, 2026. URL                  org/abs/2604.01360.
+  https://arxiv.org/abs/2604.01472.                                   Ishikawa, A., Maekawa, H., Yamamura, T., Kawakita, Y.,
+Eastman, P., Behara, P. K., Dotson, D. L., Galvelis, R.,                 Shibata, K., and Kawai, M. Proton dynamics of csh2po4
+  Herr, J. E., Horton, J. T., Mao, Y., Chodera, J. D.,                   studied by quasi-elastic neutron scattering and pfg-nmr.
+  Pritchard, B. P., Wang, Y., De Fabritiis, G., and Mark-               Solid State Ionics, 179(40):2345–2349, 2008. ISSN
+  land, T. E. Spice, A Dataset of Drug-like Molecules and                0167-2738. doi: https://doi.org/10.1016/j.ssi.2008.10.
+  Peptides for Training Machine Learning Potentials. Sci-                002. URL https://www.sciencedirect.com/
+  entific Data, 10(1), jan 4 2023. ISSN 2052-4463. doi:                  science/article/pii/S0167273808005997.
+  10.1038/s41597-022-01882-6. URL http://dx.doi.                      Jordan, K., Jin, Y., Boza, V., You, J., Cesista, F., New-
+  org/10.1038/s41597-022-01882-6.                                       house, L., and Bernstein, J. Muon: An optimizer for
+Frans, K., Levine, S., and Abbeel, P. A stable whitening opti-          hidden layers in neural networks, 2024. URL https:
+  mizer for efficient neural network training. In The Thirty-           //kellerjordan.github.io/posts/muon/.
+  ninth Annual Conference on Neural Information Pro-                  Kim, J., You, J., Park, Y., Lim, Y., Kang, Y., Kim, J.,
+  cessing Systems, 2026. URL https://openreview.                        Jeon, H., Ju, S., Hong, D., Lee, S. Y., et al. Optimiz-
+  net/forum?id=0T8i3uXq3O.                                              ing cross-domain transfer for universal machine learning
+Fu, X., Wu, Z., Wang, W., Xie, T., Keten, S., Gomez-                    interatomic potentials. Nature Communications, 2026.
+  Bombarelli, R., and Jaakkola, T. Forces are not enough:             Kingma, D. P. and Ba, J. Adam: A method for stochastic op-
+  Benchmark and critical evaluation for machine learning                timization, 2017. URL https://arxiv.org/abs/
+  force fields with molecular simulations. arXiv preprint               1412.6980.
+  arXiv:2210.07237, 2022.
+                                                                      Koker, T., Kotak, M., and Smidt, T. Training a foundation
+Gupta, V., Koren, T., and Singer, Y. Shampoo: Pre-                      model for materials on a budget, 2025. URL https:
+  conditioned stochastic tensor optimization. In Dy,                   //arxiv.org/abs/2508.16067.
+ J. and Krause, A. (eds.), Proceedings of the 35th
+ International Conference on Machine Learning, vol-                   Kozinsky, B., Musaelian, A., Johansson, A., and Batzner,
+  ume 80 of Proceedings of Machine Learning Re-                         S. Scaling the Leading Accuracy of Deep Equivari-
+  search, pp. 1842–1850. PMLR, 10–15 Jul 2018.                          ant Models to Biomolecular Simulations of Realistic
+
+                                                                  8
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+  Size. In Proceedings of the International Conference                Loshchilov, I. and Hutter, F. Decoupled weight decay regu-
+  for High Performance Computing, Networking, Stor-                     larization, 2019. URL https://arxiv.org/abs/
+  age and Analysis, pp. 1–12. ACM, nov 11 2023. doi:                    1711.05101.
+  10.1145/3581784.3627041. URL http://dx.doi.
+  org/10.1145/3581784.3627041.                                        Lu, B., Zhang, J., and Lin, G. Muon with Spectral Guidance:
+                                                                        Efficient Optimization for Scientific Machine Learn-
+Lau, T. T.-K., Long, Q., and Su, W. P OLAR G RAD: A class               ing, 2026. URL https://arxiv.org/abs/2602.
+  of matrix-gradient optimizers from a unifying precondi-               16167.
+  tioning perspective. arXiv preprint arXiv:2505.21799,
+  2025.                                                               Merchant, A., Batzner, S., Schoenholz, S. S., Aykol, M.,
+                                                                       Cheon, G., and Cubuk, E. D. Scaling deep learn-
+Levine, D. S., Shuaibi, M., Spotte-Smith, E. W. C., Tay-               ing for materials discovery. Nature, 624(7990):80–
+  lor, M. G., Hasyim, M. R., Michel, K., Batatia, I.,                  85, nov 29 2023. ISSN 0028-0836. doi: 10.1038/
+  Csányi, G., Dzamba, M., Eastman, P., Frey, N. C., Fu,               s41586-023-06735-9. URL http://dx.doi.org/
+  X., Gharakhanyan, V., Krishnapriyan, A. S., Rackers,                 10.1038/s41586-023-06735-9.
+  J. A., Raja, S., Rizvi, A., Rosen, A. S., Ulissi, Z., Vargas,
+  S., Zitnick, C. L., Blau, S. M., and Wood, B. M. The                Musaelian, A., Batzner, S., Johansson, A., Sun, L.,
+  Open Molecules 2025 (OMol25) Dataset, Evaluations,                   Owen, C. J., Kornbluth, M., and Kozinsky, B. Learn-
+  and Models. 2025. doi: 10.48550/ARXIV.2505.08762.                    ing local equivariant representations for large-scale
+  URL https://arxiv.org/abs/2505.08762.                                atomistic dynamics.     Nature Communications, 14
+                                                                       (1), feb 3 2023. ISSN 2041-1723. doi: 10.1038/
+Liao, Y.-L. and Smidt, T. Equiformer: Equivariant graph                s41467-023-36329-y. URL http://dx.doi.org/
+  attention transformer for 3d atomistic graphs. In The                10.1038/s41467-023-36329-y.
+  Eleventh International Conference on Learning Represen-
+                                                                      Pethick, T., Xie, W., Antonakopoulos, K., Zhu, Z.,
+  tations, 2023. URL https://openreview.net/
+                                                                        Silveti-Falls, A., and Cevher, V. Training deep learn-
+  forum?id=KwmPfARgOTD.
+                                                                        ing models with norm-constrained LMOs. In Forty-
+Liu, J., Su, J., Yao, X., Jiang, Z., Lai, G., Du, Y., Qin, Y.,          second International Conference on Machine Learning,
+  Xu, W., Lu, E., Yan, J., Chen, Y., Zheng, H., Liu, Y., Liu,           2025. URL https://openreview.net/forum?
+  S., Yin, B., He, W., Zhu, H., Wang, Y., Wang, J., Dong,               id=2Oqm2IzTy9.
+  M., Zhang, Z., Kang, Y., Zhang, H., Xu, X., Zhang, Y.,
+                                                                      Pozdnyakov, S. and Ceriotti, M. Smooth, exact rotational
+  Wu, Y., Zhou, X., and Yang, Z. Muon is Scalable for
+                                                                        symmetrization for deep learning on point clouds. Ad-
+  LLM Training, 2025. URL https://arxiv.org/
+                                                                        vances in Neural Information Processing Systems, 36:
+  abs/2502.16982.
+                                                                        79469–79501, 2023.
+Liu, L., Xu, Z., Zhang, Z., Kang, H., Li, Z., Liang, C.,              Qu, E. and Krishnapriyan, A. S. The importance of being
+  Chen, W., and Zhao, T. COSMOS: A hybrid adap-                         scalable: Improving the speed and accuracy of neural
+  tive optimizer for efficient training of large language               network interatomic potentials across chemical domains.
+  models. In The Fourteenth International Conference                   Advances in Neural Information Processing Systems, 37:
+  on Learning Representations, 2026a. URL https:                       139030–139053, 2024.
+  //openreview.net/forum?id=j2QTOOtM8R.
+                                                                      Qu, E., Wood, B. M., Krishnapriyan, A. S., and Ulissi, Z. W.
+Liu, X., Wang, Y., and Zhao, T. Beyond Adam: disen-                     A recipe for scalable attention-based mlips: unlocking
+  tangling optimizer effects in the fine-tuning of atomistic            long-range accuracy with all-to-all node attention. arXiv
+  foundation models. AI for Science, 2(1):015004, mar                   preprint arXiv:2603.06567, 2026.
+  1 2026b. ISSN 3050-287X. doi: 10.1088/3050-287x/
+  ae5078. URL http://dx.doi.org/10.1088/                              Riabinin, A., Shulgin, E., Gruntkowska, K., and Richtárik,
+  3050-287X/ae5078.                                                     P. From muon to gluon: Bridging theory and practice of
+                                                                        LMO-based optimizers for LLMs, 2026. URL https:
+López-Zorrilla, J., Aretxabaleta, X. M., Yeu, I. W., Etxe-             //openreview.net/forum?id=7aO0YLtXb6.
+  barria, I., Manzano, H., and Artrith, N. ænet-PyTorch:
+  A GPU-supported implementation for machine learning                 Schütt, K. T., Kindermans, P.-J., Sauceda, H. E., Chmiela, S.,
+  atomic potentials training. The Journal of Chemical                   Tkatchenko, A., and Müller, K.-R. Schnet: a continuous-
+  Physics, 158(16), apr 25 2023. ISSN 0021-9606. doi:                   filter convolutional neural network for modeling quantum
+  10.1063/5.0146803. URL http://dx.doi.org/10.                          interactions. In Proceedings of the 31st International
+  1063/5.0146803.                                                       Conference on Neural Information Processing Systems,
+
+                                                                  9
+      Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+  NIPS’17, pp. 992–1002, Red Hook, NY, USA, 2017.                    learning molecular dynamics, 2025a. URL https://
+  Curran Associates Inc. ISBN 9781510860964.                         arxiv.org/abs/2503.15389.
+
+Shapeev, A. V. Moment tensor potentials: A class of sys-           Wang, S., Bhartari, A. K., Li, B., and Perdikaris, P. Gra-
+  tematically improvable interatomic potentials. Multiscale         dient alignment in physics-informed neural networks:
+  Modeling & Simulation, 14(3):1153–1173, January 2016.             A second-order optimization perspective, 2025b. URL
+  ISSN 1540-3467. doi: 10.1137/15m1054183. URL                      https://arxiv.org/abs/2502.00604.
+  http://dx.doi.org/10.1137/15M1054183.
+                                                                   Wood, B. M., Dzamba, M., Fu, X., Gao, M., Shuaibi, M.,
+Shazeer, N. and Stern, M.       Adafactor: Adaptive                 Barroso-Luque, L., Abdelmaqsoud, K., Gharakhanyan,
+  learning rates with sublinear memory cost. CoRR,                  V., Kitchin, J. R., Levine, D. S., et al. Uma: A
+  abs/1804.04235, 2018. URL http://arxiv.org/                       family of universal models for atoms. arXiv preprint
+  abs/1804.04235.                                                   arXiv:2506.23971, 2025.
+
+Skinner, L. B., Benmore, C. J., Neuefeind, J. C., and              Yudin, N., Grishina, E., Veprikov, A., Beznosikov, A., and
+  Parise, J. B. The structure of water around the com-               Rakhuba, M. Dykaf: Dynamical kronecker approxima-
+  pressibility minimum. The Journal of Chemical Physics,             tion of the fisher information matrix for gradient precon-
+  141(21):214507, 12 2014. ISSN 0021-9606. doi:                      ditioning, 2025. URL https://arxiv.org/abs/
+  10.1063/1.4902412. URL https://doi.org/10.                         2511.06477.
+  1063/1.4902412.
+                                                                   Zhang, Y., Xing, S., Huang, J., Lv, K., Zhou, Y., Qiu, X.,
+Smith, J. S., Isayev, O., and Roitberg, A. E. Ani-1, A               Guo, Q., and Chen, K. Mousse: Rectifying the geome-
+  data set of 20 million calculated off-equilibrium confor-          try of muon with curvature-aware preconditioning, 2026.
+  mations for organic molecules. Scientific Data, 4(1),              URL https://arxiv.org/abs/2603.09697.
+  dec 19 2017. ISSN 2052-4463. doi: 10.1038/sdata.
+  2017.193. URL http://dx.doi.org/10.1038/
+  sdata.2017.193.
+
+Smith, J. S., Nebgen, B. T., Zubatyuk, R., Lubbers, N.,
+  Devereux, C., Barros, K., Tretiak, S., Isayev, O., and
+  Roitberg, A. E. Approaching coupled cluster accuracy
+  with a general-purpose neural network potential through
+  transfer learning. Nature communications, 10(1):2903,
+  2019.
+
+Tan, C. W., Descoteaux, M. L., Kotak, M., de Mi-
+  randa Nascimento, G., Kavanagh, S. R., Zichi, L., Wang,
+  M., Saluja, A., Hu, Y. R., Smidt, T., Johansson, A.,
+  Witt, W. C., Kozinsky, B., and Musaelian, A. High-
+  performance training and inference for deep equivariant
+  interatomic potentials. Digit. Discov., 5(4):1558–1567,
+  2026.
+
+Vyas, N., Morwani, D., Zhao, R., Kwun, M., Shapira, I.,
+  Brandfonbrener, D., Janson, L., and Kakade, S. Soap:
+  Improving and stabilizing shampoo using adam, 2025a.
+  URL https://arxiv.org/abs/2409.11321.
+
+Vyas, N., Zhao, R., Morwani, D., Kwun, M., and Kakade,
+  S. Improving soap using iterative whitening and muon,
+  2025b. URL https://nikhilvyas.github.io/
+  SOAP_Muon.pdf.
+
+Wang, M., Ding, J., Xiong, G., Zhan, N., Owen, C. J.,
+ Musaelian, A., Xie, Y., Molinari, N., Adams, R. P., Haile,
+ S., and Kozinsky, B. Revealing the proton slingshot
+ mechanism in solid acid electrolytes through machine
+
+                                                              10
+         Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+A. Optimizer Details
+A.1. AdamW
+We use the PyTorch torch.optim.AdamW implementation.
+
+A.2. Muon
+Algorithm 1 summarizes the Muon update for a matrix-valued parameter. The key operation is the orthogonalization of
+a momentum-augmented gradient matrix. In practice, this orthogonalization is approximated using the Newton–Schulz
+algorithm (denoted NewtonSchulz5(·) in Algorithm 1), an iterative matrix procedure for approximating the orthogonal
+factor U V ⊤ in the decomposition G = U ΣV T , i.e., the matrix obtained by replacing the singular values of G with ones.
+Because this orthogonalization is defined for two-dimensional weight tensors (and 4-dimensional convolutional parameters),
+non-matrix parameters are assigned to an auxiliary AdamW optimizer (for simplicity will be referred to as Adam). Jordan
+et al. (2024) further observed empirically that embedding and readout weights are also better optimized with Adam.
+Our nequip implementation builds on the official Muon reference implementation and retains the original β momentum
+hyperparameter. To accommodate the split between parameters partitioned to Muon and those handled by the auxiliary
+Adam optimizer, we define two parameter groups, one for each optimizer. Broadly following the recommendations of
+Jordan et al. (Jordan et al., 2024), we assign intermediate-layer linear weight matrices to Muon, while optimizing the type
+embeddings and readout layers with Adam. A complete breakdown of the parameter groups is provided in Table 2.
+To implement this split in NequIP, we must also account for the internal parameterization of e3nn layers. In particular,
+e3nn stores the weights of its equivariant operators as flattened one-dimensional parameter vectors, even when those
+weights act as structured matrices or tensors in the forward pass. Similar to the Nequix implementation (Koker et al., 2025),
+for the subset of e3nn’s Linear parameters assigned to Muon, we first recover the corresponding structured blocks from
+the flattened representation, perform the Muon update on those reshaped blocks, and then flatten and reassemble them into
+the original parameter vector. We formalize the instruction-wise action of the e3nn operators below.
+
+e3nn and tensor-product weights. We                       consider     two      e3nn.o3     layers:     (1)    Linear        and   (2)
+FullyConnectedTensorProduct (FCTP).
+In Linear, each instruction connects an input irrep block to an output irrep block of the same irrep type. The learnable
+weight for instruction j is a multiplicity-mixing matrix
+                                                                     in   out
+                                                          Wj ∈ Rmj ×nj ,                                                           (6)
+
+Table 2. Parameter classes, shapes, and optimizer-group assignments for NequIP and Allegro. e3nn.o3.Linear (Linear) and
+e3nn.o3.FullyConnectedTensorProduct (FCTP) layers store weights as flattened 1D parameters, which are partitioned and
+reshaped into structured blocks during use.
+
+     M ODEL                    PARAMETER CLASS                                          S HAPE                        PARAMETER
+                                                                                                                         GROUP
+
+                 T YPE EMBEDDING                                     [num species, num features]                         A DAM
+                 E DGE -MLP WEIGHT MATRICES                          2D WEIGHT MATRICES                                  M UON
+                 Linear WEIGHTS                                      [weight numel] ((mj , nj ) BLOCKS )                 M UON
+     N EQU IP                                                                           (1)    (2)
+                 FCTP WEIGHTS                                        [weight numel] ((mj , mj , nj ) BLOCKS )            A DAM 1
+                 E NERGY READOUT MLP                                 [num features, 1]                                   A DAM
+                 P ER - TYPE ENERGY SCALE AND SHIFT                  [num species, 1]                                    A DAM
+                 T YPE EMBEDDINGS                                    [num species, num tensor features]                  A DAM
+                 S CALAR / TENSOR EMBEDDING MLP WEIGHTS              2D WEIGHT MATRICES                                  M UON
+                 L ATENT MLP WEIGHTS                                 2D WEIGHT MATRICES                                  M UON
+    A LLEGRO
+                 F IRST- LAYER ENVIRONMENT MLP WEIGHTS               2D WEIGHT MATRICES                                  M UON
+                 T ENSOR - PRODUCT WEIGHTS                           [num tensor features, num paths]                    A DAM
+                 R EADOUT MLP WEIGHTS                                [num scalar features, 1]                            A DAM
+                                                                                                               (1)     (2)
+1
+    In future work, these weights could be represented as 2D matrices by flattening the two input dimensions (i.e., mj × mj × nout
+                                                                                                                               j   7→
+      (1) (2) 
+    mj mj × nout    j  ), analogous to Muon’s  treatment  of convolutional weights.
+
+
+                                                                  11
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+Algorithm 1 Muon optimizer update (Jordan et al., 2024)
+Require: Parameter matrix W ∈ Rm×n , step size η, β
+ 1: M0 ← 0
+ 2: for t = 1, 2, . . . do
+ 3:   Gt ← ∇W Lt (Wt−1 ) ∈ Rm×n                                                                             ▷ Current gradient
+ 4:   Mt ← βMt−1 + (1 − β)Gt                                                                              ▷ Momentum buffer
+ 5:   Ut ← βMt + (1 − β)Gt                                                                        ▷ Nesterov-style momentum
+ 6:   Ot ← NewtonSchulz5(Ut )                                                                      ▷ Orthogonalized direction
+ 7:   Wt ← Wt−1 − ηOt                                                                                      ▷ Parameter update
+ 8: end for
+ 9: return Wt
+
+
+
+which mixes copies of the irrep but does not act on the internal 2ℓ + 1-dimensional irrep basis.
+In FCTP, each instruction combines an irrep block from the first input, an irrep block from the second input, and an
+admissible output irrep block. The learnable weight for instruction j is a multiplicity-mixing tensor
+                                                             (1)   (2)     out
+                                                   Tj ∈ Rmj ×mj ×nj ,                                                      (7)
+
+which mixes copies of the two input irreps and the output irrep but does not act directly on the internal 2ℓ + 1-dimensional
+irrep bases; those couplings are fixed by the tensor-product Clebsch–Gordan structure.
+Thus, Linear uses learned 2D multiplicity-mixing blocks, while FCTP uses learned 3D blocks over the two input
+multiplicities and the output multiplicity.
+
+Flattened storage. Although these operators act through structured blocks Wj or Tj , e3nn stores all learnable weights as
+a single flattened parameter vector
+                                                                 XJ
+                                            w ∈ RP ,        P =      |sj |,                                           (8)
+                                                                         j=1
+
+where |sj | is the number of entries in instruction j’s block. Equivalently, we define a slice specification
+
+                                                     S = {(Ij , sj )}Jj=1 ,                                                (9)
+
+with Ij selecting the entries of w belonging to instruction j, and
+
+                                                   Bj = reshape(wIj , sj ),                                               (10)
+                                                                                      (1)   (2)
+where Bj = Wj and sj = (min          out                                                        out
+                               j , nj ) for Linear, while Bj = Tj and sj = (mj , mj , nj ) for FCTP. The forward
+pass uses the reshaped blocks Bj . Adam-style elementwise optimizers can operate directly on the flattened parameter
+vector w, because their updates do not depend on the structural interpretation of the parameter shape. By contrast, matrix-
+structured optimizers such as Muon, SOAP, and SOAP-Muon are shape-sensitive. To use their structured orthogonalization
+or preconditioning, the relevant slices of w must be reshaped into their instruction-wise matrix or tensor blocks, updated in
+that form, and then flattened back into the original parameter vector.
+
+A.3. SOAP
+Algorithm 2 presents the general SOAP update step, simplified by omitting the initialization steps and AdamW weight decay.
+For the standard SOAP setup, the orthogonalization flag ortho and normalization flag normalize are turned off. We use
+the default hyperparameters, β1 = 0.95, β2 = 0.95, Shampoo β = β2 = 0.95 and preconditioning frequency of 10 (Vyas
+et al., 2025a).
+Unlike AdamW, whose elementwise updates are largely insensitive to how a parameter tensor is reshaped, SOAP uses
+Shampoo-style structured preconditioning along tensor modes. Consequently, the tensor shape assigned to each parameter
+block affects the preconditioner and the resulting update.
+
+                                                              12
+      Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+Algorithm 2 SOAP update with optional Muon-style orthogonalization and normalization (Vyas et al., 2025a;b).
+Require: Matrix block W ∈ Rm×n , learning rate η, betas (β, β1 , β2 ), ϵ, preconditioning frequency f , orthogonalization
+    flag ortho, normalization flag normalize, singular-value power ρ
+ 1: for t = 1, 2, . . . do
+ 2:    Gt ← ∇W Lt (Wt−1 ) ∈ Rm×n                                                                        ▷ Current gradient
+ 3:    Ge t ← QT        G  t QR,t−1                                          ▷ Gradient projection to Shampoo   eigenbasis
+                  L,t−1
+ 4:    Mt ← β1 Mt−1 + (1 − β1 )Gt     e                                                  ▷ (Adam) First moment estimate
+ 5:    Vt ← β2p   Vt−1 + (1 − β2 )(G et ⊙ G
+                                          et )                                        ▷ (Adam) Second moment estimate
+ 6:    αt ← η 1 − β2t /(1 − β1t )                                                       ▷ (Adam) Bias-corrected step size
+                        √
+ 7:    Uet ← Mt ⊘ ( Vt + ϵ)                                                ▷ (Adam) Elementwise variance-normalization
+ 8:    Ut ← QL,t−1 U    et QT                                                                            ▷ Back projection
+                              R,t−1
+ 9:    if ortho then
+10:        if ρ = 0 then
+11:           Ut ← NewtonSchulz5(Ut )                        ▷ (Muon) orthogonalization via Newton–Schulz iteration
+12:        else if ρ ̸= 1 then
+13:           Compute SVD Ut = P ΣRT                                                     ▷ (Muon) spectral decomposition
+14:           Ut ← P Σρ RT                                                      ▷ (Muon) singular-value power transform
+15:        end if
+16:    end if
+17:    if normalize    p then
+18:        Ut ← Ut / mean(Ut2 )                                                             ▷ (Muon) RMS normalization
+19:    end if
+20:    Lt ← βLt−1 + (1 − β)Gt GT       t                                                      ▷ Left preconditioner update
+21:    Rt ← βRt−1 + (1 − β)GT       t Gt                                                    ▷ Right preconditioner update
+22:    if t % f = 0 then
+23:        SL ← Lt QL,t−1 ; SR ← Rt QR,t−1                                                               ▷ Power iteration
+24:        QL,t ← QR(SL ); QR,t ← QR(SR )                                                   ▷ Update Shampoo eigenbasis
+25:    else
+26:        QL,t ← QL,t−1 ; QR,t ← QR,t−1                                            ▷ Keep previous Shampoo eigenbasis
+27:    end if
+28:    Wt ← Wt−1 − αt Ut                                                                               ▷ Parameter update
+29: end for
+30: return Wt
+
+
+
+To leverage this preconditioning, the e3nn linear weights are unstacked and restored to their original two-dimensional
+forms, following the methodology described in Section A.2. In the present study, the e3nn fully connected tensor product
+weights were not sliced and reshaped into three-dimensional tensors. We leave the implementation of such structural
+modifications for future investigations.
+
+A.4. SOAP-Muon
+Algorithm 2 presents the general SOAP update step with the orthogonalization flag ortho and the normalization flag
+normalize both enabled for SOAP-Muon (initialization and AdamW-style weight decay omitted for simplicity). The
+resulting update combines Muon-style orthogonalization with RMS normalization of the back-projected AdamW update di-
+rection. We use the default preconditioner update frequency of 10 and apply full preconditioning, in which the preconditioner
+is applied along every mode of the weight tensor. Throughout, the Shampoo preconditioner β was set at β = β2 .
+A key hyperparameter in this update is the singular-value power ρ, which is applied to the singular-value matrix during
+the orthogonalization step. The official implementation uses the default value ρ = 0.5, which requires a full SVD and is
+therefore computationally more expensive. A cheaper Muon-style alternative is to set ρ = 0, which permits the use of
+Newton–Schulz iteration (as the transform reduces to U V T ). However, Vyas et al. (2025b) reported that using ρ = 0 can
+lead to dataset-dependent training instability. We therefore treat ρ = 0.5 as the safer default, while using ρ = 0 when
+training remains stable, since this enables the more efficient Newton–Schulz-based orthogonalization.
+
+                                                            13
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+Finally, we use the parameter grouping scheme described in Appendix A.2 to determine which parameters receive Muon-
+style orthogonalization, while the remaining parameters receive standard SOAP updates without the orthogonalization.
+This grouping also allows us to assign separate β1 , β2 hyperparameters to the orthogonalized Muon group and the non-
+orthogonalized Adam group. This differs from the official SOAP-Muon optimizer, which shares the same momentum
+settings across all parameters.
+
+B. Training Setup
+Sparse Force Training Given a desired force sparsity level s ∈ [0, 1], we retain Nkeep = round(sN ) frames with force
+labels, where N denotes the total number of frames in the corresponding dataset split. In practice, for each sparsity level,
+the force-labeled frames are sampled uniformly at random once at training initialization. We then define a binary mask
+mn ∈ {0, 1} by setting mn = 1 for the retained frames and mn = 0 for the remaining frames, whose force labels are
+discarded. The same sampled force-labeled subset is used across optimizers for a given data split and random seed.
+Under this setting, the loss in Eq. 3 becomes
+                        N                                              N
+                     λE X                           2      λF         X                               2
+            L(θ) =         (Eθ ({rj , Zj }n ) − En ) + PN       (n)
+                                                                          mn ∥Fθ ({rj , Zj }n ) − Fn ∥ .                   (11)
+                     N n=1                            3 n=1 mn Natoms n=1
+
+Thus, the force term is normalized only by the number of force components in the force-labeled configurations, rather than
+by all configurations in the split. The coefficients λE and λF are kept fixed across sparsity levels using the ratio tuned under
+full force supervision. The same masking procedure is applied to the training and validation subsets, whereas the test subset
+is left unmasked.
+
+Model Architectures. The model architectures used in this work are based on previously reported configurations for
+Allegro on CDP and NequIP on water, which were originally optimized using Adam. The architecture hyperparameters are
+presented in Table 3.
+
+Hyperparameter Search First, a grid search was performed for the learning rate and weight decay. For each optimizer and
+task, we first identified a candidate learning-rate order of magnitude 10−p , and then swept over {3 × 10−(p+1) , 10−p , 3 ×
+10−p } while weight decay was sampled across four values {0, 10−5 , 10−4 , 10−3 }. For the water dataset with NequIP, which
+proved more sensitive to learning rate, we included an additional value of 5 × 10−p . In Muon and SOAP-Muon, the learning
+rate and weight decay for both parameter groups were fixed together, although they can be further optimized separately.
+With these parameters fixed, then, for the full force-supervision setting (100%), the energy-force loss coefficient ratio was
+tuned by sweeping through {1 : 1, 1 : 10, 1 : 100}. Final configurations were selected using a validation metric given by a
+weighted sum of the per-atom energy and force errors, with a 10:1 weighting between the two components.. For NequIP on
+the water dataset, we used a reduce on plateau scheduler following the settings in Batzner et al. (Batzner et al., 2022). For
+Allegro on CDP, we opted for a different approach and used a cosine annealing scheduler. All hyperparameter sweeps were
+run with a single random seed and shortened training schedules: 100 epochs for CDP and 500 epochs for water.
+
+Training Runs The full training runs were conducted using five random seeds (7, 42, 123, 2026, and 1618). The best
+optimizer hyperparameters identified in the sweeps, and subsequently used in the training runs, are reported in Table 4.
+Training was run for 1000 epochs for CDP and 2000 epochs for water. Early stopping was applied using the weighted
+validation objective. The minimum improvement thresholds were 10−6 for water and 10−5 for CDP, with patience values of
+600 and 500 epochs, respectively. Training was conducted on NVIDIA A100-SXM4-80GB and H200 GPUs. To ensure
+consistency, all wall-clock time comparisons were derived exclusively from training runs performed on A100s without
+early stopping. All models were compiled (Tan et al., 2026) and accelerated using OpenEquivariance and cuEquivariance
+tensor-product kernels (Bharadwaj et al., 2025).
+
+SOAP-Muon Stability For the two model–system configurations considered in this work, we observed different sen-
+sitivities to the SOAP-Muon hyperparameters: the momentum parameters (β1 , β2 ) for each parameter group and the
+singular-value power ρ applied to the singular-value matrix. Allegro-CDP was relatively robust to these choices, whereas
+NequIP-water exhibited substantially greater sensitivity and benefited more from further tuning (Figure 4). For the momen-
+tum parameters, we searched over (β1 , β2 ) ∈ {(0.9, 0.95), (0.95, 0.95), (0.95, 0.98)}, following the combination of values
+
+                                                              14
+                           Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+
+
+                                           Table 3. Model architecture hyperparameters used for the CDP and water experiments.
+  (a) CDP experiments with Allegro (Wang et al., 2025a).                                                            (b) Water experiments with NequIP (Batzner et al., 2022).
+
+H YPERPARAMETER                                                          VALUE                                 H YPERPARAMETER                                          VALUE
+C UTOFF RADIUS                                                           7.0 Å                                C UTOFF RADIUS                                           4.5 Å
+N UMBER OF LAYERS                                                        2                                     N UMBER OF INTERACTION LAYERS                            4
+lmax                                                                     2                                     lmax                                                     2
+PARITY                                                                   T RUE                                 PARITY                                                   T RUE
+N UMBER OF SCALAR FEATURES                                               32                                    N UMBER OF FEATURES                                      32
+N UMBER OF TENSOR FEATURES                                               32                                    R ADIAL B ESSEL BASIS FUNCTIONS                          8
+R ADIAL B ESSEL BASIS FUNCTIONS                                          8                                     T RAINABLE B ESSEL BASIS                                 FALSE
+T RAINABLE B ESSEL BASIS                                                 FALSE                                 P OLYNOMIAL CUTOFF EXPONENT                              6
+P OLYNOMIAL CUTOFF EXPONENT                                              6                                     R ADIAL MLP DEPTH                                        3
+R ADIAL - CHEMICAL EMBEDDING DIMENSION                                   32                                    R ADIAL MLP WIDTH                                        64
+S CALAR EMBEDDING MLP DEPTH                                              2                                     P ER - TYPE ENERGY SCALES TRAINABLE                      T RUE
+S CALAR EMBEDDING MLP WIDTH                                              128                                   P ER - TYPE ENERGY SHIFTS TRAINABLE                      T RUE
+S CALAR EMBEDDING NONLINEARITY                                           S I LU                                PAIR POTENTIAL                                           ZBL
+A LLEGRO MLP DEPTH                                                       2
+A LLEGRO MLP WIDTH                                                       128
+A LLEGRO MLP NONLINEARITY                                                S I LU
+T ENSOR - PRODUCT PATH - CHANNEL COUPLING                                FALSE
+R EADOUT MLP DEPTH                                                       1
+R EADOUT MLP WIDTH                                                       32
+R EADOUT MLP NONLINEARITY                                                N ONE
+P ER - TYPE ENERGY SCALES TRAINABLE                                      T RUE
+P ER - TYPE ENERGY SHIFTS TRAINABLE                                      T RUE
+
+
+
+
+ (a)                                                                                 (b)
+                           10                                                                                 100
+
+                                                                                                               90
+   Energy MAE [meV/atom]
+
+
+
+
+                            8
+                                                                                         Force MAE [meV/Å]
+
+
+
+
+                                                                                                               80
+
+                                                                                                               70
+                            6
+                                                                                                               60
+
+                                                                                                               50
+                            4
+                                                                                                               40
+
+                            2                                                                                  30
+
+                                                                                                               20
+                                0    250     500    750    1000   1250     1500   1750                                 0     250     500    750    1000   1250   1500    1750
+                                                     Epoch                                                                                   Epoch
+
+
+                                                             SOAP-Muon (tuned)                                SOAP-Muon (untuned)
+
+Figure 4. Force and per-atom energy validation training curves for a tuned SOAP-Muon (ρ = 0.5, (β1 , β2 ) = (0.95, 0.95) for both
+parameter groups) and an untuned SOAP-Muon (ρ = 0.0, (β1 , β2 ) = (0.95, 0.98) for the Muon parameter group and (β1 , β2 ) =
+(0.9, 0.95) for the Adam parameter group). Solid lines are per-epoch means, while the faint background lines show each individual seed
+run. Both tuned and untuned variants use the same learning rate (10−3 ) and weight decay (10−4 ).
+
+
+
+
+                                                                                    15
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+reported in Jordan et al. (2024); Vyas et al. (2025a;b). For the singular-value power, we considered ρ ∈ {0, 0.5} following
+Vyas et al. (2025b). We used ρ = 0 whenever performance differences were small, in order to avoid the additional cost of
+the full SVD computation. For Allegro-CDP, we used (β1 , β2 ) = (0.95, 0.98) for the Muon parameter group, (0.9, 0.95)
+for the Adam parameter group, and ρ = 0. For NequIP-water, we used (β1 , β2 ) = (0.95, 0.95) for both the Muon and
+Adam parameter groups, together with ρ = 0.5. Since NequIP-water was more sensitive to these hyperparameters, we
+treat those settings as a practical default. However, broader evaluations across architectures and datasets are needed to
+establish more general hyperparameter recommendations. The dataset-specific instability observed for SOAP-Muon is
+consistent with Vyas et al. (2025b), who found that optimizer stability varied across datasets: some datasets were stable
+without modification, whereas others required stability-enhancing adjustments. They further showed that datasets stable
+under the original optimizer were relatively insensitive to these modifications. Nevertheless, our conclusion is based on the
+limited set of experiments performed here. We note that SOAP-Muon required substantially smaller learning rates than the
+other optimizers. Learning rates that were optimal for the other optimizers often led to severe training instabilities when
+used with SOAP-Muon. Throughout our experiments, the best-performing SOAP-Muon learning rate was approximately
+one order of magnitude lower than those used for the other optimizers (Table 4).
+
+                          Table 4. Hyperparameter settings for each task, force-% setting, and optimizer.
+
+                                                       CDP (A LLEGRO )                          WATER (N EQU IP)
+      TASK     F ORCE %    O PTIMIZER
+                                              L EARNING RATE         W EIGHT DECAY     L EARNING RATE       W EIGHT DECAY
+                                                        −2                   −4                  −2
+                           A DAM W                3×10                  1×10               1×10                1×10−4
+               100         M UON                  3×10−2                1×10−3             1×10−2              1×10−5
+                           SOAP                   3×10−2                1×10−4             1×10−2              1×10−4
+                           SOAP-M UON             1×10−3                1×10−5             1×10−3              1×10−4
+                           A DAM W                3×10−2                1×10−3             1×10−2                0
+               75          M UON                  3×10−2                1×10−3             1×10−2              1×10−4
+                           SOAP                   3×10−2                1×10−4             5×10−3                0
+                           SOAP-M UON             1×10−3                  0                1×10−3                0
+      E+F                  A DAM W                3×10−2                1×10−3             1×10−2                0
+               50          M UON                  3×10−2                1×10−3             5×10−3                0
+                           SOAP                   3×10−2                1×10−4             1×10−2                0
+                           SOAP-M UON             1×10−3                  0                1×10−3              1×10−4
+                           A DAM W                1×10−2                1×10−3             1×10−2              1×10−5
+               10          M UON                  1×10−2                1×10−3             1×10−2              1×10−4
+                           SOAP                   1×10−2                1×10−3             1×10−2              1×10−4
+                           SOAP-M UON             1×10−3                1×10−4             1×10−3                0
+                           A DAM W                1×10−2                1×10−3             5×10−3              1×10−4
+               5           M UON                  1×10−2                1×10−3             1×10−2              1×10−4
+                           SOAP                   1×10−2                1×10−5             5×10−3              1×10−3
+                           SOAP-M UON             1×10−3                1×10−4             1×10−3              1×10−5
+                           A DAM W                1×10−2                  0                5×10−3              1×10−3
+      E        0           M UON                  3×10−3                1×10−5             5×10−3                0
+                           SOAP                   3×10−3                1×10−5             5×10−3              1×10−4
+                           SOAP-M UON             3×10−4                  0                3×10−4              1×10−3
+
+
+
+C. Full Results
+
+
+
+
+                                                                16
+       Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+
+
+
+Table 5. Test MAE aggregated across runs (mean ± std) across 5 seeds. Gray force entries indicate metrics for targets not included in the
+task focus. Bold and underlined entries mark the best and second-best mean values within each force-% setting and metric, respectively.
+
+                                                             CDP (A LLEGRO )                     WATER (N EQU IP)
+             TASK     F ORCE %      O PTIMIZER
+                                                      E [meV/atom]        F [meV/Å]      E [meV/atom]        F [meV/Å]
+                                    A DAM W            0.628±0.0434       32.2±0.615       0.773±0.0713        25.7±1.44
+                                    M UON              0.581±0.0328       29.6±0.617         1.53±0.317        26.6±2.90
+                      100
+                                    SOAP               0.569±0.0694       29.6±0.305       0.604±0.0105       20.9±0.698
+                                    SOAP-M UON         0.582±0.0469       27.8±0.634       0.590±0.0687        21.0±1.04
+                                    A DAM W            0.664±0.0383       33.9±0.993        0.738±0.117        25.1±1.34
+                                    M UON              0.622±0.0287        31.1±1.11        0.773±0.146        27.1±1.76
+                      75
+                                    SOAP               0.630±0.0185       31.3±0.617       0.601±0.0381       20.9±0.872
+                                    SOAP-M UON         0.596±0.0280       30.1±0.452        0.602±0.101        21.6±1.27
+                                    A DAM W            0.698±0.0175        37.4±0.778       0.789±0.147        26.8±1.30
+             E+F
+                                    M UON              0.645±0.0508        34.1±0.803        1.01±0.153        30.8±2.86
+                      50
+                                    SOAP               0.690±0.0724        34.5±0.869      0.650±0.0772        22.7±1.01
+                                    SOAP-M UON        0.637±0.00589        32.5±1.01        0.713±0.191        23.1±1.07
+                                    A DAM W             1.28±0.0809        68.4±2.54         1.09±0.198        34.5±3.69
+                                    M UON                1.06±0.106        60.0±3.10         1.15±0.108        37.4±2.17
+                      10
+                                    SOAP                1.02±0.0579        52.9±1.65         1.04±0.207        31.9±2.19
+                                    SOAP-M UON         0.977±0.0525       51.9±0.842        0.999±0.133        40.6±17.3
+                                    A DAM W             1.62±0.0551        94.9±5.09        1.51±0.224         41.3±2.09
+                                    M UON                1.38±0.103        84.0±6.70        1.46±0.253         43.5±1.10
+                      5
+                                    SOAP                1.16±0.0841        69.2±1.83        1.62±0.659         41.9±1.59
+                                    SOAP-M UON          1.20±0.0901        68.1±3.05        1.54±0.466         41.2±3.31
+                                    A DAM W             5.16±0.178         503±31.8         3.21±0.272         306±46.1
+                                    M UON               3.30±0.135         281±9.73         5.37±0.813         591±59.1
+             E        0
+                                    SOAP                3.03±0.389         214±25.7         2.38±0.573         236±54.8
+                                    SOAP-M UON          2.75±0.163         201±18.8         2.77±0.346         269±24.5
+
+
+
+
+                                                                   17
+                 Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+
+
+
+  (a)                                                                  (b)
+            15.0
+                                                                                             6
+            12.5
+
+            10.0
+
+
+
+
+                                                                                   O-O RDF
+  O-H RDF
+
+
+
+
+                                                                                             4
+                 7.5
+
+                 5.0                                                                         2
+                 2.5
+
+                 0.0                                                                         0
+                       0     1       2        3        4        5                                0          1         2         3      4    5
+                                          r (Å)                                                                            r (Å)
+
+  (c)                                                                  (d)
+
+
+                 20                                                                    101
+
+
+                 15
+                                                                          MSD (Å2 )
+       P-O RDF
+
+
+
+
+                 10
+                                                                                       100
+
+                  5
+
+
+                  0
+                       0     1       2        3        4        5                                    10°1       100           101     102   103
+                                          r (Å)                                                                          Time (ps)
+
+
+
+                                      AIMD         AdamW            Muon                         SOAP           SOAP-Muon
+
+
+Figure 5. Physical observables obtained from MD simulations of CDP using energy and force trained MLIPs with AdamW (blue), Muon
+(orange), SOAP (green), and SOAP-Muon (purple), compared against ab initio reference curves. (a–c) Radial distribution functions for
+the O–H, O–O, and P–O pairs, respectively. (d) Mean squared displacement of H calculated from the corresponding MD trajectories.
+
+
+
+
+                                                                     18
+             Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+
+
+
+  (a)                                                                 (b)
+
+             2.5
+
+                                                                                         3
+             2.0
+   O-O RDF
+
+
+
+
+                                                                               H-H RDF
+             1.5                                                                         2
+
+             1.0
+                                                                                         1
+             0.5
+
+             0.0                                                                         0
+                   0      1          2         3           4                                 0      1           2          3   4
+                                     r (Å)                                                                      r (Å)
+
+  (c)                                                                 (d)
+             2.0
+
+
+
+             1.5                                                                  102
+                                                                  MSD (Å2 )
+   O-H RDF
+
+
+
+
+                                                                                  101
+             1.0
+
+
+                                                                                  100
+             0.5
+
+                                                                               10°1
+             0.0
+                   0      1          2         3           4                                             102
+                                     r (Å)                                                                    Time (ps)
+
+
+
+                               Experiment          AdamW        Muon                         SOAP       SOAP-Muon
+
+
+Figure 6. Physical observables obtained from MD simulations of water using energy-and-force-trained MLIPs with AdamW (blue),
+Muon (orange), SOAP (green), and SOAP-Muon (purple). (a–c) Radial distribution functions (RDFs) for the O–O, H–H, and O–H pairs,
+respectively. O-O RDF is compared against experimental data from Skinner et al. (2014) (d) Mean squared displacement calculated from
+the corresponding MD trajectories.
+
+
+
+
+                                                                19
+                        Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+
+
+
+         (a)                                                                            (b)                                                                              (c)
+                                                                                         1200                                                                                  150
+                  15
+                                                                                            800                                                                                125
+                  12
+                  6.0                                                                                                                                                          100
+                                                                                                                                                                                24
+                                                                                                   6
+                  4.5
+
+
+
+
+                                                                                         O-O RDF
+        O-H RDF
+
+
+
+
+                                                                                                                                                                         P-O RDF
+                                                                                                                                                                                   16
+                                                                                                   4
+                  3.0
+
+                                                                                                   2                                                                                8
+                  1.5
+
+                  0.0                                                                              0                                                                                0
+                        0          1         2         3      4    5                                   0         1          2          3          4         5                           0   1   2       3    4   5
+                                                   r (Å)                                                                          r (Å)                                                           r (Å)
+
+         (d)                                                                            (e)                                                                              (f)
+
+              15.0
+                                                                                                   6                                                                               20
+              12.5
+
+              10.0                                                                                                                                                                 15
+                                                                                         O-O RDF
+    O-H RDF
+
+
+
+
+                                                                                                                                                                         P-O RDF
+                                                                                                   4
+                  7.5
+                                                                                                                                                                                   10
+                  5.0                                                                              2
+                                                                                                                                                                                    5
+                  2.5
+
+                  0.0                                                                              0                                                                                0
+                        0          1         2         3      4    5                                   0         1          2          3          4         5                           0   1   2       3    4   5
+                                                   r (Å)                                                                          r (Å)                                                           r (Å)
+
+         (g)                                                                            (h)                                       T (K)
+                                                                                                           620       600         580       560        540
+                                                                                         10°6
+                  103
+
+
+                  102                                                                 6 £ 10°7
+                                                                         D (cm2 /s)
+MSD (Å2 )
+
+
+
+
+                  101                                                                 4 £ 10°7
+
+                                                                                      3 £ 10°7
+                  100
+
+                                                                                      2 £ 10°7
+              10°1
+                            10°1       100           101     102   103                                 1.6                 1.7              1.8             1.9
+                                                 Time (ps)                                                                 1000/T (K°1 )
+
+
+                                                                                      AdamW, E,F                           SOAP-Muon, E,F                         AIMD
+                                                                                      AdamW, E, 50% F                      SOAP-Muon, E, 50% F
+                                                                                      AdamW, E, 10% F                      SOAP-Muon, E, 10% F
+                                                                                      AdamW, E, 5% F                       SOAP-Muon, E, 5% F
+
+
+Figure 7. Physical observables obtained from MD simulations of CDP using MLIPs trained with AdamW (blue) and SOAP-Muon (purple),
+on energy labels and varying fractions of force labels: 5%, 10%, 50%, and 100% force supervision (lighter to darker shades indicate
+increasing fractions of force labels). (a-c) RDFs for the O–H, O–O, and P–O pairs with AdamW. (d-f) RDFs for the O–H, O–O, and P–O
+pairs with SOAP-Muon. (g) MSD of H calculated from the corresponding MD trajectories. (h) Arrhenius plot of the diffusion coefficient
+D, derived from the linear regime of the proton MSD, versus 1/T . The activation energy is determined from the slope of the fitted
+linear regression — AdamW (E, F): Ea = 0.429 eV, SOAP-Muon (E, F): Ea = 0.411 eV, SOAP-Muon (E, 5% F): Ea = 0.421 eV.
+MD simulations with the AdamW (E, 5% F) model did not remain stable long enough to reach the linear proton-diffusion regime. The
+experimental range is Ea = 0.39–0.43 eV (Haile et al., 2007; Ishikawa et al., 2008; Wang et al., 2025a).
+
+
+
+
+                                                                                                                            20
+                 Beyond Adam: SOAP and Muon for Faster, Label-Efficient Training of Machine Learning Interatomic Potentials
+
+
+
+
+ (a)                                               (b)                                                             (c)
+                                                                                                                                   2.5
+                 2.5
+                                                                            3                                                      2.0
+                 2.0
+       O-O RDF
+
+
+
+
+                                                                                                                         O-H RDF
+                                                                  H-H RDF
+                                                                                                                                   1.5
+                 1.5                                                        2
+
+                 1.0                                                                                                               1.0
+                                                                            1
+                 0.5                                                                                                               0.5
+
+                 0.0                                                        0
+                                                                                                                                   0.0
+                       0   1    2        3   4                                  0   1          2        3    4                           0   1   2        3   4
+                                r (Å)                                                         r (Å)                                            r (Å)
+
+(d)                                                 (e)                                                            (f)
+                                                                                                                                   2.5
+                 2.5
+                                                                            3                                                      2.0
+                 2.0
+       O-O RDF
+
+
+
+
+                                                                                                                         O-H RDF
+                                                                  H-H RDF
+
+
+
+
+                 1.5                                                                                                               1.5
+                                                                            2
+                 1.0                                                                                                               1.0
+                                                                            1
+                 0.5                                                                                                               0.5
+
+                 0.0                                                        0
+                                                                                                                                   0.0
+                       0   1    2        3   4                                  0   1          2        3    4                           0   1   2        3   4
+                                r (Å)                                                         r (Å)                                            r (Å)
+
+                                                    (g)
+
+
+                                                                     102
+                                                     MSD (Å2 )
+
+
+
+
+                                                                     101
+
+
+                                                                     100
+
+
+                                                                  10°1
+
+                                                                                         102
+                                                                                            Time (ps)
+
+
+
+                                                 AdamW, E, F                            SOAP, E, F          Experiment
+                                                 AdamW, E, 5% F                         SOAP, E, 5% F
+
+
+Figure 8. Physical observables obtained from MD simulations of water using MLIPs trained with AdamW (blue) and SOAP (green),
+on energy labels and varying fractions of force labels: 5% and 100% force supervision (lighter to darker shades indicate increasing
+fractions of force labels). (a-c) RDFs for the O–O, O–H, and H–H pairs with AdamW. (d-f) RDFs for the O–O, O–H, and H–H pairs with
+SOAP-Muon. (g) MSD calculated from the corresponding MD trajectories.
+
+
+
+
+                                                                                         21
+
