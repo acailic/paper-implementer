@@ -1,0 +1,777 @@
+         On the Role of Directionality in Structural Generalization
+
+                                                  Zichao Wei
+                                               Saarland University
+
+
+
+
+                       Abstract                              The neuro-symbolic system AM-Parser
+                                                          (Groschwitz et al., 2018; Lindemann et al., 2019)
+    Several SLOG test categories explicitly involve       (70.8±4.3%) addresses this by using a BERT
+    directional distinctions (modifier position shifts,   supertagger to predict AM algebra types, then
+    argument extraction positions), yet AM-Parser,        letting AM algebra rules perform combinatory
+    the previous SOTA, uses an AM algebra whose           reasoning. AM-Parser validates the neuro-sym­
+    operations do not encode direction. We redesign       bolic paradigm, but its success has obscured an
+    the symbolic backend around CCG directed
+                                                          unexamined design choice: the AM algebra was
+    types (deterministic CKY + single linear decoder,
+                                                          designed for AMR semantic graph parsing, where
+    30K learnable parameters). Under the same
+    BERT-base encoder, the system achieves 75.9           word order is irrelevant, so its operations deliber­
+    ±6.4% LF exact match, surpassing AM-Parser            ately do not encode direction (Weißenhorn et al.,
+    (70.8±4.3%). Per SLOG’s own category group­           2022a). Of SLOG’s 17 test categories, however, 5
+    ings, gains are highly directional: the CCG           explicitly require directional distinctions (PP/RC
+    system outperforms AM-Parser on all 5 posi­           modifier position shifts, argument extraction po­
+    tion-shift categories (+29.9pp), while AM-Parser      sitions). This raises a question: does a directional
+    outperforms on all 6 recursive-depth categories.      representation yield a consistent advantage on
+    Replacing the encoder with DeBERTa-v3-large           these categories?
+    yields 90.7±4.9%, with the largest encoder gains         This paper argues that on structural gener­
+    in recursive-depth categories, complementary
+                                                          alization categories involving directional distinc­
+    to directionality’s gains. Directional representa­
+    tions shift the bottleneck from the symbolic layer
+                                                          tions, representations that encode the direction
+    (AM-Parser’s 0% category ceiling) to the neural       of combinatory operations have a systematic
+    layer, which improves with encoder upgrades.          advantage. The slash direction of Combinatory
+                                                          Categorial Grammar (CCG (Steedman, 2001))
+1     Introduction                                        provides the most direct encoding of direc­
+                                                          tionality: 𝑆 \ NP (takes subject on the left)
+Structural generalization is a central challenge in
+                                                          and 𝑆/ NP (takes object on the right) distin­
+semantic parsing (Lake and Baroni, 2018): a sys­
+                                                          guish positions through the combinatory rules
+tem must apply compositional rules learned from
+                                                          themselves, requiring no additional mechanism.
+training data to structural combinations never
+                                                          Following the neuro-symbolic paradigm of AM-
+seen during training. On SLOG, a benchmark
+                                                          Parser, we redesign the symbolic backend around
+specifically targeting structural generalization (Li
+                                                          CCG directed types: deterministic CKY performs
+et al., 2023), end-to-end neural models (T5 (Raf­
+                                                          combinatory reasoning, and a single linear layer
+fel et al., 2020), LLaMA (Touvron et al., 2023))
+                                                          performs type prediction (30K learnable para­
+achieve approximately 40% (Yao and Koller, 2022).
+                                                          meters). The contribution of directionality is
+Prior work attributes this not to insufficient ca­
+                                                          tested through per-category group analysis: if
+pacity but to a structural deficiency in seq2seq
+                                                          directionality is the cause, its effect should fall
+architectures for compositional generalization:
+                                                          precisely on position-shift categories, not on re­
+end-to-end models learn surface correlations in
+                                                          cursive-depth categories.
+the training distribution rather than composable
+                                                             Contributions: (1) New SOTA on SLOG; per
+rules (Kim and Linzen, 2020).
+                                                          SLOG’s own category groupings, directionality’s
+                                                          gains concentrate on position-shift categories
+(5/5) and are absent for recursive depth (0/6). (2)   2.2   AM-Parser and Neuro-Symbolic Meth­
+Two explanations for why directionality works: it           ods
+reduces the supertagger’s discriminative burden       AM-Parser (Groschwitz et al., 2018; Lindemann et
+(engineering), and it encodes a fundamental cue       al., 2019) decomposes semantic parsing into two
+in the word-order-to-structure mapping (Levelt,       steps: (1) a neural network predicts AM algebra
+1989; Hawkins, 1994; Hawkins, 2004) (linguistic).     types for each word (supertagging), and (2) AM
+(3) Encoder scalability: 75.9% → 79.9% → 90.7%        algebra rules perform combinatory reasoning.
+across three encoder tiers, with gains comple­        This design ensures that structural generalization
+mentary to directionality’s.                          derives from the compositional closure of alge­
+                                                      braic rules rather than from specific structural
+2     Background and Related Work
+                                                      combinations present in training data.
+2.1    Structural Generalization and COGS/               AM-Parser demonstrated the potential of the
+       SLOG                                           neuro-symbolic paradigm on COGS (Weißen­
+COGS (Kim and Linzen, 2020) is a compositional        horn et al., 2022a; Petit et al., 2023), and Weißen­
+generalization benchmark for semantic parsing         horn et al. (2022b) further argued that compo­
+with 21 generalization categories: 18 are lexical     sitional generalization requires compositional
+generalization (substituting new words into ex­       parsers. Recently, Lindemann et al. (2024) showed
+isting structures) and only 3 are structural gener­   that pre-training on synthetic syntactic transfor­
+alization, limiting its coverage of structural phe­   mations can strengthen the structural inductive
+nomena. SLOG (Li et al., 2023) was designed to        bias for semantic parsing. AM-Parser achieves
+address this gap by adding 17 structural general­     70.8±4.3% on SLOG, the previous strongest sys­
+ization categories covering relative clauses (RC),    tem.
+wh-questions, and center embedding, establish­           The AM algebra was originally designed for
+ing the current standard evaluation for structural    AMR semantic graph parsing, where AMR is
+generalization.                                       an abstract, word-order-independent semantic
+   SLOG uses the same training set as COGS            representation. Its apply and modify operations
+(32,755 samples), but its gen set contains 17,000     therefore do not encode direction. This is a rea­
+test samples (1,000 per category). The training       sonable and successful design for AMR tasks.
+data contains no relative clauses or wh-questions;    When AM-Parser was applied to COGS and
+these structures appear only in the test set. This    SLOG, this directionless combinatory system was
+design forces systems to handle entirely novel        inherited directly. Because AM-Parser substan­
+syntactic structures with zero training signal,       tially outperforms end-to-end methods on SLOG
+testing the algebraic closure of the symbolic rep­    (70.8% vs. 40%), the question of whether direc­
+resentation: the type system must reserve type        tionality is a better choice has not been explored.
+slots for unseen structures.                          2.3   Combinatory Categorial Grammar
+   SLOG’s 17 categories are grouped by the                  (CCG)
+original paper into four sections: §2.1 recursive
+depth (6 categories, testing generalization over      CCG (Steedman, 2001) is a lexicalized grammar
+nesting depth), §2.2 modifier position (4 cate­       formalism whose defining feature is encoding
+gories, testing PP/RC modifier shifts from object     directionality in its types:
+side to subject side), §2.3 extraction position (1       • 𝑆 \ NP: requires an NP to the left to produce
+category, testing argument extraction position             S (backward function application)
+within RCs), and §2.4 wh-questions (6 categories,        • 𝑆/ NP: requires an NP to the right to pro­
+with mixed properties). This grouping naturally            duce S (forward function application)
+separates direction-relevant from direction-irrel­    Directionality in CCG is not an add-on but the es­
+evant dimensions: modifier position and extrac­       sential definition of its combinatory operations.
+tion position categories explicitly test positional   The same NP retains its type regardless of posi­
+directionality, while recursive-depth categories      tion; slash direction distinguishes which side of
+are unrelated to directionality.                      the verb a constituent occupies. For tasks requir­
+                                                      ing structure recovery from ordered sentences
+                                                      (as SLOG tests), CCG’s directed types directly
+                                                      encode positional information. The AM algebra’s
+modify does not distinguish left from right; when      3.2   CCG Type System
+positional distinctions are needed, this burden        We use 26 CCG types to cover all syntactic
+shifts to the supertagger or to additional features    structures in COGS and SLOG. Of these, 20 base
+(such as +dist (Weißenhorn et al., 2022a)).            types (NP, S, 𝑆 \ NP, (𝑆 \ NP)/ NP, passives,
+   We do not use the full CCG combinatory cal­         prepositions, etc.) cover all 21 COGS categories;
+culus. The system retains forward and backward         4 extension types (RC_THAT, TV_GAP, S_GAP,
+function application (𝐴/𝐵 + 𝐵 → 𝐴 and 𝐵 +              WH) cover the relative clauses and wh-ques­
+𝐴 \ 𝐵 → 𝐴) but simplifies type raising and com­        tions added by SLOG; 2 disambiguation types
+position into atomic types with explicit merge         (DIT_REC, RC_THAT_REC) resolve role ambigu­
+rules, reducing the inventory to 26 categories         ities in ditransitive verbs and RC indirect-object
+suited to COGS/SLOG (including 2 disambigua­           extraction.
+tion types; see §3.2).                                    CCG types are deterministically derived from
+                                                       gold-standard logical forms (LFs). The training
+3     Method
+                                                       target is the final state of the CKY parse trajec­
+3.1    Overall Architecture                            tory (the head word survives; all other positions
+The system adopts the same neuro-symbolic par­         collapse to ∅).
+adigm as AM-Parser: neural supertagger + sym­          3.3   Evaluation Metric
+bolic combinatory backend. The difference lies in
+the choice of type system and combinatory rules.       We report LF exact match: the system applies
+  The system consists of three components:             deterministic CKY parsing and semantic edge ex­
+                                                       traction to the predicted CCG type sequence and
+    1. Neural supertagger: A frozen BERT (De­          compares the extracted predicate-argument edge
+       vlin et al., 2019) encodes the input sentence   set against the edge set extracted from the gold
+       into contextualized word vectors. Function      LF. COGS/SLOG LFs are conjunctions of predi­
+       words (articles, “was”, “did”, etc.) are then
+                                                       cate-argument relations (e.g., sleep.agent(x,
+       stripped, retaining only content words. This
+                                                       cat)), so edge-set comparison is naturally insen­
+       aligns the word sequence with the CCG
+                                                       sitive to conjunct order and variable naming.
+       type sequence, since function words do
+                                                       The reformatted LF exact match reported by
+       not carry CCG types in the COGS/SLOG
+                                                       AM-Parser (Li et al., 2023) achieves the same nor­
+       formalization. Gumbel-Softmax (Jang et al.,
+                                                       malization by sorting conjuncts and re-indexing
+       2017) then discretizes the continuous BERT
+                                                       variables; the two are equivalent in their criterion
+       embeddings into one of 𝐾 = 32 codebook
+                                                       of semantic correctness: both determine whether
+       entries, and a linear readout head (ℝ64 →       the system correctly recovers all predicate-argu­
+       ℝ26 ) maps codebook embeddings to logits        ment relations. Pipeline fidelity is 99.92% (see
+       over 26 CCG types. Total: 30K learnable         Appendix A); the 0.08% loss stems from inher­
+       parameters (excluding the frozen BERT).         ent ambiguities in the CCG type system and is
+    2. Deterministic CKY composition: Bot­             included in the reported figures.
+       tom-up CKY parsing is applied to the pre­
+       dicted CCG type sequence using standard         3.4   Training Details
+       CCG combinatory rules (forward/backward           • Data: SLOG training set (32,755 samples),
+       function application). This step is purely          100% CKY coverage
+       symbolic, deterministic, and non-learnable.       • Optimizer: AdamW (lr=10−3 , weight decay=
+       It corresponds to the role of the AM alge­          10−4 ), cosine schedule
+       bra in AM-Parser (performing combinatory          • Gumbel temperature: annealed from 1.0 to
+       reasoning), but uses CCG’s forward/back­            0.1 over 50 epochs
+       ward function application rules.                  • Parameters: 30K (excluding frozen BERT)
+    3. Semantic edge extraction: Predicate-ar­           • Training time: 8 minutes (single GPU)
+       gument edges (agent, theme, recipient, etc.)      • Model selection: All hyperparameters are
+       are deterministically extracted from the            fixed across seeds; no validation-based
+       CKY parse tree to produce a logical form.           model selection or early stopping is used,
+       This step is likewise purely symbolic.              ensuring no information leaks from the test
+                                                           distribution into model selection. Results for
+                                  AM-Parser                          Ours (BERT)                  Ours (DeBERTa)
+      Encoder                     BERT-base                          BERT-base                    DeBERTa-v3-large
+      Type system                 AM algebra (undirected)            CCG (directed)               CCG (directed)
+      Symbolic composition        AM algebra apply/modify            CKY fwd/bwd application      CKY fwd/bwd application
+      Decoder                     Symbolic logic + edge predictor    Single linear layer          Single linear layer
+      0% categories               2                                  0                            0
+      Overall%                    70.8±4.3                           75.9±6.4                     90.7±4.9
+
+Table 1: Architectural comparison of three neuro-symbolic systems. The symbolic composition layer is a purely
+symbolic, non-learnable operation; the decoder converts type sequences into logical forms.
+
+                 Category                     Ours (DeBERTa)    Ours (BERT)     AM-Parser             T5     LLaMA
+                 PP recur. (depth 3)                 99.1±1.2        96.8±2.6    100.0±0.0     93.1±1.9     98.9±0.6
+                 PP recur. (depth 5–12)              97.8±2.1        94.3±3.2    100.0±0.0     16.6±1.0     20.6±1.0
+                 CP recur. (depth 3)                81.9±29.8       18.8±34.4    100.0±0.0     60.9±2.1     98.1±0.7
+                 CP recur. (depth 5–12)             64.8±26.3       17.7±34.7    100.0±0.0      5.3±0.4     12.1±0.7
+                 Center emb. (depth 3)             100.0±0.0         99.7±0.3    100.0±0.0    64.1±19.1     50.7±5.7
+                 Center emb. (depth 5–12)            99.3±1.8        80.6±8.3     99.5±0.4      0.0±0.0      0.0±0.0
+                 PP_modif_iobj                      99.3±0.8         97.6±1.7      90.4±8.1    53.8±1.4     71.2±4.2
+                 PP_modif_subj                      94.5±4.8         92.8±4.0      57.6±8.1     0.8±0.5     28.9±3.5
+                 RC_modif_iobj                      95.7±5.8        78.4±10.6      74.4±6.4    36.6±2.1     55.0±2.1
+                 RC_modif_subj                       52.0±4.1       61.9±11.6      55.8±8.4     0.2±0.2     29.5±3.4
+                 RC_iobj_extracted                  97.8±2.3         96.9±3.0       0.0±0.0     0.0±0.0      2.5±3.2
+                 Q_subj_active                       91.9±7.2       77.8±13.3     99.8±0.6     98.1±1.7     93.3±6.0
+                 Q_subj_passive                      99.2±2.5       85.9±16.5    100.0±0.1    100.0±0.0    15.3±17.5
+                 Q_dobj_ditransV                    99.6±1.3         96.3±5.0    29.4±33.5     98.5±0.9      8.6±5.7
+                 Q_iobj_ditransV                    99.7±0.8        71.4±26.4    41.4±42.4      0.4±0.7    73.5±18.4
+                 Q_modified_NPs                     84.5±5.4         73.9±5.8    55.6±12.5     36.8±0.4     20.8±2.4
+                 Q_long_mv                         84.7±15.1        48.4±19.1       0.0±0.0    24.9±5.1      3.0±4.7
+                 Overall                            90.7±4.9         75.9±6.4      70.8±4.3    40.6±1.0     40.1±1.8
+
+Table 2: SLOG gen set results (LF exact match mean±std). Our system reports results over 10 seeds; other systems
+report reformatted exact match (5 seeds) from (Li et al., 2023) Table 5. Vanilla TF = Transformer trained from
+scratch (Vaswani et al., 2017). Highest value per row in bold.
+
+      10 seeds report the final checkpoint at epoch                  4     Experimental Results
+      50.
+                                                                     4.1    Main SLOG Results
+3.5    System Architecture Comparison                                Table 2 reports per-category accuracy for each
+Table 1 compares the architectural configura­                        system on the SLOG gen set. Our system reports
+tions of three neuro-symbolic systems. All three                     LF exact match (10 seeds); other systems report
+share the BERT supertagger + symbolic combina­                       reformatted exact match (5 seeds) from (Li et al.,
+tory backend paradigm; differences concentrate                       2023) Table 5.
+in the representational properties of the type                          Under the controlled condition (BERT-base),
+system (directionality) and the complexity of the                    the system achieves 75.9±6.4%, surpassing AM-
+decoder.                                                             Parser (70.8±4.3%). With DeBERTa-v3-large, the
+                                                                     system reaches 90.7±4.9%, exceeding AM-Parser
+                                                                     by nearly 20 percentage points, with 9/17
+                                                                     categories averaging above 97%. The encoder
+Figure 1: Mean accuracy by SLOG category group. On §2.2 modifier position and §2.3 extraction position, the
+CCG system outperforms AM-Parser; on §2.1 recursive depth, AM-Parser has the advantage. The largest gains
+from the encoder upgrade (DeBERTa-v3-L) appear in the recursive-depth group.
+
+upgrade systematically narrows the gap with             average of +29.9pp and underperforms on all 6
+AM-Parser under BERT-base: most recursive-              recursive-depth categories (§2.1) by an average of
+depth categories approach or surpass AM-Parser          −31.9pp. The absolute magnitudes of these two
+under DeBERTa, with only CP recursion and               deltas are nearly equal, indicating that the effect
+RC_modif_subj still showing a clear deficit.            of directionality is not a general improvement
+                                                        but a directional one: it improves the direction-
+4.2   Directional Separation by SLOG Cate­              relevant dimension and does not help on the
+      gory Groups                                       irrelevant dimension. This symmetry implies that
+If directionality is the cause of the performance       the effect of directionality constitutes a precise
+gain, its effect should fall precisely on direction-    redistribution across the two dimensions, not
+relevant categories, not distribute uniformly. To       a random fluctuation within a general improve­
+test this prediction, we strictly follow SLOG’s         ment.
+original category groupings (Li et al., 2023):              The wh-question group (§2.4) provides fur­
+§2.1 recursive depth (6 categories, testing gener­      ther evidence. The 6 wh-categories can be
+alization over nesting depth, unrelated to direc­       divided, by a priori criteria independent
+tionality), §2.2 modifier position (4 categories,       of experimental results, into two subgroups:
+testing PP/RC modifier shifts from object side          Q_dobj_ditransV, Q_iobj_ditransV, Q_long_mv,
+to subject side, directly related to directionality),   and Q_modified_NPs involve argument extrac­
+§2.3 extraction position (1 category, testing argu­     tion from non-subject positions, where direc­
+ment extraction position within RCs, directly           tionality directly determines argument role iden­
+related to directionality), and §2.4 wh-questions       tification; Q_subj_active and Q_subj_passive in­
+(6 categories, with mixed properties). Using            volve simple subject extraction, where the argu­
+SLOG’s own groupings eliminates any influence           ment is the subject itself and no positional ambi­
+of grouping methodology on the conclusions.             guity arises. Within the same system, the CCG
+Figure 1 shows mean accuracy by group.                  system leads by large margins on the direction-
+   Under controlled conditions (BERT-base), the         relevant subcategories (+30.0 to +66.9pp) and
+difference between the CCG system and AM-               AM-Parser leads on the direction-irrelevant sub­
+Parser exhibits a precise directional separation:       categories. This within-group comparison con­
+the CCG system outperforms AM-Parser on all             trols for all system-level confounds: the decoder
+5 position-shift categories (§2.2 + §2.3) by an         and training strategy are identical across the two
+subgroups, making it a cleaner test of the direc­      4.3    Encoder Scalability
+tional effect than cross-group comparisons.            AM-Parser scores 0.0±0.0 on two categories (5
+   We acknowledge that the two systems differ in       seeds) (Li et al., 2023), constituting an archi­
+ways beyond the type system, including decoder         tectural ceiling that cannot be improved by
+architecture (single linear layer vs. edge predic­     upgrading the encoder. All categories under the
+tor), training strategy (Gumbel-Softmax anneal­        CCG system are empirically non-zero, so encoder
+ing vs. AM training), and type granularity (26         improvements are not truncated by the compo­
+types vs. 50 types). More fundamentally, replac­       sition layer. We verify this with three encoder
+ing the representation is a system-engineering         tiers (all other hyperparameters fixed): BERT-
+operation: directionality is not an optional para­     base 75.9±6.4% → ModernBERT-base (Warner
+meter of CCG but the definition of its combina­
+                                                       et al., 2025) 79.9±3.7% → DeBERTa-v3-large
+tory rules (see Appendix B). It cannot be isolated
+                                                       (He et al., 2023) 90.7±4.9%. DeBERTa-v3-large
+as an independent variable for ablation. Just as
+                                                       pushes 9/17 categories above 97%, including the
+one cannot “add directionality” to the AM algebra
+                                                       two AM-Parser 0% categories (RC_iobj_extracted
+without rewriting the entire combinatory calcu­
+                                                       97.8%, Q_long_mv 84.7%). Detailed per-category
+lus, one cannot “remove directionality” from
+                                                       encoder analysis and a shared variance structure
+CCG without deconstructing the entire formal
+                                                       analysis are in Appendix C and G.
+system. We accept this limitation candidly.
+   This limitation does not, however, block the        5     Discussion
+test of directionality. The logic of the test relies
+not on ablation but on pattern alignment: if direc­    The preceding sections demonstrated the direc­
+tionality is the cause, improvements should fall       tional separation pattern: directionality precisely
+precisely on direction-relevant categories. The        targets position-shift categories. The following
+data show exactly this pattern: the CCG system         three subsections explain the causes of this
+leads on all 5 position-shift categories and trails    pattern, and the final subsection discusses its
+on all 6 recursive-depth categories. We acknowl­       methodological implications.
+edge that confounds could also produce non-
+uniform effects, and this pattern alone cannot ex­     5.1    Why Directionality Matters: An Engi­
+clude alternative explanations. Directionality is,            neering Argument
+however, the most parsimonious explanation for         In a neuro-symbolic system, the type system is
+the observed pattern: the advantage aligns pre­        the sole interface between the neural predictor
+cisely with the dimension where directionality         and the symbolic reasoner: the predictor’s output
+is most relevant, not with the dimension where         is a type sequence, and the reasoner’s input
+decoder architecture or training strategy would        is also a type sequence. The design of this inter­
+most plausibly have an effect. The within-group        face determines not only what each component
+differentiation of the wh-question categories,         processes but also whether they can collaborate
+where a priori classification aligns precisely with    effectively.
+experimental results within the same system,              Any information that must be represented in
+further narrows the space of alternative explana­      the system has only two possible locations: it can
+tions. Directionality is the most parsimonious         reside in the non-learnable combinatory rules or
+explanation for this full set of evidence, requiring   in the learnable type labels. Directionality deter­
+the fewest additional theoretical assumptions.         mines how information is distributed between
+   Replacing BERT-base with DeBERTa-v3-large           these two locations.
+shifts the largest encoder-upgrade gains to recur­        Consider PP modification as an example. In
+sive-depth categories (+22.5pp), complementary         the AM algebra, PP modification of the object
+to the gains from directionality: directionality       (“the cat beside a car”) and PP modification of
+resolves position shifts, and the encoder resolves     the subject (“the cat beside a car was chased,”
+recursive depth. The two belong to different           with the PP on the left side of the verb) require
+dimensions and are complementary rather than           the supertagger to assign different type labels to
+competitive.                                           the two cases, because the AM algebra’s modify
+                                                       operation does not distinguish left from right. In
+                                                       CCG, the PP’s type in both cases is NP \ NP, and
+                                                       directionality is automatically distinguished by
+Figure 2: Accuracy comparison for PP and RC modifier position pairs (subject side vs. indirect-object side).
+AM-Parser shows large directional asymmetry on both modifier pairs (Δ33, Δ19); the CCG system (BERT)
+substantially reduces the asymmetry for PP modifiers. The subject side of RC modifiers is weaker across all
+systems.
+
+the slash direction at composition time (forward         5.2    Why Directionality Matters: A Linguis­
+vs. backward application). The type inventory                   tic Argument
+does not expand, and the supertagger’s discrimi­         We contend that directionality is effective at
+native burden does not increase.                         the system-design level because it reflects a
+   PP modification is just one instance. Argument        structural property of language production and
+structure (subject vs. object), modifier attach­         comprehension.
+ment (left vs. right), and wh-extraction (forward           Natural language as a spoken medium is a
+vs. backward) are all naturally distinguished by         one-dimensional linear signal: words must be
+slash direction in CCG. With the same BERT and           produced sequentially in time. The conceptual
+training data, the CCG system outperforms the            structure (who did what to whom, what modifies
+AM system not because BERT is stronger, but be­          what) is relational in the speaker’s mind and has
+cause its discriminative burden is lighter. Figure 2     no linear order. The process of converting con­
+shows this for PP and RC modifier position pairs.        ceptual structure into a one-dimensional word
+   The authors of AM-Parser have indirectly              sequence is called linearization (Levelt, 1989),
+confirmed the impact of missing directionality.          language comprehension is its inverse, recover­
+Weißenhorn et al. (2022a) reports that PP modi­          ing multi-dimensional conceptual structure from
+fication direction requires an additional distance       one-dimensional word order. Hawkins (Hawkins,
+encoding (+dist feature, a decoder-layer patch           1994; Hawkins, 2004) provides independent ar­
+that does not belong to the AM algebra itself)           guments from the comprehension side: cross-lin­
+to distinguish the linear position of a modifier         guistic word-order regularities are systematically
+relative to the head. The existence of +dist is itself   governed by structural-recognition efficiency,
+evidence: positional information was omitted by          and human parsers prefer word orders that allow
+the AM algebra and had to be externally supplied.        the fastest identification of phrasal structure. In
+In CCG, slash direction is the definition of the         this framework, directionality (which side of the
+combinatory operations: positional information           head an argument appears on) is the property of
+is built into the representational protocol, requir­     word order most directly relevant to structural
+ing no patch.                                            generalization: it determines whether a parser
+                                                         can distinguish grammatical relations from local
+                                                         positional information alone.
+   The benchmark design of SLOG (testing struc­        Parser, shifting the bottleneck to the neural layer,
+tural generalization through position shifts: PP       which improves with encoder upgrades (75.9% →
+moving from the object side to the subject side,       90.7%). Directionality and encoder strength are
+wh-constituents extracted from their base posi­        complementary, not substitutive. On structural
+tion to sentence-initial position) is in essence       generalization involving positional distinctions,
+testing whether a parsing system has processed         directional representations have a consistent and
+the directional cues in the mapping from linear        substantial advantage.
+word order to structure. CCG’s slash direction is
+a precise formalization of this cognitive process.     7   Limitations
+This explains why the experimental gains from          The system generates logical forms through a
+directionality fall precisely on position-shift cat­
+                                                       deterministic pipeline (CCG types → CKY →
+egories: these categories are exactly the points
+                                                       semantic edge extraction). Pipeline fidelity is
+in the word-order-to-structure recovery process
+                                                       99.92% (13/17,000 inconsistencies stem from in­
+where directional information is most critical.
+                                                       herent ambiguities in the CCG type system). This
+The AM algebra’s directionless design is reason­
+                                                       pipeline is not fully comparable in output format
+able for AMR semantic graph tasks, but on SLOG
+                                                       to seq2seq methods that directly generate LFs.
+tasks that require recovering structure from lin­
+                                                       We note, however, that LF exact match itself has
+ear word order, abandoning directionality means
+                                                       known evaluation issues: T5 achieves 47.2% plain
+abandoning the most fundamental structural cue
+                                                       exact match on Q_dobj_ditransV but 98.5% after
+in the comprehension process.
+                                                       reformatting (Wu et al., 2023), suggesting that LF
+5.3    Synthesis: The Role of Directionality           format differences can exaggerate the apparent
+                                                       degree of generalization failure. CCG type match
+The engineering and linguistic arguments con­          avoids this problem but introduces the degree of
+verge: directionality is a key property of the         freedom inherent in type system design.
+representational protocol between the neural and           The system uses a frozen BERT-base encoder
+symbolic components. It determines what infor­         (110M parameters) for supertagging. BERT’s pre-
+mation is learned by the neural layer and what         training data may contain patterns similar to
+is given by symbolic rules. Its effect on position-    SLOG test structures, so pre-training leakage
+shift categories is directional (5/5) and absent for   cannot be entirely ruled out. This confound is
+recursive depth (0/6). Its effect on scalability is    shared by the entire supertagger paradigm and
+architectural: it removes the 0% category ceiling      does not affect the core argument of this paper
+and places the performance bottleneck on the           (directional vs. non-directional comparison), but
+improvable supertagger (§4.3). Directionality is       it underscores the need for further work to isolate
+not an ablatable parameter; it is the definition of    pre-training effects.
+CCG’s combinatory operations (see Appendix B).             The argumentative framework of this paper
+   The hypothesis is falsifiable: if subsequent        relies on CCG’s concept of directionality. These
+work finds a non-directional representation that       concepts have been empirically validated within
+matches CCG on position-shift categories, our          the COGS/SLOG domain, but whether they gen­
+claim is challenged. Conversely, if introducing        eralize to broader structural generalization eval­
+directional encoding into other formalisms yields      uations remains an open question.
+consistent gains, directionality’s role is validated       The variance analyses of the two systems (ours
+across frameworks. We welcome such tests.              and AM-Parser) are based on different numbers
+                                                       of seeds (10 vs. 5), which may affect the precision
+6     Conclusion
+                                                       of variance estimates. The qualitative conclusion
+This paper tests the role of directionality in         about shared variance structure (both systems
+structural generalization through controlled ex­       exhibit categories where standard deviation ap­
+periments on SLOG. The effect is directional:          proaches or exceeds the mean) does not depend
+improvements concentrate on all 5 position-shift       on an exact match in seed count.
+categories (+29.9pp) and are absent for all 6              Code and trained models will be released upon
+recursive-depth categories (−31.9pp). The effect       acceptance.
+is also architectural: directional representations         The encoder replacement experiments were
+eliminate the 0% category ceiling present in AM-       conducted only under the CCG system. AM-
+Parser’s evaluation pipeline is not fully open-              A Structural Generalization Benchmark for Seman­
+sourced (code is open but pre-trained weights and            tic Parsing. In Proceedings of the 2023 Conference on
+evaluation scripts are not available), preventing            Empirical Methods in Natural Language Processing,
+                                                             pages 3213–3232, Singapore.
+us from reproducing AM-Parser’s results under
+the same encoders. The core comparison under               Matthias Lindemann, Jonas Groschwitz, and Alexan­
+the BERT-base control condition is unaffected by            der Koller. 2019. Compositional Semantic Parsing
+this limitation.                                            across Graphbanks. In Proceedings of the 57th An­
+                                                            nual Meeting of the Association for Computational
+References                                                  Linguistics, pages 4576–4585, Florence, Italy.
+                                                           Matthias Lindemann, Alexander Koller, and Ivan
+Jacob Devlin, Ming-Wei Chang, Kenton Lee, and               Titov. 2024. Strengthening Structural Inductive Bi­
+   Kristina Toutanova. 2019. BERT: Pre-Training of          ases by Pre-Training to Perform Syntactic Transfor­
+   Deep Bidirectional Transformers for Language Un­         mations. In Proceedings of the 2024 Conference on
+   derstanding. In Proceedings of the 2019 Conference       Empirical Methods in Natural Language Processing,
+   of the North American Chapter of the Association for
+                                                            pages 11558–11573, Miami, Florida, USA.
+   Computational Linguistics: Human Language Tech­
+   nologies, Volume 1 (Long and Short Papers), pages       Alban Petit, Caio Corro, and François Yvon. 2023.
+   4171–4186, Minneapolis, Minnesota.                        Structural Generalization in COGS: Supertagging
+                                                             Is (Almost) All You Need. In Proceedings of the
+Jonas Groschwitz, Matthias Lindemann, Meaghan
+                                                             2023 Conference on Empirical Methods in Natural
+  Fowlie, Mark Johnson, and Alexander Koller. 2018.
+                                                             Language Processing, pages 1089–1101, Singapore.
+  AMR Dependency Parsing with a Typed Semantic
+  Algebra. In Proceedings of the 56th Annual Meeting       Colin Raffel, Noam Shazeer, Adam Roberts, Katherine
+  of the Association for Computational Linguistics (Vol­     Lee, Sharan Narang, Michael Matena, Yanqi Zhou,
+  ume 1: Long Papers), pages 1831–1841, Melbourne,           Wei Li, and Peter J. Liu. 2020. Exploring the Limits
+  Australia.                                                 of Transfer Learning with a Unified Text-to-Text
+                                                             Transformer. Journal of Machine Learning Research
+John A. Hawkins. 1994. A Performance Theory of Order
+                                                             21(140):1–67.
+  and Constituency. Cambridge Studies in Linguistics
+  73. Cambridge: Cambridge University Press.               Mark Steedman. 2001. The Syntactic Process. Language,
+                                                            Speech and Communication. Cambridge, Mass.:
+John A. Hawkins. 2004. Efficiency and Complexity in
+                                                            MIT Press.
+  Grammars. Oxford, New York: Oxford University
+  Press.                                                   Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier
+                                                             Martinet, Marie-Anne Lachaux, Timothée Lacroix,
+Pengcheng He, Jianfeng Gao, and Weizhu Chen.
+                                                             Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal
+  2023. DeBERTaV3: Improving DeBERTa Using
+                                                             Azhar, Aurelien Rodriguez, Armand Joulin, Edouard
+  ELECTRA-style Pre-Training with Gradient-Disen­
+                                                             Grave, and Guillaume Lample. 2023. LLaMA: Open
+  tangled Embedding Sharing. In The Eleventh Inter­
+                                                             and Efficient Foundation Language Models. http://
+  national Conference on Learning Representations.
+                                                             arxiv.org/abs/2302.13971. arXiv: 2302.13971 [cs].
+Eric Jang, Shixiang Gu, and Ben Poole. 2017. Categor­
+                                                           Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
+  ical Reparameterization with Gumbel-Softmax. In
+                                                             Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz
+  5th International Conference on Learning Represen­
+                                                             Kaiser, and Illia Polosukhin. 2017. Attention Is All
+  tations, ICLR 2017.
+                                                             You Need. In Advances in Neural Information Pro­
+Najoung Kim and Tal Linzen. 2020. COGS: A Composi­           cessing Systems.
+  tional Generalization Challenge Based on Semantic
+                                                           Benjamin Warner, Antoine Chaffin, Benjamin Clavié,
+  Interpretation. In Proceedings of the 2020 Conference
+                                                             Orion Weller, Oskar Hallström, Said Taghadouini,
+  on Empirical Methods in Natural Language Process­
+                                                             Alexis Gallagher, Raja Biswas, Faisal Ladhak, Tom
+  ing (EMNLP), pages 9087–9105, Online.
+                                                             Aarsen, Griffin Thomas Adams, Jeremy Howard,
+Brenden M. Lake and Marco Baroni. 2018. Gener­               and Iacopo Poli. 2025. Smarter, Better, Faster,
+  alization without Systematicity: On the Composi­           Longer: A Modern Bidirectional Encoder for Fast,
+  tional Skills of Sequence-to-Sequence Recurrent            Memory Efficient, and Long Context Finetuning
+  Networks. In Proceedings of the 35th International         and Inference. In Proceedings of the 63rd Annual
+  Conference on Machine Learning, pages 2879–2888.           Meeting of the Association for Computational Lin­
+                                                             guistics (Volume 1: Long Papers), pages 2526–2547,
+Willem J. M. Levelt. 1989. Speaking: From Intention to       Vienna, Austria.
+ Articulation. The MIT Press.
+                                                           Pia Weißenhorn, Lucia Donatelli, and Alexander
+Bingzhi Li, Lucia Donatelli, Alexander Koller, Tal           Koller. 2022a. Compositional Generalization with a
+  Linzen, Yuekun Yao, and Najoung Kim. 2023. SLOG:           Broad-Coverage Semantic Parser. In Proceedings of
+  the 11th Joint Conference on Lexical and Computa­
+  tional Semantics, pages 44–54, Seattle, Washington.
+Pia Weißenhorn, Yuekun Yao, Lucia Donatelli, and
+  Alexander Koller. 2022b. Compositional Generaliza­
+  tion Requires Compositional Parsers. https://arxiv.
+  org/abs/2202.11937v1.
+Zhengxuan Wu, Christopher D. Manning, and
+  Christopher Potts. 2023. ReCOGS: How Incidental
+  Details of a Logical Form Overshadow an Evalua­
+  tion of Semantic Interpretation. Transactions of the
+  Association for Computational Linguistics 11:1719–
+  1733.
+Yuekun Yao and Alexander Koller. 2022. Structural
+  Generalization Is Hard for Sequence-to-Sequence
+  Models. In Proceedings of the 2022 Conference on
+  Empirical Methods in Natural Language Processing,
+  pages 5048–5062, Abu Dhabi, United Arab Emirates.
+A CCG-to-LF Pipeline Fidelity Verifica­                   merge table symmetric (accepting both orderings
+  tion                                                    with the same result) would collapse agent and
+                                                          theme into a single undifferentiated role, elimi­
+Of the full 17,000 SLOG gen samples, 16,861 con­          nating the information needed for semantic edge
+tain predicate-argument edges and 139 do not. All         extraction.
+edge-free samples come from Q_subj_active (79)               Semantic edge extraction. Role labels
+and Q_subj_passive (60), all of which are intran­         (agent, theme, recipient, nmod) are read directly
+sitive wh-questions (e.g., “Who slept?”) whose            from the merge rules during CKY backtracking.
+LFs contain only a single predicate and one argu­         There is no separate role prediction component.
+ment, producing no comparable edge pairs. For             Removing direction from the merge rules re­
+these samples, evaluation degenerates to a pure           moves the source of role information entirely.
+type-prediction correctness check (trivial edge-          Restoring role assignment would require intro­
+set match).                                               ducing a learned role predictor (an additional
+   On the 16,861 samples with edges, gold CCG             neural component), which would in substance
+type sequences processed through determinis­              reintroduce directionality through a different
+tic CKY parsing and semantic edge extraction              route: the predictor would need to learn, from po­
+achieve 99.92% agreement (16,848/16,861) with             sitional context, the same left-right distinctions
+gold LF edges. The remaining 13 inconsistent              that slash direction encodes declaratively.
+samples all belong to Q_modified_NPs and stem                In short, directionality is not a parameter of
+from an inherent ambiguity in the CCG type sys­           the system but the foundation on which the
+tem: transitive verbs and ditransitive verbs miss­        type inventory, merge rules, and edge extraction
+ing one argument share the type (𝑆 \ NP)/ NP.             are jointly built. A “non-directional CCG” is
+This ambiguity does not affect any conclusion of          not a variant of CCG but a different formal
+this paper.                                               system requiring redesign of all three compo­
+                                                          nents. This paper therefore employs cross-system
+B On the Infeasibility of a Directionality
+                                                          category-level pattern analysis, comparing the
+  Ablation                                                per-category performance of two complete rep­
+One might expect a directionality-removal abla­           resentational systems (one directional, one non-
+tion: remove slash direction within the CCG               directional) under controlled conditions, rather
+framework and observe whether performance                 than ablation experiments, to test the contribu­
+drops. We explain here why this ablation is tech­         tion of directionality. Directionality consistently
+nically infeasible at every level of the system.          outperforms the non-directional system on all 5
+   Type inventory. The 26 types (Appendix D)              position-shift categories and consistently under­
+encode direction in their definitions: 𝑆 \ NP             performs on all 6 recursive-depth categories. This
+(type 3) means “takes subject on the left,” and           directional separation constitutes direct evidence
+(𝑆 \ NP)/ NP (type 4) means “takes object on              for directionality as a representational property.
+the right, then subject on the left.” Removing
+                                                          C Full Multi-Encoder Comparison
+direction would require merging types that differ
+only by slash direction, reducing the inventory           Table 3 reports the 10-seed overall results for
+and destroying the distinctions the supertagger           all encoders we tested. The relationship between
+learns to predict.                                        encoder scale and performance is not monotonic:
+   CKY merge rules. The 37 merge rules (Ap­               ELECTRA-large (69.9%) and ModernBERT-large
+pendix E) are keyed on ordered pairs (𝐿, 𝑅):              (69.8%) show significant degradation relative
+the left span’s type and the right span’s type.           to their base versions, RoBERTa-large (76.9%)
+Directionality enters through this ordering. For          is slightly better than RoBERTa-base (73.9%),
+example, ((S \ NP)/ NP, NP) fires when the                while DeBERTa-v3-large (90.7%) substantially
+transitive verb is on the left and its object is on the   surpasses all base models. The degradation cases
+right, assigning the theme role. The reverse pair         indicate that the 1024→32 Gumbel-Softmax bot­
+(NP, 𝑆 \ NP) fires when the subject NP is on the          tleneck is unfavorable for the representation
+left and the verb on the right, assigning the agent       spaces of some large models. The mechanism
+role. These are different rules with different re­        behind DeBERTa-v3-large’s success warrants
+sults and different role assignments. Making the          further investigation (one hypothesis is that its
+                                     Encoder               Overall%    Std
+                                     BERT-base (control)        75.9   ±6.4
+                                     ModernBERT-base            79.9   ±3.7
+                                     DeBERTa-v3-large           90.7   ±4.9
+                                     ELECTRA-base               77.3   ±4.0
+                                     RoBERTa-large              76.9   ±3.8
+                                     DeBERTa-v3-base            75.1   ±5.4
+                                     RoBERTa-base               73.9   ±7.4
+                                     ELECTRA-large              69.9   ±6.4
+                                     ModernBERT-large           69.8   ±5.4
+
+  Table 3: Multi-encoder 10-seed results (overall LF exact match mean±std). All configurations use the same
+  Gumbel-Softmax bottleneck (K=32) and CKY composition.
+
+disentangled attention design (He et al., 2023)            wh-questions. Types 24–25 are disambiguation
+may make position-direction information more               types that resolve role ambiguities in ditransitive
+linearly separable in the embedding space).                verbs and RC indirect-object extraction.
+   Per-category analysis reveals that gains are               We retain forward and backward function
+highly non-uniform: the highest-variance cate­             application but replace type raising and compo­
+gories under BERT-base benefit most from the               sition with atomic types carrying explicit merge
+encoder upgrade. CP recursion jumps from 18.8              rules. Standard CCG correspondences: wh-words
+±34.4% (BERT-base) to 81.9±29.8% (DeBERTa-                 map to WH (standard: 𝑆𝑞 /(𝑆 \ NP)); relative
+v3-large); Q_long_mv from 48.4±19.1% to 84.7               pronouns map to RC_THAT (standard: (NP \
+±15.1%; PP_modif_subj from 92.8% to 94.5%.                 NP)/(𝑆/ NP)). Type raising (NP → 𝑆/(𝑆 \
+RC_modif_subj drops from 61.9% to 52.0%, a cat­            NP)) and composition (𝐴/𝐵 + 𝐵/𝐶 → 𝐴/𝐶)
+egory that is weak across all systems (AM-Parser           are not used.
+55.8%), suggesting that subject-side relative
+clauses pose a generalization challenge beyond             E Complete CKY Merge Rules
+directionality. No single category drops to zero           Table 5 lists all 37 deterministic merge rules used
+under any encoder. Under DeBERTa-v3-large,                 by the CKY parser. Each rule specifies: the left and
+9/17 categories average above 97%, including the           right input types, the result type, any predicate-
+two AM-Parser 0% categories (RC_iobj_extracted             argument edge extracted (role and direction), and
+97.8%, Q_long_mv 84.7%).                                   which side retains the head. These rules, together
+   Overall variance does not decrease monotoni­            with the type inventory in Appendix D, fully
+cally with encoder strength: ±6.4 → ±3.7 → ±               specify the deterministic pipeline from CCG type
+4.9. DeBERTa-v3-large’s slightly higher variance           sequences to logical forms.
+relative to ModernBERT-base (±4.9 vs. ±3.7) is                Directionality is encoded in the ordered pair:
+driven by two low-scoring seeds on CP recur­               rule (𝐴, 𝐵) fires only when 𝐴 occupies the left
+sion (seed 2: CP_3 2.7%, seed 1: Q_long_mv                 span and 𝐵 the right span. The same two types
+43.4%), while these seeds perform normally on              in reversed order either do not match any rule or
+the remaining 15 categories, indicating that the           match a different rule with a different result and
+discretization boundary remains highly sensitive           role assignment. This is the concrete mechanism
+to deep nesting structures. Even the worst seed            by which slash direction enters the system.
+(82.1%) exceeds AM-Parser by 11 percentage
+points.                                                    F Worked Example: From CCG Types to
+                                                             Logical Form
+D Complete CCG Type Inventory
+                                                           This section traces the complete deterministic
+Table 4 lists all 26 CCG types used in this paper.
+                                                           pipeline on a concrete sentence, from raw input
+Types 1–19 cover the 20 base categories for
+                                                           to extracted predicate-argument edges.
+COGS (21 generalization categories). Types 20–
+23 extend coverage to SLOG’s relative clauses and
+                     ID    Name          CCG notation      Description
+                     0     ∅                               Void (absorbed position)
+                     1     NP            NP                Noun phrase
+                     2     S             S                 Sentence
+                     3     S_NP          𝑆 \ NP            Intransitive verb (takes subject left)
+                     4     SNP_NP        (𝑆 \ NP)/ NP      Transitive verb (takes object right, subject left)
+                     5     PP_NP         PP / NP           Preposition (takes complement right)
+                     6     NP_NP         NP \ NP           Nominal modifier (attaches left to NP)
+                     7     DIT           DIT               Ditransitive verb stem
+                     8     CCOMP         CCOMP             Clausal complement verb
+                     9     THAT_S        THAT_S            Complementizer “that”
+                     10    PN            PN                Proper noun (treated as NP)
+                     11    XCOMP         XCOMP             Raising/control verb
+                     12    UNACC         UNACC             Unaccusative verb (single theme argument)
+                     13    PASS_TV       PASS_TV           Passivized transitive verb
+                     14    PASS_DIT      PASS_DIT          Passivized ditransitive verb
+                     15    PASS_REC      PASS_REC          Passivized ditransitive (recipient promoted)
+                     16    BY            BY                Passive agent marker “by”
+                     17    BY+           BY+               BY after absorbing its NP complement
+                     18    TO            TO                Dative marker “to”
+                     19    TO+           TO+               TO after absorbing its NP complement
+                     20    RC_THAT       RC_THAT           Relative pronoun (theme/agent gap)
+                     21    TV_GAP        TV_GAP            Transitive verb with object gap
+                     22    S_GAP         S_GAP             Sentence with extracted argument
+                     23    WH            WH                Wh-word
+                     24    DIT_REC       DIT_REC           Disambiguation: ditransitive, recipient reading
+                     25    RC_THAT_R     RC_THAT_R         Disambiguation: RC with recipient gap
+
+   Table 4: Complete CCG type inventory (26 types). ID 0 (∅) marks absorbed positions after CKY merges.
+
+   Input sentence: “The dog chased the cat be­                   Step 3: Deterministic CKY parsing. Bottom-
+side a car.”                                                     up CKY applies the merge rules from Appendix
+   Step 1: Function word stripping. Articles                     E. The derivation proceeds from the innermost
+(“The”, “the”, “a”) and other function words are                 (rightmost) constituents outward:
+removed. These words do not carry CCG types in                      Merge 1 (span [3,4]): PP / NP + NP →
+the COGS/SLOG formalization; removing them                       NP \ NP
+aligns the word sequence with the CCG type                             beside + car. Head = car (R). No edge
+sequence. Content words retained:                                extracted.
+  Posi­      Posi­         Posi­       Posi­       Posi­               The preposition absorbs its complement, form­
+ tion 0     tion 1        tion 2      tion 3      tion 4         ing a nominal modifier.
+                                                                    Merge 2 (span [2,4]): NP + NP \ NP → NP
+  dog      chased          cat        beside       car                 cat + [beside car]. Head = cat (L). Edge: R→
+Step 2: CCG type assignment. The supertagger                     L nmod → cat.nmod(cat, car).
+predicts one of 26 CCG types for each content                          The modifier attaches to the noun. Direction­
+word. The gold (target) type sequence is:                        ality: NP\NP attaches leftward (backward applica­
+  dog       chased              cat    beside       car          tion).
+                                                                    Merge 3 (span [1,4]): (𝑆 \ NP)/ NP + NP →
+  NP      (𝑆 \ NP)/ NP NP PP / NP NP                             𝑆 \ NP
+                                                                       chased + [cat beside car]. Head = chased (L).
+              Left              Right                                     Result         Edge             Head
+              Core argument structure
+
+              (𝑆 \ NP)/ NP      NP                                        𝑆 \ NP         L→R: theme        L
+
+              NP                𝑆 \ NP                                    S              R→L: agent        R
+
+              NP                UNACC                                     S              R→L: theme        R
+
+              DIT               NP                                        (𝑆 \ NP)/ NP   L→R: recipient    L
+
+              DIT_REC           NP                                        𝑆 \ NP         L→R: recipient    L
+
+              Modification and complementation
+
+              PP / NP           NP                                        NP \ NP                          R
+
+              NP                NP \ NP                                   NP             R→L: nmod         L
+
+              CCOMP             S                                         𝑆 \ NP         L→R: ccomp        L
+
+              THAT_S            S                                         S                                R
+              XCOMP             𝑆 \ NP / UNACC                            𝑆 \ NP         L→R: xcomp        L
+
+              Passive constructions
+              NP                PASS_TV                                   S              R→L: theme        R
+
+              NP                PASS_REC                                  S              R→L: recipient    R
+
+              PASS_DIT          NP                                        PASS_REC       L→R: theme        L
+
+              PASS_TV           BY+                                       PASS_TV        L→R: agent        L
+
+              PASS_TV           TO+                                       PASS_TV        L→R: recipient    L
+
+              PASS_REC          BY+                                       PASS_REC       L→R: agent        L
+
+              𝑆 \ NP            TO+                                       𝑆 \ NP         L→R: recipient    L
+
+              BY                NP                                        BY+                              R
+              TO                NP                                        TO+                              R
+              Relative clauses and wh-questions (19 rules)
+              NP                TV_GAP                                    S_GAP          R→L: agent        R
+
+              RC_THAT           𝑉any                                      NP \ NP                          R
+
+              RC_THAT_R         𝑉any                                      NP \ NP                          R
+
+              WH                S / 𝑆 \ NP / UNACC / PASS_TV / PASS_REC   S                                R
+
+
+Table 5: Complete CKY merge rules (37 rules). L→R: left span assigns role to right span’s head. R→L: right span
+assigns role to left span’s head. Head: which span’s head survives. 𝑉any abbreviates the set {𝑆 \ NP, UNACC,
+PASS_TV, PASS_REC, PASS_DIT, S, S_GAP}.
+
+Edge: L→R theme → chase.theme(chased, cat).                      chase.agent(chased, dog) ∧ chase.theme(chased,
+     The transitive verb absorbs its object on the                         cat) ∧ cat.nmod.beside(cat, car)
+right (forward application). The slash direction                    This edge set is compared against the gold LF
+/ NP determines that the right-side constituent is               edge set for evaluation (LF exact match). The
+the theme.                                                       entire pipeline from type prediction to LF is
+   Merge 4 (span [0,4]): NP + 𝑆 \ NP → 𝑆                         deterministic: no learned component participates
+     dog + [chased cat beside car]. Head = chased                after the supertagger’s type prediction in Step 2.
+(R). Edge: R→L agent → chase.agent(chased,                          Role of directionality. In Merges 3 and 4, the
+dog).                                                            role assignment (theme vs. agent) is determined
+     The subject NP is consumed on the left (back­               entirely by which side of the verb the NP appears
+ward application). The slash direction \ NP deter­               on: right → theme (forward application), left
+mines that the left-side constituent is the agent.               → agent (backward application). In a non-direc­
+   Step 4: Edge collection. The three edges ex­                  tional system, both merges would produce the
+tracted during CKY backtracking constitute the                   same undifferentiated NP+verb combination, and
+logical form:                                                    distinguishing agent from theme would require
+                                                                 an additional learned component.
+G Shared Variance Structure
+Per-category data reveal a pattern beyond overall
+accuracy. Both systems (despite using different
+type representations) exhibit categories where
+the standard deviation approaches or exceeds
+the mean. Our system shows 34.4% standard de­
+viation on CP recursion, with individual seeds
+jumping from 0% to 99.6%. AM-Parser shows
+33.5% standard deviation on Q_dobj_ditransV
+and 42.4% on Q_iobj_ditransV, with standard
+deviations approaching or exceeding the means
+themselves.
+   The choice of representation changes where
+variance falls (ours on CP recursion, AM-Parser’s
+on Q_dobj), but does not eliminate variance. The
+two systems share the same paradigm (BERT
+supertagging + symbolic combinatory backend),
+the same training data, and differ only in type
+representation, yet both exhibit high-variance
+categories. This suggests that supertagger initial­
+ization sensitivity on certain categories cannot
+be eliminated by representation choice alone:
+directionality can relocate instability but cannot
+remove it. This pattern implies that initialization
+sensitivity is an inherent cost of the neuro-sym­
+bolic paradigm’s separation of statistical learning
+from symbolic reasoning, a cost that representa­
+tion choice can redistribute but not eliminate.
+
