@@ -3560,6 +3560,44 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Repo's 79th paper rank 74 unique. FIRST egocentric-scene-graph-evolution / activity-conditioned-graph-edit-forecasting paper. 7 tables (1 EgoSchema+EgoMCQ, 2 EgoCVR, 3 A-GEF, 4 EXPLORE subset, 5 EgoMCQ ablation, 6 A-GEF #queries ablation, 7 EXPLORE full 28-model) + Eqs 1-4. SG-Ego: 3.8M graphs, Nobj=1480 Nrel=387, training-free VidSGG (Qwen3.5-9B + GroundingDINO + SAM2/DINOv2). GLEN: TripletGCN graph encoder + frozen EgoVLP text enc + K=128 learnable node queries + Graph Edit Encoder; GTCA (Eq3) + GTM/GTM-tilde objectives; Eq4 action-conditioned node/edge CA. Python source-free reconciliation: ZERO numeric prose-vs-table cell typos; all 4 cross-table byte-identities EXACT (T4<->T7 6 rows, T3<->T6[128] GLEN+static, T1<->T5 GTCA+GTM-tilde heads); prose 66.0-vs-72.8 EXACT; A-GEF GLEN>static>Qwen every K (+25.32 R@100 over static). CAUGHT split-metric overclaim (EXPLORE-Bench Sobj SOTA 65.59 but Srel 2.69 = 7th, beaten by 7 MLLMs incl Qwen3-VL-8B-Inst 2.82; abstract blanket-SOTA vs body L518 'SOTA on Sobj competitive on Srel') + EgoCVR 'outperform CVR-trained' FALSE on Global R@5 (GLEN 40.3 < Thawakar 41.3) + EgoMCQ Intra rank 4/5 (-4.7pp EgoVLPv2) + A-GEF own-benchmark-vs-strawman (Qwen degenerate flat 9.14, static no-evolution) + annotation-circularity (GLEN tested on SG-Ego-derived A-GEF) + EgoSchema 'sufficient details' understates -6.8pp (SG-Ego 66.0 vs Frames 72.8; Frames+SG-Ego only +0.4) + Srel LLM-judged metric artifact + no CIs/seeds. file /Pages=5 vs pdfinfo 17 (12-page gap defect recurs)."
+    },
+    {
+      "arxiv_id": "2607.01232",
+      "title": "Is One Layer Enough? Training A Single Transformer Layer Can Match Full-Parameter RL Training",
+      "authors": "Zijian Zhang, Rizhen Hu, Athanasios Glentis, Dawei Li, Chung-Yiu Yau, Hongzhou Lin, Mingyi Hong",
+      "date": "2026-07-02",
+      "categories": [
+        "cs.LG"
+      ],
+      "abstract": "Reinforcement learning (RL) has become a central component of post-training large language models (LLMs), yet little is understood about how RL adaptation is distributed across transformer layers. Existing approaches typically update all model parameters uniformly, implicitly assuming that every layer contributes similarly to the gains obtained during RL post-training. In this work, we challenge this assumption through a systematic layer-wise study of RL training.",
+      "keywords": [
+        "RL post-training",
+        "layer contribution",
+        "single-layer training",
+        "GRPO",
+        "layer-wise adaptation",
+        "transformer depth",
+        "Qwen3",
+        "Qwen2.5",
+        "mathematical reasoning",
+        "agentic tasks",
+        "ALFWorld",
+        "layer-aware training",
+        "majority voting",
+        "Dr. GRPO",
+        "GiGPO",
+        "DeepSeek-R1 distilled",
+        "middle-layer concentration",
+        "Spearman correlation",
+        "weight change magnitude"
+      ],
+      "subarea_lineage": "RL layer-wise adaptation / single-layer RL training efficiency — sibling to layer-importance-in-LLMs (pruning/removal) and layer-aware-SFT (LISA/MISA), but first repo paper on RL-specific layer contribution and single-layer-matches-full RL",
+      "status": "broken-down",
+      "iteration": 93,
+      "rank": 80,
+      "rank_unique": 75,
+      "sourcing": "paper.pdf 23pp pdfinfo=pdftotext-layout 1567 lines; all 7 main-text tables verbatim + 9 appendix tables + 4 equations + 9 figures",
+      "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ]
 }
