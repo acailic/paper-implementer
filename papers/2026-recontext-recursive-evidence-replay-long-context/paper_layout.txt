@@ -1,0 +1,1090 @@
+                                                    ReContext: Recursive Evidence Replay as LLM Harness for
+                                                                   Long-Context Reasoning
+
+                                                      Yanjun Zhao* , Ruizhong Qiu* , Tianxin Wei* , Yuanchen Bei, Zhining Liu,
+                                                           Lingjie Chen, Ismini Lourentzou, Hanghang Tong, Jingrui He†
+                                                                            University of Illinois Urbana-Champaign
+                                                                             {yanjunzh, jingrui}@illinois.edu
+
+
+                                                                Abstract
+                                             Understanding and reasoning over long con-
+arXiv:2607.02509v1 [cs.AI] 2 Jul 2026
+
+
+
+
+                                             texts has become a key requirement for deploy-
+                                             ing large language models (LLMs) in realistic
+                                             applications. Although recent LLMs support
+                                             increasingly long context windows, they of-
+                                             ten fail to use relevant evidence that is already
+                                             present in the input, revealing a gap between
+                                             context access and effective context utilization.
+                                             In this work, we propose Recursive Evidence
+                                             Replay as LLM Harness for Long-Context              Figure 1: Top 0.1% of context tokens already ac-
+                                             Reasoning (R E C ONTEXT), a training-free in-       counts for about 50% / 80% accumulated relevance
+                                             ference method for improving long-context rea-      score across three LLMs, corresponding to only 128
+                                             soning. R E C ONTEXT uses model-internal rele-      tokens in a 128K-token context. This figure ranks all
+                                             vance signals to construct a query-conditioned      context tokens by their relevance scores with respect
+                                             evidence pool and replays it before final gen-      to the question and shows how much accumulated rele-
+                                             eration while preserving the full original con-     vance score is covered by the top-ranked tokens. Each
+                                             text. This recursive selection process sepa-        curve represents the mean trend over eight datasets, and
+                                             rates evidence organization from answer gen-        the shaded region shows the variance across datasets.
+                                             eration without training, external memory, or
+                                             context pruning. We also provide a theoretical
+                                             analysis based on associative memory, which
+                                                                                                 input, but the model does not consistently use
+                                             characterizes the context as a memory store,
+                                             the question as a retrieval cue, attention as       it during generation (Yen et al., 2025; Ye et al.,
+                                             cue-trace association, and replay as trace re-      2026; Bei et al., 2026) This suggests that the
+                                             activation. Experiments on eight long-context       bottleneck lies not only in context access, but
+                                             datasets with 128K context length show that         also in context harnessing: we need a mechanism
+                                             R E C ONTEXT consistently improves evidence         that dynamically manages long contexts during
+                                             utilization across Qwen3-4B, Qwen3-8B, and          reasoning by continuously identifying, organizing,
+                                             Llama3-8B, achieving the best average rank
+                                                                                                 and updating the information most relevant to the
+                                             on all three backbones. Code is available at
+                                             https://github.com/Yanjun-Zhao/ReContext.           current stage, thereby enabling more grounded and
+                                                                                                 efficient long-context reasoning.
+                                                                                                    Standard long-context prompting requires a
+                                        1    Introduction                                        model to read the context and answer the query in
+                                                                                                 a single inference pass. As the context grows, the
+                                        Long-context large language models (LLMs) can
+                                                                                                 evidence must compete with increasing irrelevant
+                                        now place entire documents, multi-document
+                                                                                                 information, making it harder for the model
+                                        collections, and extended dialogues inside a single
+                                                                                                 to ground its answers and leading to errors or
+                                        prompt. However, longer context windows do
+                                                                                                 hallucinations (Li et al., 2024; Liu et al., 2025).
+                                        not guarantee reliable long-context reasoning. A
+                                                                                                 Recent efforts address this problem from different
+                                        recurring failure mode is that the evidence needed
+                                                                                                 angles: attention intervention methods modify
+                                        to answer a question is already present in the
+                                                                                                 low-level model behavior (Li et al., 2024; Tang
+                                            * Equal contribution. † Corresponding author.        et al., 2024; Ye et al., 2026), making them invasive
+         Input Context & Question                                      Evidence Sifting Pipeline                                      Recursive Replay & Generation
+
+                       Long Context                                                                                                             Recursive Evidence Sifting
+                                                            1           LLM Inference (Frozen-Parameter)
+                                                                                                                                  Round 1:        ∅        →     Scoring Function → E₁
+         ... "Enron and the Long Shadow of Stat. 13                                           Partial Forward Pass
+    1 Eliz.," in Enron: Corporate Fiascos and their ...                                                                           Round 2: [E₁]     →            Scoring Function → E₁              E₂
+
+
+                                                            2         Question-conditioned Cue-to-Context                         Round 3: [E₁, E₂] →            Scoring Function → E₁              E₂       E₃
+      ... Mark-to-market accounting ... is considered
+    2
+      to be one of reasons for the Enron scandal ...
+                                                                               Relevance Scores
+                                                                                                                           High
+                               ⋮                            Q₁           Q₂          Q₃          …           Qₓ                         Replay Prompt: [𝑪; 𝐴 = 𝝋(𝑬(𝑹) ); 𝒒]
+         ... irregular accounting ... Enron filed for the
+   239
+         then largest Chapter 11 bankruptcy ...                                                                                        Full Context                      Evidence 𝝋(𝑬(𝑹) )
+                                                                                                                                  ... "Enron and the Long               ... these ostensibly independent
+                                                                                                                           Low    Shadow of Stat. 13 Eliz.,"        E₁: ghost-entities, he was able to
+   240
+         ... these ostensibly independent ghost-entities,              Context Tokens (Full Context 𝐶)                            in Enron: Corporate                   defraud Enron ...
+         he was able to defraud Enron ...
+                               ⋮
+                                                                                                                                  Fiascos and their ...
+                                                                                                                                              …                 +       ... Fastow was … key figures
+                                                                                                                                                                    E₂: behind … web of off-balance-
+                                                                                                                                  ... irregular accounting              sheet special purpose entities ...
+
+   367 ... Fastow was … key figures behind … web
+                                                            3           Token Selection/Map into Sentence                         procedures ... Enron filed            ... LJM ... was a company
+       of off-balance-sheet special purpose entities ...                                                                          for the then largest              E₃: created in 1999 by Enron's
+                                                                                                                                  Chapter 11 bankruptcy ...             CFO, Andrew Fastow ...
+                               ⋮
+                                                                                                                                            LJM was one of what type of company Andrew
+   419 ... LJM ... was a company created in 1999 by                                                                                Question
+                                                                                                                                            Fastow used in the Enron scandal?
+         Enron's CFO, Andrew Fastow ...
+                                                            4                 Evidence Materialization
+                               ⋮
+                                                                 240 ... these ostensibly independent ghost-entities, he                  KV cache reused for full context 𝑪
+                                                                     was able to defraud Enron ...
+                                                                     ... Fastow was … key figures behind … web of                         only evidence + question processed
+                           Question                              367
+                                                                     off-balance-sheet special purpose entities ...
+    LJM was one of what type of company                          419 ... LJM ... was a company created in 1999 by                                              Final Answer
+   Andrew Fastow used in the Enron scandal?                            Enron's CFO, Andrew Fastow ...
+                                                                                                                                                      independent ghost-entities
+
+
+
+
+Figure 2: Overview of R E C ONTEXT. R E C ONTEXT identifies question-relevant evidence from a long context using
+internal LLM relevance signals, materializes selected tokens into grounded evidence spans, and recursively replays
+the resulting evidence before final generation while preserving access to the full context.
+
+
+because they require changing the backbone                                                               R E C ONTEXT updates an ordered evidence pool by
+forward or decoding logic. Retrieval and external-                                                       conditioning each new selection step on the orig-
+memory methods add retrieval systems (Lewis                                                              inal context, the question, and the evidence pool
+et al., 2021; Xu et al., 2025), while compression                                                        accumulated so far. This scaffold serves as a tem-
+methods shorten the effective input (Jiang et al.,                                                       porary external workspace in an iterative pipeline,
+2023, 2024; Zhao et al., 2025c), both often rely                                                         which is why we view ReContext as LLM harness
+on retrieved, compressed, or LLM-summarized                                                              between full-context reading and final generation.
+evidence views, which may lose fine-grained                                                              The replayed scaffold changes the model state
+details and become unstable on complex multi-hop                                                         from which the next round’s query-token attention
+tasks. This suggests that a context harness should                                                       scores are computed, allowing later rounds to
+not be limited to retrieving or reducing the input.                                                      surface evidence related to previously selected
+Instead, while preserving full access to the original                                                    spans. The full context remains in the prompt; the
+input, it should dynamically query and maintain a                                                        evidence pool is used for emphasis, not exclusion.
+repository of supporting evidence according to the                                                       We use “recursive” in this limited inference-time
+current reasoning stage, helping the model perform                                                       sense: each evidence proposal depends on the
+high-quality reasoning over long contexts.                                                               evidence pool produced by previous rounds, rather
+   We propose Recursive Evidence Replay as                                                               than on an open-ended reasoning loop.
+LLM Harness for Long-Context Reasoning                                                                      We further provide theoretical insights for R E -
+(R E C ONTEXT), a training-free inference method                                                         C ONTEXT from the perspective of associative mem-
+for long-context reasoning. Given a long context                                                         ory. The long context can be viewed as a mem-
+and a question, R E C ONTEXT reads the original                                                          ory store, the question as a retrieval cue, atten-
+prompt, uses question-conditioned internal atten-                                                        tion as a prompt-internal proxy for cue-trace as-
+tion as candidate evidence proposals, materializes                                                       sociation, and replay as reactivation of selected
+selected tokens as grounded text spans, and replays                                                      traces near generation time. This view yields a
+these spans before final answer generation. As                                                           monotonic-improvement proof showing that recur-
+shown in Figure 1, 128 tokens in a 128K-token                                                            sive evidence replay can move the hidden represen-
+context, already account for roughly 50–80%                                                              tation toward the answer embedding, and frames
+of accumulated question-conditioned relevance.                                                           R E C ONTEXT as query-evidence rebinding with
+R E C ONTEXT turns these sparse signals into an                                                          internal relevance signals rather than a trained re-
+evidence pool: across a small number of rounds,                                                          triever or context pruning.
+In summary, the contributions of our work are:          context compression methods reduce the input
+ • We introduce Recursive Evidence Replay as            length by filtering, pruning, or compressing less
+   LLM Harness (R E C ONTEXT), a training-free          informative content (Li et al., 2023; Jiang et al.,
+   method that converts prompt-internal relevance       2023, 2024). Another line of work improves in-
+   signals into an explicit recursive evidence pool     ference efficiency through KV cache compression
+   while preserving the full context.                   or token eviction (Liu et al., 2023b; Zhang et al.,
+ • We provide an associative-memory explanation         2023; Xiao et al., 2024).
+   of R E C ONTEXT and a monotonic-improvement
+                                                        2.2   Internal Attention Signals and
+   proof, formalizing evidence selection as cue-
+                                                              Memory-Based Interpretation
+   trace association and replay as trace reactivation
+   for query-evidence rebinding.                        Another related direction studies token-level
+ • We evaluate R E C ONTEXT on eight 128K long-         importance inside LLMs. Prior work has observed
+   context datasets across Qwen3-4B, Qwen3-8B           that attention patterns in long-context inference are
+   and Llama3-8B, where it achieves the best av-        often highly structured: a small number of tokens
+   erage rank on all three backbones and improves       may act as heavy hitters, attention sinks, or salient
+   mean accuracy over Vanilla from 0.24 to 0.30, a      key positions that contribute disproportionately
+   24.6% relative gain.                                 to future attention computation (Liu et al., 2023b;
+                                                        Zhang et al., 2023; Xiao et al., 2024). Based on
+2     Related Work                                      this observation, recent methods select or retain
+                                                        important KV cache tokens to improve inference
+2.1    Long-Context Utilization and
+                                                        efficiency while preserving model performance (Li
+       Evidence-Guided Reasoning
+                                                        et al., 2024; Cai et al., 2025; Tang et al., 2024;
+Recent work has significantly extended the con-         Feng et al., 2025).
+text window of large language models (LLMs),               These studies demonstrate that model-internal
+enabling them to process long documents, multi-         signals can provide useful information about which
+document inputs, code repositories, and extended        context tokens are important. Our work is related
+dialogue histories. Existing methods improve long-      to this line of research, but differs in objective.
+context modeling through position extrapolation,        Rather than proposing a new token-importance esti-
+efficient attention mechanisms, and long-context        mator or KV-cache compression strategy, R E C ON -
+fine-tuning (Peng et al., 2023; Chen et al., 2024;      TEXT uses existing question-to-context relevance
+Ding et al., 2023, 2024). Along with these model-       signals to construct grounded candidate evidence
+ing advances, a series of benchmarks have been pro-     spans, and studies how replaying these spans can
+posed to evaluate long-context capabilities across      improve long-context answer generation. The se-
+diverse scenarios, including document question          lected evidence is question-conditioned and cho-
+answering, multi-document reasoning, retrieval,         sen according to its relevance to the current ques-
+summarization, code completion, and synthetic           tion, rather than its general contribution to main-
+stress tests (Bai et al., 2024; Shaham et al., 2023;    taining the cache. This use of relevance signals
+An et al., 2023; Zhang et al., 2024; Hsieh et al.,      also admits an associative-memory interpretation:
+2024; Yen et al., 2025). These studies show that        selected spans are treated as context traces associ-
+long-context evaluation should not only measure         ated with the query and replayed before generation.
+whether a model can accept long inputs, but also        Classical and modern associative memory models
+whether it can locate and use relevant information      retrieve stored patterns using partial or noisy cues,
+hidden in long contexts.                                and recent studies have connected Transformer at-
+   However, increasing the context window alone         tention with memory retrieval mechanisms (Ram-
+does not guarantee effective context utilization.       sauer et al., 2021; Krotov et al., 2025).
+Prior analysis has shown that LLMs are sensitive
+to the position of relevant evidence and may            3     Method
+fail to use information when it appears in less
+favorable locations within the prompt (Liu et al.,      3.1   Overview
+2023a). To address this issue, retrieval-augmented      Given a long context C and a question q, a standard
+generation retrieves relevant passages before           long-context LLM generates directly from [C; q].
+generation (Lewis et al., 2021), while prompt and       Context Harness with Recursive Evidence Selec-
+Table 1: Main benchmark comparison across long-context tasks. R E C ONTEXT achieves the best average rank for
+all three backbones, showing consistent gains across datasets and model scales. Darker and lighter backgrounds
+indicate the best and second-best results within each backbone, respectively.
+                            NQ        TriviaQA HotpotQA             PopQA       NarrQA         InfQA        InfMC Clip.
+                           128K         128K     128K                128K        128K           128K         128K 128K         Avg
+Model      Method
+                                                                                                                               Rank
+                         Acc   F1     Acc    F1     Acc    F1     Acc    F1     Acc    F1     Acc    F1      Acc     Acc
+         Vanilla      0.02     0.21   0.04   0.24   0.00   0.10   0.00   0.11   0.02   0.17   0.09   0.21    0.51    0.38      4.39
+         AttnSharp    0.02     0.21   0.02   0.23   0.00   0.09   0.00   0.10   0.03   0.17   0.10   0.23    0.47    0.42      4.25
+         DySCO        0.02     0.21   0.10   0.30   0.03   0.13   0.00   0.10   0.01   0.17   0.11   0.23    0.50    0.44      4.00
+Qwen3-4B
+         A-MEM        0.02     0.20   0.19   0.37   0.06   0.15   0.06   0.16   0.04   0.19   0.07   0.18    0.43    0.48      3.57
+         DAC          0.02     0.18   0.21   0.38   0.07   0.17   0.01   0.09   0.05   0.20   0.07   0.19    0.43    0.24      3.79
+         R E C ONTEXT 0.08     0.25   0.30   0.45   0.08   0.19   0.07   0.19   0.07   0.21   0.12   0.24    0.55    0.52      1.00
+         Vanilla      0.06     0.26   0.53   0.66   0.18   0.31   0.18   0.32   0.19   0.33   0.22   0.36    0.64    0.30      3.96
+         AttnSharp    0.06     0.26   0.43   0.59   0.18   0.31   0.13   0.29   0.18   0.34   0.23   0.37    0.60    0.32      4.50
+         DySCO        0.09     0.30   0.51   0.64   0.19   0.31   0.22   0.35   0.18   0.33   0.23   0.36    0.63    0.34      3.25
+Qwen3-8B
+         A-MEM        0.08     0.28   0.58   0.67   0.21   0.32   0.19   0.30   0.17   0.31   0.18   0.28    0.58    0.18      4.21
+         DAC          0.12     0.29   0.65   0.72   0.22   0.35   0.15   0.30   0.14   0.28   0.15   0.26    0.64    0.20      3.61
+         R E C ONTEXT 0.13     0.33   0.68   0.75   0.20   0.34   0.23   0.36   0.21   0.35   0.25   0.39    0.63    0.33      1.46
+          Vanilla      0.15    0.29   0.69   0.76   0.24   0.39   0.21   0.28   0.13   0.27   0.15   0.34    0.56    0.32      3.25
+          AttnSharp    0.15    0.28   0.69   0.76   0.23   0.39   0.20   0.28   0.13   0.27   0.17   0.34    0.57    0.22      3.29
+          DySCO        0.10    0.26   0.63   0.72   0.23   0.37   0.18   0.27   0.13   0.26   0.14   0.33    0.56    0.38      4.57
+Llama3-8B
+          A-MEM        0.16    0.34   0.67   0.75   0.24   0.34   0.17   0.23   0.15   0.29   0.19   0.33    0.54    0.32      3.43
+          DAC          0.06    0.23   0.56   0.68   0.16   0.30   0.15   0.22   0.16   0.30   0.15   0.28    0.49    0.28      5.18
+          R E C ONTEXT 0.19    0.31   0.70   0.77   0.25   0.39   0.22   0.29   0.17   0.29   0.22   0.40    0.64    0.40      1.29
+
+
+
+tion (R E C ONTEXT) instead separates evidence or-                selected heads. For cue position tu , define
+ganization from answer generation. It first reads the
+                                                                          (u)        1 X  (l,h)
+original prompt, extracts candidate evidence spans                       ai     =        Atu ,i ,                   i ∈ Ix ,     (1)
+using question-conditioned internal relevance sig-                                  |H|
+                                                                                        (l,h)∈H
+nals, replays these spans as an evidence pool, and
+then generates the final answer from the full con-                where H is a selected set of layer-head pairs, and
+                                                                    (l,h)
+text, the evidence pool, and the question. The                    Atu ,i is the attention weight from cue token tu to
+method does not prune the prompt or directly mod-                 token i at layer-head pair (l, h). We accumulate
+ify attention logits during final decoding. The orig-             cue-token evidence across Q(x) with exponential
+inal context remains available throughout genera-                 decay and normalization to obtain the final rele-
+tion. The replayed scaffold emphasizes candidate                  vance score ri . We then restrict candidates to the
+evidence and makes evidence utilization explicit                  original context and select the top-K positions:
+while keeping unselected context accessible.
+                                                                                    P = TopKi∈IC (ri ; K).                       (2)
+   R E C ONTEXT maintains an ordered evidence
+pool and updates it over a small fixed number of                  Here K is the evidence-token budget, and P con-
+rounds. Each round computes relevance scores                      tains the selected context positions. We treat these
+from a prompt that already contains the evidence                  scores as an inexpensive prompt-internal proposal
+pool accumulated in previous rounds.                              signal, which can identify candidate spans that may
+                                                                  be useful for answer generation.
+3.2   Evidence Selection
+Let M denote the backbone LLM. For a current                      3.3    Evidence Materialization and Replay
+prompt x, let Ix denote token positions in x, and let             Token-level proposals are often too fragmentary for
+IC ⊆ Ix denote positions belonging to the original                answer generation. A selected token may identify
+context C. Let Q(x) = (t1 , . . . , tL ) be the last              an entity, date, or predicate, but the model usually
+L ≤ w cue positions in the prompt suffix, with                    needs the surrounding statement to use it reliably.
+w = 8 in our main experiments. These suffix cues                  Therefore, R E C ONTEXT maps selected token po-
+provide a query-conditioned readout, and in later                 sitions back to their containing sentences or local
+rounds are conditioned on the replayed scaffold.                  spans. Let SC = (s1 , . . . , sN ) be the ordered span
+During a read pass over x, we score prompt tokens                 decomposition of C, and let pos(sn ) denote the
+by aggregating attention from these cue tokens over               token positions covered by span sn . The evidence
+pool is the ordered subsequence of spans touched          Here ⊕ denotes ordered concatenation; we avoid
+by selected tokens:                                       set union because the evidence pool is an ordered
+                                                          list. The final answer is generated from
+        E = (sn : pos(sn ) ∩ P ̸= ∅)N
+                                    n=1 .           (3)
+                                                                        x(R) = [C; ϕ(E (R) ); q].         (10)
+Each evidence unit is copied from the original
+                                                                            y ∼ M (· | x(R) ).            (11)
+prompt, so the evidence pool is grounded rather
+than freely generated.                                       We call this process recursive because each
+  For a single-pass replay, the prompt is                 round conditions on the evidence pool produced by
+                                                          previous rounds. In practice, R is small and fixed,
+                 x+ = [C; ϕ(E); q],                 (4)   so R E C ONTEXT remains a lightweight inference-
+                                                          time wrapper rather than an open-ended reasoning
+where ϕ(E) is the textual replay format. The an-          procedure.
+swer is generated as
+                                                          3.5    Theoretical Analysis
+                                   +
+                   y ∼ M (· | x ).                  (5)   In this subsection, we provide theoretical under-
+                                                          pinning that our recursive evidence replay process
+Replay places selected evidence near the question         in R E C ONTEXT can push the hidden embedding
+while keeping the full context available. In this         toward the answer. Our result is formally stated in
+sense, R E C ONTEXT selects for emphasis rather           Theorem 1 below.
+than exclusion: unselected context remains avail-         Theorem 1 (monotonic improvement). Our the-
+able during final generation.                             oretical setup is similar to prior works (Nichani
+                                                          et al., 2025; Olsson et al., 2022) and stated in Ap-
+3.4   Recursive Evidence Selection
+                                                          pendix E.1. Let h(j) denote the hidden embedding
+For R rounds, R E C ONTEXT updates the evidence           after the j-th evidence replay step, and let y denote
+pool recursively. Let E (0) = ∅ be the initial or-        the embedding of the answer. Then, for every step
+dered evidence pool. At round j ∈ {1, . . . , R}, the     j ≥ 1,
+current prompt is
+                                                                     cos(h(j) , y) > cos(h(j−1) , y),     (12)
+               (j−1)               (j−1)
+           x           = [C; ϕ(E           ); q].   (6)
+                                                          where cos(·, ·) denotes cosine similarity.
+The model reads x(j−1) , so the replayed scaffold           The proof is involved and thus deferred to Ap-
+conditions the hidden states from which query-side        pendix E.2. Intuitively, our Theorem 1 shows that
+prompt-suffix attention scores are computed. In the       explicitly adding the evidence to the prompt can
+main setting, candidate positions are selected only       monotonically increase the similarity of the hidden
+from the original context token positions IC ; the re-    embedding between the prediction and the answer.
+played scaffold conditions scoring but is not treated
+as a source of new copied spans. R E C ONTEXT             4     Experiments
+then obtains relevance scores r(j) , selects positions    4.1    Datasets
+P (j) , materializes spans from the original context,
+                                                          We evaluate R E C ONTEXT on eight long-context
+and appends only spans that are not already in the
+                                                          benchmarks: Natural Questions (NQ), TriviaQA,
+evidence pool. The span list proposed at round j is
+                                                          HotpotQA, PopQA, NarrativeQA, InfBench QA,
+                                                          InfBench MC, and CLIPPER. For the first seven
+      Sb(j) = (sn : pos(sn ) ∩ P (j) ̸= ∅)N
+                                          n=1 .     (7)
+                                                          datasets, we adopt the 128K-context versions con-
+The newly added spans are the ordered subse-              structed by HELMET (Yen et al., 2025), while
+quence                                                    CLIPPER (Pham et al., 2025) evaluates evidence-
+                                                          grounded claim verification over long book con-
+           ∆E (j) = Sb(j) \ E (j−1) ,    (8)
+                                                          texts. These tasks cover factual question answer-
+and the evidence pool is updated by ordered               ing, multi-hop reasoning, narrative understanding,
+concatenation:                                            multiple-choice reasoning, and long-context claim
+                                                          verification. Detailed dataset descriptions are pro-
+             E (j) = E (j−1) ∪ ∆E (j) .             (9)   vided in Appendix B.1.
+                   NQ              PopQA               InfMC                           NQ                PopQA                 InfMC
+      10.0                     8                  56                         10.0                 10.0                    60
+       7.5                     6                  53                          7.5                  7.5                    57
+       5.0                     4                  50                          5.0                  5.0                    54
+Acc
+
+
+
+
+                         Acc
+
+
+
+
+                                            Acc
+
+
+
+
+                                                                       Acc
+
+
+
+
+                                                                                            Acc
+
+
+
+
+                                                                                                                    Acc
+       2.5                     2                  47                          2.5                  2.5                    51
+       0.0                  0                     44                          0.0               0.0                       48
+             R=1          R=2              R=3             R=4                   K=1          K=8                K=16             K=32
+
+
+Figure 3: Visualization of the main ablation studies. Left: the effect of recursive evidence-selection rounds R. Right:
+the effect of the top-K evidence-token candidate budget.
+
+
+   We use the official metric associated with each               4.4         Main Results
+task. For NQ, TriviaQA, HotpotQA, PopQA, Nar-                    The main comparison across eight datasets and
+rativeQA, and InfBench QA, we report answer ac-                  three backbone models is summarized in Table 1.
+curacy (Acc) and token-level F1. For InfBench                    Task scores are reported as fractions in [0, 1], while
+MC and CLIPPER, we report accuracy. Together,                    average rank is computed by ranking methods
+these tasks provide a broad testbed for long-context             within each backbone on each reported metric col-
+utilization.                                                     umn and averaging the resulting ranks; lower is
+                                                                 better. R E C ONTEXT obtains the best average rank
+4.2          Baselines                                           for all three backbones, with average ranks of
+                                                                 1.00 on Qwen3-4B, 1.46 on Qwen3-8B, and 1.29
+ We compare R E C ONTEXT with the following:                     on Llama3-8B. Averaging the eight Acc columns
+• Vanilla directly generates from the full context               across all three backbones, R E C ONTEXT improves
+  and question.                                                  over Vanilla from 0.24 to 0.30, a relative gain of
+• AttnSharp sharpens attention toward question-                  24.6%. On Qwen3-4B, R E C ONTEXT achieves the
+  relevant context tokens, following attention-based             best score on every reported metric, including im-
+  long-context utilization methods (Tang et al.,                 proving NQ Acc from the strongest baseline score
+  2024; Ye et al., 2026).                                        of 0.02 to 0.08.
+• DySCO dynamically rescales decoding attention                     On Qwen3-8B, R E C ONTEXT leads on most QA
+  using retrieval-head signals (Ye et al., 2026).                metrics and has the best average rank, with excep-
+                                                                 tions on HotpotQA, InfBench MC, and CLIPPER.
+• A-MEM stores and retrieves task-relevant con-
+                                                                 On Llama3-8B, R E C ONTEXT obtains the best av-
+  text evidence with an external agentic memory
+                                                                 erage rank and the highest accuracy score for every
+  module (Xu et al., 2025).
+                                                                 task, while NQ, HotpotQA, and NarrativeQA F1
+• DAC applies dynamic attention-aware prompt                     are led by other baselines. Overall, these results
+  compression before generation (Zhao et al.,                    indicate that explicit evidence replay improves ag-
+  2025c).                                                        gregate long-context performance across model
+ In contrast, R E C ONTEXT preserves the full orig-              families, without implying dominance on every
+ inal context and replays a query-conditioned evi-               individual metric.
+ dence pool before final generation.                                Under a shorter 64K context budget with think-
+                                                                 ing disabled, Table 3 shows that R E C ONTEXT stays
+4.3          Experimental Settings                               within the top two on every reported metric. It
+                                                                 ties for the best NQ Acc, obtains the best NQ F1,
+We evaluate three backbone LLMs: Qwen3-4B,                       PopQA Acc, and InfBench MC accuracy, and ranks
+Qwen3-8B, and Llama3.1-8B. For each backbone,                    second on PopQA F1. Its macro-average over the
+all methods use the same prompting format, de-                   five reported scores improves over Vanilla from
+coding configuration, and context budget. Unless                 0.21 to 0.28, corresponding to a 35.0% relative
+otherwise specified, all methods receive the same                gain based on the reported scores. These results
+original long-context input and question, and the                suggest that the observed improvements are not
+main results are obtained with thinking disabled.                tied to a single context budget.
+Detailed experimental settings are provided in Ap-                  When thinking is enabled on Qwen3-4B, the
+pendix C.                                                        robustness results in Table 2 show that R E C ON -
+Figure 4: Qualitative examples of R E C ONTEXT evidence replay. R E C ONTEXT selects and replays query-relevant
+evidence spans (blue text) across diverse long-context reasoning tasks, enabling the model to ground its answer in
+the highlighted support and correct errors made by Vanilla generation.
+
+
+Table 2: Robustness evaluation with thinking enabled.      Table 3: Robustness evaluation under a shorter context
+R E C ONTEXT remains strongest on NQ, PopQA and            budget. R E C ONTEXT stays within the top two on every
+InfMC, indicating that evidence replay remains useful      metric, suggesting that the gains are not tied to the main
+when the backbone performs explicit reasoning.             context length.
+                        NQ          PopQA        InfMC                             NQ          PopQA        InfMC
+                       128K          128K         128K                             64K          64K          64K
+      Method                                                    Method
+                     Acc    F1     Acc    F1      Acc                           Acc    F1     Acc    F1      Acc
+      Vanilla        0.08   0.24   0.14   0.25    0.69          Vanilla         0.07   0.24   0.04   0.20    0.48
+      AttnSharp      0.13   0.27   0.14   0.24    0.63          AttnSharp       0.07   0.24   0.03   0.20    0.44
+      DAC            0.10   0.23   0.13   0.24    0.66          DAC             0.09   0.23   0.17   0.32    0.53
+      A-MEM          0.09   0.23   0.11   0.23    0.71          A-MEM           0.06   0.20   0.06   0.19    0.51
+      DySCO          0.14   0.29   0.17   0.29    0.67          DySCO           0.11   0.26   0.07   0.23    0.46
+      R E C ONTEXT   0.15   0.30   0.18   0.28    0.72          R E C ONTEXT    0.11   0.26   0.18   0.30    0.54
+
+
+
+TEXT achieves the best NQ Acc and F1, the best             one round to two rounds improves all reported met-
+PopQA Acc, and the best InfBench MC accuracy.              rics, raising the macro-average from 0.17 to 0.22.
+Its macro-average over the five reported scores im-        Larger values provide further gains for NQ and
+proves over Vanilla from 28.0 to 32.6, a relative          InfBench MC, with the best NQ Acc at R = 3
+gain of 16.7%. PopQA F1 is an exception, where             and R = 4, the best NQ F1 and InfBench MC
+DySCO obtains the highest score. These results             accuracy at R = 4, and the best PopQA scores
+suggest that Recursive Evidence Selection remains          at R = 2. This suggests that additional selection
+useful even when the backbone model is allowed             can improve performance on some tasks, but the
+to produce intermediate reasoning.                         best recursion depth is task-dependent rather than
+                                                           uniformly larger.
+4.5   Ablation Studies                                        The top-K token candidate budget determines
+We analyze the effects of recursive selection rounds       how many high-scoring token positions can seed ev-
+and candidate-token budget in Tables 6 and 7, with         idence span materialization in each selection round.
+selected accuracy trends visualized in Figure 3.           With R = 2 fixed, Table 7 shows that NQ Acc
+   The number of recursive evidence-selection              ties at K = 8 and K = 16, while NQ F1 peaks
+rounds R controls how many times the evidence              at K = 8; by contrast, PopQA and InfBench MC
+pool is expanded before final replay. Moving from          achieve their strongest scores at K = 32. The
+Table 4: Ablation on evidence-token source. Selecting                         when the preprocessing step keeps the right span
+evidence from the original context consistently outper-                       but can also weaken the answer if supporting sen-
+forms selecting from the full replay prompt.
+                                                                              tences are omitted. By contrast, R E C ONTEXT
+                                        NQ       PopQA          InfMC         copies model-selected evidence sentences into an
+                                       128K       128K           128K         explicit evidence pool and replays them near the
+                      Source
+                                    Acc    F1    Acc     F1       Acc         question while leaving the original context intact.
+                      Full prompt 0.04 0.23 0.02 0.14            0.52
+                                                                              In the inspected cases, the evidence pool appears
+                      Context     0.08 0.25 0.07 0.19            0.54         to encourage answers grounded in a compact set of
+                                                                              supporting sentences rather than in a diffuse long
+                                                                              prompt.
+                                            Runtime
+                200
+                                                                              4.7    Time and Space Efficiency
+                150
+Runtime (min)
+
+
+
+
+                                                                              As shown in Figure 5, R E C ONTEXT introduces
+                100                                                           the evidence-selection and replay stage, making it
+                 50                                                           slightly slower than the vanilla baseline. However,
+                                                                              it remains substantially faster than DySCO, which
+                  0    Vanilla AttnSharp   DAC   A-MEM        DySCO     Our   changes the backbone forward or decoding logic.
+                                                                              In terms of GPU memory consumption, R E C ON -
+Figure 5: Runtime comparison on CLIPPER using                                 TEXT inserts fewer than 128 additional evidence to-
+Llama3-8B at 128K context length.                                             kens, resulting in only minimal memory overhead.
+                                                                              Consequently, its overall memory consumption is
+macro-average rises from 0.19 at K = 1 to 0.23 at                             similar to both Vanilla. Detailed measurements are
+K = 32, but the task-level pattern is not monotonic:                          provided in Appendix B.3.
+larger candidate sets can expose more candidate
+spans, while smaller budgets can be cleaner for NQ.                           5     Conclusion
+   Finally, the token-source ablation in Table 4 com-                         We present R E C ONTEXT, a training-free method
+pares selecting evidence tokens from the original                             that turns model-internal relevance signals into an
+context only versus from the full replay prompt.                              explicit evidence scaffold for long-context reason-
+Context-only selection consistently outperforms                               ing. R E C ONTEXT recursively selects candidate
+full-prompt selection on NQ, PopQA, and Inf-                                  evidence and replays the organized scaffold before
+Bench MC, improving the macro-average from                                    answer generation while preserving the original
+0.19 to 0.23. The largest gains appear on PopQA                               context, thereby separating evidence organization
+Acc, which increases from 0.02 to 0.07, and NQ                                from answer generation. Our associative-memory
+Acc, which increases from 0.04 to 0.08. This sup-                             analysis provides a simple interpretation of this
+ports the main setting: the replayed scaffold condi-                          process as cue-conditioned trace reactivation, and
+tions the model state used for scoring, but copied                            our experiments across eight 128K-context datasets
+evidence spans are selected from the original con-                            and three backbones show consistent improvements
+text rather than allocating the evidence budget over                          over strong long-context baselines. These find-
+the entire prompt.                                                            ings suggest that long-context inference can be im-
+                                                                              proved not only by extending context windows or
+4.6                   Qualitative Results
+                                                                              compressing inputs, but also by better organizing
+We further compare the methods through qualita-                               the evidence already available in the prompt.
+tive case analysis on retrieval-heavy examples, as
+shown in Figure 4. Vanilla receives the full context,                         Limitations
+but relevant spans may become weakly bound at
+generation time. AttnSharp and DySCO strengthen                               R E C ONTEXT requires access to model-internal rel-
+attention toward relevant tokens, but the selected                            evance signals, which limits its direct use with
+evidence remains latent inside the decoding pro-                              closed-source APIs that do not expose attention or
+cess rather than being exposed as text. A-MEM                                 similar scoring information. The method also adds
+and DAC create shorter evidence views through                                 a read-and-replay stage, so inference latency is
+memory retrieval or compression, which can help                               higher than direct full-context decoding, although
+it remains training-free and does not maintain a            Sizhe Dang, Yangyang Guo, Yanjun Zhao, Haishan
+persistent external memory.                                   Ye, Xiaodong Zheng, Guang Dai, and Ivor Tsang.
+                                                               2025. Fzoo: Fast zeroth-order optimizer for fine-
+                                                               tuning large language models towards adam-scale
+                                                               speed. Preprint, arXiv:2506.09034.
+References
+Chenxin An, Shansan Gong, Ming Zhong, Xingjian              Jiayu Ding, Shuming Ma, Li Dong, Xingxing Zhang,
+  Zhao, Mukai Li, Jun Zhang, Lingpeng Kong, and                Shaohan Huang, Wenhui Wang, Nanning Zheng, and
+  Xipeng Qiu. 2023. L-eval: Instituting standard-              Furu Wei. 2023. Longnet: Scaling transformers to
+  ized evaluation for long context language models.            1,000,000,000 tokens. Preprint, arXiv:2307.02486.
+  Preprint, arXiv:2307.11088.
+                                                            Yiran Ding, Li Lyna Zhang, Chengruidong Zhang,
+Yushi Bai, Xin Lv, Jiajie Zhang, Hongchang Lyu,               Yuanyuan Xu, Ning Shang, Jiahang Xu, Fan Yang,
+  Jiankai Tang, Zhidian Huang, Zhengxiao Du, Xiao             and Mao Yang. 2024. Longrope: Extending llm
+  Liu, Aohan Zeng, Lei Hou, Yuxiao Dong, Jie Tang,            context window beyond 2 million tokens. Preprint,
+  and Juanzi Li. 2024. Longbench: A bilingual, mul-           arXiv:2402.13753.
+  titask benchmark for long context understanding.
+  Preprint, arXiv:2308.14508.                               Yuan Feng, Junlin Lv, Yukun Cao, Xike Xie, and
+                                                              S. Kevin Zhou. 2025. Ada-kv: Optimizing kv cache
+Yuanchen Bei, Tianxin Wei, Xuying Ning, Yanjun                eviction by adaptive budget allocation for efficient
+  Zhao, Zhining Liu, Xiao Lin, Yada Zhu, Hendrik              llm inference. Preprint, arXiv:2407.11550.
+  Hamann, Jingrui He, and Hanghang Tong. 2026.
+  Mem-gallery: Benchmarking multimodal long-term            Mor Geva, Roei Schuster, Jonathan Berant, and Omer
+  conversational memory for mllm agents. Preprint,           Levy. 2021. Transformer feed-forward layers are
+  arXiv:2601.03515.                                          key-value memories. In Proceedings of the 2021
+                                                             Conference on Empirical Methods in Natural Lan-
+Iz Beltagy, Matthew E. Peters, and Arman Cohan. 2020.        guage Processing, pages 5484–5495. Association for
+   Longformer: The long-document transformer. arXiv          Computational Linguistics.
+   preprint arXiv:2004.05150.
+                                                            Yangyang Guo, Yanjun Zhao, Sizhe Dang, Tian Zhou,
+Sebastian Borgeaud, Arthur Mensch, Jordan Hoff-               Liang Sun, and Yi Qian. 2024. Less is more: Em-
+  mann, Trevor Cai, Eliza Rutherford, Katie Milli-            bracing sparsity and interpolation with esiformer for
+  can, George Bm van den Driessche, Jean-Baptiste             time series forecasting. Preprint, arXiv:2410.05726.
+  Lespiau, Bogdan Damoc, Aidan Clark, Diego
+  de Las Casas, Aurelia Guy, Jacob Menick, Roman            J. J. Hopfield. 1982. Neural networks and physical sys-
+  Ring, Tom Hennigan, Saffron Huang, Loren Mag-                 tems with emergent collective computational abilities.
+  giore, Chris Jones, Albin Cassirer, and 9 others. 2022.      Proceedings of the National Academy of Sciences,
+  Improving language models by retrieving from tril-           79(8):2554–2558.
+  lions of tokens. In Proceedings of the 39th Inter-
+  national Conference on Machine Learning, pages            Cheng-Ping Hsieh, Simeng Sun, Samuel Kriman, Shan-
+  2206–2240.                                                  tanu Acharya, Dima Rekesh, Fei Jia, Yang Zhang,
+                                                              and Boris Ginsburg. 2024. Ruler: What’s the real
+Trenton Bricken and Cengiz Pehlevan. 2021. Atten-             context size of your long-context language models?
+  tion approximates sparse distributed memory. In             Preprint, arXiv:2404.06654.
+  Advances in Neural Information Processing Systems,
+  volume 34.                                                Huiqiang Jiang, Qianhui Wu, Chin-Yew Lin, Yuqing
+                                                              Yang, and Lili Qiu. 2023. Llmlingua: Compressing
+Zefan Cai, Yichi Zhang, Bofei Gao, Yuliang Liu,               prompts for accelerated inference of large language
+  Yucheng Li, Tianyu Liu, Keming Lu, Wayne Xiong,             models. Preprint, arXiv:2310.05736.
+  Yue Dong, Junjie Hu, and Wen Xiao. 2025. Pyra-
+  midkv: Dynamic kv cache compression based                 Huiqiang Jiang, Qianhui Wu, Xufang Luo, Dongsheng
+  on pyramidal information funneling. Preprint,               Li, Chin-Yew Lin, Yuqing Yang, and Lili Qiu. 2024.
+  arXiv:2406.02069.                                           Longllmlingua: Accelerating and enhancing llms
+                                                              in long context scenarios via prompt compression.
+Chao Chen, Tian Zhou, Yanjun Zhao, Hui Liu, Liang             Preprint, arXiv:2310.06839.
+  Sun, and Rong Jin. 2025. Does vector quantization
+  fail in spatio-temporal forecasting? exploring a dif-     Dmitry Krotov, Benjamin Hoover, Parikshit Ram, and
+  ferentiable sparse soft-vector quantization approach.      Bao Pham. 2025. Modern methods in associative
+  Preprint, arXiv:2312.03406.                                memory. Preprint, arXiv:2507.06211.
+
+Yukang Chen, Shengju Qian, Haotian Tang, Xin Lai,           Dmitry Krotov and John J. Hopfield. 2016. Dense as-
+  Zhijian Liu, Song Han, and Jiaya Jia. 2024. Longlora:      sociative memory for pattern recognition. In Ad-
+  Efficient fine-tuning of long-context large language       vances in Neural Information Processing Systems,
+  models. Preprint, arXiv:2309.12307.                        volume 29, pages 1172–1180.
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio      Bowen Peng, Jeffrey Quesnelle, Honglu Fan, and En-
+  Petroni, Vladimir Karpukhin, Naman Goyal, Hein-           rico Shippole. 2023. Yarn: Efficient context window
+  rich Küttler, Mike Lewis, Wen tau Yih, Tim Rock-          extension of large language models. arXiv preprint
+  täschel, Sebastian Riedel, and Douwe Kiela. 2021.         arXiv:2309.00071.
+  Retrieval-augmented generation for knowledge-
+  intensive nlp tasks. Preprint, arXiv:2005.11401.        Chau Minh Pham, Yapei Chang, and Mohit Iyyer. 2025.
+                                                            Clipper: Compression enables long-context synthetic
+Yucheng Li, Bo Dong, Chenghua Lin, and Frank                data generation. Preprint, arXiv:2502.14854.
+  Guerin. 2023. Compressing context to enhance infer-
+  ence efficiency of large language models. Preprint,     Hubert Ramsauer, Bernhard Schäfl, Johannes Lehner,
+  arXiv:2310.06201.                                         Philipp Seidl, Michael Widrich, Thomas Adler,
+                                                            Lukas Gruber, Markus Holzleitner, Milena Pavlović,
+Yuhong Li, Yingbing Huang, Bowen Yang, Bharat               Geir Kjetil Sandve, Victor Greiff, David Kreil,
+  Venkitesh, Acyr Locatelli, Hanchen Ye, Tianle Cai,        Michael Kopp, Günter Klambauer, Johannes Brand-
+  Patrick Lewis, and Deming Chen. 2024. Snapkv:             stetter, and Sepp Hochreiter. 2021. Hopfield net-
+  Llm knows what you are looking for before genera-         works is all you need. Preprint, arXiv:2008.02217.
+  tion. Preprint, arXiv:2404.14469.
+Nelson F. Liu, Kevin Lin, John Hewitt, Ashwin             Tao Ren, Jinyang Jiang, Hui Yang, Wan Tian, Min-
+  Paranjape, Michele Bevilacqua, Fabio Petroni, and         hao Zou, Guanghao Li, Zishi Zhang, Qinghao Wang,
+  Percy Liang. 2023a. Lost in the middle: How               Shentao Qin, Yanjun Zhao, Rui Tao, Hui Shao, and
+  language models use long contexts. Preprint,              Yijie Peng. 2025. Riskpo: Risk-based policy opti-
+  arXiv:2307.03172.                                         mization via verifiable reward for llm post-training.
+                                                            Preprint, arXiv:2510.00911.
+Zhining Liu, Rana Ali Amjad, Ravinarayana Adkathi-
+  mar, Tianxin Wei, and Hanghang Tong. 2025. Selfe-       Uri Shaham, Maor Ivgi, Avia Efrat, Jonathan Berant,
+  licit: Your language model secretly knows where is        and Omer Levy. 2023. Zeroscrolls: A zero-shot
+  the relevant evidence. In Proceedings of the 63rd An-     benchmark for long text understanding. Preprint,
+  nual Meeting of the Association for Computational         arXiv:2305.14196.
+  Linguistics (Volume 1: Long Papers), pages 9153–
+  9173. Association for Computational Linguistics.        Sainbayar Sukhbaatar, Arthur Szlam, Jason Weston, and
+                                                            Rob Fergus. 2015. End-to-end memory networks. In
+Zichang Liu, Aditya Desai, Fangshuo Liao, Weitao            Advances in Neural Information Processing Systems,
+  Wang, Victor Xie, Zhaozhuo Xu, Anastasios Kyril-          volume 28, pages 2440–2448.
+  lidis, and Anshumali Shrivastava. 2023b. Scis-
+  sorhands: Exploiting the persistence of importance      Jiaming Tang, Yilong Zhao, Kan Zhu, Guangxuan Xiao,
+  hypothesis for llm kv cache compression at test time.      Baris Kasikci, and Song Han. 2024. Quest: Query-
+  Preprint, arXiv:2305.17118.                                aware sparsity for efficient long-context llm inference.
+                                                             Preprint, arXiv:2406.10774.
+Alexander Miller, Adam Fisch, Jesse Dodge, Amir-
+  Hossein Karimi, Antoine Bordes, and Jason Weston.       Tianxin Wei, Ting-Wei Li, Zhining Liu, Xuying Ning,
+  2016. Key-value memory networks for directly read-        Ze Yang, Jiaru Zou, Zhichen Zeng, Ruizhong Qiu,
+  ing documents. In Proceedings of the 2016 Con-            Xiao Lin, Dongqi Fu, Zihao Li, Mengting Ai,
+  ference on Empirical Methods in Natural Language          Duo Zhou, Wenxuan Bao, Yunzhe Li, Gaotang Li,
+  Processing, pages 1400–1409. Association for Com-         Cheng Qian, Yu Wang, Xiangru Tang, and 10 others.
+  putational Linguistics.                                   2026. Agentic reasoning for large language models.
+Eshaan Nichani, Jason Lee, and Alberto Bietti. 2025.        Preprint, arXiv:2601.12538.
+  Understanding factual recall in transformers via as-
+  sociative memories. In International Conference on      Jason Weston, Sumit Chopra, and Antoine Bordes. 2015.
+  Learning Representations, volume 2025, pages 4166–         Memory networks. In International Conference on
+  4207.                                                      Learning Representations.
+
+Xuying Ning, Katherine Tieu, Dongqi Fu, Tianxin Wei,      Guangxuan Xiao, Yuandong Tian, Beidi Chen, Song
+  Zihao Li, Yuanchen Bei, Jiaru Zou, Mengting Ai,           Han, and Mike Lewis. 2024. Efficient streaming
+  Zhining Liu, Ting-Wei Li, Lingjie Chen, Yanjun            language models with attention sinks. Preprint,
+  Zhao, Ke Yang, Bingxuan Li, Cheng Qian, Gaotang           arXiv:2309.17453.
+  Li, Xiao Lin, Zhichen Zeng, Ruizhong Qiu, and
+  23 others. 2026. Code as agent harness. Preprint,       Wujiang Xu, Zujie Liang, Kai Mei, Hang Gao, Juntao
+  arXiv:2605.18747.                                        Tan, and Yongfeng Zhang. 2025. A-mem: Agentic
+                                                           memory for llm agents. Preprint, arXiv:2502.12110.
+Catherine Olsson, Nelson Elhage, Neel Nanda, Nicholas
+  Joseph, Nova DasSarma, Tom Henighan, Ben Mann,          Xi Ye, Wuwei Zhang, Fangcong Yin, Howard Yen,
+  Amanda Askell, Yuntao Bai, Anna Chen, and 1 oth-          and Danqi Chen. 2026. Dysco: Dynamic attention-
+  ers. 2022. In-context learning and induction heads.       scaling decoding for long-context language models.
+  arXiv preprint arXiv:2209.11895.                          Preprint, arXiv:2602.22175.
+Howard Yen, Tianyu Gao, Minmin Hou, Ke Ding,
+  Daniel Fleischer, Peter Izsak, Moshe Wasserblat, and
+  Danqi Chen. 2025. Helmet: How to evaluate long-
+  context language models effectively and thoroughly.
+  Preprint, arXiv:2410.02694.
+Manzil Zaheer, Guru Guruganesh, Avinava Dubey,
+ Joshua Ainslie, Chris Alberti, Santiago Ontanon,
+ Philip Pham, Anirudh Ravula, Qifan Wang, Li Yang,
+ and Amr Ahmed. 2020. Big bird: Transformers for
+ longer sequences. In Advances in Neural Information
+ Processing Systems, volume 33, pages 17283–17297.
+Xinrong Zhang, Yingfa Chen, Shengding Hu, Zi-
+  hang Xu, Junhao Chen, Moo Khai Hao, Xu Han,
+  Zhen Leng Thai, Shuo Wang, Zhiyuan Liu, and
+  Maosong Sun. 2024. ∞bench: Extending long
+  context evaluation beyond 100k tokens. Preprint,
+  arXiv:2402.13718.
+Zhenyu Zhang, Ying Sheng, Tianyi Zhou, Tianlong
+  Chen, Lianmin Zheng, Ruisi Cai, Zhao Song, Yuan-
+  dong Tian, Christopher Ré, Clark Barrett, Zhangyang
+  Wang, and Beidi Chen. 2023. H2 o: Heavy-hitter ora-
+  cle for efficient generative inference of large language
+  models. Preprint, arXiv:2306.14048.
+Kai Zhao, Yanjun Zhao, Jiaming Song, Shien He,
+  Lusheng Zhang, Qiang Zhang, and Tianjiao Li.
+  2025a. Saber: Switchable and balanced training for
+  efficient llm reasoning. Preprint, arXiv:2508.10026.
+Yanjun Zhao, Sizhe Dang, Haishan Ye, Guang Dai,
+  Yi Qian, and Ivor W. Tsang. 2025b. Second-order
+  fine-tuning without pain for llms:a hessian informed
+  zeroth-order optimizer. Preprint, arXiv:2402.15173.
+Yanjun Zhao, Ziqing‘ Ma, Tian Zhou, Mengni Ye, Liang
+  Sun, and Yi Qian. 2023. Gcformer: An efficient
+  solution for accurate and scalable long-term multi-
+  variate time series forecasting. In Proceedings of
+  the 32nd ACM International Conference on Informa-
+  tion and Knowledge Management, CIKM ’23, page
+  3464–3473, New York, NY, USA. Association for
+  Computing Machinery.
+Yanjun Zhao, Tianxin Wei, Jiaru Zou, Xuying Ning,
+  Yuanchen Bei, Lingjie Chen, Simmi Rana, Wendy H.
+  Yang, Hanghang Tong, and Jingrui He. 2026. Paper-
+  mind: Benchmarking agentic reasoning and critique
+  over scientific papers in multimodal llms. Preprint,
+  arXiv:2604.21304.
+Yanjun Zhao, Tian Zhou, Chao Chen, Liang Sun,
+  Yi Qian, and Rong Jin. 2024. Sparse-vq trans-
+  former: An ffn-free framework with vector quantiza-
+  tion for enhanced time series forecasting. Preprint,
+  arXiv:2402.05830.
+Yi Zhao, Zuchao Li, Hai Zhao, Baoyuan Qi, and Guom-
+   ing Liu. 2025c. Dac: A dynamic attention-aware
+   approach for task-agnostic prompt compression. In
+   Proceedings of the 63rd Annual Meeting of the As-
+   sociation for Computational Linguistics (Volume 1:
+   Long Papers), pages 19395–19407.
+A    Extended Related Work                               candidate evidence spans into an explicit scaffold,
+                                                         while leaving the full context in the prompt as a
+Long-context modeling and evaluation. Recent
+                                                         fallback source of information.
+long-context research has substantially expanded
+the input length that LLMs can process through           Attention-based inference and KV-cache meth-
+efficient attention, position extrapolation, and long-   ods. Several inference-time methods use inter-
+context fine-tuning (Beltagy et al., 2020; Zaheer        nal attention patterns to improve long-context ef-
+et al., 2020; Peng et al., 2023; Chen et al., 2024;      ficiency or utilization. Query-aware sparsity and
+Ding et al., 2023, 2024; Zhao et al., 2023; Ren          dynamic attention-scaling methods use attention-
+et al., 2025; Ning et al., 2026; Guo et al., 2024; Wei   derived signals to select relevant tokens or adjust
+et al., 2026). In parallel, long-context benchmarks      attention behavior during decoding (Tang et al.,
+have shifted evaluation beyond input length alone,       2024; Ye et al., 2026). A related line of KV-cache
+covering document understanding, multi-document          methods observes that long-context attention of-
+reasoning, retrieval, summarization, code, and syn-      ten concentrates on heavy hitters, attention sinks,
+thetic stress tests (Bai et al., 2024; Shaham et al.,    or salient key positions, and uses this structure
+2023; An et al., 2023; Zhang et al., 2024; Hsieh         for cache retention or eviction (Liu et al., 2023b;
+et al., 2024; Yen et al., 2025; Zhao et al., 2026).      Zhang et al., 2023; Xiao et al., 2024; Li et al., 2024;
+These studies clarify an important distinction be-       Cai et al., 2025; Feng et al., 2025; Zhao et al.,
+tween context access and context utilization: a          2025b; Dang et al., 2025). R E C ONTEXT differs
+model may accept a long prompt while still failing       in both objective and mechanism. It does not di-
+to locate or use the evidence needed for a particu-      rectly rescale attention logits during final decoding
+lar question. This gap is also reflected in analyses     and does not optimize a cache budget. More im-
+of position sensitivity, where relevant information      portantly, it treats attention only as an inexpensive
+can be underused when it appears in less favor-          proposal signal rather than as a faithful explanation
+able locations (Liu et al., 2023a). R E C ONTEXT         of model behavior. The selected spans are mate-
+addresses this utilization problem without chang-        rialized as readable text, so the final generation is
+ing the backbone model or extending its context          conditioned on an explicit evidence scaffold rather
+window. It keeps the original context available, but     than only on latent attention intervention.
+adds a query-conditioned evidence scaffold that
+                                                         Associative-memory interpretation. The behav-
+makes candidate supporting spans more accessible
+                                                         ior of R E C ONTEXT can also be viewed through
+near generation time.
+                                                         an associative-memory lens. Classical associative-
+Retrieval, external memory, and prompt com-              memory models describe content-addressable re-
+pression. Retrieval-augmented generation and             trieval from stored patterns, while dense and mod-
+retrieval-enhanced language modeling improve             ern Hopfield-style formulations connect such re-
+grounding by retrieving relevant passages or             trieval with higher-capacity memory and attention-
+chunks before generation (Lewis et al., 2021;            like updates (Hopfield, 1982; Krotov and Hopfield,
+Borgeaud et al., 2022), while recent agentic mem-        2016; Ramsauer et al., 2021; Krotov et al., 2025;
+ory systems maintain and query external mem-             Zhao et al., 2024; Chen et al., 2025). Related neu-
+ory structures across interactions (Xu et al., 2025).    ral memory architectures, including Memory Net-
+Prompt and context compression methods take a            works and key-value memory networks, frame rea-
+different route: they reduce the amount of text          soning as query-conditioned access to stored repre-
+passed to the model by filtering, pruning, or com-       sentations or facts (Weston et al., 2015; Sukhbaatar
+pressing less informative content (Li et al., 2023;      et al., 2015; Miller et al., 2016). Transformer-
+Jiang et al., 2023, 2024; Zhao et al., 2025c,a).         specific analyses further connect attention or feed-
+These approaches can reduce distraction and com-         forward components with associative and key-
+putation, but they also introduce an additional se-      value memory views (Bricken and Pehlevan, 2021;
+lection or compression step that may omit useful         Geva et al., 2021). In our setting, the long con-
+evidence. R E C ONTEXT is complementary to this          text acts as a collection of memory traces, the
+line of work. It does not build a persistent mem-        question serves as a retrieval cue, and attention
+ory, train a retriever, or replace the original long     provides a prompt-internal proxy for cue–trace
+context with a shortened version. Instead, it uses       association rather than a faithful explanation of
+the model’s own prompt-internal signals to copy          the model’s decision process. Evidence sifting
+selects candidate traces, evidence materialization      Table 5: Runtime usage on CLIPPER using Llama3-8B
+turns them back into grounded text spans, and re-       at 128K context length.
+play reactivates these spans near answer genera-
+tion. Under this view, recursive evidence sifting is           Method                Runtime
+a lightweight way to repeatedly re-query the same
+context under a scaffold-conditioned state, improv-            Vanilla                44 min
+ing query–evidence rebinding without adding an                 AttnSharp              46 min
+external memory module, training a retriever, or               DAC                    34 min
+removing the original context.                                 A-MEM                  50 min
+B     Experiment Details                                       DySCO                 2h 13min
+                                                               R E C ONTEXT           62 min
+B.1    Dataset Details
+The first seven datasets in our evaluation come
+from the HELMET benchmark (Yen et al., 2025),           ture. All methods compared under the same setting
+and CLIPPER is evaluated as an additional               use the same backbone, context budget, prompting
+long-context claim-verification benchmark (Pham         format, and decoding configuration on the corre-
+et al., 2025).                                          sponding hardware.
+   • NQ evaluates open-domain factual question
+                                                        B.3   Detailed Efficiency Analysis
+      answering, where the model must locate short
+      answer evidence in a long input.                  We report wall-clock runtime on CLIPPER using
+   • TriviaQA also tests factual question answer-       Llama3-8B at 128K context length with thinking
+      ing, but with trivia-style questions that often   disabled. Vanilla full-context decoding takes 44
+      require matching paraphrased clues to sup-        minutes, AttnSharp takes 46 minutes, DAC takes
+      porting evidence.                                 34 minutes in total, A-MEM takes 50 minutes, and
+                                                        DySCO requires 2 hours and 13 minutes. The
+   • HotpotQA focuses on multi-hop question
+                                                        best-performing variant of R E C ONTEXT takes 62
+      answering and requires combining evidence
+                                                        minutes. The additional runtime of R E C ONTEXT
+      from multiple pieces of context.
+                                                        mainly comes from evidence sifting and replay,
+   • PopQA probes entity-centric factual knowl-         which add computation beyond direct full-context
+      edge and is sensitive to whether relevant ev-     decoding; nevertheless, R E C ONTEXT remains sub-
+      idence about less prominent entities is cor-      stantially faster than DySCO, which changes the
+      rectly used.                                      backbone forward or decoding logic. Its GPU mem-
+   • NarrativeQA evaluates narrative understand-        ory stays at the same level as Vanilla and DySCO
+      ing over long stories, requiring the model to     because the replay scaffold adds fewer than 128
+      connect events, characters, and plot informa-     evidence tokens.
+      tion.
+                                                        B.4   R E C ONTEXT Implementation Details
+   • InfBench QA contains free-form question an-
+      swering over very long inputs and stresses        The R E C ONTEXT implementation is activated by
+      evidence retrieval from extended contexts.        setting –decoding_method Our. In this mode, the
+   • InfBench MC uses a multiple-choice format          evaluation driver calls the sentence-replay path
+      over long inputs, testing whether the model       in rescale_generate: the model receives the
+      can select the option best supported by the       original prompt, computes candidate evidence
+      context.                                          proposals from attention, reconstructs a replay
+                                                        prompt, and then generates from the replay prompt.
+   • CLIPPER evaluates claim verification over
+                                                        The same custom model classes also support
+      book-length contexts with evidence-grounded
+                                                        attention-rescaling baselines, but R E C ONTEXT
+      synthetic claims.
+                                                        uses the selected tokens to construct replayed
+B.2    GPU Resources                                    evidence rather than to directly rescale attention
+                                                        logits during final decoding.
+We conduct experiments on NVIDIA A100 and
+NVIDIA H200 GPU servers. The H200 runs are              Prompt segmentation. For each dataset, the im-
+executed on an ARM64 (aarch64) system architec-         plementation identifies the boundary between the
+long-context portion and the question or answer-        Table 6: Ablation on recursive evidence-sifting rounds.
+format suffix. Let LC be the number of tokens           Multiple rounds substantially improve over a single
+                                                        round, while the best depth varies by dataset.
+before this boundary. The original prompt is split
+into context tokens x1:LC and question-side tokens                           NQ          PopQA        InfMC
+xLC +1:T . The default replay prompt is formed as                           128K          128K         128K
+                                                               R Rounds
+context, replayed evidence, and question-side to-
+                                                                          Acc    F1     Acc    F1      Acc
+kens. The code also contains alternative replay
+positions for ablations, but the multi-round setting           1          0.04   0.21   0.01   0.10    0.48
+                                                               2          0.08   0.25   0.07   0.19    0.50
+uses the before-question replay form.
+                                                               3          0.09   0.25   0.05   0.18    0.51
+Attention readout. The readout uses the final w                4          0.09   0.25   0.05   0.17    0.54
+prompt tokens as cue tokens, where w is controlled
+by context_warmup_steps and is set to 8 in our
+main runs. For each cue token, attention weights        Caching and length accounting. To avoid un-
+are averaged over a fixed set of selected layer-head    necessary recomputation, the implementation snap-
+pairs. Scores are accumulated across cue positions      shots the key-value cache at the end of the origi-
+with exponential decay:                                 nal context. During replay generation, it restores
+                                                        this context cache and processes only the inserted
+                                                        evidence plus the question-side tokens before de-
+                                        
+     r(t) = Normalize a(t) + λr(t−1) ,           (13)
+                                                        coding the answer. The generation length budget
+                                                        is extended by the number of inserted replay to-
+where a(t) is the current averaged attention distri-
+                                                        kens so that adding evidence does not reduce the
+bution and λ is the decay factor. The configura-
+                                                        maximum number of answer tokens.
+tion files set λ = 0.75. Chat-template tokens are
+masked by default. In the main setting, candidate       C    Experimental Settings
+copied spans are restricted to the original context.
+The token-source ablation additionally allows can-      We use the same backbone model, context budget,
+didate positions over the full replay prompt; in both   prompting format, and answer decoding settings
+settings, the replayed scaffold conditions the model    for R E C ONTEXT and the corresponding baselines
+state from which query-token attention is read out.     within each comparison. For Qwen3 models
+                                                        evaluated beyond their native context window, we
+Token selection and sentence recovery. After            enable YaRN rope scaling. The main benchmark
+scoring, the implementation applies top-K, top-p,       comparison and most ablations use 128K contexts;
+or hybrid selection to obtain token positions. These    the shorter-context robustness study in Table 3
+selection rules follow prior token-importance           uses 64K contexts. Thinking mode is disabled
+methods and are not specific to R E C ONTEXT. The       unless explicitly stated, with Table 2 serving as
+method then decodes the prompt, finds sentence          the thinking-enabled robustness setting. All task
+boundaries, and copies the sentence containing          scores in the experimental tables are reported as
+each selected token. Empty strings and trailing         fractions in [0, 1], while average rank in Table 1
+special markers are removed. When multiple              remains on the original rank scale.
+selected tokens fall in the same sentence, the             Dataset-specific maximum answer lengths and
+sentence is kept once.                                  stopping behavior follow the evaluation scripts in
+Recursive evidence sifting. For R replay rounds,        the released code. The appendix ablations below
+the implementation repeats evidence proposal and        isolate two hyperparameters on 128K NQ, PopQA,
+sentence recovery on the current replay prompt.         and InfBench MC: Table 6 varies the number of
+Newly recovered sentences are deduplicated              replay rounds R, and Table 7 varies the top-K
+against previously inserted sentences, accumulated      evidence-token candidate budget while keeping the
+into a single ordered scaffold, and inserted back       other generation settings fixed.
+between the original context and the question-side
+                                                        D    Additional Visualizations
+prompt. The final answer is generated only after the
+last replay round. The main scripts use R = 2 with      The extended robustness results are reported numer-
+sentence wrapping disabled, so the inserted scaf-       ically in Tables 2 and 3. These tables complement
+fold is a compact list of copied evidence sentences.    the hyperparameter visualizations in Figure 3: Ta-
+Table 7: Ablation on the evidence candidate budget.          E.2   Proof of Theorem 1
+Larger candidate sets improve PopQA and InfMC, but
+can hurt NQ, revealing a recall–noise trade-off.             Proof. To prove that the cosine similarity
+                                                             cos(h(j) , y) strictly increases with each step j ≥ 1,
+                    NQ           PopQA        InfMC          we will trace the evolution of the attention weights
+                   128K           128K         128K          for each token.
+         Top-K
+                 Acc    F1      Acc    F1      Acc              W.l.o.g., suppose that i∗ = 1, so y = c1 . The
+                                                                                                                 (j)
+         1       0.03   0.22    0.04   0.14    0.52          initial sequence is x(0) = [c1 , . . . , cn ]. Let wi de-
+         8       0.08   0.25    0.07   0.19    0.50          note the sum of the attention weights of all copies
+         16      0.08   0.25    0.05   0.17    0.55          of the token ci in the sequence x(j) when comput-
+         32      0.04   0.23    0.10   0.21    0.58          ing h(j) . Thus, we can express the hidden embed-
+                                                             ding at any step j as:
+
+ble 2 evaluates whether evidence replay remains                                                     n
+                                                                                                             (j)
+                                                                                                    X
+useful when thinking is enabled at 128K context                                       h(j) =                wi ci .               (19)
+length, while Table 3 checks whether the same be-                                                   i=1
+havior holds under a shorter 64K context budget.
+                                                             Since the embeddings ci are mutually orthogonal
+E     Theoretical Analysis                                   and have unit norm (∥ci ∥2 = 1), the cosine similar-
+                                                             ity between h(j) and y = c1 is:
+E.1    Theoretical Setup
+Following prior works (Nichani et al., 2025; Olsson                                     ⟨h(j) , c1 ⟩
+                                                              cos(h(j) , y) =                                                     (20)
+et al., 2022), we formulate the long-context task                                     ∥h(j) ∥2 ∥c1 ∥2
+as follows. Suppose that each token i = 1, . . . , n                                                  (j)
+                                                                                                w1
+in the context has mutually orthogonal embedding                                 =q                                               (21)
+                                                                                          Pn         (j) 2
+ci ∈ Rd with ∥ci ∥2 = 1 and that the answer has                                                m=1 (wm )
+embedding y ∈ Rd . Initially, the prompt sequence                                     
+                                                                                                                (j)
+                                                                                                                      !2 −1/2
+is x(0) = [c1 , . . . , cn ]. Let q ∈ Rd denote the query
+                                                                                                X            wi
+                                                                                 = 1 +                         (j)
+                                                                                                                                . (22)
+embedding. The initial attention scores are:                                                        i̸=1     w1
+                                     (0)
+          a(0) = softmax [⟨xi , q⟩]ni=1 .
+                                              
+                                                     (14)                         (j)
+                                                                    (j)          w1
+                                                             Let Ri       =       (j)   . To prove that cos(h(j) , y) >
+                                                                                 wi
+The initial hidden embedding h(0) is:
+                                                             cos(h(j−1) , y), it is sufficient to prove that the ratio
+                          n                                    (j)      (j−1)
+                          X       (0) (0)                    Ri > Ri           for all i ̸= 1 and for all j ≥ 1. We
+                 h(0) =         ai xi .               (15)
+                                                             will use induction to prove this.
+                          i=1                                                                              (0)     (0)
+                                                                At j = 0, the attention weights are wi = ai .
+In each step j ≥ 1, we first append the most rele-           The initial ratio for the base state (as dictated by the
+vant evidence to the sequence:                                                                      (0)
+                                                             dot product) can be defined as Ri = e⟨c1 −ci ,q⟩ .
+                          (j−1)                                                       (0)     (0)
+         x(j) = x(j−1) , xargmax(a(j−1) ) .                  Since ⟨y − ci , q⟩ < a1 − ai , then
+                                        
+                                             (16)
+                                                                                        (0)            (0)         (0)
+Then, we update the attention scores:                                            ln Ri        < w1 − wi .                         (23)
+                        (j)
+      a(j) = softmax [⟨xi , h(j−1) ⟩]n+j
+                                         
+                                     i=1 .            (17)   We are also given that ⟨y, q⟩ > ⟨ci , q⟩ for all i ̸=
+                                                                           (0)     (0)
+Finally, we update the hidden embedding:                     1, meaning a1 > ai . Thus, the most relevant
+                                                             evidence token at step 0 is c1 , and x(1) appends c1 .
+                          n+j
+                          X    (j) (j)
+                                                             At step 1, the sequence has 2 copies of c1 and 1
+                 h(j) =       ai xi .                 (18)   copy of ci . The unnormalized attention score for
+                          i=1                                                          (0)       (0)
+                                                             each copy of ck is e⟨ck ,h ⟩ = ewk . Normalizing
+We assume that the context is relevant to the answer         these gives:
+y: there exists i∗ such that y = ci∗ . We also assume
+                                                                                              (0)                        (0)
+that the query q is relevant to the answer y: ⟨y, q⟩ >                     (1)        2ew1                   (1)       ewi
+⟨ci , q⟩ for all i ̸= i∗ and maxi̸=i∗ ⟨y−c i ,q⟩                          w1 =             ,               wi      =       ,      (24)
+                                       (0)    (0) < 1.                                 Z1                               Z1
+                                          ai∗ −ai
+                     (j)                                                                                              (j−1)
+where Zj = ni=1 wi is the denominator of soft-                                                                    −∆m                          (j−1)
+            P
+                                                                                 where Σ(j−1) =
+                                                                                                     P
+                                                                                                       m̸=1 e                 . Let u = ∆i
+                                               (1)                                           (j−2)
+max in attention scores. Evaluating the ratio Ri :                               and v = ∆i          . We evaluate the difference u −
+                                                                                   (j)
+                               (1)                                               ∆i :
+               (1)            w1              (0)      (0)
+              Ri        =      (1)
+                                      = 2ew1 −wi .                        (25)                          j + 1 − e−u
+                              wi                                                              (j)
+                                                                                      u − ∆i        =u−                                         (32)
+                                                                                                     j + 1 + Σ(j−1)
+                               (1)
+We want to show Ri > Ri . Substituting our
+                                            (0)
+                                                                                      u(j + 1 + Σ(j−1) ) − (j + 1) + e−u
+               (0)  (0)  (0)
+                                                                                    =                                    .                      (33)
+assumption ln Ri < w1 − wi :                                                                   j + 1 + Σ(j−1)
+
+  (1)    (0) (0)       (0)
+                             (0)  (0)                                            Let’s analyze the numerator u(j + 1 + Σ(j−1) ) −
+ Ri = 2ew1 −wi > 2eln Ri = 2Ri > Ri .                                            (j + 1) + e−u . From our previous step, u is for-
+                                                                          (26)                      j−e−v
+                                                                                 mulated as u = j+Σ   (j−2) . By the inductive hy-
+                                                                                             (j−1)           (j−2)
+        (1)             (0)
+Thus, Ri > Ri , which implies cos(h(1) , y) >                                    pothesis ∆m         > ∆m            − ln(1 + 1j ), we have
+                                                                                     (j−1)                (j−2)
+cos(h(0) , y).                                                                   e−∆m     < j+1    −∆m
+                                                                                               j e       . Summing this over all
+                                    (j−1)      (j−2)
+    Assume for step j − 1 that Ri         > Ri       >                           m ̸= 1 gives bounds on Σ:
+          (0)                     (j−1)
+· · · > Ri > 1. Because Ri              > 1, we have                                                          j + 1 (j−2)
+w1
+   (j−1)
+         > wi
+               (j−1)
+                     . Therefore, individual tokens c1                                         Σ(j−1) <            Σ      .                     (34)
+                                                                                                                j
+continue to command the highest attention scores,
+                                                                                 Using this upper bound, we can bound the term
+meaning c1 is consistently appended. At step j,
+              (j)                                                                u(j + 1 + Σ(j−1) ) in the numerator:
+there are N1 = j + 1 copies of c1 and 1 copy of
+each ci .                                                                            u(j + 1 + Σ(j−1) )                     (35)
+          (j)        (j)     (j)
+    Let ∆i = w1 − wi . The weights update                                            
+                                                                                         j−e  −v
+                                                                                                   
+                                                                                                               j + 1 (j−2)
+                                                                                                                           
+according to:                                                                      <         (j−2)
+                                                                                                      j+1+            Σ
+                                                                                       j+Σ                        j
+                              (j−1)                             (j−1)                                                       (36)
+   (j) (j + 1)ew1                           (j) ewi                                           −v
+  w1 =                                ,    wi =                         . (27)
+                                                                                                  
+                                                                                         j−e         j+1               
+             Zj                                               Zj                   =                        j + Σ(j−2)      (37)
+                                                                                       j + Σ(j−2)      j
+Dividing the two yields the recurrence relation for                                  j+1                         j + 1 −v
+                                                                                   =      (j − e−v ) = j + 1 −         e . (38)
+R:                                                                                     j                            j
+                                              (j−1)
+                   Ri
+                     (j)
+                            = (j + 1)e∆i              .                   (28)   Substituting this back into the numerator of our
+                                                                                 difference expression, we have that the numerator
+                              (j)         (j−1)                                  is smaller than:
+We want to prove Ri                  > Ri         . Substituting the                                      
+                (j−1)      (j−2)
+                      = je∆i                                                                      j + 1 −v
+recurrence for Ri                , the condition                                   < j+1−              e     − (j + 1) + e−u (39)
+becomes:                                                                                            j
+                                                                                              j + 1 −v
+                                (j−1)               (j−2)                          = e−u −          e .                       (40)
+              (j + 1)e∆i                  > je∆i            ,             (29)                  j
+                                                                                                              (j−1)              (j−2)
+which is equivalent to:                                                          Because we assumed ∆i                > ∆i               −ln(1+ 1j ),
+                                                                               it is an algebraic consequence that e−u < j+1 −v
+                                                                                                                            j e .
+         (j−1)    (j−2)          1                                               Therefore, the numerator is < 0, which implies
+        ∆i     > ∆i     − ln 1 +     .                                    (30)
+                                 j                                                       (j)
+                                                                                 u − ∆i < 0. It follows that
+We will in fact prove a strictly stronger statement:                                                   (j)           (j−1)
+  (j)     (j−1)                                                                                      ∆i      > ∆i            .                  (41)
+∆i > ∆i         for all j ≥ 1.
+                 (j)        (j)                                                                (j)
+   By writing w1 and wi explicitly using the                                         Because ∆i is strictly increasing, it easily sat-
+                            (j)                                                                                (j)   (j−1)
+sum Zj , we can express ∆i as:                                                   isfies the required bound ∆i > ∆i          − ln(1 +
+                                                                                   1
+                                                  (j−1)                          j+1  ). This guarantees that:
+               (j) j + 1 − e−∆i
+              ∆i =                                        ,               (31)                         (j+1)           (j)
+                    j + 1 + Σ(j−1)                                                                   Ri         > Ri .                          (42)
+Since the ratio of the correct answer’s weight to
+every incorrect answer’s weight strictly increases at
+                                    (j)
+every step j, the relative mass of w1 continuously
+approaches 1. Consequently, the denominator
+in the cosine similarity formula strictly shrinks,
+yielding:
+
+     cos(h(j) , y) > cos(h(j−1) , y),   ∀j ≥ 1.
+Figure 6: Top 0.1% of context tokens already accounts for about 50% / 80% accumulated relevance score
+across three LLMs, corresponding to only 128 tokens in a 128K-token context. This figure ranks all context
+tokens by their relevance scores with respect to the question and shows how much accumulated relevance score is
+covered by the top-ranked tokens. Each curve represents the mean trend over eight datasets, and the shaded region
+shows the variance across datasets.
+
