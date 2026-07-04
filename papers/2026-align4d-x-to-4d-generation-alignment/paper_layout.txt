@@ -1,0 +1,1373 @@
+                                                                                                                                 Text-to-4D Generation                                                    Im
+                                                                                                                                                                                      Text        Image
+                                        JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                        The Infinity                                                               1
+                                                                                                                         Gauntlet is
+                                                                                                                          shining.
+                                                                                                                                                                                          PLA4D
+                                                          Alignment Is All You Need For X-to-4D Generation
+                                                         Qiaowei Miao, Student Member, IEEE, Kehan Li, Yawei Luo∗ , Yi Yang, Fellow, IEEE
+                                                                                                                                                                                         Video     3D
+                                                                                                                                Video-to-4D Generation                                                     3
+
+
+                                           Abstract—Generative diffusion models excel at synthesizing
+                                        high-quality images, videos, and 3D content under multimodal                         Text-to-video                   Text                    Text-to-3D
+                                        control. However, arbitrary user-defined modality-to-4D (X-to-                          Model                                                  Model
+                                        4D) generation remains challenging due to the high cost of con-                                                   Text-to-Image
+                                        structing diverse datasets and the limited scalability of existing                                                   Model      Image-to-3D
+                                        methods. This paper presents Align4D, a flexible framework that                                     First frame                   Model
+                                        translates any-modal input into coherent video–3D pairs, using
+                                        video to guide 4D motion and 3D data to shape 4D geometry.                           Video                         Image                         3D
+                                        Align4D introduces three key techniques: (1) Object Distance                                     Image-to-                      Front view
+                                                                                                                                        Video Model
+arXiv:2607.02516v1 [cs.CV] 2 Jul 2026
+
+
+
+
+                                        Alignment, which searches Video-Aligned and Multiview-Aligned
+                                        Object Distances (VAOD/MAOD) respectively, to reconcile 4D
+                                        renderings to video and the priors of multiview diffusion models;                        Motion                                               Geometry
+                                        (2) Motion-Geometry Joint Alignment, which constrains known                             Alignment                     4D                      Alignment
+                                        and unknown views through synchronized video and 3D inputs,
+                                        ensuring consistent 4D generation; and (3) Asynchronous Opti-
+                                        mization, which decouples Gaussian attribute and deformation
+                                                                                                                     Fig. 1. Align4D transforms an arbitrary input into a coherent Video-3D
+                                        network training to enhance motion and geometry fidelity. We                 pair by sequentially leveraging multiple off-the-shelf models. Within this
+                                        further propose the X4D dataset, integrating prompt, image,                  X-to-4D generation framework, Align4D focuses on rigorously aligning the
+                                        video, and 3D data for benchmarking. Experiments on X4D                      4D object’s temporal motion with the video prior and its spatial geometry
+                                        and Consistent4D demonstrate that Align4D achieves state-of-                 with the 3D representation, thereby achieving powerful synthesis capabilities.
+                                        the-art quality and consistency in X-to-4D generation. Project
+                                        page: https://miaoqiaowei.github.io/Align4D/.
+                                          Index Terms—4D generation, object generation, multimedia                   infeasible due to the prohibitive data collection and compu-
+                                        content creation.                                                            tational resource requirements. These limitations highlight the
+                                                                                                                     urgent need for a flexible and unified framework that enables
+                                                                 I. I NTRODUCTION                                    arbitrary modality-to-4D (X-to-4D) generation.
+                                                                                                                        In this paper, we revisit the 4D generation task and present
+                                             D content generation is essential for creating realistic and
+                                        4    dynamic content in applications such as virtual reality,
+                                        the metaverse, computer games, and cinematic visual effects.
+                                                                                                                     a key insight: 4D content synthesis can be intrinsically de-
+                                                                                                                     coupled into 3D geometry generation and temporal motion
+                                                                                                                     generation. Building on this idea, we propose Align4D, a
+                                        However, existing 4D generation methods [1]–[10] typically                   unified framework that reformulates arbitrary-modality-guided
+                                        focus on single-modal inputs, which limits their generative                  4D generation into a task of aligning 4D assets with synchro-
+                                        flexibility and capabilities. Text-to-4D methods [1]–[3] provide             nized video and 3D data through matched object distances.
+                                        broad accessibility, but the generated objects often lack a                  Instead of training an end-to-end model from scratch, our
+                                        strong sense of realism and purpose. Image-to-4D methods [7],                framework leverages the robust inference capabilities of off-
+                                        [11], [12] enhance appearance quality but fail to effectively                the-shelf pretrained diffusion models to bridge the gap between
+                                        provide motion guidance. Video-to-4D methods [5], [8]–[10],                  input modalities and 4D outputs. As illustrated in Figure 1,
+                                        [13] improve motion realism but compromise structural con-                   Align4D establishes flexible generative pathways where di-
+                                        sistency. Meanwhile, 3D-to-4D methods [6] preserve spatial                   versity input (text, image, video, or 3D) is converted into a
+                                        geometry but lack temporal coherence. Recent efforts [14],                   coherent Video-3D pair via video generation models [16]–[19]
+                                        [15] explore constructing datasets to train diffusion models for             and 3D generation models [20]–[22]. Align4D then focuses on
+                                        generating multiview and multi-timestamp images. However,                    rigorously aligning the temporal motion of the 4D target with
+                                        scaling these datasets to enable multimodal inputs remains                   the video input, and ensuring its spatial geometry is consistent
+                                           This work was supported by National Natural Science Foundation of China   with the 3D representation. This dual alignment process is
+                                        (62293554, U2336212), ”Pioneer” and ”Leading Goose” R&D Program of           critical, as it guarantees the synthesized 4D results exhibit both
+                                        Zhejiang (2025C02022, 2024C01161), Zhejiang Provincial Natural Science       action coherence and structural fidelity. This modular design
+                                        Foundation of China (LZ24F020002), Ningbo Innovation ”Yongjiang 2035”
+                                        Key Research and Development Programme (2024Z292), and Young Elite           effectively circumvents the data scarcity issue, thereby offering
+                                        Scientists Sponsorship Program by CAST (2023QNRC001). The author grate-      a generalizable and flexible solution for X-to-4D generation
+                                        fully acknowledges the support of Zhejiang University Education Foundation   with powerful synthesis capabilities, as shown in Figure 2.
+                                        Qizhen Scholar Foundation. This research was supported by HUAWEI’s
+                                        Al Hundred Schools Program and was carried out using the Ascend AI              However, unifying these disparate priors presents a sig-
+                                        technology stack.                                                            nificant challenge: aligning the 4D output with both the
+                                           Qiaowei Miao, Kehan Li, Yawei Luo, and Yi Yang are with the Zhejiang      motion posture from the generated video and the geometric
+                                        University, Hangzhou 310027, China (e-mail: qiaoweimiao@zju.edu.cn; ke-
+                                        han.li@zju.edu.cn;yaweiluo@zju.edu.cn; yangyics@zju.edu.cn).                 structure from the generated 3D content. Since the video
+                                           Yawei Luo is the corresponding author.                                    and 3D priors are derived from independent models, they often
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                              2
+
+
+
+
+               Text-to-4D Generation                                                                  Image-to-4D Generation
+                                                                 Text            Image
+       The Infinity
+       Gauntlet is
+        shining.
+
+                                                                     Align4D
+
+                                                                 Video             3D
+              Video-to-4D Generation                                                                     3D-to-4D Generation
+Fig. 2.     Align4D is a novel X-to-4D framework that enables users to input text, images, videos, or 3D objects to generate 4D targets. Align4D
+transforms arbitrary modality inputs into corresponding video-3D pairs, synchronizing the motion of the generated 4D objects with the videos and aligning
+their structures with the 3D data through matched object distances , achieving dynamic objects with high temporal dynamics and precise geometry.
+           Text-to-video                 Text                    Text-to-3D
+              Model                                                Model
+exhibit spatial or temporal discrepancies. We identify two                   aligning 4D renderings with video and the prior of a
+                                   Text-to-Image
+critical aspects of this alignment problem.
+                                      Model       First, for  Known          multiview diffusion model. Building on this foundation,
+                                                 Image-to-3D
+Spatiotemporal Viewpoints,       the
+                       First frame   4D   target must align  with  the       we employ a single multiview diffusion model to jointly
+                                                    Model
+3D geometry at the initial state and the video content across                align the motion and geometry of 4D renderings with
+           Video
+time. A major     hurdle here is Image
+                                     determining the appropriate  3D         video and 3D data in an asynchronous way.
+object distance; existing     methods [5], [10],Front
+                       Image-to-                    [23]   often
+                                                        view      rely    • We construct X4D, a first quadruple dataset to benchmark
+on manual, empiricalVideo     Modelwhich lead to floating artifacts
+                        settings,                                            X-to-4D generation capabilities via inputs generated by
+or distortions when applied to arbitrary inputs. Second, for                 pretrained diffusion models.
+Unknown Spatiotemporal Viewpoints, the model must main-                   • Extensive experiments demonstrate that Align4D excels
+               Motion                                         Geometry
+tain geometric  consistency across unseen views while adhering               in generating 4D objects, producing fine textures, precise
+             Alignment                 4D
+to the motion dynamics observed in the video. Optimizing
+                                                              Alignment
+                                                                             geometry, and seamless motion.
+4D targets using multiple diffusion priors simultaneously is
+notoriously unstable and time consuming [7], [8], [24], often
+                                                                                             II. R ELATED WORKS
+resulting in degraded quality due to parameter sensitivity.
+   To tackle these challenges, Align4D introduces a novel                 Generative diffusion models. They revolutionize the land-
+alignment-driven optimization strategy designed to synthesize scape of visual generation, demonstrating remarkable per-
+4D objects with smooth motion and consistent geometry. First, formance across tasks such as image, video, and 3D con-
+we propose Object Distance Alignment, which automati- tent generation [25]. (a) Image generation models [26]–[29]
+cally searches for the Video-Aligned Object Distance (VAOD) leverage their impressive text-guided generative capabilities to
+to match front-view renderings with video frames, and the produce high-resolution and highly creative images, sparking
+Multiview-Aligned Object Distance (MAOD) to calibrate the significant interest in extending diffusion models to video and
+4D model with multiview diffusion priors. Furthermore, we 3D generation domains. (b) Video generation models [19],
+develop a Motion-Geometry Joint Alignment (MGJA) mod- [30]–[38], including text-to-video and image-to-video genera-
+ule. For known viewpoints, we utilize VAOD to strictly align tion, garner increasing attention. For instance, text-to-video
+the 4D model with the input video. For unknown viewpoints, models [30], [39] rely on large-scale, high-quality text-to-
+rather than relying on unstable multi-model optimization, we video datasets for training, enabling a deeper understanding
+employ a single multiview diffusion model guided by MAOD of verbs and generating rich, creative sequences of temporally
+and condition it on the video frames to transfer motion coherent video frames. On the other hand, image-to-video
+and geometry priors to non-front views. To ensure robust models [19], [33] infer the subsequent actions of a target
+convergence, we introduce an Asynchronous Optimization object based solely on a given initial frame. However, these
+strategy that refines geometry and motion parameters sepa- models lack flexible control over the generated actions. (c)
+rately. Extensive experiments on our newly collected X4D 3D generation models [21], [40]–[47] allow users to set text
+dataset and the Consistent4D dataset [5] demonstrate that or images as control conditions to generate static 3D targets
+Align4D effectively harmonizes conflicting priors, generating based on meshes or 3D Gaussian representations. These mod-
+high-fidelity 4D targets that often surpass the quality of the els achieve robust generalization through large-scale training
+initial video-3D pairs. Our contributions are as follows:               datasets and can rapidly generate 3D objects for unseen inputs
+   • We propose an X-to-4D generation framework that sup-               using inference alone. The rapid advancements in image,
+      ports arbitrary input modalities, including text, images, video, and 3D diffusion models lay a solid foundation for
+      videos, and 3D data, as conditioning inputs to generate constructing an X-to-4D generation framework.
+      4D assets.                                                          4D Generation. The goal of 4D generation is to syn-
+   • We introduce a novel object distance alignment method              thesize dynamic 3D objects with consistent geometry and
+      designed to search the matched object distances for motion across views. However, existing approaches still face
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                                                    3
+
+
+
+                                                                                                                Multiview Diffusion Model
+                                                                                           Renderings (t,v)
+
+                                                                                                                                                        Unknown
+
+             3D
+                                                                                                                                                      Spatiotemporal                     /
+
+
+
+
+                                                       Search MAOD
+                                                                                                                                                        Viewpoint
+
+
+
+
+                                           )
+            / Video /
+                                                                                                                                                        Alignment
+
+
+
+
+                                                                     Rendering with VAOD
+                        Diffusion Models
+                                                                                                                                                                             Gaussian
+
+
+
+
+                                              3D
+                                                                                                                                                                   Grad.
+                                                                                                                                                                              Model
+                                                                                                                       Condition       Condition
+                                                                                           Renderings (t,v)
+                                                                                                                                                          ℒ MGJA           Asynchronous
+
+
+                                           ( Video ,
+                                                                                                     (        , MAOD ) (                   ,   VAOD   )                    Optimization
+
+
+
+
+                                                       Search VAOD
+             Image
+
+
+
+
+                                                                                                                                                                   Grad.
+                                                                                                    Renderings (1,v)               Video                                                 /
+                                                                                                                                                         Known
+                                                                                                                                                      Spatiotemporal
+            /
+
+
+
+
+                                                                                                                                                        Viewpoint           Deformable
+             Text
+
+
+
+
+                                                                                                                                                        Alignment            Network
+                                                                                           Renderings (t,1)
+
+
+Fig. 3. Overview of the Align4D framework. Given arbitrary input modalities, pretrained video and 3D diffusion models are used to construct a unified
+video–3D pair. We then search for two key object distances: the Video-Aligned Object Distance (VAOD), which aligns the 4D front-view renderings with the
+video, and the Multiview-Aligned Object Distance (MAOD), which aligns multiview geometry with the multiview diffusion prior [53]. Using these distances,
+Align4D performs Motion–Geometry Joint Alignment under both known and unknown spatiotemporal viewpoints. Finally, an asynchronous optimization stage
+refines the Gaussian representation and the deformation network to produce high-quality 4D content.
+
+
+
+several critical limitations across different dimensions. Re-                                                      constructed multimodal dataset X4D (Section III-E). Our
+garding control modalities, current methods primarily rely                                                         framework is illustrated in Figure 3.
+on single-modal inputs: while text-driven methods [2], [4]
+and image-to-4D pipelines [7] offer partial multimodal sup-                                                        A. Preliminaries
+port, dedicated video-to-4D [8], [10], [48] and 3D-to-4D [6]
+                                                                                                                      Score Distillation Sampling (SDS). SDS is a widely
+methods cannot jointly accommodate text, image, 3D, and
+                                                                                                                   adopted mechanism in 3D and 4D generation [7], [24], [40],
+video as unified inputs. Concerning representations, NeRF-
+                                                                                                                   [54], enabling the transfer of 2D diffusion priors into 3D
+based approaches [2]–[4], [49] provide smooth temporal mod-
+                                                                                                                   representations. During diffusion model training, a noised
+eling but suffer from prohibitive training times. Conversely,
+                                                                                                                   sample xτ is produced by adding Gaussian noise ϵ ∼ N (0, I)
+Gaussian Splatting variants [1], [7], [48], [50]–[52] improve
+                                                                                                                   to data x at a randomly sampled timestep τ , and the UNet
+efficiency yet struggle to provide fine-grained motion control
+                                                                                                                   ϕ is trained to predict the added noise ϵ. Given a 3D scene
+over thousands of Gaussians, compromising temporal coher-
+                                                                                                                   representation with parameters θ, its rendering x = g(θ) is
+ence. For guidance and optimization, many approaches rely
+                                                                                                                   treated as the diffusion input. The SDS gradient [24] is then
+on proprietary video diffusion models [30], [39] for motion
+                                                                                                                   computed as:
+guidance, which severely limits reproducibility. Open-source                                                                                                               
+attempts [2], [7] often suffer from inaccurate object distances                                                                                                         ∂x
+                                                                                                                     ∇θ LSDS (x = g(θ)) = Eτ,ϵ w(τ ) ϵ̂ϕ (z, v, τ ) − ϵ       , (1)
+and an entangled motion–geometry optimization process, lead-                                                                                                             ∂θ
+ing to degraded 4D consistency. Furthermore, the reliance on                                                       where z is the latent corresponding to x, v denotes condition-
+optimization from random initialization via SDS contributes to                                                     ing signals, and w(τ ) is the timestep-dependent weighting.
+slow convergence and prolonged generation times. In contrast,                                                      This gradient is backpropagated through the differentiable
+our Align4D introduces a 3DGS-based 4D framework with                                                              renderer g to update the 3D parameters θ.
+a deformable motion field and novel multimodal alignment
+strategies. This design enables efficient generation while pre-
+serving both geometric fidelity and video-consistent motion.                                                       B. Object Distance Alignment
+                                                                                                                      Theoretical analysis. Whether using explicit video super-
+                                       III. M ETHODOLOGY                                                           vision or SDS-based implicit supervision, consistent object-
+   In this paper, we introduce Align4D, an X-to-4D gener-                                                          distance alignment is fundamental to 4D generation. In video-
+ation framework that aligns motion with video priors and                                                           conditioned settings, the camera captures the target at a
+geometry with 3D inputs. Leveraging pretrained models,                                                             fixed object distance, whereas pretrained diffusion models are
+Align4D converts arbitrary modalities into unified video–3D                                                        trained on images rendered with a canonical focal length
+pairs for 4D synthesis. We first outline the preliminaries (Sec-                                                   but varying distances. This mismatch makes 4D generation
+tion III-A). To ensure accurate motion–geometry alignment,                                                         challenging: the reconstructed 4D object must simultaneously
+we propose object distance alignment, which identifies the                                                         match the video’s object distance and conform to the spatial
+video-aligned object distance and multiview-aligned object                                                         priors encoded in the diffusion model. Thus, estimating both
+distance (Section III-B). Based on these distances, we design                                                      the video-aligned object distance and the multiview diffu-
+a motion–geometry joint alignment module for both known                                                            sion–aligned object distance becomes essential.
+and unknown spatiotemporal viewpoints (Section III-C). Fi-                                                            We introduce the pinhole camera model to illustrate how to
+nally, an asynchronous optimization strategy further refines                                                       calculate the object distance. For a given camera with a fixed
+the 4D representation (Section III-D), and we introduce the                                                        focal length f , an image x of a 4D target θ is captured at an
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                   4
+
+
+
+
+            （a）Search Video-Aligned Object Distance （b） Search Multiview-Aligned Object Distance
+
+Fig. 4. Object distance alignment. (a) We search for the Video-Aligned Object Distance (VAOD)     to align the known front-view renderings of the 4D object
+                                                                                                 Video
+with the input video. Specifically, we render front-view images under different object distances and compute LMSE with respect to the video frames; the
+distance that yields the global minimum LMSE is selected as the VAOD. (b) We then search for the Multiview-Aligned Object Distance (MAOD), which aligns
+                                                                                                            (
+multiview renderings with the geometry prior of the multiview diffusion model. Using the first frame as the SAOD ,                )
+                                                                                                             condition, we render four orthogonal views and
+compute LSDS . The object distance corresponding to a local minimum of LSDS , and that is smaller than the VAOD, is selected as the MAOD.
+                                                                                         Renderings (t,v)            Condition
+object distance d. If the true physical width of the 4D target θ Video-Aligned Object Distance (VAOD) and the Multiview-
+is W , and its projected width in image x is w, then by similar  Aligned Object Distance (MAOD). Unknown
+                                                          Search VAOD
+
+
+
+
+triangles, we get:                                                 Video-Aligned Object DistanceTime-View    (VAOD). To determine
+                                              )
+
+
+
+
+                                                                 the object distance that best aligns Alignment
+                                                                                                             the 4D model with the
+                      w    W           W
+                                                            (2) input video, we search for the Video-Aligned          Object Distance
+                                                 3D
+
+
+
+
+                        =     , d=        f.
+                                                                        Rendering with
+
+
+
+
+                                                                                                                   Grad.
+                      f     d           w                        (VAOD). As Unet shown in Figure 4 (a), we initialize the 4D
+                                                                           VAOD
+
+
+
+
+                                                               Renderings (t,v)          Condition
+However, a 4D target isn’t a physical entity, so its physical representation θ using the providedloss        3D model ψ Stepat t = 1.
+                                              ( Video ,
+
+
+
+
+                                                                                                              ′           control
+dimensions cannot be directly measured to derive the object We then sweep      (    the   object
+                                                                                       , SAOD )   distance   d   ∈ D   = [d min , dmax ]
+                                                          Search MAOD
+
+
+
+
+                                                                                                              d′
+distance. Therefore, we propose a search method to find the and render the front-view images {xθ1 }. Grad.         Each rendering is
+optimal object distance. Based on Equation 2, the ratio of any comparedRenderings       (0,v)video frame I1 using
+                                                                             with the first
+                                                                                                              Known
+                                                                                                                    the Mean Squared
+object distance ds to the video-aligned object distance dv is Error (MSE), and the distance yielding             the global minimum
+                                                                                                            Time-View
+equal to the ratio of the target size in the rendered image ws is selected as:                              Alignment
+to the target size in the video frame wv :                    Renderings (t,0)                           d′
+                                                                                    d = arg min ∥x − I ∥2 .     VA                  (4)
+                                                                                                                                      θ1   1 2
+                                                                                                                             d′
+                               dv   ws
+                                  =    .                                         (3)           The rationale for choosing the global minimum is illustrated
+                                                                                                              Video
+                               ds   wv
+                                                                                            in Figure 5. When d′ is too small, the object becomes overly
+Thus, by varying ds to generate rendered images xs , we                                     magnified, producing saturated renderings with uniformly low
+compute the corresponding widths ws and compare them with                                   MSE. As d′ increases, the object gradually becomes fully
+the target width wv in the video frame. When ws closely                                     visible, and the MSE decreases until reaching the best geo-
+matches wv , Equation 3 indicates that dv = ds , i.e., ds is                                metric and motion correspondence. Beyond this point, further
+identified as the video-aligned object distance.                                            increases in d′ cause the object to shrink and eventually vanish,
+   For the object distance associated with the multiview dif-                               driving the rendered image toward a white background and
+fusion model, the matched value should yield rendered in-                                   increasing the MSE toward its upper bound.
+puts whose output distribution matches the model’s training-                                   Multiview-Aligned Object Distance (MAOD). Selecting a
+time distribution. Since diffusion models enforce alignment                                 matched object distance is crucial when using the SDS method
+between their outputs and a Gaussian prior during training, we                              with multiview diffusion models to provide geometric priors.
+can assess how well a candidate object distance aligns with                                 This necessity stems from the limited scope of pretrained data
+the training distribution by fixing condition and varying only                              in these models, often resulting in the classification of images
+the object distance. In this setting, the similarity between the                            for 4D generation as out-of-distribution data, thereby mak-
+UNet-predicted noise and the Gaussian prior serves as an indi-                              ing generative outcomes heavily dependent on the diffusion
+cator of distance alignment. Motivated by this observation, we                              model’s ability to generalize. The aligned object distance, as
+treat the diffusion UNet as a distributional discriminator and                              a key control parameter, significantly enhances the model’s
+use the SDS loss—an effective proxy for the KL divergence                                   capacity to adapt to out-of-distribution data and strengthens its
+between the model’s output distribution and the prior [24]—to                               ability to provide geometric priors within the SDS framework,
+evaluate the degree of alignment at each object distance.                                   ultimately improving the quality of 4D generation.
+This allows us to reliably search for the multiview diffusion                                  To find the optimal object distance parameter, we search for
+model–aligned object distance. Building on this theoretical                                 the Multiview-Aligned Object Distance (MAOD) to align mul-
+basis, we then develop concrete search procedures for the                                   tiview renderings of 4D objects with the multiview diffusion
+                                                                                                                                                 Mesh                   View
+                                                                                                    Image-to-Mesh                                                                                             V
+                                                                                                    Diffusion Model                                                                                                           MV Diffusion
+                                                                                                                               (a) Intra-Frame                                                       (b) Inter-Frame
+
+
+             Prompt                Generated Image     Generated Video            Generated 3D                        Our
+                                                                                                                      Module
+                                                                                                                               Random
+                                                                                                                               View
+                                                                                                                                                    Front
+                                                                                                                                                    View
+                                                                                                                                                                 Front View
+                                                                                                                                                                 Rendering
+                                                                                                                                                                               Random View
+                                                                                                                                                                               Rendering
+                                                                                                                                                                                             4D/3D
+                                                                                                                                                                                             Representation
+                                                                                                                                                                                                                           Data
+                                                                                                                                                                                                                           Flow
+                                                                                                                                                                                                                                             Gradient
+                                                                                                                                                                                                                                             Flow
+
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                                                                                                                 5
+
+
+
+        Search Video-Aligned Object Distance           Search Multiview-Aligned Object Distance
+ 0.45                                          250
+
+  0.4
+ 0.35                                          200
+
+  0.3
+                                               150
+ 0.25
+  0.2
+                                               100
+ 0.15
+  0.1                                          50
+                                                       Local minimum
+ 0.05
+                     Global minimum                     before VAOD                                     (a) τ ∈ [100,200,300]                                   (b) τ ∈ [400,500,600]                             (c) τ ∈ [700,800,900]
+   0                                            0
+
+
+
+
+                                                     1.20001
+
+
+
+
+                                                     2.85001
+                                                     0.00001
+                                                     0.15001
+                                                     0.30001
+                                                     0.45001
+                                                     0.60001
+                                                     0.75001
+                                                     0.90001
+                                                     1.05001
+
+                                                     1.35001
+                                                     1.50001
+                                                     1.65001
+                                                     1.80001
+                                                     1.95001
+                                                     2.10001
+                                                     2.25001
+                                                     2.40001
+                                                     2.55001
+                                                     2.70001
+        0.00001
+        0.15001
+        0.30001
+        0.45001
+        0.60001
+        0.75001
+        0.90001
+        1.05001
+        1.20001
+        1.35001
+        1.50001
+        1.65001
+        1.80001
+        1.95001
+        2.10001
+        2.25001
+        2.40001
+        2.55001
+        2.70001
+        2.85001
+                                                                                                  Fig. 6. SDS loss versus object distance for different diffusion timesteps τ .
+               …                  …                                       …                       (a) τ ∈ {100, 200, 300}, the curves exhibit irregular and unstable variations.
+                                                                                                  (b) τ ∈ {400, 500, 600}, a coarse decreasing–then–increasing trend emerges,
+                                                                                                  but the minima remain inconsistent across distances. (c) τ ∈ {700, 800, 900},
+Fig. 5. Searching strategies for video-aligned object distance and                                the curves show strong consistency with a clear local minimum near the
+multiview-aligned object distance.                                                                matched object distance. Averaging the SDS losses across multiple large-τ
+                                                                                                  timesteps yields a stable and reliable estimate of the MAOD.
+model’s prior. As illustrated in Figure 4 (b), we obtain or-
+thogonal four-view rendered images corresponding to azimuth                                       with the multiview diffusion prior and is thus selected as
+angles [−90◦ , 0◦ , 90◦ , 180◦                                                                    the MAOD. For distances larger than VAOD, the rendered
+                           n ]. Within  range [dmin , dmax ], we
+                                        the
+                                                                                                  object progressively disappears, causing the SDS loss to
+                               c,d′
+                                    o
+render a set of images        xθ1            , where C denotes                                    drop toward a trivial lower bound associated with a blank
+                                                     c∈C    d′ ∈D
+the coordinates. We then use the video frame I1 at time                                           background, as illustrated in Figure 4. Although this global
+step t = 1 as the image control condition. It is important                                        minimum is numerically smaller, it does not reflect meaningful
+to note that I1 is equivalent to the 4D front rendered image                                      geometric alignment. Our experiments show that the correct
+xdθ1VA corresponding to the VAOD. Next, the four orthogonal                                       MAOD is given by the local minimum located to the left of
+rendered images at each object distance d′ are used as inputs                                     VAOD, whereas the global minimum is an artifact caused by
+to compute the modified SDS loss LSDS for searching:                                              background-dominated
+                                                                                                       GT
+                                                                                                                          renderings.
+                                                                                                                   W/O. mask
+                                                                                                                                      More analysis is provided
+                                                                                                                                   W/. mask
+                                                                                                  in Section V-A.
+              1 XX                                               2
+  LSDS =                   w(τ ) ϵϕ (zθc1 ; I1 , c, d′ , τ ) − ϵ 2 , (5)
+            |C||T|    τ ∈T c∈C
+                                                                                                  C. Motion-Geometry Joint Alignment
+where zθc1 = ατ xcθ1 + στ ϵfix . We sample a noise latent ϵfix and
+add it to each object distance and each viewpoint rendering                                          Known Spatiotemporal Viewpoint Alignment. First, we
+xcθ1 to calculate LSDS . Here, c represents the coordinate of                                     align the given video with the multi-time-step front views of
+the rendering xcθ1 , τ is the timestep of the multiview diffusion                                 the 4D target. For a generated video consisting of T frames,
+model. We use diffusion timesteps T = {700, 800, 900}.                                            {It }T , we render the correspondingnT frames
+                                                                                                                                            o   under the front
+                                                                                                          ′                              c′
+   The choice of the diffusion timestep τ is closely related                                      view c at the object distance dVA , xθt . We calculate the
+                                                                                                                                             T
+to the noise schedule coefficients w(τ ), which control the                                       MSE loss between them to inject motion into the 4D model:
+gradual noise injection in diffusion models—ensuring that                                                                                                   T
+early steps remain close to the data distribution while later                                                                                    1 X c′                       ′
+                                                                                                                        LKSVA =                        ||xθt − It ||22 + ||mcθt − Mt ||22 ,                                                             (6)
+steps approach a Gaussian prior [55], [56]. A smaller τ                                                                                          T t=1
+increases the mismatch between the predicted noise and the                                                                                                                                                             ′
+injected Gaussian noise, making the SDS loss less reliable for                                    where θt denotes the 4D model at time t, mcθt represents the
+                                                                                                                      ′
+reflecting how well the diffusion prior aligns with the rendered                                  alpha channel of xcθt and Mt represents the mask of frame It .
+inputs. We provide the SDS–object-distance curves in Fig-                                            Unknown Spatiotemporal Viewpoint Alignment. Beyond
+ure 6. (a) When τ ∈ {100, 200, 300} display no stable pattern,                                    enforcing constraints on frontal actions, extending motion
+resulting in unreliable MAOD estimation. (b) Intermediate                                         information to other unknown viewpoints remains a significant
+timesteps τ ∈ {400, 500, 600} begin to exhibit a decreasing-                                      challenge. Previous approaches [1]–[4], [7] attempt to impose
+then-increasing trend but remain inconsistent across distances.                                   constraints using SDS optimization via image diffusion mod-
+(c) In contrast, τ ∈ {700, 800, 900} produce highly consistent                                    els, multiview diffusion models, and video diffusion models.
+curves with a pronounced local minimum near the true object                                       However, this indiscriminate stacking of SDS not only incurs
+distance, enabling robust MAOD identification. Therefore, we                                      substantial computational overhead but also fails to guarantee
+adopt τ ∈ {700, 800, 900} and use the averaged SDS loss                                           cohesive results. To address this issue, we revisit the opti-
+across these timesteps, which reduces stochastic variability and                                  mization strategy of multiview diffusion models for SDS and
+yields stable, reliable MAOD estimates.                                                           propose the Motion-Geometry Joint Alignment (MGJA).
+   Compared with the MSE loss used for VAOD, the SDS                                                 MGJA leverages a single multiview diffusion model, refer-
+loss exhibits fundamentally different behavior. A well-trained                                    encing both video and 3D data, to effectively transfer motion
+diffusion model produces a lower SDS loss when the input                                          and geometric performance from frontal views to unknown
+aligns well with its learned prior. Consequently, within the                                      targets in nonfrontal views and non-initial timesteps for 4D
+distance range smaller than VAOD, using the video frame                                           objects. We utilize one multiview diffusion model [53] to
+I1 as the conditioning view yields a clear local minimum,                                         simultaneously align 4D renderings with video motion and 3D
+which corresponds to the object distance most compatible                                          geometry. The motion and posture of a 4D object in unknown
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                     6
+
+
+
+views need to align with the corresponding video frame at each
+time step. Specifically, as shown in Figure 3, for each time step              …doll wearing a green coat
+                                                                                     gives a rose…
+t, we randomly select N viewpoints. These N viewpoints are
+used to render a set of corresponding images from the 4D
+model at the video-aligned object distance dVA . Subsequently,                  … 3D rendering of a purple
+we utilize Lmot to transfer the motion information from the                    cartoon character dancing…
+front view to these rendered viewpoints:
+              N
+           1 X                                                      2            … a full-body astronaut
+Lmot =           w(τ ) ϵϕ (ατ xcθnt + στ ϵ; It , cn , dVA , τ ) − ϵ 2 ,                jumping…
+          N n=1
+                                                                    (7)                  Prompt            Generated Image   Generated Video   Generated 3D
+where ϵ is the randomly sampled noise, ϕ represents the U-
+Net of the multiview diffusion model, and w(τ ) denotes the                   Fig. 7. Samples from X4D dataset. Each quadruplet consists of a prompt,
+weight coefficient related to the timestep. The variable τ is                 a generated image, a generated video, and a generated 3D object, all created
+                                                                              by off-the-shelf diffusion models.
+a randomly sampled timestep within the multiview diffusion
+model. It is the t-th video frame, and cn is the coordinate                   D. Asynchronous Optimization
+of the n-th viewpoint. Lmot ensures that the motion posture
+of the 4D object’s position at each moment aligns with the                       The optimization objective LMGJA aims to refine the 4D
+motion posture of the front view.                                             representation by integrating both known and unknown tem-
+   Merely optimizing the motion alignment of the 4D object                    poral perspectives to align effectively with video and 3D data.
+with the video might cause the generated target’s geometric                   However, employing a synchronous optimization approach, as
+structure to deviate from the 3D target. Therefore, it is essential           seen in previous works [7], can introduce instability, poten-
+to ensure that the 4D target maintains geometric consistency                  tially leading to suboptimal generation results. To overcome
+with the 3D input. For unknown viewpoints of 4D object,                       this challenge, we propose an asynchronous optimization
+another critical prior is the rendered images from the 3D                     framework. As illustrated in Figure 3, our method strategically
+representation at the same viewpoint. Although the rendered                   alternates between fixing the 3DGS and the deformation net-
+images of 3D and 4D from the same viewpoint may differ due                    work while optimizing the other. This asynchronous strategy
+to motion over time, their geometric structures remain highly                 ensures that when the 3DGS geometry is suboptimal, the
+correlated. By leveraging these same-view-rendered images                     deformation network can compensate. When the deformation
+from the 3D representation as geometric priors, we can ensure                 network’s capacity to drive motion is inadequate, the 3DGS
+better alignment between the 4D output and the 3D target,                     reinforces the geometric structure. This approach fosters a
+avoiding undesirable modifications or artifacts introduced by                 more balanced integration of geometry and motion.
+the multiview diffusion model. This enhances the fidelity of
+the 4D geometry to the given 3D target. So, we propose Lgeo                   E. X4D Dataset
+for optimization:                                                                Figure 7 presents representative samples from our X4D
+            N                                                                 dataset, which is built from four types of aligned multimodal
+          1 X
+Lgeo =            w(τ )||ϵϕ (ατ xcθnt + στ ϵ; xcψn , 0, dMA , τ ) − ϵ||22 .   quadruplets (text, image, video, and 3D). We construct the
+          N n=1
+                                                                              dataset through four complementary pipelines: (a) Prompt-
+                                                               (8)
+                                                                              driven pipeline. A textual prompt (from MAV3D [4]) is first
+Since both xcθnt and xcψn are rendered from the same viewpoint
+                                                                              used to generate an image via SDXL [57]. The same prompt
+cn , the coordinate parameter in Equation 8 is zero. Thus, xcψn is
+                                                                              then drives SVD [19] to produce a video, and LGM [20]
+regarded as the hypothetical front viewpoint and is utilized to
+                                                                              to reconstruct the corresponding 3D Gaussian representation.
+refine the rendered image xcθnt of the 4D model through SDS
+                                                                              (b) Image-driven pipeline. Given a single input image, we
+optimization, following motion deformation, from the view-
+                                                                              retrieve visually related content from the web, synthesize a
+point cn . Here, xcψ represents the rendered image of the 3D
+                                                                              short video using SVD, reconstruct its 3D Gaussian model
+input ψ from the same viewpoint c. Additionally, considering
+                                                                              with LGM, and produce a paired textual description using
+that the structure of a 4D object can gradually diverge more
+                                                                              image-to-prompt tool [58]. (c) Video-driven pipeline. For
+from the 3D geometry over time, we introduce a temporal
+                                                                              videos collected from Kling [59], we extract the first frame
+gradient coefficient TT−t λ, where λ is a hyperparameter used
+                                                                              as the reference image for 3D reconstruction. Each video
+to control the scales of Lmot and Lgeo . At this point, we
+                                                                              is also processed by an image-to-text model to obtain its
+can derive the LUSVA to optimize unknow spatiotemporal
+                                                                              textual prompt. (d) 3D-driven pipeline. 3D assets from
+viewpoint expression of 4D object:
+                                                                              an open-source repository [22] are rendered from canoni-
+                            T
+                       1 X t           T −t                                   cal viewpoints. The rendered image is then used for video
+           LUSVA =             λLmot +      λLgeo .                     (9)
+                       T t=1 T           T                                    synthesis and textual description generation, forming a com-
+                                                                              plete text–image–video–3D quadruplet. Together, these four
+From the above description, we can now derive the overall                     pipelines produce consistently aligned multimodal quadru-
+optimization objective LMGJA :                                                plets, enabling the creation of a large-scale, diverse dataset
+                   LMGJA = LKSVA + LUSVA .                            (10)    tailored for advancing 4D generation research.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                          7
+
+
+Input
+STAG4D Free4D 4Diffusion
+SC4D
+L4GM
+DG4D
+
+
+
+
+                           Color
+                           shift
+Align4D
+
+
+
+
+                                   X4D                                 X4D                                           Consistent4D
+
+Fig. 8. Qualitative comparisons between Align4D and other methods on our X4D and Consistent4D datasets. Align4D is capable of generating detailed,
+geometrically consistent 4D targets that faithfully replicate the motion observed in the video. To better appreciate these qualities, please zoom in.
+
+   The construction of X4D inevitably inherits statistical bi-              distance search, we set dmin = 0.00001 and dmax = 3.00001,
+ases from its upstream generative components—SDXL [27],                     performing searches at intervals of 0.05. The number of
+SVD [19], and LGM [20]—each of which is trained on het-                     viewpoints is set to N = 4, and we use Zero123 [53] as
+erogeneous data sources. To mitigate cross-modal distribution               the multiview diffusion model. All experiments are conducted
+mismatch, we intentionally combine models originating from                  on a system equipped with NVIDIA V100 GPUs with 32 GB
+diverse training corpora, with prompts generated via an image-              memory each, an Intel Xeon processor (Skylake, IBRS), and
+to-prompt tool [58]. All assets, including text, images, videos,            629 GB of RAM. The software environment includes Ubuntu
+and 3D models, are collected from openly licensed community                 22.04.3 LTS with CUDA 12.4.
+datasets. During cross-modal expansion using generative tools                  Dataset. We conduct experiments on the proposed X4D
+such as SDXL and Kling, all generated samples undergo                       dataset, which contains aligned text–image–video–3D quadru-
+strict manual filtering to ensure data quality and regulatory               plets generated through our unified multimodal pipeline, as
+compliance.                                                                 shown in Figure 1. These quadruplets provide consistent input
+                                                                            conditions across tasks, allowing fair comparisons among text-
+                                    IV. E XPERIMENT                         to-4D, image-to-4D, video-to-4D, and 3D-to-4D generation.
+                                                                            To further evaluate performance, we also use the Consistent4D
+A. Experimental Settings                                                    dataset [5], specifically designed for video-to-4D task. Both
+   Implementation Details. In Align4D, we set the dense                     quantitative and qualitative experiments on X4D and Consis-
+percentage to 0.1, the densification interval to 100, and the               tent4D assess the geometric consistency, motion coherence,
+densification gradient threshold to 0.05. All other settings                and fidelity of the generated 4D outputs relative to the input
+follow DG4D [7]. In particular, DG4D uses a fixed object                    control conditions.
+distance of 1.5 to align with the video, and sets the multi-view               Metrics. We evaluate generation quality using PSNR [60],
+diffusion model parameter to 0 for SDS optimization, which                  SSIM [61], LPIPS [62], CLIP similarity [63], and FVD [64],
+we also adopt in our ablation experiments. During the object                following established practice in 4D generation. PSNR, SSIM,
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                          8
+
+
+
+                                                                TABLE I
+                                         Q UANTITATIVE RESULTS OF A LIGN 4D ON OUR X4D DATASET.
+
+                                             Human Evaluation                                                         VBench
+        Methods
+                                                                                              Subject           Bckground    Aesthetic                 Imaging
+                         Appearance% ↑     Structure% ↑     Motion% ↑   Fidelity% ↑
+                                                                                            Consistency ↑      Consistency ↑ Quality ↑                 Quality ↑
+     L4GM [8]                  9.2              5.5            7.9          6.6                  0.80                   0.88             0.46            0.40
+     SC4D [10]                 5.3              5.3            4.0          5.3                  0.81                   0.91             0.43            0.38
+    STAG4D [48]               19.7             17.1           26.3         18.4                  0.83                   0.91             0.50            0.41
+  DG4D [7] (baseline)          4.0              2.6            3.9          3.9                  0.71                   0.85             0.40            0.31
+     Align4D (ours)           61.8             69.5           57.9         65.8                  0.85                   0.93             0.55            0.43
+
+
+
+LPIPS, and CLIP similarity are adopted as image-level metrics                                       TABLE II
+to assess perceptual and semantic alignment between rendered            Q UANTITATIVE RESULTS OF A LIGN 4D ON THE C ONSISTENT 4D DATASET.
+                                                                             T HE BEST SCORES ARE HIGHLIGHTED IN BOLD . ∗ INDICATES
+images and references. FVD serves as a video-level metric                  GENERATING VIDEOS USING THE FIRST AND LAST FRAMES OF THE
+widely used in generative video evaluation, capturing both               TRAINING VIDEO . + INDICATES GENERATING VIDEOS USING THE FIRST
+frame-level fidelity and temporal coherence. Additionally, we                         AND LAST FRAMES OF THE TEST VIDEO .
+
+incorporate the CLIP-F score [65], defined as the average CLIP                                                  Consistent4D Dataset [5]
+                                                                                  Methods
+similarity between adjacent frames, to evaluate 4D rendering                                        PSNR↑      SSIM↑ LPIPS↓        FVD↓         CLIP↑    CLIP-F↑
+
+and quantify temporal semantic consistency. We further in-                 CRM [69] + Rigging           13.5     0.88          0.17   1258.5    0.79        -
+                                                                          Meshyai [22] + Rigging        12.7     0.87          0.19   1179.2    0.85        -
+corporate VBench [66] to assess 360° surround-view render-                     Kling∗ [59]              11.0     0.81          0.28     -       0.81        -
+                                                                              Kling+ [59]               11.4     0.80          0.26     -       0.78        -
+ings. VBench provides model-based scores along four dimen-
+                                                                            4Diffusion [68]             12.2     0.84          0.26   1522.9    0.83      0.912
+sions—subject consistency, background consistency, aesthetic                  Free4D [67]                6.4     0.45          0.41   2513.6    0.77      0.809
+quality, and imaging quality—allowing a comprehensive eval-                    L4GM [8]                 14.2     0.84          0.20   1217.1    0.90      0.990
+                                                                               SC4D [10]                16.8     0.86          0.16   1132.2    0.91      0.988
+uation of rendering quality.                                                  4DGen [70]                12.7     0.87          0.19   1258.5    0.80      0.981
+                                                                             Efficient4D [9]            12.8     0.85          0.21   1304.2    0.89      0.954
+   Baselines. To ensure fair cross-modal comparison, all base-               STAG4D [48]                17.0     0.87          0.14   1251.7    0.90      0.988
+lines are adapted to our unified X-to-4D framework, receiving              DG4D [7] (baseline)          10.7     0.78          0.28   1262.0    0.89      0.978
+
+their respective modality from the structured X4D quadruplets                 Align4D (ours)            17.8     0.90          0.11   1088.9    0.94      0.992
+
+as input. This allows diverse methods to generate the same 4D
+targets under consistent conditions. We include representative                                      TABLE III
+image-to-4D models [3], [7], [67] and state-of-the-art video-              Q UANTITATIVE RESULTS FROM ABLATION STUDIES OF A LIGN 4D ON
+to-4D methods [8]–[10], [48], [68]. Text-to-4D [2] is excluded                               C ONSISTENT 4D DATASET.
+due to substantial differences in motion and geometric control.                                                             Consistent4D Dataset [5]
+                                                                          Methods
+The standard 3D-to-4D method [6] is impractical due to                                                         PSNR↑       SSIM↑ LPIPS↓        FVD↓        CLIP↑
+extreme memory demands; instead, we use 3D tools like                     STAG4D [48]                           17.0           0.87    0.14     1251.7     0.90
+                                                                          STAG4D [48] + ODA + MGJA              17.5           0.88    0.12     1109.4     0.93
+CRM [21] and MeshyAI [22] with rigging for a feasible                     STAG4D [48] + AO                      17.2           0.88    0.14     1129.2     0.91
+comparison. Video generation models such as Kling [59]                    DG4D [7] (baseline)                   10.7           0.78    0.28     1262.0     0.89
+are additionally included, producing sequences under identical            Align4D W/O. ODA                      15.9           0.86    0.16     1111.5     0.90
+                                                                          Align4D W/O. MGJA                     15.5           0.85    0.17     1113.1     0.91
+text or image conditions to ensure evaluation consistency. All            Align4D W/O. AO                       17.6           0.89    0.13     1139.7     0.93
+methods are evaluated on X4D using the same quadruplets,                  Align4D (ours)                        17.8           0.90    0.11     1088.9     0.94
+
+ensuring fair comparison across modalities. We also report
+results on the Consistent4D dataset [5], which provides curated         geometric artifacts, whereas SC4D [10] reduces geometric
+sequences for standardized assessment of motion fidelity,               errors but lacks fine-grained detail. L4GM [8] achieves fast
+appearance consistency, and adherence to input conditions.              generation, yet exhibits noticeable geometric inconsistencies.
+                                                                        DG4D [7] can approximate the frontal-view video visually;
+                                                                        however, it occasionally deviates from the video or introduces
+B. Comparisons to State-of-the-Art Methods                              substantial errors in other viewpoints. By contrast, Align4D
+   Qualitative evaluation. We provide extensive visual com-             consistently delivers the most refined 4D outputs, preserving
+parisons on the X4D dataset, where the input data is generated          dynamic motion and geometric fidelity across all views.
+by pretrained generative models. As shown in Figure 8,                     Quantitative evaluation. We first conduct comparisons on
+Align4D produces high-quality, sharp renderings with strong             the X4D dataset. All models generate 4D targets conditioned
+temporal and multiview consistency. In comparison, 4Diffu-              on the same quadruplet inputs and render full 360◦ surround-
+sion [68], despite being a large-scale multiview video diffusion        view videos. A user study with 30 participants evaluates
+model, struggles to generalize to the diverse test scenarios.           the generated results across four dimensions: Appearance,
+Free4D [67], while integrating the powerful 4D reconstruction           Structure, Motion, and Fidelity. Align4D consistently receives
+network MonST3R [71], often fails to generate geometrically             the highest human preference. Additionally, the rendered
+detailed and temporally coherent 4D targets that are view-              videos are evaluated using VBench on subject consistency,
+able from arbitrary angles. STAG4D [48] generally produces              background consistency, aesthetic quality, and imaging quality,
+ JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                              9
+
+
+
+     𝑡1    →      𝑡2          𝑣1      →       𝑣2      (𝑡1 , 𝑣1 ) → (𝑡2 , 𝑣2 ) (𝑡1 , 𝑣1 ) → (𝑡2 , 𝑣2 ) (𝑡1 , 𝑣1 ) → (𝑡2 , 𝑣2 ) (𝑡1 , 𝑣1 ) → (𝑡2 , 𝑣2 )
+
+
+
+
+          Video                       3D                      W/O. ODA            W/O. MGJA                 W/O. AO                  Align4D
+ Fig. 9. Qualitative ablation experiments on the X4D dataset for Align4D. ODA is crucial for precisely injecting action and geometric data into video
+ and multiview diffusion models. MGJA significantly enhances the rendering of 4D non-frontal, multi-moment views by meticulously aligning 4D actions to
+ video and geometry to 3D inputs. Additionally, AO refines the intricate details of the generated 4D targets.
+
+
+                             TABLE IV                                          only to a blurred frontal view but also causes the back
+      C OMPARISON OF LOSS REDUCTION BETWEEN A SYNCHRONOUS                      view to deviate from the 3D data priors when not using
+          O PTIMIZATION (AO) AND J OINT O PTIMIZATION (JO).
+                                                                               ODA for SDS optimization, resulting in erroneous coverage
+                       Step
+                                                                               modifications. Without MGJA, unknown views, especially the
+                               100        200      300        400   500        rear view of the 4D generation target, exhibit more severe
+      Methods
+          Align4D + JO         72.3     174.2      155.2     44.0   3.5
+                                                                               errors and inconsistencies. If asynchronous optimization is
+          Align4D + AO         34.4     87.7        85.7     24.8   3.2        not used, although there is good alignment of dynamics and
+                                                                               geometry with the input video and 3D data in both frontal
+                             TABLE V                                           and other views, some details lack refinement and there is a
+  RUNTIME COMPARISON BETWEEN A LIGN 4D AND BASELINE METHODS .
+   O NLY THE TIME SPENT ON GENERATING 4D TARGETS IS MEASURED ,                 tendency to inherit imperfections from imperfect video or 3D
+      WHILE THE OVERHEAD FOR DATA PREPARATION IS EXCLUDED .                    data. Asynchronous optimization effectively alleviates these
+                                                                               issues. When ODA, MGJA, and AO are used together, forming
+                Methods         Time (Min.)         VRAM (GB)                  the complete Align4D, the 4D target achieves fidelity to video
+              L4GM [8]                1.5                  24.6                motion, 3D geometry, and exhibits detailed precision.
+              SC4D [10]               35                    8.9                   The quantitative results are shown in Table III. By
+             STAG4D [48]              80                   12.2
+              DG4D [7]                15                   15.6                synergistically employing ODA, MGJA, and AO, Align4D
+                                                                               effectively addresses limitations in generated video-3D data,
+            Align4D (ours)             25                  19.4
+                                                                               producing 4D targets with motion and geometry better aligned
+（,3D）        ODA-VAOD                0.0025                 2.7
+             ODA-MAOD                 0.20                  4.5                with human perception. ODA is a prerequisite for robust
+                                                                               MGJA, disabling it significantly degrades performance (Ta-
+                                                                               ble III W/O. ODA). MGJA then refines motion and geometry
+ where Align4D also achieves the top scores. Furthermore,                      alignment using ODA’s precise object distances; the effec-
+ Table II reports the quantitative results on the Consistent4D                 tiveness hinges on ODA’s quality (Table III W/O. MGJA).
+ dataset. Compared to state-of-the-art video-to-4D methods [3],                AO further enhances MGJA’s alignment by decoupling 3DGS
+ [7]–[10], [48], Align4D attains the best performance across                   and deformable network optimization, yielding finer and more
+ five key metrics, covering both image-level and video-level                   stable convergence by mitigating component interference (Ta-
+ evaluations. This demonstrates that Align4D effectively in-                   ble III W/O. AO). Besides, Table V reports the computational
+ tegrates the geometric consistency of 3D data with the mo-                    costs of Align4D and baseline methods, highlighting the
+ tion coherence of video data, successfully transferring these                 low overhead of VAOD and MAOD searches. In summary,
+ properties to novel, unseen views. In contrast, 3D generation                 the ODA module estimates accurate object distances, MGJA
+ models [21], [22] combined with manual rigging struggle                       ensures robust multiview and temporal alignment, and AO
+ to faithfully reproduce object motion, and video generation                   facilitates optimal convergence. Together, these components
+ models [59] fail to maintain motion consistency under test-                   allow Align4D to achieve state-of-the-art generation quality
+ view conditions. Overall, Align4D exhibits clear advantages                   with balanced computational efficiency.
+ over these alternatives, producing more accurate, temporally
+                                                                                  Module migratability. We successfully migrate our mod-
+ coherent, and geometrically consistent 4D results.
+                                                                               ules to the STAG4D method. We specifically integrate ODA,
+                                                                               MGJA, and AO into STAG4D (see Table III). Notably, MGJA’s
+ C. Ablation Studies                                                           synergistic function relies on the optimal object distance
+   The qualitative results are shown in Figure 9. As can                       provided by ODA; thus, these two modules are inherently
+ be seen, the absence of object distance alignment leads not                   bound together for migration. This demonstrates that ODA,
+                                                                               (𝑡2 , 𝑣3 )
+  Video OF LATEX CLASS FILES,
+JOURNAL                    3DVOL. 14, NO. 8, AUGUST
+                                               W/O.2021
+                                                     FLA                      W/O. MGJA                                      W/O. AO                      Align4D                   10
+
+                                                                                                      GT                   W/O. mask          W/. mask
+
+                 (𝑡1 , 𝑣1 )   (𝑡2 , 𝑣1 )   (𝑡2 , 𝑣2 )   (𝑡2, 𝑣3)                                  (a) Initial         (b) SDS loss local      (c) VAOD         (b) SDS loss global
+
+
+
+
+                                                                               Loss (𝑡3 , 𝑣4 )
+                                                                                                      setting             minimum                                   minimum
+      4D-fy
+                                                                                                                                                               Object
+                                                                                                                                                              Distance
+                                                                                                  𝑑VA = 1.0         𝑑VA = 1.60001 𝑑VA = 2.0              𝑑VA = 3.0
+                                                                                                  𝑑MA = 1.0         𝑑MA = 0.25001 𝑑MA = 2.0              𝑑MA = 3.0
+      Align4D
+
+
+
+
+                                                                                                                      (via ODA)
+
+
+
+
+                    …a doll wearing a green coat gives a rose …
+      4D-fy
+
+
+
+
+                                                                                          Condition             (a) MAOD≈0         (b) MAOD<          (c) MAOD=      (b) MAOD>
+                                                                                                                                      VAOD               VAOD           VAOD
+
+                                                                                  Fig. 11.     Generation results under different MAOD selections. (a) A
+      Align4D
+
+
+
+
+                                                                                  small object distance (OD) used as MAOD introduces color shifts and loss
+                                                                                  of fine details. (b) An SDS-loss local-minimum OD used as MAOD achieves
+                                                                                  the best input fidelity. (c) Using VAOD as MAOD produces an under-scaled
+                                                                                  object with reduced high-frequency detail. (d) An SDS-loss global-minimum
+                                                                                  OD used as MAOD likewise leads to under-scaling.
+                …a monkey wearing sunglasses and a yellow shirt …
+                                                                                                              (𝑡1 , 𝑣1 )      (𝑡2, 𝑣1)     (𝑡1, 𝑣2)      (𝑡1, 𝑣3)        (𝑡1, 𝑣4)
+Fig. 10.    Generation results comparing Align4D with text-to-4D
+
+
+                                                                                                 𝑑MA = 1.0
+                                                                                                 𝑑VA = 1.0
+method [2]. Given the same text prompts, Align4D delivers markedly superior
+geometric structure and a significantly wider motion range.
+
+
+MGJA, and AO from Align4D can be directly transferred
+                                                                                                 𝑑MA = 0.25
+                                                                                                 𝑑VA = 1.60
+                                                                                     (via ODA)
+
+
+
+
+to other models like STAG4D, providing performance gains
+across multiple metrics compared to the STAG4D baseline.
+   Asynchronous optimization effectiveness. We further
+compared the effects of joint optimization (JO) and asyn-
+                                                                                                 𝑑MA = 2.0
+                                                                                                 𝑑VA = 2.0
+
+
+
+
+chronous optimization (AO) during the training phase to
+highlight their differences. As shown in Table IV, under the
+same number of steps, asynchronous optimization resulted in
+smaller fluctuations and a faster decrease in loss, using an
+                                                                                                 𝑑MA = 3.0
+                                                                                                 𝑑VA = 3.0
+
+
+
+
+SDS loss as an example. It also achieved a lower loss value at
+the same number of steps. This indicates that decoupling the
+optimization of the deformation network and 3DGS is more
+beneficial for aligning 4D objects with the input conditions.                     Fig. 12. 4D generation results under different object distances. Only when
+                                                                                  the optimal values are found using the object distance alignment method for
+                                                                                  dVA and dMA , can we ensure the generation of 4D targets with faithful motion
+D. Comparison with Text-to-4D generation method                                   and accurate geometry.
+   Compared to the text-to-4D generation method 4D-Fy [2],
+the dynamic quality of 4D outputs controlled solely by text                       differs from the viewpoint-aligned object distance (VAOD).
+prompts is noticeably inferior to those guided by images or                       Figure 11 illustrates this effect by varying MAOD while
+videos, even when using the same prompts, as illustrated in                       keeping VAOD fixed: (a) MAOD ≈ 0 (initial setting): The
+Figure 10. Moreover, text-to-4D methods cannot accept inputs                      generated results exhibit local blurring and overall color shifts,
+from other modalities, such as images or videos, making                           indicating that the multiview diffusion model cannot accurately
+both qualitative and quantitative evaluation on the Consis-                       infer the target geometry under the current object distance
+tent4D dataset infeasible. In contrast, Align4D’s flexible X-                     setting. (b) MAOD < VAOD (local SDS-loss minimum): The
+to-4D generation pipeline not only supports a wide range of                       generated geometry is complete, and the rendered appearance
+input modalities but also leverages the smooth motion from                        closely matches the input, suggesting that this distance best
+the generated video and the fine-grained geometric guidance                       aligns with the diffusion model’s implicit distance prior. (c)
+provided by the generated 3D object.                                              MAOD = VAOD: The generated object appears underscaled
+                                                                                  with color inconsistencies, indicating that VAOD does not
+                                                                                  capture the diffusion model’s internal understanding of object
+                              V. D ISSCUSSION
+                                                                                  distance, and thus MAOD is required for proper alignment. (d)
+A. Why MAOD Should Be Smaller Than VAOD                                           MAOD > VAOD (global SDS-loss minimum): Although this
+   MAOD is designed to approximate the intrinsic object dis-                      setting achieves the lowest SDS loss, it produces unrealistic
+tance preferred by the multiview diffusion model, which often                     object scale and appearance, demonstrating that global SDS-
+                                          Reference Frame                                                                                                                               “A monkey is
+                                                                                                                                                                                                                      Condition
+                                                             Texture                                                                                                                  playing a guitar.”
+                                                            Alignment                                                  Render
+                                                                                                                                                                                                                                              T-MV
+                                                                                                                                                                                                                                             Refinemt
+                                                                         Front
+          JOURNAL OF LATEX CLASS
+                             View
+                                  FILES, 4DGS
+                                          VOL. 14, NO. 8, AUGUST
+                                                           Time
+                                                                 2021                                                                                                                        T                                                                                                                       11
+
+
+
+
+                                                                                                                                       Alignment
+                                                                                                                                       Geometry
+                                                                                                                                                                                                              T2V Diffusion
+                                              Focal                                                   GS-Mesh
+                                                                 Rendering Focal                     Contrastive                                                                                                   Motion
+                                            Alignment
+                                                                                                      Learning                                                              Render                                Alignment
+
+                                                                                                                                                                                                                     Condition
+
+          Video                                                         Generate                     3D                Render                      Time
+                                                                                                                                                                 W/O. FLA                    T
+
+                                                                                                                                                                                                                                             W/O. MGJA
+                                                                                                                                                                                                                                        Reference Video
+
+                                                                                                                                                                                                                                              T-MV
+                                                                                                                                                                                                                                                                                    W/O. AO                    Align4D
+                                      (         ) (                      Mesh
+                                                                                   )           (                   )              (                View   )      4DGS
+                                                                                                                                                                        (                        )                   (                       )
+                                                                                                                                                                                                                                             Refinemt
+                                                                                                                                                                                                                                                          (      ) (          ) (       ) (      ) (       ) (           )
+           Zero123 ImageDream
+                                                                                                                                Random
+                                                                                                       Mesh                      View
+                                          Image-to-Mesh                                                                                                                                      V
+                                          Diffusion Model                                                                                                                                                     MV Diffusion
+                                                                                   (a) Intra-Frame                                                                                   (b) Inter-Frame
+
+                                                             Our                   Random                  Front          Front View               Random View              4D/3D                          Data                   Gradient
+
+
+            (𝑡1 , 𝑣1 )                                        (𝑡2 , 𝑣1 )
+                                                             Module                View
+                                                                                                              (𝑡2 , 𝑣2 )
+                                                                                                           View           Rendering
+                                                                                                                                                     (𝑡3 , 𝑣3 )
+                                                                                                                                                   Rendering                Representation                 Flow                   Flow
+
+                                                                                                                                                                                                                                                          (𝑡1 , 𝑣1 )       (𝑡2 , 𝑣2 )    (𝑡3 , 𝑣3 )     (𝑡4 , 𝑣4 )
+
+
+
+
+                                                                                                                                                                                                                                     Seed 0
+4D-fy
+Align4D
+
+
+
+
+                                                                                                                                                                                                                                    Seed 1
+          Fig. 13. Align4D with different multiview diffusion models. We incorporate two distinct multiview diffusion models, Zero123 [41] and ImageDream [72],
+          both of which produce outputs with accurate geometric structures and temporally coherent motion. These results further demonstrate that Align4D is compatible
+                           τ ∈multiview
+                       (a)of
+          with a variety       [100,200,300]         (b) τ ∈ [400,500,600]
+                                        diffusion backbones.                   (c) τ ∈ [700,800,900]
+
+                                      …a doll wearing a green coat gives a rose …                                                                                                                                                                                       …a ghost is eating a burger …
+
+
+
+
+                                                                                                                                                                                                                                     Seed 0
+4D-fy
+Align4D
+
+
+
+
+                                                                                                                                                                                                                                     Seed 1
+           Input
+
+
+
+
+          …a monkey wearing sunglasses and a yellow shirt …                                                                                                                                                                                                            …fluffy yorkie eating a donut…
+
+                                                                                                                                                                                                                              Fig. 15. Visualization of diversity in generated results shows that by using
+                                                                                                                                                                                                                              different random seeds. Align4D can produce 4D outputs with significant
+           STAG4D Free4D 4Diffusion
+
+
+
+
+                                                        GT                                            W/O. mask                                           W/. mask                                                            variations while faithfully adhering to the input conditions.
+          Fig. 14. Effect of masks on 4D generation results. Incorporating masks
+          further enhances boundary fidelity and preserves fine edge details in the
+          generated 4D content.                                                                                                                                                                                               high-quality geometry and maintain motion consistency even
+                                                                                                                                                                                                                              without masks. However, incorporating masks improves the
+                                                                                                                                                                                                                              preservation of fine local details and achieves a closer visual
+          loss minimization does not correspond to a physically mean-                                                                                                                                                         match to the input, particularly in the frontal view.
+          ingful distance alignment. These observations indicate that the
+          diffusion model favors an object distance slightly smaller than                                                                                                                                                     D. Stability of Generation Across Different Diffusion Models
+          VAOD, typically near a local SDS-loss minimum, making it
+                                                                                                                                                                                                                                 MAOD exhibits broad compatibility with various diffusion
+          the most appropriate choice for defining MAOD.
+                                                                                                                                                                                                                              models. Methods such as Zero123 [53] allow explicit control
+                                                                                                                                                                                                                              of the object distance by directly using camera parameters as
+          B. Generation Quality Comparison Across Object Distances
+           SC4D
+
+
+
+
+                                                                                                                                                                                                                              inputs. In contrast, multiview diffusion models represented by
+             Figure 12 shows a visual comparison of 4D generation                                                                                                                                                             ImageDream [72] employ a fixed distance schedule: they rely
+          results under different object distances. Using an unmatched                                                                                                                                                        on several predefined camera parameters to generate multi-
+          video object distance causes noticeable blur in frontal-view                                                                                                                                                        view outputs, and their pretrained weights implicitly encode
+           L4GM
+
+
+
+
+          actions and introduces conflicts with the multiview diffu-                                                                                                                                                          a fixed viewing distance. Consequently, only an extremely
+          sion model supervision, resulting in geometric inaccuracies.                                                                                                                                                        lightweight modification to Equation 5 is required for adap-
+          Similarly, an unmatched multiview object distance leads to                                                                                                                                                          tation to these models. Specifically, within
+                                                                                                                                                                                                                                                                        nthe distance
+                                                                                                                                                                                                                                                                                     range
+          misalignment of the target geometry across viewpoints. By
+           DG4D
+
+
+
+
+                                                                                                                                                                                                                                                                            c,d′
+                                                                                                                                                                                                                                                                                 o
+                                                                                                                                                                                                                              D = [dmin , dmax ], we render image sets     xθ1              ,
+          applying Color
+                     Object Distance Alignment (ODA), the matched                                                                                                                                                                                                                                        c∈C     d′ ∈D
+          object distances
+                     shift ensure consistent video motion and 3D objectwhere c corresponds to three horizontally varying azimuth
+          geometry, producing coherent and high-quality 4D assets.     angles [−90◦ , 0◦ , 90◦ ], which lie within the azimuth range
+           Align4D
+
+
+
+
+                                                                       covered by the ImageDream training data. The SDS loss for
+          C. Effect of Masks                                           each candidate distance d′ is computed as:
+                                                                                                                                        2
+                               [7], we employ RemoveBg [73], basedX4D Ld′ = 1                                      c,d′
+                                                                                                                                   
+             Following DG4DX4D
+                                                                                           XX
+                                                                           SDS                      w(τ )  ϵ ϕ   z      ;
+                                                                                                              Consistent4D
+                                                                                                                  θ1      I1 , c, τ   −ϵ .
+                             2
+          on a pretrained U Net [74], to extract frame-wise masks                 |C| |T|                                               2
+                                                                                           c∈C τ ∈T
+          that guide generation toward better alignment with the input                                                                    (11)
+          video geometry. Figure 14 presents an ablation study on the We select the distance d′ that is smaller than VAOD and
+          mask loss. The results indicate that Align4D can generate corresponds to a local minimum of the SDS loss as the MAOD.
+ vi
+Gen
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                  12
+
+
+Align4D
+                             TABLE VI                                          image-to-video model, with the resulting image-to-3D output
+  U SER P REFERENCE FOR R ESULTS G ENERATED BY D IFFERENT M ODELS              to make a video-3D pair as input, the generated 4D assets
+     （      ） I NTEGRATED
+                   （       ）     （ A LIGN
+                           INTO THE     ）4D （        ）
+                                             P IPELINE
+                                                                               inherit limitations from the underlying diffusion models. In
+                                Video model                                    particular, current text-to-image and image-to-video diffusion
+                                              Kling [59]   VideoCrafter [17]
+                  3D model                                                     models struggle with transparent materials and rapidly chang-
+                         Meshai [22]           27.4%            22.5%          ing neon effects. Consequently, Align4D’s 4D outputs also
+                         Tripo3d [75]          26.5%            23.6%
+                                                                               reflect these deficiencies. We expect that as generative models
+                                                                               improve in expressiveness, these limitations will be mitigated.
+             Generated
+              video
+
+
+
+
+                                                                                                         VI. C ONCLUSION
+                                                                                  In this paper, we propose Align4D, an alignment-based
+                                                                               framework designed for flexible X-to-4D generation. This
+                                                                               framework leverages multimodal inputs combined with pre-
+             Align4D
+
+
+
+
+                                                                               trained diffusion models to produce paired video-3D data .
+                                                                               Align4D introduces object distance-based alignment, search-
+                                                                               ing for the video-aligned object distance and the multiview-
+          “Transparent robot, glowing neon reflections, rapidly waving.”       aligned object distance that achieves optimal generalization
+                                                                               for multiview diffusion models. Based on this, the framework
+Fig. 16. Failure case. The generated 4D assets exhibit limited fine detail
+when handling transparent or rapidly flickering neon objects.                  aligns the front-view renderings of 4D targets with the video
+                                                                               and conditions unknown non-front view multi-timestep ren-
+                                                                               derings on the same-timestep front-view video frames and the
+Figure 13 presents results generated using different diffusion                 same-view initial-timestep 3D renderings. By employing SDS
+models. Align4D produces highly consistent outputs across                      optimization, Align4D achieves joint alignment of motion and
+multiple diffusion backbones and remains stable across diverse                 geometry. Furthermore, asynchronous optimization is utilized
+examples, demonstrating that MGJA in Align4D is broadly                        to refine the 4D target for better motion and geometry repre-
+applicable to various multiview diffusion models.                              sentation. To evaluate the open X-to-4D generation task, we
+                                                                               propose a quadruplet dataset, X4D, consisting of (prompt, im-
+E. Align4D with Different Seeds                                                age, video, 3D). Through extensive testing in generated scenes,
+   To investigate the impact of random seeds on 4D generation,                 real-world scenarios, and synthetic environments, Align4D
+we use the text-to-4D task as an example, since it involves                    demonstrates exceptional generative capabilities.
+the most extensive data processing through multiple diffusion
+models. Given a fixed prompt, an image is first generated                                                   R EFERENCES
+via SDXL, followed by video synthesis with SVD and 3D
+                                                                               [1] H. Ling, S. W. Kim, A. Torralba, S. Fidler, and K. Kreis, “Align
+generation with LGM to construct a video–3D pair. Align4D                          your gaussians: Text-to-4d with dynamic 3d gaussians and composed
+then generates the corresponding 4D object. As shown in                            diffusion models,” in Proceedings of the IEEE/CVF Conference on
+Figure 15, while different seeds introduce stylistic variations                    Computer Vision and Pattern Recognition, 2024, pp. 8576–8588.
+                                                                               [2] S. Bahmani, I. Skorokhodov, V. Rong, G. Wetzstein, L. Guibas,
+in the video–3D pair, the resulting 4D objects consistently                        P. Wonka, S. Tulyakov, J. J. Park, A. Tagliasacchi, and D. B. Lindell,
+preserve the input text semantics and maintain stable geometric                    “4d-fy: Text-to-4d generation using hybrid score distillation sampling,”
+structure across seeds.                                                            in Proceedings of the IEEE/CVF Conference on Computer Vision and
+                                                                                   Pattern Recognition, 2024, pp. 7996–8006.
+                                                                               [3] Y. Yin, D. Xu, Z. Wang, Y. Zhao, and Y. Wei, “4dgen: Grounded 4d
+F. Robustness Across Diverse Video and 3D Generation Mod-                          content generation with spatial-temporal consistency,” arXiv preprint
+els                                                                                arXiv:2312.17225, 2023.
+                                                                               [4] U. Singer, S. Sheynin, A. Polyak, O. Ashual, I. Makarov, F. Kokkinos,
+   Align4D operates on video–3D pairs generated by various                         N. Goyal, A. Vedaldi, D. Parikh, J. Johnson, and Y. Taigman, “Text-to-
+diffusion models, regardless of the underlying architecture.                       4d dynamic scene generation,” in International Conference on Machine
+                                                                                   Learning, 2023.
+Table VI presents results obtained using different combinations                [5] Y. Jiang, L. Zhang, J. Gao, W. Hu, and Y. Yao, “Consistent4d:
+of video and 3D generative models. For each configuration, the                     Consistent 360° dynamic object generation from monocular video,” in
+same conditioning input is used to synthesize the video–3D                         International Conference on Learning Representations, 2024. [Online].
+                                                                                   Available: https://openreview.net/forum?id=sPUrdFGepF
+pair, which Align4D then processes to produce the final 4D                     [6] Y. Zhao, Z. Yan, E. Xie, L. Hong, Z. Li, and G. H. Lee, “Ani-
+output. A user study with 30 participants further evaluates                        mate124: Animating one image to 4d dynamic scene,” arXiv preprint
+these results. Across all combinations, Align4D receives com-                      arXiv:2311.14603, 2023.
+                                                                               [7] J. Ren, L. Pan, J. Tang, C. Zhang, A. Cao, G. Zeng, and Z. Liu,
+parable user preferences, demonstrating that the framework                         “Dreamgaussian4d: Generative 4d gaussian splatting,” arXiv preprint
+consistently delivers high-quality 4D generation, thereby fur-                     arXiv:2312.17142, 2023.
+ther validating the model versatility of Align4D.                              [8] J. Ren, C. Xie, A. Mirzaei, K. Kreis, Z. Liu, A. Torralba, S. Fidler, S. W.
+                                                                                   Kim, H. Ling et al., “L4gm: Large 4d gaussian reconstruction model,”
+                                                                                   Annual Conference on Neural Information Processing Systems, vol. 37,
+G. Failure Analysis                                                                pp. 56 828–56 858, 2024.
+                                                                               [9] Z. Pan, Z. Yang, X. Zhu, and L. Zhang, “Efficient4d: Fast dy-
+   We further analyze scenarios where Align4D underper-                            namic 3d object generation from a single-view video,” arXiv preprint
+forms. When using a text-to-image model followed by an                             arXiv:2401.08742, 2024.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                    13
+
+
+
+[10] Z. Wu, C. Yu, Y. Jiang, C. Cao, F. Wang, and X. Bai, “Sc4d: Sparse-               latent diffusion models,” in Proceedings of the IEEE/CVF Conference
+     controlled video-to-4d generation and motion transfer,” in European               on Computer Vision and Pattern Recognition, 2023, pp. 22 563–22 575.
+     Conference on Computer Vision. Springer, 2024, pp. 361–379.                  [31] S. Ge, S. Nah, G. Liu, T. Poon, A. Tao, B. Catanzaro, D. Jacobs, J.-
+[11] Z. Yang, Z. Pan, C. Gu, and L. Zhang, “Diffusion$ˆ2$: Dynamic                     B. Huang, M.-Y. Liu, and Y. Balaji, “Preserve your own correlation: A
+     3d content generation via score composition of video and multi-                   noise prior for video diffusion models,” in Proceedings of the IEEE/CVF
+     view diffusion models,” in International Conference on Learning                   International Conference on Computer Vision, 2023, pp. 22 930–22 941.
+     Representations, 2025. [Online]. Available: https://openreview.net/          [32] R. Girdhar, M. Singh, A. Brown, Q. Duval, S. Azadi, S. S. Rambhatla,
+     forum?id=fectsEG2GU                                                               A. Shah, X. Yin, D. Parikh, and I. Misra, “Factorizing text-to-video
+[12] H. E. Pang, S. Liu, Z. Cai, L. Yang, T. Zhang, and Z. Liu, “Disco4d:              generation by explicit image conditioning,” in European Conference on
+     Disentangled 4d human generation and animation from a single image,”              Computer Vision. Springer, 2024, pp. 205–224.
+     in Proceedings of the Computer Vision and Pattern Recognition Confer-        [33] Y. Guo, C. Yang, A. Rao, Z. Liang, Y. Wang, Y. Qiao, M. Agrawala,
+     ence, 2025, pp. 26 331–26 344.                                                    D. Lin, and B. Dai, “Animatediff: Animate your personalized text-
+[13] Y. Wang, X. Wang, Z. Chen, Z. Wang, F. Sun, and J. Zhu, “Vidu4d:                  to-image diffusion models without specific tuning,” in International
+     Single generated video to high-fidelity 4d reconstruction with dynamic            Conference on Learning Representations, 2024. [Online]. Available:
+     gaussian surfels,” Annual Conference on Neural Information Processing             https://openreview.net/forum?id=Fx2SbBgcte
+     Systems, vol. 37, pp. 131 316–131 343, 2024.                                 [34] J. Ho, W. Chan, C. Saharia, J. Whang, R. Gao, A. Gritsenko, D. P.
+[14] Y. Xie, C.-H. Yao, V. Voleti, H. Jiang, and V. Jampani, “SV4d: Dynamic            Kingma, B. Poole, M. Norouzi, D. J. Fleet et al., “Imagen video:
+     3d content generation with multi-frame and multi-view consistency,” in            High definition video generation with diffusion models,” arXiv preprint
+     International Conference on Learning Representations, 2025. [Online].             arXiv:2210.02303, 2022.
+     Available: https://openreview.net/forum?id=tJoS2d0Onf                        [35] L. Khachatryan, A. Movsisyan, V. Tadevosyan, R. Henschel, Z. Wang,
+[15] H. Liang, Y. Yin, D. Xu, H. Liang, Z. Wang, K. N. Plataniotis,                    S. Navasardyan, and H. Shi, “Text2video-zero: Text-to-image diffusion
+     Y. Zhao, and Y. Wei, “Diffusion4d: fast spatial-temporal consistent 4d            models are zero-shot video generators,” in Proceedings of the IEEE/CVF
+     generation via video diffusion models,” in Annual Conference on Neural            International Conference on Computer Vision, 2023, pp. 15 954–15 964.
+     Information Processing Systems, 2024.                                        [36] A. Köksal, K. E. Ak, Y. Sun, D. Rajan, and J. H. Lim, “Controllable
+[16] H. Chen, M. Xia, Y. He, Y. Zhang, X. Cun, S. Yang, J. Xing, Y. Liu,               video generation with text-based instructions,” IEEE Transactions on
+     Q. Chen, X. Wang et al., “Videocrafter1: Open diffusion models for                Multimedia, vol. 26, pp. 190–201, 2024.
+     high-quality video generation,” arXiv preprint arXiv:2310.19512, 2023.       [37] X. Zhang, C. Zhang, J. Xu, Y. Zhu, X. Shi, Y. Yang, and Y. Luo,
+[17] H. Chen, Y. Zhang, X. Cun, M. Xia, X. Wang, C. Weng, and Y. Shan,                 “Video2roleplay: A multimodal dataset and framework for video-guided
+     “Videocrafter2: Overcoming data limitations for high-quality video                role-playing agents,” in Proceedings of the 2025 Conference on Empiri-
+     diffusion models,” in Proceedings of the IEEE/CVF Conference on                   cal Methods in Natural Language Processing, 2025, pp. 23 688–23 714.
+     Computer Vision and Pattern Recognition, 2024, pp. 7310–7320.                [38] J. Zhu, H. Ma, J. Chen, and J. Yuan, “Motionvideogan: A novel video
+[18] T. Brooks, B. Peebles, C. Holmes, W. DePue, Y. Guo,                               generator based on the motion space learned from image pairs,” IEEE
+     L. Jing, D. Schnurr, J. Taylor, T. Luhman, E. Luhman,                             Transactions on Multimedia, vol. 25, pp. 9370–9382, 2023.
+     C. Ng, R. Wang, and A. Ramesh, “Video generation                             [39] U. Singer, A. Polyak, T. Hayes, X. Yin, J. An, S. Zhang, Q. Hu,
+     models as world simulators,” 2024. [Online]. Available: https:                    H. Yang, O. Ashual, O. Gafni, D. Parikh, S. Gupta, and Y. Taigman,
+     //openai.com/research/video-generation-models-as-world-simulators                 “Make-a-video: Text-to-video generation without text-video data,” in
+[19] A. Blattmann, T. Dockhorn, S. Kulal, D. Mendelevitch, M. Kilian,                  International Conference on Learning Representations, 2023. [Online].
+     D. Lorenz, Y. Levi, Z. English, V. Voleti, A. Letts et al., “Stable video         Available: https://openreview.net/forum?id=nJfylDvgzlq
+     diffusion: Scaling latent video diffusion models to large datasets,” arXiv   [40] Y. Shi, P. Wang, J. Ye, L. Mai, K. Li, and X. Yang, “MVDream: Multi-
+     preprint arXiv:2311.15127, 2023.                                                  view diffusion for 3d generation,” in International Conference
+[20] J. Tang, Z. Chen, X. Chen, T. Wang, G. Zeng, and Z. Liu, “Lgm: Large              on Learning Representations, 2024. [Online]. Available: https:
+     multi-view gaussian model for high-resolution 3d content creation,” in            //openreview.net/forum?id=FUgrjq2pbB
+     European Conference on Computer Vision. Springer, 2024, pp. 1–18.            [41] R. Shi, H. Chen, Z. Zhang, M. Liu, C. Xu, X. Wei, L. Chen, C. Zeng, and
+[21] Z. Wang, Y. Wang, Y. Chen, C. Xiang, S. Chen, D. Yu, C. Li, H. Su,                H. Su, “Zero123++: a single image to consistent multi-view diffusion
+     and J. Zhu, “Crm: Single image to 3d textured mesh with convolutional             base model,” arXiv preprint arXiv:2310.15110, 2023.
+     reconstruction model,” in European Conference on Computer Vision,            [42] X. Long, Y.-C. Guo, C. Lin, Y. Liu, Z. Dou, L. Liu, Y. Ma, S.-H. Zhang,
+     2024. [Online]. Available: https://api.semanticscholar.org/CorpusID:              M. Habermann, C. Theobalt et al., “Wonder3d: Single image to 3d using
+     268297409                                                                         cross-domain diffusion,” in Proceedings of the IEEE/CVF Conference
+[22] Meshy AI, “Meshy AI: The #1 ai 3d model generator for creators,”                  on Computer Vision and Pattern Recognition, 2024, pp. 9970–9980.
+     https://www.meshy.ai/, 2025, accessed: 2025-04-17.                           [43] F. Yin, X. Chen, C. Zhang, B. Jiang, Z. Zhao, W. Liu, G. Yu, and
+[23] Z. Li, Y. Chen, and P. Liu, “Dreammesh4d: Video-to-4d generation                  T. Chen, “Shapegpt: 3d shape generation with a unified multi-modal
+     with sparse-controlled gaussian-mesh hybrid representation,” in Annual            language model,” IEEE Transactions on Multimedia, vol. 27, pp. 4107–
+     Conference on Neural Information Processing Systems, 2024.                        4120, 2025.
+[24] B. Poole, A. Jain, J. T. Barron, and B. Mildenhall, “Dreamfusion:            [44] Z. Ye, Y. Liu, and Y. Peng, “Maan: Memory-augmented auto-regressive
+     Text-to-3d using 2d diffusion,” in International Conference on Learning           network for text-driven 3d indoor scene generation,” IEEE Transactions
+     Representations, 2023. [Online]. Available: https://openreview.net/               on Multimedia, vol. 26, pp. 11 057–11 069, 2024.
+     forum?id=FjNys5c7VyY                                                         [45] J. Li, Y. Luo, Y. Li, X. Li, X. Li, Y. Hao, L. Wang, and Z. Li, “Dream-
+[25] Q. Miao, K. Li, J. Quan, Z. Min, S. Ma, Y. Xu, Y. Yang, P. Liu,                   texture: High-fidelity synthetic 3d data generation through decoupled
+     and Y. Luo, “Advances in 4d generation: A survey,” 2025. [Online].                geometry and texture synthesis,” in European Conference on Computer
+     Available: https://arxiv.org/abs/2503.14501                                       Vision. Springer, 2024, pp. 303–320.
+[26] R. Rombach, A. Blattmann, D. Lorenz, P. Esser, and B. Ommer, “High-          [46] Z. Min, Y. Luo, W. Yang, Y. Wang, and Y. Yang, “Entangled view-
+     resolution image synthesis with latent diffusion models,” in Proceedings          epipolar information aggregation for generalizable neural radiance
+     of the IEEE/CVF Conference on Computer Vision and Pattern Recogni-                fields,” in Proceedings of the IEEE/CVF Conference on Computer Vision
+     tion, June 2022, pp. 10 684–10 695.                                               and Pattern Recognition, 2024, pp. 4906–4916.
+[27] C. Saharia, W. Chan, S. Saxena, L. Li, J. Whang, E. L. Denton,               [47] Z. Min, Y. Luo, J. Sun, and Y. Yang, “Epipolar-free 3d gaussian splatting
+     K. Ghasemipour, R. Gontijo Lopes, B. Karagol Ayan, T. Salimans                    for generalizable novel view synthesis,” in Annual Conference on Neural
+     et al., “Photorealistic text-to-image diffusion models with deep language         Information Processing Systems, 2024, pp. 39 573–39 596.
+     understanding,” in Annual Conference on Neural Information Processing        [48] Y. Zeng, Y. Jiang, S. Zhu, Y. Lu, Y. Lin, H. Zhu, W. Hu, X. Cao, and
+     Systems, 2022.                                                                    Y. Yao, “Stag4d: Spatial-temporal anchored generative 4d gaussians,” in
+[28] Y. Xu, X. Xu, H. Gao, and F. Xiao, “Sgdm: An adaptive style-                      European Conference on Computer Vision. Springer, 2025, pp. 163–
+     guided diffusion model for personalized text to image generation,” IEEE           179.
+     Transactions on Multimedia, vol. 26, pp. 9804–9813, 2024.                    [49] Y. Zheng, X. Li, K. Nagano, S. Liu, O. Hilliges, and S. De Mello,
+[29] J. Xiao and X. Bi, “Model-guided generative adversarial networks for              “A unified approach for text-and image-guided 4d scene generation,”
+     unsupervised fine-grained image generation,” IEEE Transactions on                 in Proceedings of the IEEE/CVF Conference on Computer Vision and
+     Multimedia, vol. 26, pp. 1188–1199, 2024.                                         Pattern Recognition, 2024, pp. 7300–7309.
+[30] A. Blattmann, R. Rombach, H. Ling, T. Dockhorn, S. W. Kim, S. Fidler,        [50] J. Quan, Q. Miao, Y. Xu, Z. Lin, Y. Li, W. Yang, Z. Li, and Y. Luo,
+     and K. Kreis, “Align your latents: High-resolution video synthesis with           “Particlegs: Learning neural gaussian particle dynamics from videos
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                       14
+
+
+
+     for prior-free physical motion extrapolation,” in Proceedings of the          [71] J. Zhang, C. Herrmann, J. Hur, V. Jampani, T. Darrell, F. Cole,
+     IEEE/CVF Conference on Computer Vision and Pattern Recognition,                    D. Sun, and M.-H. Yang, “MonST3r: A simple approach for
+     2026, pp. 8331–8341.                                                               estimating geometry in the presence of motion,” in International
+[51] Q. Miao, J. Quan, K. Li, Y. Xu, Y. Yang, and Y. Luo, “Frequency-aware              Conference on Learning Representations, 2025. [Online]. Available:
+     dynamic gaussian splatting,” in The Fourteenth International Conference            https://openreview.net/forum?id=lJpqxFgWCM
+     on Learning Representations, 2026.                                            [72] P. Wang and Y. Shi, “Imagedream: Image-prompt multi-view
+[52] Y. Xu, Q. Miao, J. Quan, W. Yang, Z. Li, and Y. Luo, “Langfield4d:                 diffusion for 3d generation,” 2023. [Online]. Available: https:
+     Learning identity-adaptive and spatio-temporal continuous 4d language              //arxiv.org/abs/2312.02201
+     fields for dynamic scenes,” in Proceedings of the IEEE/CVF Conference         [73] D. Gatis, “rembg: Tool for removing image background,” https://github.
+     on Computer Vision and Pattern Recognition, 2026, pp. 9558–9569.                   com/danielgatis/rembg, Feb. 2021.
+[53] R. Liu, R. Wu, B. Van Hoorick, P. Tokmakov, S. Zakharov, and C. Von-          [74] X. Qin, Z. Zhang, C. Huang, M. Dehghan, O. R. Zaiane, and
+     drick, “Zero-1-to-3: Zero-shot one image to 3d object,” in Proceedings             M. Jagersand, “U2-net: Going deeper with nested u-structure for salient
+     of the IEEE/CVF International Conference on Computer Vision, 2023,                 object detection,” Pattern Recognition, vol. 106, p. 107404, Oct. 2020.
+     pp. 9298–9309.                                                                     [Online]. Available: http://dx.doi.org/10.1016/j.patcog.2020.107404
+[54] Z. Wang, C. Lu, Y. Wang, F. Bao, C. Li, H. Su, and J. Zhu, “Prolific-         [75] Tripo3D AI, “Tripo Studio 3D AI: Image to 3d model ai tool,” https:
+     dreamer: High-fidelity and diverse text-to-3d generation with variational          //studio.tripo3d.ai/, 2025, accessed: 2025-04-17.
+     score distillation,” Annual Conference on Neural Information Processing
+     Systems, vol. 36, 2024.
+[55] D. Kingma, T. Salimans, B. Poole, and J. Ho, “Variational diffusion
+     models,” Annual Conference on Neural Information Processing Systems,
+     vol. 34, pp. 21 696–21 707, 2021.                                                                       Qiaowei Miao received a bachelor’s degree in com-
+[56] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon,                                           puter science and technology from Hebei University,
+     and B. Poole, “Score-based generative modeling through stochastic                                       China, in 2021. He is working toward a PhD at the
+     differential equations,” in International Conference on Learning                                        School of Software Technology, Zhejiang University,
+     Representations, 2021. [Online]. Available: https://openreview.net/                                     China. His research interests include 4D vision and
+     forum?id=PxTIG12RRHS                                                                                    deep learning.
+[57] D. Podell, Z. English, K. Lacey, A. Blattmann, T. Dockhorn,
+     J. Müller, J. Penna, and R. Rombach, “SDXL: Improving latent
+     diffusion models for high-resolution image synthesis,” in International
+     Conference on Learning Representations, 2024. [Online]. Available:
+     https://openreview.net/forum?id=di52zR8xgf
+[58] C. Holtz, “imagetoprompt,” Feb. 2025. [Online]. Available: https:
+     //imagetoprompt.com/
+[59] Kling, “Kling AI: Next-generation ai creative studio,” https://klingai.
+     com/, 2025, accessed: 2025-04-17.                                                                       Kehan Li received a bachelor’s degree in computer
+[60] F. A. Fardo, V. H. Conforto, F. C. de Oliveira, and P. S. Rodrigues, “A                                 science and technology at Chongqing University,
+     formal evaluation of psnr as quality measurement parameter for image                                    China, in 2024. He is pursuing a master’s degree
+     segmentation algorithms,” arXiv preprint arXiv:1605.07116, 2016.                                        at Zhejiang University, focusing on Artificial Intel-
+[61] Z. Wang, E. P. Simoncelli, and A. C. Bovik, “Multiscale structural                                      ligence and Computer Vision.
+     similarity for image quality assessment,” in Asilomar Conference on
+     Signals, Systems & Computers, vol. 2. Ieee, 2003, pp. 1398–1402.
+[62] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The
+     unreasonable effectiveness of deep features as a perceptual metric,”
+     in Proceedings of the IEEE/CVF Conference on Computer Vision and
+     Pattern Recognition, 2018, pp. 586–595.
+[63] A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh,
+     S. Agarwal, G. Sastry, A. Askell, P. Mishkin, J. Clark, G. Krueger, and
+     I. Sutskever, “Learning transferable visual models from natural language
+     supervision,” 2021. [Online]. Available: https://arxiv.org/abs/2103.00020
+[64] T. Unterthiner, S. van Steenkiste, K. Kurach, R. Marinier, M. Michalski,                                Yawei Luo received the PhD degree from the
+     and S. Gelly, “FVD: A new metric for video generation,” 2019.                                           Huazhong University of Science and Technology, in
+     [Online]. Available: https://openreview.net/forum?id=rylgEULtdN                                         2020. He is a ZJU 100 young professor with the
+[65] J. Bai, M. Xia, X. Wang, Z. Yuan, Z. Liu, H. Hu, P. Wan,                                                School of Software Technology, Zhejiang Univer-
+     and D. ZHANG, “Syncammaster: Synchronizing multi-camera video                                           sity. He was a postdoctoral researcher with CCAI,
+     generation from diverse viewpoints,” in International Conference                                        College of Computer Science and Technology in
+     on Learning Representations, 2025. [Online]. Available: https:                                          Zhejiang University from 2020 to 2023. He was a
+     //openreview.net/forum?id=m8Rk3HLGFx                                                                    visiting Ph.D student with ReLER lab, AAII, Univer-
+[66] Z. Huang, Y. He, J. Yu, F. Zhang, C. Si, Y. Jiang, Y. Zhang, T. Wu, Q. Jin,                             sity of Technology Sydney, from 2017 to 2019. His
+     N. Chanpaisit, Y. Wang, X. Chen, L. Wang, D. Lin, Y. Qiao, and Z. Liu,                                  research interests include knowledge engineering,
+     “VBench: Comprehensive benchmark suite for video generative models,”                                    domain adaptation, and 3D reconstruction.
+     in Proceedings of the IEEE/CVF Conference on Computer Vision and
+     Pattern Recognition, 2024.
+[67] T. Liu, Z. Huang, Z. Chen, G. Wang, S. Hu, L. Shen, H. Sun, Z. Cao,
+     W. Li, and Z. Liu, “Free4d: Tuning-free 4d scene generation with spatial-
+     temporal consistency,” in Proceedings of the IEEE/CVF International                                    Yi Yang received the PhD degree in computer
+     Conference on Computer Vision, October 2025, pp. 25 571–25 582.                                        science from Zhejiang University, Hangzhou, China,
+[68] H. Zhang, X. Chen, Y. Wang, X. Liu, Y. Wang, and Y. Qiao,                                              in 2010. He is currently a distinguished professor
+     “4diffusion: Multi-view video diffusion model for 4d generation,” in                                   with Zhejiang University, China. He was a profes-
+     Annual Conference on Neural Information Processing Systems, 2024.                                      sor and director with the ReLER Lab, Australian
+     [Online]. Available: https://openreview.net/forum?id=SFk7AMpyhx                                        Artificial Intelligence Institute (AAII), University of
+[69] Z. Wang, Y. Wang, Y. Chen, C. Xiang, S. Chen, D. Yu, C. Li, H. Su,                                     Technology Sydney, Australia. He was a postdoc-
+     and J. Zhu, “Crm: Single image to 3d textured mesh with convolutional                                  toral research with the School of Computer Sci-
+     reconstruction model,” in European Conference on Computer Vision.                                      ence, Carnegie Mellon University, Pittsburgh, PA,
+     Springer, 2024, pp. 57–74.                                                                             USA. His current research interest include machine
+[70] Y. Yin, D. Xu, Z. Wang, Y. Zhao, and Y. Wei, “4dgen: Grounded 4d                                       learning and its applications to multimedia content
+     content generation with spatial-temporal consistency,” arXiv preprint         analysis and computer vision, such as multimedia indexing and retrieval,
+     arXiv:2312.17225, 2023.                                                       surveillance video analysis and video semantics understanding.
+
