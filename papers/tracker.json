@@ -498,7 +498,7 @@
       "pdf_url": "https://arxiv.org/pdf/2606.28133.pdf",
       "code_url": "",
       "project_page": "https://translation-as-a-bridging-action.github.io/",
-      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a \u03c0_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
+      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a π_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
       "ai_keywords": [
         "bi-manual manipulation",
         "parallel grippers",
@@ -688,7 +688,7 @@
       "pdf_url": "https://arxiv.org/pdf/2604.02869",
       "code_url": "",
       "project_page": "",
-      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) \u2014 with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
+      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) — with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
       "ai_keywords": [
         "reinforcement learning",
         "multi-turn RL",
@@ -710,7 +710,7 @@
       "folder": "papers/2026-multi-turn-rl-tool-calling-iterative-reward-calibration",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; \u00a78.1 LRs vs T6 LRs)."
+      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; §8.1 LRs vs T6 LRs)."
     },
     {
       "title": "Speculating Experts Accelerates Inference for Mixture-of-Experts",
@@ -797,7 +797,7 @@
       "folder": "papers/2026-spin-unifying-sparse-attention-hierarchical-memory",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 32 (gnhf). Fresh source-first breakdown from arXiv PDF (10pp, 1170 layout lines); all 3 explicit tables verbatim (T1 operation mappings across ShadowKV/RetroInfer/SeerAttention-R, T2 workload characteristics LongBench-v2/LongGenBench, T3 Spin-powered system configs). NEW SUBAREA for repo: long-context serving / sparse-attention runtime \u2014 sibling to inference-efficiency papers jetspec (token-level spec-decode) + speculating-experts (expert-level offload); Spin attacks the attention + KV-memory level. Headline (prose-confirmed, no figure back-fill): 1.66-5.66x throughput, 7-9x lower TTFT, 8.4-58% decode-latency reduction vs original sparse impl (up to 2.39x), 49-78x metadata HBM reduction. Models Qwen3-14B/32B + Llama-3.1-70B on A100 + B200. 1 paper-internal wording note: abstract spells 'hierachical' once (body uses 'hierarchical') \u2014 transcribed uniformly; the 49-78x figure is consistent across abstract+body+Fig-15 derivation (13.9-17.4x x 3.5-4.5x). Figure bar values not back-filled."
+      "note": "Added iter 32 (gnhf). Fresh source-first breakdown from arXiv PDF (10pp, 1170 layout lines); all 3 explicit tables verbatim (T1 operation mappings across ShadowKV/RetroInfer/SeerAttention-R, T2 workload characteristics LongBench-v2/LongGenBench, T3 Spin-powered system configs). NEW SUBAREA for repo: long-context serving / sparse-attention runtime — sibling to inference-efficiency papers jetspec (token-level spec-decode) + speculating-experts (expert-level offload); Spin attacks the attention + KV-memory level. Headline (prose-confirmed, no figure back-fill): 1.66-5.66x throughput, 7-9x lower TTFT, 8.4-58% decode-latency reduction vs original sparse impl (up to 2.39x), 49-78x metadata HBM reduction. Models Qwen3-14B/32B + Llama-3.1-70B on A100 + B200. 1 paper-internal wording note: abstract spells 'hierachical' once (body uses 'hierarchical') — transcribed uniformly; the 49-78x figure is consistent across abstract+body+Fig-15 derivation (13.9-17.4x x 3.5-4.5x). Figure bar values not back-filled."
     },
     {
       "title": "Reasoning in Trees: Improving Retrieval-Augmented Generation for Multi-Hop Question Answering",
@@ -839,7 +839,7 @@
       "folder": "papers/2026-reasoning-trees-rt-rag-multi-hop-qa",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 33 (gnhf). Fresh source-first breakdown from arXiv PDF (8pp, WWW '26). NEW SUBAREA for repo: retrieval-augmented generation / multi-hop QA reasoning \u2014 unrelated to inference-efficiency lineage and a retrieval+reasoning-structure counterpart to the agentic-RL lineage. All 4 numeric tables verbatim (T1 dataset stats MuSiQue/2WikiMQA/HotpotQA, T2 main results 2 models x up to 13 methods, T3 ablation 4 components, T5 max-tree-depth 1-4); T4+T6 qualitative reasoning-chain examples summarized. Headline (every cell RT-RAG leads): GPT-4o-mini 64.92 F1/52.33 EM, Qwen2.5-14B 63.32 F1/51.33 EM; largest per-dataset gain 2WikiMQA +12.69 F1. Method: consensus-validated reasoning tree T=(V,E) + post-order retrieval + adaptive leaf conversion on [none] + rejection sampling + query rewriting. Hyperparams: embedding text-embedding-3-small, reranker bge-reranker-base, k=45/15, consensus=5, rejection=5, refine<=3. Source-free reconciliation passed: T2 Avg col reproduces (RT-RAG (54.42+75.08+65.26)/3=64.92 etc.); T3 deltas recompute; T5 depth-4 row == T2/T3 RT-RAG (main config = max-depth-4). NO paper-internal numeric inconsistency (unlike iter 30/31); only mild tension = 'depth-3 optimal' prose vs depth-4 main config, flagged in Limitations."
+      "note": "Added iter 33 (gnhf). Fresh source-first breakdown from arXiv PDF (8pp, WWW '26). NEW SUBAREA for repo: retrieval-augmented generation / multi-hop QA reasoning — unrelated to inference-efficiency lineage and a retrieval+reasoning-structure counterpart to the agentic-RL lineage. All 4 numeric tables verbatim (T1 dataset stats MuSiQue/2WikiMQA/HotpotQA, T2 main results 2 models x up to 13 methods, T3 ablation 4 components, T5 max-tree-depth 1-4); T4+T6 qualitative reasoning-chain examples summarized. Headline (every cell RT-RAG leads): GPT-4o-mini 64.92 F1/52.33 EM, Qwen2.5-14B 63.32 F1/51.33 EM; largest per-dataset gain 2WikiMQA +12.69 F1. Method: consensus-validated reasoning tree T=(V,E) + post-order retrieval + adaptive leaf conversion on [none] + rejection sampling + query rewriting. Hyperparams: embedding text-embedding-3-small, reranker bge-reranker-base, k=45/15, consensus=5, rejection=5, refine<=3. Source-free reconciliation passed: T2 Avg col reproduces (RT-RAG (54.42+75.08+65.26)/3=64.92 etc.); T3 deltas recompute; T5 depth-4 row == T2/T3 RT-RAG (main config = max-depth-4). NO paper-internal numeric inconsistency (unlike iter 30/31); only mild tension = 'depth-3 optimal' prose vs depth-4 main config, flagged in Limitations."
     },
     {
       "title": "Beyond Outcome Verification: Verifiable Process Reward Models for Structured Reasoning",
@@ -1076,6 +1076,37 @@
         "trustworthy deployment"
       ],
       "sourcing_note": "Source-first breakdown built from paper.pdf (8pp+app, 16pp total) via pdftotext -layout (paper_layout.txt, 1077 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 main results 9 methods x 10 settings x ACC/ECE/NLL; T2/T6 efficiency; T3 dataset stats; T4 prompts; T5 Llama2-7B). Figure bar values NOT back-filled (only prose-confirmed trends). Source-free reconciliation passed: +520 extra params = 4,467,208-4,466,688 (1.0001x); train-time ratios 0.72/0.60/0.65 (T2) and 0.57/0.71/0.46 (T6); AAO/WB/Combined dataset unions all reconcile; 9-of-10 ECE headline exact (Phy is 3rd not 2nd). One paper-internal anomaly flagged inline (Table 5 Llama2-7B LA ECE ARC-E=45.85 with low NLL, internally contradictory, possible source typo). No other prose-vs-table numeric contradiction."
+    },
+    {
+      "title": "A Hippocampus for Linear Attention: An Exact Memory for What the Recurrent State Forgets",
+      "authors": [
+        "Wanyun Cui"
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.02303",
+      "arxiv_url": "https://arxiv.org/abs/2607.02303",
+      "pdf_url": "https://arxiv.org/pdf/2607.02303",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Linear-attention and state-space language models compress the prefix into a fixed-size recurrent state, yielding O(1) memory at the cost of a lossy exact memory: when many key-value associations compete, earlier facts are overwritten and needle recall degrades. Inspired by Complementary Learning Systems, we give linear attention a hippocampal complement. HOLA (Hippocampal Linear Attention) keeps the usual delta-rule state as a compressive memory and adds a bounded exact KV cache, forming a semiparametric test-time memory: the state models linearly compressible structure, while the cache stores associations that should not be forced through that state. The cache writes without a learned eviction module, keeping tokens with large beta*||e||, the prediction residual actually committed to the state; a decoupled RMSNorm-gamma cache read then turns these exact KV pairs into sharp retrieval rather than soft averaging. At 340M parameters trained on 15B SlimPajama tokens, HOLA lowers Wikitext perplexity from 27.32 to 22.92 (-16.1%), below a full-attention Transformer++ (26.88), and improves LAMBADA perplexity from 30.95 to 30.26.",
+      "subarea": "linear-attention / state-space exact-memory architecture via semiparametric test-time memory (CLS-inspired bounded exact KV cache + delta-rule write-magnitude surprise eviction)",
+      "rank": 24,
+      "ai_keywords": [
+        "linear attention",
+        "state-space models",
+        "Gated DeltaNet",
+        "recurrent state memory",
+        "exact KV cache",
+        "needle-in-a-haystack recall",
+        "Complementary Learning Systems",
+        "semiparametric memory",
+        "delta rule",
+        "surprise-based eviction",
+        "RMSNorm sharpening",
+        "associative recall",
+        "long-context retrieval"
+      ],
+      "sourcing_note": "Source-first breakdown built from paper.pdf (12pp) via pdftotext -layout (paper_layout.txt, 752 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 389-410, T2 471-475, T3 509-531, T4 549-557, T5 573-580, T6 735-739). Source-free reconciliation PASSED: all 9 Table-1 Avg cells reproduce from their 6-task commonsense components; Table-2 per-scale deltas recompute (15-16% rel); Table-5 RMSNorm-gamma PPL 59.5 == Table-2 46M HOLA 59.5 and Table-4 beta*||e|| flat-read 70.10 == Table-5 unit-L2 70.10; headline deltas recompute (-16.1% Wiki, +72% FDA, +24% SWDE). Figure-derived values quoted only where prose-confirmed (16k/32k S-NIAH-1 0.58/0.24/0.14 + +0.64@16k from sec 4.4); per-point bar reads not back-filled. 1 inline note: Table-1 Avg is a 6-task mean while sec 4.2 also cites a 9-task accuracy mean (different denominators); effective-logit arithmetic (0.83cos / 11cos) noted as stated heuristic vs head-dim 256. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     }
   ],
   "updated_at": "2026-07-04"
