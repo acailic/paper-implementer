@@ -497,7 +497,7 @@
       "pdf_url": "https://arxiv.org/pdf/2606.28133.pdf",
       "code_url": "",
       "project_page": "https://translation-as-a-bridging-action.github.io/",
-      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a π_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
+      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a \u03c0_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
       "ai_keywords": [
         "bi-manual manipulation",
         "parallel grippers",
@@ -687,7 +687,7 @@
       "pdf_url": "https://arxiv.org/pdf/2604.02869",
       "code_url": "",
       "project_page": "",
-      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) — with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
+      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) \u2014 with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
       "ai_keywords": [
         "reinforcement learning",
         "multi-turn RL",
@@ -709,7 +709,7 @@
       "folder": "papers/2026-multi-turn-rl-tool-calling-iterative-reward-calibration",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; §8.1 LRs vs T6 LRs)."
+      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; \u00a78.1 LRs vs T6 LRs)."
     },
     {
       "title": "Speculating Experts Accelerates Inference for Mixture-of-Experts",
@@ -796,7 +796,7 @@
       "folder": "papers/2026-spin-unifying-sparse-attention-hierarchical-memory",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 32 (gnhf). Fresh source-first breakdown from arXiv PDF (10pp, 1170 layout lines); all 3 explicit tables verbatim (T1 operation mappings across ShadowKV/RetroInfer/SeerAttention-R, T2 workload characteristics LongBench-v2/LongGenBench, T3 Spin-powered system configs). NEW SUBAREA for repo: long-context serving / sparse-attention runtime — sibling to inference-efficiency papers jetspec (token-level spec-decode) + speculating-experts (expert-level offload); Spin attacks the attention + KV-memory level. Headline (prose-confirmed, no figure back-fill): 1.66-5.66x throughput, 7-9x lower TTFT, 8.4-58% decode-latency reduction vs original sparse impl (up to 2.39x), 49-78x metadata HBM reduction. Models Qwen3-14B/32B + Llama-3.1-70B on A100 + B200. 1 paper-internal wording note: abstract spells 'hierachical' once (body uses 'hierarchical') — transcribed uniformly; the 49-78x figure is consistent across abstract+body+Fig-15 derivation (13.9-17.4x x 3.5-4.5x). Figure bar values not back-filled."
+      "note": "Added iter 32 (gnhf). Fresh source-first breakdown from arXiv PDF (10pp, 1170 layout lines); all 3 explicit tables verbatim (T1 operation mappings across ShadowKV/RetroInfer/SeerAttention-R, T2 workload characteristics LongBench-v2/LongGenBench, T3 Spin-powered system configs). NEW SUBAREA for repo: long-context serving / sparse-attention runtime \u2014 sibling to inference-efficiency papers jetspec (token-level spec-decode) + speculating-experts (expert-level offload); Spin attacks the attention + KV-memory level. Headline (prose-confirmed, no figure back-fill): 1.66-5.66x throughput, 7-9x lower TTFT, 8.4-58% decode-latency reduction vs original sparse impl (up to 2.39x), 49-78x metadata HBM reduction. Models Qwen3-14B/32B + Llama-3.1-70B on A100 + B200. 1 paper-internal wording note: abstract spells 'hierachical' once (body uses 'hierarchical') \u2014 transcribed uniformly; the 49-78x figure is consistent across abstract+body+Fig-15 derivation (13.9-17.4x x 3.5-4.5x). Figure bar values not back-filled."
     },
     {
       "title": "Reasoning in Trees: Improving Retrieval-Augmented Generation for Multi-Hop Question Answering",
@@ -838,7 +838,7 @@
       "folder": "papers/2026-reasoning-trees-rt-rag-multi-hop-qa",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "note": "Added iter 33 (gnhf). Fresh source-first breakdown from arXiv PDF (8pp, WWW '26). NEW SUBAREA for repo: retrieval-augmented generation / multi-hop QA reasoning — unrelated to inference-efficiency lineage and a retrieval+reasoning-structure counterpart to the agentic-RL lineage. All 4 numeric tables verbatim (T1 dataset stats MuSiQue/2WikiMQA/HotpotQA, T2 main results 2 models x up to 13 methods, T3 ablation 4 components, T5 max-tree-depth 1-4); T4+T6 qualitative reasoning-chain examples summarized. Headline (every cell RT-RAG leads): GPT-4o-mini 64.92 F1/52.33 EM, Qwen2.5-14B 63.32 F1/51.33 EM; largest per-dataset gain 2WikiMQA +12.69 F1. Method: consensus-validated reasoning tree T=(V,E) + post-order retrieval + adaptive leaf conversion on [none] + rejection sampling + query rewriting. Hyperparams: embedding text-embedding-3-small, reranker bge-reranker-base, k=45/15, consensus=5, rejection=5, refine<=3. Source-free reconciliation passed: T2 Avg col reproduces (RT-RAG (54.42+75.08+65.26)/3=64.92 etc.); T3 deltas recompute; T5 depth-4 row == T2/T3 RT-RAG (main config = max-depth-4). NO paper-internal numeric inconsistency (unlike iter 30/31); only mild tension = 'depth-3 optimal' prose vs depth-4 main config, flagged in Limitations."
+      "note": "Added iter 33 (gnhf). Fresh source-first breakdown from arXiv PDF (8pp, WWW '26). NEW SUBAREA for repo: retrieval-augmented generation / multi-hop QA reasoning \u2014 unrelated to inference-efficiency lineage and a retrieval+reasoning-structure counterpart to the agentic-RL lineage. All 4 numeric tables verbatim (T1 dataset stats MuSiQue/2WikiMQA/HotpotQA, T2 main results 2 models x up to 13 methods, T3 ablation 4 components, T5 max-tree-depth 1-4); T4+T6 qualitative reasoning-chain examples summarized. Headline (every cell RT-RAG leads): GPT-4o-mini 64.92 F1/52.33 EM, Qwen2.5-14B 63.32 F1/51.33 EM; largest per-dataset gain 2WikiMQA +12.69 F1. Method: consensus-validated reasoning tree T=(V,E) + post-order retrieval + adaptive leaf conversion on [none] + rejection sampling + query rewriting. Hyperparams: embedding text-embedding-3-small, reranker bge-reranker-base, k=45/15, consensus=5, rejection=5, refine<=3. Source-free reconciliation passed: T2 Avg col reproduces (RT-RAG (54.42+75.08+65.26)/3=64.92 etc.); T3 deltas recompute; T5 depth-4 row == T2/T3 RT-RAG (main config = max-depth-4). NO paper-internal numeric inconsistency (unlike iter 30/31); only mild tension = 'depth-3 optimal' prose vs depth-4 main config, flagged in Limitations."
     },
     {
       "title": "Beyond Outcome Verification: Verifiable Process Reward Models for Structured Reasoning",
@@ -1244,7 +1244,7 @@
       "year": 2026,
       "code_url": "",
       "project_page": "",
-      "subarea": "distribution-wise / population-level reward design for visual-generation RL: replace per-sample reward models (CLIP/HPS/ImageReward) with a Fréchet-distance FID signal over a generated reference set, made cheap by a subset-replace strategy (replace n=50 of N=5000 images per step, score the swap via R=-FID[(G\\g)∪g',G_real]); attacks reward hacking / mode collapse that sample-wise rewards cause; deployed two ways -- (1) direct policy-gradient RL fine-tuning of SiT-XL/2 (FID 8.30->5.77), (2) RL over post-hoc model-merging coefficients (EDM2-XS 3.74->3.52) which sidesteps the SDE-train/ODE-infer mismatch",
+      "subarea": "distribution-wise / population-level reward design for visual-generation RL: replace per-sample reward models (CLIP/HPS/ImageReward) with a Fr\u00e9chet-distance FID signal over a generated reference set, made cheap by a subset-replace strategy (replace n=50 of N=5000 images per step, score the swap via R=-FID[(G\\g)\u222ag',G_real]); attacks reward hacking / mode collapse that sample-wise rewards cause; deployed two ways -- (1) direct policy-gradient RL fine-tuning of SiT-XL/2 (FID 8.30->5.77), (2) RL over post-hoc model-merging coefficients (EDM2-XS 3.74->3.52) which sidesteps the SDE-train/ODE-infer mismatch",
       "ai_keywords": [
         "distribution-wise reward",
         "sample-wise reward",
@@ -1862,7 +1862,7 @@
       "year": "2026",
       "code_url": "",
       "project_page": "https://corl-team.github.io/rank-then-act",
-      "subarea": "FIRST reward-free video-IL / ordinal-progress-RL paper in the repo. RTA replaces scalar reward regression with a Spearman rank-correlation reward over predicted frame progress ranks vs true timestamps (bounded [-1,1], scale-invariant). Two-stage: (1) GRPO-fine-tune a VLM (Qwen2.5-VL-7B) as a listwise progress scorer on ANCHOR+SHUFFLED expert clips (kills the 'later-is-better' shortcut); (2) freeze scorer, query every N=15 steps over a sliding window with L=2 shuffles, avg progress-time rho is the SOLE reward for policy-gradient (VL-DAC / LOOP / DrQv2 / MLP-PPO backbones) — NO env reward at any stage. Distinct from VRRL (iter 56, which is REWARD-BASED VLM reflection RL) and from Rank2Reward (per-task scalar progress head): RTA is correlation-only + cross-task-reusable single scorer. Sibling to the agentic-RL/reward-design lineage but attacks reward SIGNAL FORM (ordinal correlation vs scalar) rather than reward shaping or trajectory supervision.",
+      "subarea": "FIRST reward-free video-IL / ordinal-progress-RL paper in the repo. RTA replaces scalar reward regression with a Spearman rank-correlation reward over predicted frame progress ranks vs true timestamps (bounded [-1,1], scale-invariant). Two-stage: (1) GRPO-fine-tune a VLM (Qwen2.5-VL-7B) as a listwise progress scorer on ANCHOR+SHUFFLED expert clips (kills the 'later-is-better' shortcut); (2) freeze scorer, query every N=15 steps over a sliding window with L=2 shuffles, avg progress-time rho is the SOLE reward for policy-gradient (VL-DAC / LOOP / DrQv2 / MLP-PPO backbones) \u2014 NO env reward at any stage. Distinct from VRRL (iter 56, which is REWARD-BASED VLM reflection RL) and from Rank2Reward (per-task scalar progress head): RTA is correlation-only + cross-task-reusable single scorer. Sibling to the agentic-RL/reward-design lineage but attacks reward SIGNAL FORM (ordinal correlation vs scalar) rather than reward shaping or trajectory supervision.",
       "ai_keywords": [
         "reward-free reinforcement learning",
         "video imitation learning",
@@ -1944,7 +1944,7 @@
       "arxiv_url": "https://arxiv.org/abs/2607.02288",
       "pdf_url": "https://arxiv.org/pdf/2607.02288",
       "title": "Generalization in offline RL: The structure is more important than the amount of pessimism",
-      "authors": "Max Weltevrede, Matthijs T. J. Spaan, Wendelin Böhmer",
+      "authors": "Max Weltevrede, Matthijs T. J. Spaan, Wendelin B\u00f6hmer",
       "year": "2026",
       "code_url": "",
       "project_page": "",
@@ -1996,7 +1996,7 @@
         "Richard Freinschlag",
         "Erich Kobler",
         "Andreas Mayr",
-        "Günter Klambauer"
+        "G\u00fcnter Klambauer"
       ],
       "year": 2026,
       "code_url": "",
@@ -2048,7 +2048,7 @@
       "year": 2026,
       "code_url": "",
       "project_page": "",
-      "subarea": "distributional RL / classification-based value learning — Dynamic Support Endpoint Learning (DySEL) for the Gaussian Histogram Loss (HL-Gauss) categorical critic; learns [vmin,vmax] via a constrained min-max Lagrangian instead of pre-specifying it. First repo paper on distributional RL / categorical critics / HL-Gauss.",
+      "subarea": "distributional RL / classification-based value learning \u2014 Dynamic Support Endpoint Learning (DySEL) for the Gaussian Histogram Loss (HL-Gauss) categorical critic; learns [vmin,vmax] via a constrained min-max Lagrangian instead of pre-specifying it. First repo paper on distributional RL / categorical critics / HL-Gauss.",
       "ai_keywords": [
         "distributional reinforcement learning",
         "categorical critic",
@@ -2103,7 +2103,7 @@
       "year": 2026,
       "code_url": "https://github.com/AI9Stars/CheckRLM",
       "project_page": "",
-      "subarea": "in-reasoning knowledge-thought coherence checking for Reasoning Language Models via RAG — paragraph-granular mid-chain claim extraction (Eq 3) + localized token-level retrieval-grounded correction (Eq 4-6) of the reasoning chain itself, jointly DPO-trained (Eq 7). Mitigates error accumulation in long-CoT RLMs. First repo paper on mid-reasoning RAG intervention / error-accumulation mitigation in long-CoT RLMs. Sibling to search-during-reasoning lineage (Search-o1, RT-RAG) but attacks factual-error propagation, not retrieval coverage; complementary to MAVEN (trains reasoner via rewards) where CheckRLM leaves the reasoner frozen and trains only the checker via DPO.",
+      "subarea": "in-reasoning knowledge-thought coherence checking for Reasoning Language Models via RAG \u2014 paragraph-granular mid-chain claim extraction (Eq 3) + localized token-level retrieval-grounded correction (Eq 4-6) of the reasoning chain itself, jointly DPO-trained (Eq 7). Mitigates error accumulation in long-CoT RLMs. First repo paper on mid-reasoning RAG intervention / error-accumulation mitigation in long-CoT RLMs. Sibling to search-during-reasoning lineage (Search-o1, RT-RAG) but attacks factual-error propagation, not retrieval coverage; complementary to MAVEN (trains reasoner via rewards) where CheckRLM leaves the reasoner frozen and trains only the checker via DPO.",
       "ai_keywords": [
         "retrieval-augmented generation",
         "RAG",
@@ -2156,7 +2156,7 @@
       "year": 2026,
       "code_url": "https://github.com/Yanjun-Zhao/ReContext",
       "project_page": "",
-      "subarea": "training-free inference-time evidence-replay harness for long-context reasoning — turns the model's own prompt-internal attention into a query-conditioned evidence pool (Eq 1-3) and recursively replays it (Eq 6-11) before final generation while PRESERVING the full original context (no pruning, no external memory, no training, no decoding-attention editing). Associative-memory interpretation (context=memory store, question=retrieval cue, attention=cue-trace association, replay=trace reactivation) with a monotonic-improvement Theorem 1 (Eq 12, cos(h^j,y) strictly increases per replay step; proved by induction on the attention-weight ratio in App E.2). First repo paper to frame long-context utilization as cue-conditioned trace reactivation under an associative-memory model. Sibling to the long-context lineage but training-free + full-context-preserving + model-internal-signal-only, where MAVEN (iter 53) trains the reasoner with evidence-state rewards, CheckRLM (iter 64) retrieves externally mid-CoT, and drowning-in-documents (iter 47) changes architecture.",
+      "subarea": "training-free inference-time evidence-replay harness for long-context reasoning \u2014 turns the model's own prompt-internal attention into a query-conditioned evidence pool (Eq 1-3) and recursively replays it (Eq 6-11) before final generation while PRESERVING the full original context (no pruning, no external memory, no training, no decoding-attention editing). Associative-memory interpretation (context=memory store, question=retrieval cue, attention=cue-trace association, replay=trace reactivation) with a monotonic-improvement Theorem 1 (Eq 12, cos(h^j,y) strictly increases per replay step; proved by induction on the attention-weight ratio in App E.2). First repo paper to frame long-context utilization as cue-conditioned trace reactivation under an associative-memory model. Sibling to the long-context lineage but training-free + full-context-preserving + model-internal-signal-only, where MAVEN (iter 53) trains the reasoner with evidence-state rewards, CheckRLM (iter 64) retrieves externally mid-CoT, and drowning-in-documents (iter 47) changes architecture.",
       "ai_keywords": [
         "long-context reasoning",
         "context utilization",
@@ -2284,7 +2284,7 @@
       "folder": "papers/2026-dsgnar-pinns-second-order-gauss-newton-conditioning",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
-      "sourcing_note": "Source-first breakdown. PDF fetched from arxiv.org/pdf/2607.02194 (49pp; `file` misreports 10pp, pdfinfo confirms 49 — same file-vs-pdfinfo defect as iter-66 SASP). paper_layout.txt pdftotext -layout, 4078 lines, 2 explicit tables (Table 1 main 7-PDE results grid L140-185; Table 2 Jacobian-build wall-clock L588-612) + Algorithm 1 (DSGNAR, L470-505) + Algorithm 3 (LambdaSolve) + Eqs 1-23 + Figures 1-4. Table 1 verbatim with all 13 precision-rows; Table 2 verbatim with all 7 N x d_theta rows. Source-free reconciliation PASSED (0 contradictions): abstract 'five orders on Burgers' = Burgers-double 5.31 orders (1.62e-8 -> 7.97e-14) EXACT; 'eight orders high-dim Poisson' = 5D-Poisson 8.52 orders (~1e-7 -> 3.03e-16) EXACT; min Ours l2 = 3.03e-16 matches 'as low as 3e-16'; Burgers-single 4.75e-7 in 9.8s matches '<10s'. 9 inline honest-scope flags: (1) two wall-clock REGRESSIONS vs benchmark (NS s=4000 0.22x, Multi-scale 0.22x); (2) 'eight orders high-dim Poisson' matches 5D row not the genuinely-higher 10D row (6.22 orders); (3) Navier-Stokes weakest accuracy (~2 orders, bottleneck shifted to PINN objective); (4) no theory for the COMBINED doubly-sketched construction (authors' own open question); (5) linear convergence empirical not proven; (6) benchmark t_wall cross-paper cross-hardware not device-matched; (7) ~ prefix on 3 benchmark l2 values approximate; (8) under-specified sketch/update internals; (9) single-precision Wave/KdV/Multi-scale rows have no benchmark counterpart. NO numeric prose-vs-table contradiction. Code released."
+      "sourcing_note": "Source-first breakdown. PDF fetched from arxiv.org/pdf/2607.02194 (49pp; `file` misreports 10pp, pdfinfo confirms 49 \u2014 same file-vs-pdfinfo defect as iter-66 SASP). paper_layout.txt pdftotext -layout, 4078 lines, 2 explicit tables (Table 1 main 7-PDE results grid L140-185; Table 2 Jacobian-build wall-clock L588-612) + Algorithm 1 (DSGNAR, L470-505) + Algorithm 3 (LambdaSolve) + Eqs 1-23 + Figures 1-4. Table 1 verbatim with all 13 precision-rows; Table 2 verbatim with all 7 N x d_theta rows. Source-free reconciliation PASSED (0 contradictions): abstract 'five orders on Burgers' = Burgers-double 5.31 orders (1.62e-8 -> 7.97e-14) EXACT; 'eight orders high-dim Poisson' = 5D-Poisson 8.52 orders (~1e-7 -> 3.03e-16) EXACT; min Ours l2 = 3.03e-16 matches 'as low as 3e-16'; Burgers-single 4.75e-7 in 9.8s matches '<10s'. 9 inline honest-scope flags: (1) two wall-clock REGRESSIONS vs benchmark (NS s=4000 0.22x, Multi-scale 0.22x); (2) 'eight orders high-dim Poisson' matches 5D row not the genuinely-higher 10D row (6.22 orders); (3) Navier-Stokes weakest accuracy (~2 orders, bottleneck shifted to PINN objective); (4) no theory for the COMBINED doubly-sketched construction (authors' own open question); (5) linear convergence empirical not proven; (6) benchmark t_wall cross-paper cross-hardware not device-matched; (7) ~ prefix on 3 benchmark l2 values approximate; (8) under-specified sketch/update internals; (9) single-precision Wave/KdV/Multi-scale rows have no benchmark counterpart. NO numeric prose-vs-table contradiction. Code released."
     },
     {
       "rank": 50,
@@ -2431,6 +2431,56 @@
       "pwc_url": "",
       "status": "broken-down",
       "folder": "papers/2026-sunta-surprise-based-chunking-hierarchical-video-prediction",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04"
+    },
+    {
+      "rank": 53,
+      "arxiv_id": "2607.02437",
+      "arxiv_url": "https://arxiv.org/abs/2607.02437",
+      "pdf_url": "https://arxiv.org/pdf/2607.02437",
+      "title": "Extreme Adaptive Transformer for Time Series Forecasting",
+      "authors": [
+        "Sanjeev Shrestha",
+        "Hui Liu",
+        "Yifan Zhang"
+      ],
+      "year": 2026,
+      "code_url": "https://github.com/sanzexstha/Exformer",
+      "project_page": "",
+      "subarea": "Long-term multivariate time-series forecasting (LSTF) on highly skewed / rare-but-critical extreme-event hydrologic data via a query-adaptive sparse (extreme-aware) attention mechanism. Exformer = encoder-only Transformer: decompose into seasonal+trend, dimension-invariant embedding, non-overlapping patching (N_enc=ceil(I/p) tokens), GMM-derived per-timestep anomaly score -> threshold tau -> patch-level normal/extreme label e_m in {0,1}. Extreme-Adaptive Attention (Eqs 3-6): Local (Eq3, window w, normal-to-normal), Stride (Eq4, period s, normal-to-normal), Extreme (Eq5, extreme-to-extreme); combined mask M_EA (Eq6) = (Dozer temporal mask M_D AND label mask M_E) for normal queries, pure M_E for extreme queries. Linear-in-I complexity O((w+s)I/p + n_e^2) with w in {1,3}, s in {2,3}, p in {24,48,60}, threshold percentile k in {50..90}. 4 datasets (Ross/Saratoga/UpperPen/SFC, Santa Clara County CA streamflow+rainfall, 15-min, I=1440, h=288=3-day); best in 7/8 RMSE+MAPE cells; 31.6 GFLOPs = 5.9-18.4x cheaper than temporal-attention baselines (FLOPs ratios all EXACT). Repo's FIRST time-series-forecasting / hydrologic-streamflow / extreme-event-imbalanced-regression / event-aware-sparse-attention paper. Sibling to sparse-attention lineage (spin-unifying-sparse-attention/speculating-experts/DSGNAR) -- content/label-aware sparsity vs static; sibling to imbalanced-learning lineage (NeuFS active learning). 4 prose-vs-table stale-% defects found on Saratoga column (Exformer-MAPE-Saratoga 0.07 in table vs 0.08 implied by prose).",
+      "ai_keywords": [
+        "time series forecasting",
+        "long-term forecasting",
+        "LSTF",
+        "multivariate time series",
+        "hydrologic forecasting",
+        "streamflow prediction",
+        "extreme event forecasting",
+        "imbalanced regression",
+        "rare event prediction",
+        "sparse attention",
+        "extreme-adaptive attention",
+        "query-adaptive attention",
+        "attention mask",
+        "event-aware attention",
+        "DozerAttention",
+        "Local attention",
+        "Stride attention",
+        "patch token",
+        "anomaly detection",
+        "Gaussian mixture model",
+        "Transformer encoder",
+        "decomposition forecasting",
+        "MAPE",
+        "RMSE"
+      ],
+      "abstract": "Time series forecasting remains challenging when the underlying data contain rare but critical extreme events. This issue is particularly important in hydrologic forecasting, where streamflow distributions are often highly skewed and extreme peaks can have substantial impacts on flood monitoring, water resource management, and early warning systems. Although Transformer-based forecasting models have achieved strong performance by modeling long-range temporal dependencies, they typically treat all time points uniformly and may therefore underrepresent rare extreme patterns. In this paper, we propose the Extreme-Adaptive Transformer (Exformer), a forecasting framework designed to explicitly model temporal dependencies involving both normal and extreme events. Exformer introduces an extreme-adaptive attention mechanism composed of three sparse components: Local, Stride, and Extreme. The Local and Stride components capture short-term and periodic temporal dependencies, respectively, while the Extreme component selectively models event-aware dependencies between normal and extreme streamflow patterns. Experiments on four real-world hydrologic streamflow datasets show that Exformer achieves superior 3-day forecasting performance compared with state-of-the-art baselines. Our findings demonstrate that explicitly incorporating extreme-aware attention improves the forecasting capacity of Transformer models on imbalanced time series with rare but consequential events. Code is available at https://github.com/sanzexstha/Exformer.",
+      "popularity": "",
+      "citation_count": "",
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-exformer-extreme-adaptive-transformer-time-series-forecasting",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04"
     }
