@@ -66,8 +66,8 @@
   "hotPaths": [
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 131,
-      "lastAccessed": 1783157318452,
+      "accessCount": 132,
+      "lastAccessed": 1783158243408,
       "type": "file"
     },
     {
@@ -293,21 +293,21 @@
       "type": "file"
     },
     {
-      "path": "README.md",
-      "accessCount": 1,
-      "lastAccessed": 1783117533845,
-      "type": "file"
-    },
-    {
       "path": "AGENTS.md",
-      "accessCount": 1,
-      "lastAccessed": 1783117533897,
+      "accessCount": 2,
+      "lastAccessed": 1783158241760,
       "type": "file"
     },
     {
       "path": "templates/breakdown.md",
+      "accessCount": 2,
+      "lastAccessed": 1783158268157,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
       "accessCount": 1,
-      "lastAccessed": 1783117559667,
+      "lastAccessed": 1783117533845,
       "type": "file"
     },
     {
