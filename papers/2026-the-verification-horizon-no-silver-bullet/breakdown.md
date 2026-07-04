@@ -323,8 +323,10 @@ A faithful evaluator yields monotonically increasing $\bar{S}_{\text{UT}}(\theta
 
 | Setting | WebDev Human Eval | QwenWebBench |
 |---------|:-:|:-:|
-| Qwen-Plus (base) | 78 | 1509 |
+| Qwen-Plus (intermediate ckpt) | 78 | 1509 |
 | + Interactive Judge RFT | **84 (+6)** | **1545 (+36)** |
+
+> *Sourcing:* Table 5 — the 78→84 / 1509→1545 gains are measured on an **intermediate Qwen-Plus checkpoint** (not the released base model), per the source caption "Effect of rejection sampling fine-tuning with Interactive Judge filtering on an intermediate Qwen-Plus checkpoint." Numeric cells (78/84/1509/1545, Δ +6/+36) are verbatim.
 
 #### §3: Interactive Judge Variance Decomposition (Table 12)
 
