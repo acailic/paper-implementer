@@ -1,0 +1,1524 @@
+                                             Many Voices, One Reward: Multi-Role Rubric Generation for LLM
+                                                              Judging and Reward Modeling
+                                                              Dazhi Fu1,2 , Jiuding Yang2 , Yiwen Guo3,* , Jicong Fan1,*
+                                                1
+                                                    School of Data Science, The Chinese University of Hong Kong, Shenzhen, China
+                                                                                    2
+                                                                                      LIGHTSPEED
+                                                                               3
+                                                                                 Independent Researcher
+
+                                                                                dazhifu@link.cuhk.edu.cn, jiudingyang@tencent.com
+                                                                                 guoyiwen89@gmail.com, fanjicong@cuhk.edu.cn
+
+
+                                                                Abstract                                   acquisition, both approaches share a common de-
+                                                                                                           pendency: reliable reward or preference signals
+                                             Reliable reward and preference signals are crit-              that distinguish better responses from worse ones.
+arXiv:2607.01830v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                             ical for evaluating and optimizing large lan-                 Constructing such signals is especially challeng-
+                                             guage models on open-ended tasks. Rubric-
+                                                                                                           ing for open-ended tasks, where response quality
+                                             based judges offer a transparent way to decom-
+                                             pose such judgments into explicit evaluation
+                                                                                                           is multidimensional, context-dependent, and diffi-
+                                             criteria, but existing annotation-free rubric gen-            cult to reduce to a single opaque score. How these
+                                             erators typically rely on a single generic eval-              signals are defined, produced, and validated has
+                                             uator. As a result, they may overlook impor-                  therefore emerged as a central challenge for both
+                                             tant dimensions of human preference, a fail-                  evaluation (Zheng et al., 2023; Lambert et al., 2025)
+                                             ure mode we term dimensional blind spots.                     and optimization.
+                                             To address this limitation, we propose Multi-                    A natural way to make these signals more trans-
+                                             Role Rubric Generation (MRRG), a training-
+                                                                                                           parent — inspired by how humans evaluate open-
+                                             free and reference-free framework that elicits
+                                             evaluation criteria from multiple complemen-                  ended work — is to express evaluation criteria as
+                                             tary roles and consolidates them into an au-                  rubrics or checklists (Viswanathan et al., 2025; Que
+                                             ditable rubric-based scorer. This scorer can                  et al., 2024; Saha et al., 2024). Rather than collaps-
+                                             be used both to validate pairwise preferences                 ing quality into a single opaque judgment, a rubric
+                                             and to provide rewards for GRPO-style Rein-                   decomposes evaluation into concrete, verifiable
+                                             forcement Learning with Verifiable Rewards                    sub-questions. Prior work has shown that rubric-
+                                             (RLVR). Experiments on preference validation
+                                                                                                           or criteria-conditioned judges can substantially nar-
+                                             benchmarks show that MRRG consistently out-
+                                             performs single-role rubric generation base-
+                                                                                                           row the gap with human raters (Shen et al., 2026;
+                                             lines across multiple backbone models. Further                Kawabata and Sugawara, 2026), and that rubric-
+                                             RLVR experiments demonstrate that MRRG                        style process supervision can stabilize reasoning-
+                                             yields a stronger reward signal for improving                 oriented reinforcement learning (Lightman et al.,
+                                             open-ended generation. Our code is available                  2023; Uesato et al., 2022). Together, these results
+                                             here.                                                         position rubrics as a promising interface for both
+                                                                                                           evaluation and optimization. However, existing ap-
+                                        1    Introduction                                                  proaches typically rely on gold responses, expert-
+                                                                                                           written references, large-scale preference datasets,
+                                        Large language models (LLMs) (Brown et al.,
+                                                                                                           or extensive human annotations to construct effec-
+                                        2020; Achiam et al., 2023; Yang et al., 2025) have
+                                                                                                           tive rubrics — requirements that are costly and
+                                        achieved remarkable capabilities across a wide
+                                                                                                           frequently unavailable in realistic open-ended set-
+                                        range of open-ended generation tasks. A key driver
+                                                                                                           tings.
+                                        of this progress is post-training, which aligns pre-
+                                                                                                              Recent annotation-free approaches (Zhang et al.,
+                                        trained models with human intentions through tech-
+                                                                                                           2025; Shen et al., 2026) reduce this cost by gener-
+                                        niques such as Reinforcement Learning with Hu-
+                                                                                                           ating rubrics directly from the query. Yet they typi-
+                                        man Feedback (RLHF) (Ouyang et al., 2022; Bai
+                                                                                                           cally rely on a single generic evaluator to enumer-
+                                        et al., 2022) and Reinforcement Learning with Ver-
+                                                                                                           ate all quality criteria at once. This single-voiced
+                                        ifiable Rewards (RLVR) (Lambert et al., 2024; Guo
+                                                                                                           formulation assumes that one evaluator can recover
+                                        et al., 2025). Despite their differences in reward
+                                                                                                           the full structure of human preference, overlook-
+                                            * indicates corresponding authors                              ing the fact that human judgment is inherently dis-
+
+                                                                                                       1
+tributed across complementary perspectives: users                 tently outperforms the strongest listed base-
+emphasize usefulness, domain experts prioritize                   line across Qwen2.5 and GPT-series models,
+correctness, and educators focus on clarity, evi-                 with gains of 3.1–16.4 percentage points. In
+dence, and safety. Consequently, single-voiced                    GRPO-style RLVR experiments, MRRG im-
+rubrics tend to omit preference-relevant dimensions               proves over the strongest single-voice reward
+— a failure mode we term dimensional blind spots.                 baseline by 1.7 points on BiGGen Bench and
+   Dimensional blind spots lead to two concrete                   3.4 points on HealthBench-Hard.
+failures. First, they make judging accuracy highly
+domain-dependent: as shown in Figure 1a, single-
+voiced rubric judgment performs well in technically         2     Method
+structured domains but degrades when domain-
+specific quality criteria are insufficiently covered.       This section develops MRRG in four steps. We
+Second, they enable rubric hacking: as shown in             first formalize rubric-based scoring as a unified
+Figure 1b, responses can score well by optimizing           interface that subsumes both LLM-as-a-judge and
+for covered criteria while remaining low quality.           RLVR reward modeling (Sec. 2.1). We then in-
+Table 1 illustrates this mechanism concretely: for a        troduce our multi-role rubric generator, MRRG
+broad NASDAQ-related question, a single-voiced              (Multi-Role Rubric Generation, Sec. 2.2), and de-
+rubric rewards surface-level task completion while          scribe how the resulting per-role rubrics are pooled
+overlooking feasibility, epistemic calibration, and         into a scalar score (Sec. 2.3) that can be used, with-
+unverifiable claims. Additional analyses are pro-           out modification, as both a preference validator and
+vided in Appendix C.                                        an RLVR reward (Sec. 2.4).
+   To address these blind spots, we propose Multi-
+Role Rubric Generation (MRRG), a training-free              2.1   Preliminaries: Rubric-Based Scoring
+and reference-free framework that recasts rubric            Let x ∈ X denote an input prompt and y ∈ Y a
+generation as multi-role elicitation. Rather than           candidate response. Every alignment signal aims
+relying on a single generic evaluator, MRRG in-             to approximate the latent human quality function
+structs an LLM to adopt complementary evaluative            q ⋆ : X × Y → R. Classical reward models
+roles — such as user, domain expert, educator, AI           parametrize q ⋆ as a scalar network rθ (x, y) trained
+researcher, and linguist — each generating com-             on preference pairs (Ouyang et al., 2022; Bai
+pact, atomic, and verifiable rubric items. These            et al., 2022); LLM-as-a-judge approaches instan-
+are then pooled and deduplicated into an auditable          tiate it as a prompted language  model, q ⋆ (x, y) ≈
+rubric-based scorer suitable for both preference                                   
+                                                            G promptjudge (x, y) (Zheng et al., 2023). Both
+validation and as a reward model in GRPO-style              collapse the multi-dimensional structure of q ⋆ into
+RLVR. Figure 2 illustrates the overall framework.           an opaque scalar.
+Our contributions are as follows:
+                                                            Notation. Throughout the paper, G(·) denotes a
+   • Dimensional blind spots. We identify dimen-
+                                                            call to a pretrained language model. Different uses
+     sional blind spots as a key failure mode of
+                                                            of G are distinguished by the prompt template pro-
+     single-voiced rubric generation and demon-
+                                                            vided to the model. We use promptjudge to denote
+     strate that they cause domain-dependent judg-
+                                                            the per-criterion evaluation template, promptm for
+     ing accuracy and rubric hacking, as illustrated
+                                                            role-conditioned rubric generation under role pm ,
+     in Figure 1.
+                                                            and promptr for generic rubric generation.
+   • Multi-Role Rubric Generation. We pro-
+     pose MRRG, a training-free and reference-              Rubric-based scoring. A rubric-based scorer
+     free framework that elicits rubric criteria from       breaks this collapse by introducing an inter-
+     multiple complementary roles and aggregates            pretable intermediate variable. A rubric R(x) =
+     them into an auditable scorer for both LLM-            {ck , wk }K
+                                                                      k=1 is a set of criteria, each ck being
+     as-a-judge evaluation and RLVR reward mod-             an atomic, verifiable proposition about the re-
+     eling.                                                 sponse (e.g., “The answer cites the correct theo-
+                                                            rem”). Each criterion is evaluated by the same lan-
+   • Empirical validation. On RewardBench-                  guage model to sk = G promptjudge (x, y, ck ) ∈
+     2, JudgeBench, and PPE, MRRG consis-                   {0, 1}, and the overall score aggregates criterion-
+
+                                                        2
+   (a) Domain-dependent judging accuracy in single-voiced rubric                                                        (b) Rubric hacking
+
+                Figure 1: Two main problems caused by dimensional blind spots in single-voiced rubrics.
+
+Table 1: Case study comparing single-voiced and multi-voiced rubrics with corresponding passing answers. i in
+[Wi] indicates the weight for each criteria.
+
+                Question: Can you list and analyse the investment strategies and history of operation for each company listed on the NASDAQ?
+ Single-voiced rubric                                                                 Multi-voiced rubric
+
+
+
+      • Lists all NASDAQ-listed companies. [W3]                                            • Acknowledges impracticality of covering every company; sets scope
+                                                                                             boundaries. [W3]
+      • Describes investment strategies for each company. [W3]
+                                                                                           • Avoids unsupported generalizations about companies. [W2]
+      • Provides historical analysis of operations for each company. [W3]
+                                                                                           • Flags potentially outdated or incomplete data. [W2]
+      • Uses reliable and verifiable sources. [W2]
+                                                                                           • Provides a methodology/framework instead of exhaustive listing. [W3]
+      • Organizes information clearly, e.g., by company. [W2]
+                                                                                           • Avoids unverifiable or speculative claims. [W3]
+      • Avoids irrelevant or extraneous information. [W2]
+                                                                                           • Clearly defines “investment strategies” and “history of operation”. [W3]
+      • Uses precise and professional language. [W1]
+                                                                                           • Avoids misleading implications or over generalizations. [W3]
+      • Includes recent and up-to-date information. [W2]
+                                                                                           • Avoids conflating market trends with individual strategies. [W3]
+      • Clarifies technical terms or jargon. [W1]
+                                                                                           • Acknowledges if the request is too broad or infeasible. [W3]
+
+
+ Single-voiced rubric passing answer                                                  Multi-voiced rubric passing answer
+ Apple Inc.: strategy centers on brand loyalty, ecosystem integration, and R&D;       A complete firm-by-firm analysis of all NASDAQ-listed companies is impracti-
+ history includes the Macintosh, iPod, iPhone, and iPad. Amazon.com, Inc.:            cal in one response. A better answer defines the scope, selects firms or sectors,
+ strategy spans e-commerce, AWS, logistics, and streaming; history includes its       and analyzes each using filings, annual reports, investor presentations, and
+ start as an online bookstore, AWS launch, and Whole Foods acquisition. This          market data. Key dimensions include capital allocation, acquisitions, R&D,
+ gives a brief company-by-company overview.                                           revenue model, operational milestones, risks, and recent performance.
+
+
+
+
+level judgments:                                                                      model-agnostic (any sufficiently capable LLM can
+                                                                                      serve as G). The central design question thus be-
+  S(x, y; R)
+     PK                                                                              comes: how should R(x) be constructed so as to
+             k=1 wk · G promptjudge (x, y, ck )
+                                                                          (1)         cover more comprehensive evaluative dimensions
+   =                                                                  ,
+                        PK                                                            and thus be close to q ⋆ ?
+                          k=1 wk
+
+where wk > 0 is the importance of the k-th crite-
+                                                                                      2.2      Multi-Role Rubric Generation
+rion. This decomposition makes the signal simul-
+taneously auditable (every contribution wk sk is at-                                  Existing rubric generators (Gunjal et al., 2025;
+tributable to a named criterion), verifier-like (each                                 Zhang et al., 2025; Liu et al., 2025b) construct
+sk is a constrained yes/no or graded judgment), and                                   initial R(x) with one or a few LLM calls, e.g.,
+
+                                                                                  3
+                                         Figure 2: Framework of MRRG.
+
+                            
+R(x) = G promptr x, ŷ with ŷ = G(x) a sam-                   to judge its importance.
+ple response, where a “universal evaluator” is asked
+to enumerate every relevant criterion at once. As              Criterion format and self-assessed importance.
+argued in Sec. 1, this single-voice formulation com-           Each role is also instructed to emit binary crite-
+presses genuinely distinct viewpoints into a shared            ria paired with a self-assessed importance weight
+prior and could lead to dimensional blind spots.               wm,k ∈ {1, 2, 3} on a three-point scale:
+
+Role-conditioned elicitation. A straightforward
+                                                                             
+                                                                             3 core need
+                                                                             
+approach to broadening the evaluative dimen-
+                                                                       wm,k = 2 significant issue               (3)
+sions in rubric generation is to repeat the gen-                             
+                                                                              1 non-critical polish
+                                                                             
+eration process multiple times. Although this
+can increase the apparent diversity of the result-
+ing rubrics, it remains constrained by the inher-              Selection of Roles. One might consider selecting
+ent biases and limitations of a single evaluative              a question-specific subset of roles, since the per-
+perspective or role. To address this limitation,               spectives most relevant to evaluation can in princi-
+we recast rubric generation as a multi-role elic-              ple depend on the input question. We instead adopt
+itation problem. Let P = {p1 , . . . , pM } be a               a fixed but carefully chosen role pool P, motivated
+small, fixed set of evaluative roles; by default               by four considerations. (i) Determining the “most
+P = {U SER, D OMAIN E XPERT, E DUCATOR,                        relevant” roles for an arbitrary question is itself
+AI R ESEARCHER, L INGUIST}. For each role                      ill-posed and would likely require an LLM-based
+pm we supply a role-specific template promptm                  role selector. Such a selector could inherit, or even
+that foregrounds the concerns most salient to that             amplify, the same dimensional biases that MRRG
+role—e.g., the U SER template emphasizes problem-              aims to mitigate. (ii) The D OMAIN E XPERT role
+solving utility and intent satisfaction, while the E D -       is already instantiated conditionally on the input
+UCATOR template emphasizes evidential support,                 question, providing question-aware specialization
+communication quality and safety. This produces a              without exposing the high-level role-selection pro-
+role-specific rubric                                           cess to additional model bias. (iii) The default
+                                                              roles cover the principal axes along which humans
+         Rm (x) = G promptm (x, ŷ)                            evaluate open-ended generation: practical utility
+                                                    (2)        (U SER), technical correctness (D OMAIN E XPERT),
+                   = {(cm,k , wm,k )}K   m
+                                       k=1 ,
+                                                               communicative clarity (E DUCATOR), AI-specific
+where m = 1, . . . , M and ŷ = G(x) is a sample               reasoning and model behavior (AI R ESEARCHER),
+response. Each Rm (x) is compact (Km ∈ [3, 7]                  and linguistic quality (L INGUIST). (iv) Keeping
+in practice) and internally coherent, because the              the role pool small, with |P| = M and M = 5 in
+generator only has to reason from one viewpoint at             our experiments, bounds the rubric-generation cost
+a time. Importantly, wm,k is produced jointly with             by O(M ) LLM calls per prompt, independent of
+cm,k inside the same role-conditioned call: the role           dataset size. We study the sensitivity of MRRG to
+that writes a criterion is also the one best positioned        the choice of P in Section 3.2.
+
+                                                           4
+2.3   Rubric Deduplication                                   Preference   validation      (LLM-as-a-judge).
+The per-role rubrics {Rm (x)}M                               Given two candidates (yA , yB ) for the same
+                                m=1 may contain re-
+peated criteria, since different roles can indepen-          prompt x, we predict the preferred response as
+dently produce the same requirement. In practice,            arg maxi∈{A,B} S(x, yi ; R(x)).
+                                                                                      e
+we also observe that LLMs sometimes generate                 Reward modeling for RLVR. We use
+identical criteria within role-specific rubrics, po-         S(x, y; R(x))
+                                                                      e     directly as the reward inside GRPO-
+tentially due to hallucinated redundancy. If left            style optimization (Guo et al., 2025). For a prompt
+untreated, such exact duplicates may be counted              x with a rollout group {yi }G  roll
+                                                                                          i=1 , the group-relative
+multiple times and distort the final rubric-based            advantage of yi is
+judgment. To address this issue, we apply a simple
+deterministic post-processing step.                                           S(x, yi ; R(x))
+                                                                                        e     − µS (x)
+                                                                      Ai =                             ,      (6)
+   We first concatenate all role-specific rubrics into                              σS (x) + ε
+a single list,
+                                                             where µS (x) and σS (x) denote the mean and stan-
+                                                                                                 Groll
+                               M,Km
+       R1:M (x) = (cm,k , wm,k ) m=1,k=1 .        (4)        dard deviation of {S(x, yi ; R(x))}
+                                                                                           e
+                                                                                                 i=1 taken within
+                                                             the rollout group for prompt x and ε is a small con-
+We then scan this list in order and remove crite-            stant for numerical stability. Because R(x)
+                                                                                                       e   is gen-
+ria whose text exactly matches a criterion that has          erated once per prompt and cached, the per-rollout
+already appeared. The first occurrence is kept to-           reward cost reduces to N yes/no judge calls, which
+gether with its original weight, while subsequent            parallelize trivially across the group.
+duplicate occurrences are discarded. The final
+rubric is
+                                                             3     Experimental Results
+                                 N
+              R(x)
+              e     = (c̃j , w̃j ) j=1 ,        (5)          We evaluate MRRG along the two downstream
+                                                             settings it was designed for: (i) preference vali-
+where N is the number of criteria in the final rubric.
+                                                             dation, where MRRG acts as an LLM-as-a-judge
+   Importantly, this procedure only removes exact
+                                                             on benchmark preference pairs (Sec. 3.2); and (ii)
+duplicates and leaves all non-identical criteria un-
+                                                             reward modeling for RLVR, where the same rubric-
+changed, including criteria that are semantically
+                                                             based scorer drives GRPO-style policy optimiza-
+similar or potentially in tension with one another.
+                                                             tion (Sec. 3.3). Across the experimental part we
+Although one could apply semantic deduplication
+                                                             answer the following questions:
+or consolidation methods, such as using an LLM to
+merge redundant criteria or resolve conflicting ones,        Q1. Can MRRG outperform single-voiced rubric
+we avoid this design choice for two reasons. First,              generators and other baselines in both prefer-
+LLM-based consolidation introduces an additional                 ence validation and RLVR reward modeling?
+judgment step, where decisions about redundancy
+and conflict may themselves be biased and may                Q2. Is MRRG robust to the choice of roles, or does
+propagate such bias into the final rubric. Second,               it rely critically on any specific role?
+merging or removing semantically similar crite-
+                                                             Q3. Does MRRG expand the coverage of evalua-
+ria from different roles may inadvertently weaken
+                                                                 tive dimensions beyond single-voiced genera-
+important evaluation dimensions: when multiple
+                                                                 tion, or are its gains simply due to producing
+roles independently emphasize similar criteria, this
+                                                                 more criteria?
+agreement can signal that the criterion is important.
+Collapsing these criteria into a single item may re-
+duce their effective influence and thus affect the           3.1    Experimental Setup
+final judgment. We therefore adopt exact-match               Rubric generator and judge models. For pref-
+deduplication as a conservative, deterministic, and          erence validation experiments, we instantiate G(·)
+reproducible choice. Additional empirical analysis           with a diverse range of models including Qwen2.5-
+is provided in Appendix C.3.                                 3B-Instruct, Qwen2.5-7B-Instruct, Qwen2.5-
+                                                             32B-Instruct, GPT-oss-20b and GPT-oss-120b
+2.4  From Rubric Score to Alignment Signal                   for rubric generation and per-criterion judging.
+The scalar S(x, y; R(x))
+                   e     ∈ [0, 1] plugs into both            And all methods are evaluated on JudgeBench (Tan
+downstream settings without modification.                    et al., 2024), RewardBench-2 (Malik et al., 2025)
+
+                                                         5
+Table 2: Accuracy (%) performance comparison of different models on RewardBench-2, JudgeBench, and PPE. S0
+denotes SVRG w/o SR, S1 denotes SVRG w/ SR, and CtT denotes Chasing the Tail. For each model–benchmark
+pair, the best result is marked in bold.
+
+      Model                      RewardBench-2                  JudgeBench                    PPE
+                            S0    S1   CtT MRRG         S0      S1   CtT MRRG       S0   S1    CtT MRRG
+      Qwen2.5 Series
+      Qwen2.5-3B-Instruct 29.4 40.3 21.3      51.2      35.1 40.9 31.1       55.1   31.2 36.3 31.3   46.2
+      Qwen2.5-7B-Instruct 37.6 50.7 36.5      59.2      32.3 35.1 40.5       56.9   34.0 42.3 37.5   48.5
+      Qwen2.5-32B-Instruct 42.3 54.9 59.4     65.3      37.1 47.4 52.0       65.1   44.0 48.2 49.5   53.9
+      GPT Series
+      GPT-OSS-20B           51.2 62.4 60.3    73.7      54.3 67.7 63.1       74.0   40.1 52.2 53.2   56.3
+      GPT-OSS-120B          52.3 64.4 61.3    74.5      56.5 67.8 64.0       74.8   43.3 52.8 54.4   57.8
+
+
+
+and PPE (Frick et al., 2024). As for RLVR ex-
+periments, we use Qwen2.5-3B-Instruct as base
+model for GRPO, while GPT-4o is used for rubric
+generation for different strategies and gpt-oss-120b
+is used for per-criterion judging. We select 2000
+questions from Wildchat (Zhao et al., 2024) as train-
+ing set, and models are evaluated on two widely
+used open-ended-task datasets: BiGGen Bench
+(Kim et al., 2024) and HealthBench-Hard (Arora
+et al., 2025).
+   Detailed description for these two datasets is
+provided in Appendix A. Also, full prompt tem-
+plates for all five roles, and the judge template are
+provided in Appendix D.
+                                                             Figure 3: T-SNE visualization of rubrics proposed by
+Baselines. We compare MRRG against three                     different roles and methods.
+methods: (i) Single-voice rubric generator with-
+out sample responses (SVRG w/o SR): the method
+generates rubrics for questions without sample re-           consistent gains across model scales and families
+sponses. (ii) Single-voice rubric generators with            demonstrate that the advantage of multi-role rubric
+sample responses (SVRG w/ SR): the method gen-               generation is not tied to a particular backbone.
+erates rubrics for specific questions with sample re-        They also suggest that MRRG constructs more
+sponses. (iii) Chasing the Tail(Zhang et al., 2025):         comprehensive and discriminative rubrics for open-
+the method generates and refines rubrics by com-             ended evaluation.
+paring great and diverse responses.                             We also visualize the rubrics generated by dif-
+                                                             ferent roles and by the single-voiced process in
+3.2   Preference Validation                                  Figure 3. The visualization shows that role-specific
+Table 2 shows that MRRG consistently achieves the            rubrics largely cover the regions occupied by single-
+strongest performance across all three benchmarks            voiced rubrics. Meanwhile, they also extend to
+and all backbone models, often with substantial              additional regions where few or no single-voiced
+margins over the baselines. On the Qwen2.5 series,           rubrics are present, suggesting that the multi-role
+MRRG improves upon the SVRG w/o SR baseline                  process captures evaluative dimensions that are un-
+by more than 20 points on RewardBench-2 for the              derexplored by single-voiced generation. This pro-
+3B, 7B, and 32B variants, and yields comparable              vides qualitative evidence that MRRG yields more
+improvements on JudgeBench. On the GPT series,               diverse and comprehensive criteria.
+MRRG remains uniformly superior, raising GPT-
+OSS-120B from 52.3 to 74.5 on RewardBench-                   Ablations. Table 3 isolates the contribution of
+2 and from 56.5 to 74.8 on JudgeBench. These                 different components of MRRG. (i) Role abla-
+
+                                                        6
+                                                                the gains of MRRG arise from role-based diversity
+                                                                rather than merely from an increased number of
+                                                                generated criteria.
+                                                                   In addition, we conducted an experiment to com-
+                                                                pare single-role baselines with leave-one-role-out
+                                                                MRRG variants, as shown in Figure 4. The re-
+                                                                sults show that the most effective single role varies
+(a)   Single    role    on   (b)    leave-one-role-out          across backbone models, suggesting that no sin-
+JudgeBench                   MRRG on JudgeBench
+                                                                gle evaluative perspective is uniformly optimal. In
+                                                                contrast, removing a role from MRRG leads only
+                                                                to moderate performance changes in most cases.
+                                                                Although excluding stronger single roles tends to
+                                                                result in larger drops, the overall degradation re-
+                                                                mains limited. This indicates that MRRG does not
+                                                                depend critically on any particular role; rather, its
+                                                                effectiveness comes from aggregating complemen-
+(c)  Single   role      on   (d)    leave-one-role-out
+RewardBench-2                MRRG on RewardBench-2              tary perspectives to construct more comprehensive
+                                                                rubrics.
+                                                                Table 3: Ablation of MRRG components using
+                                                                Qwen2.5-3B-Instruct on the domain benchmark. “role
+Figure 4: comparison of single-role baselines with leave-       m” denotes using only rubrics from role m.
+one-role-out variants of MRRG
+                                                                      Variant           RewardBench-2   JudgeBench
+tion: using rubrics from any single role leads to                     U SER                 34.4           36.2
+a clear performance drop compared with MRRG,                          D OMAIN E XPERT       33.0           44.5
+                                                                      E DUCATOR             37.8           44.8
+indicating that no individual perspective is suf-                     R ESEARCHER           33.9           42.0
+ficient to construct a comprehensive evaluation                       L INGUIST             35.1           37.4
+rubric. Among the single-role variants, E DU -                        RSVRG w/o SR          39.1           38.5
+CATOR performs best on both RewardBench-2                             RSVRG w/ SR           43.9           45.1
+and JudgeBench, achieving 37.8 and 44.8, respec-                      MRRG                  51.2           55.1
+tively. Nevertheless, it still lags behind MRRG
+by 13.4 points on RewardBench-2 and 10.3 points
+on JudgeBench, highlighting the importance of ag-               3.3   Reward Modeling for RLVR
+gregating complementary evaluative perspectives.                Setup. We plug S(x, y; R(x))
+                                                                                         e     into GRPO as the
+(ii) Repeated single-voiced rubric generation: To               per-rollout reward, using the same rubric R(x)
+                                                                                                             e
+examine whether the advantage of MRRG simply                    cached per prompt across the rollout group. The
+comes from generating more criteria, we introduce               base policy is Qwen2.5-3B-Instruct; we train it on
+a repeated single-voiced rubric generation baseline,            2000 open-ended prompts drawn from WildChat
+denoted as RSVRG. Specifically, RSVRG repeats                   (Zhao et al., 2024).
+the single-voiced rubric generation process 5 times
+and then applies the same post-processing pipeline              Main results. Table 4 reports the post-RL policy
+as MRRG. As shown in Table 3, RSVRG improves                    performance under different reward sources. Us-
+over individual-role variants in some cases, espe-              ing MRRG as the reward consistently yields the
+cially when sample responses are enabled, sug-                  best results on both in-domain and domain-transfer
+gesting that repeated sampling can increase rubric              evaluations. On BiGGen Bench, MRRG achieves
+diversity to a limited extent. However, RSVRG w/                a score of 63.7, outperforming the strongest base-
+SR remains substantially below MRRG, with gaps                  line, SVRG w/ SR, by 1.7 points. The improve-
+of 7.3 points on RewardBench-2 and 10.0 points on               ment is even larger on the domain-transfer bench-
+JudgeBench. This indicates that simply generating               mark HealthBench-Hard, where MRRG reaches
+more single-voiced rubrics cannot fully substitute              32.1 and exceeds the second-best method by 3.4
+for explicitly eliciting rubrics from multiple com-             points. Notably, all rubric-based rewards improve
+plementary roles. Overall, these results suggest that           over the base policy, while MRRG provides the
+
+                                                            7
+Table 4: Post-RL policy Accuracy (%) performance                              and uses them as rewards for RLVR. OpenRubrics
+under different reward sources. Best performance in                           (Liu et al., 2025b) collects large-scale and diverse
+each column is in bold.
+                                                                              question–rubric pairs to train rubric-generation
+    Reward source                       BiGGen Bench   HealthBench-Hard       models capable of producing reliable and scalable
+    Base policy (Qwen2.5-3B-Instruct)       57.8             25.6             rubrics.
+    SVRG w/o SR                             60.0             26.0
+    SVRG w/ SR                              62.0             28.7                While these approaches demonstrate the effec-
+    Chasing the Tail                        61.1             27.0
+                                                                              tiveness of rubric-based evaluation and reward
+    MRRG                                    63.7             32.1
+                                                                              modeling, they often depend on additional supervi-
+                                                                              sion, such as reference answers for rubric construc-
+largest gains across both benchmarks. These re-                               tion or preference-labeled data for training rubric
+sults suggest that multi-role rubric rewards provide                          generators. This reliance can limit their applicabil-
+a more comprehensive and robust training signal                               ity in realistic settings where reference answers or
+than single-voiced alternatives, leading to better                            preference annotations are unavailable or expensive
+generalization under distribution shift. Detailed                             to obtain.
+experimental results are provided in Appendix C.4.
+                                                                              4.3 Multi-Role Prompting for Evaluation and
+4      Related Work                                                               Reasoning
+
+4.1      Reward Modeling and LLM-as-a-Judge                                   Prior work has shown that role conditioning can
+                                                                              substantially affect the knowledge and reasoning
+Scalar reward models. Aligning LLMs with hu-
+                                                                              patterns elicited from LLMs. In-Context Imper-
+man intent typically relies on a learned reward
+                                                                              sonation (Salewski et al., 2023) shows that ask-
+model trained on Bradley–Terry-style pairwise
+                                                                              ing a LLM to act as a domain expert / a child
+preferences. InstructGPT (Ouyang et al., 2022) and
+                                                                              systematically changes the knowledge it surfaces
+HH-RLHF (Bai et al., 2022) train a Bradley–Terry
+                                                                              on QA and bandit tasks; Role-Play Prompting
+head on top of a base language model (LM) using
+                                                                              extends role-play to chain-of-thought reasoning
+human-labeled pairwise preferences, and use the
+                                                                              and reports gains across MMLU and GSM8K.
+resulting scalar as the reward for RLHF. PPE (Frick
+                                                                              Multi-Agent Debate (Chan et al., 2024) runs sev-
+et al., 2024) subsequently shows that such reward
+                                                                              eral LLM instances that iteratively critique and
+models are brittle proxies of downstream policy
+                                                                              revise each other’s answers, improving factuality
+quality and proposes a preference-proxy bench-
+                                                                              on TriviaQA-style tasks; Encouraging Divergent
+mark to measure that gap. LLM-as-a-judge. Other
+                                                                              Thinking (EDT) (Liang et al., 2024) shows that
+methods like MT-Bench / Chatbot Arena (Zheng
+                                                                              explicitly encouraging divergent viewpoints across
+et al., 2023) prompts a strong LLM (GPT-4) to di-
+                                                                              agents further reduces mode collapse in reason-
+rectly score or pairwise-compare two responses,
+                                                                              ing. These methods primarily use multiple roles
+and AlpacaFarm (Dubois et al., 2023) uses this
+                                                                              to produce better answers. In contrast, MRRG
+LLM-judge signal as a stand-in for human feed-
+                                                                              generates the evaluation criteria themselves. More-
+back when simulating RLHF.
+                                                                              over, unlike debate-based methods, MRRG does
+4.2      Rubric-Based Evaluation and RLVR                                     not require iterative interaction, critique, or con-
+                                                                              sensus among agents. Instead, role-specific rubrics
+A recent line of work makes evaluation criteria ex-                           are generated independently and then combined
+plicit through rubrics or checklists. These methods                           through deterministic deduplication.
+typically generate rubrics using one or a few LLM
+calls under a single “universal evaluator” prompt,                            5   Conclusion
+and the resulting criteria can further be used as ver-
+ifiable rewards for RLVR. For example, Chasing                                We presented Multi-Role Rubric Generation
+the Tail (Zhang et al., 2025) emphasizes that rubric                          (MRRG), a training-free framework that recasts
+generation should account for distinctions among                              rubric construction as a multi-role elicitation pro-
+high-quality and diverse responses, and proposes                              cess and pool per-role rubrics into a powerful scorer.
+a workflow for constructing rubrics that capture                              The same scorer serves uniformly as an LLM-
+such distinctions. Rubrics as Rewards (RaR) (Gun-                             as-a-judge for preference validation and as a re-
+jal et al., 2025) generates question-specific rubrics                         ward inside RLVR, with no architectural change
+from the input question and a reference answer,                               between the two uses. Empirically, MRRG consis-
+
+                                                                          8
+tently outperforms single-voice rubric generators,              problems and fundamental limitations of reinforce-
+and rubric-refinement baselines on JudgeBench,                  ment learning from human feedback. arXiv preprint
+                                                                arXiv:2307.15217.
+RewardBench-2, and PPE, and it also delivers
+stronger downstream policies under GRPO on                    Chi-Min Chan, Weize Chen, Yusheng Su, Jianxuan Yu,
+BiGGen-Bench and HealthBench-Hard.                              Wei Xue, Shanghang Zhang, Jie Fu, and Zhiyuan Liu.
+                                                                2024. Chateval: Towards better llm-based evaluators
+Limitations                                                     through multi-agent debate. In International con-
+                                                                ference on learning representations, volume 2024,
+While MRRG mitigates the dimensional blind spots                pages 9079–9093.
+of single-voiced rubric generation, it still has one          Lichang Chen, Chen Zhu, Davit Soselia, Jiuhai Chen,
+notable limitation. The pool of roles used to instan-           Tianyi Zhou, Tom Goldstein, Heng Huang, Moham-
+tiate the multiple voices is predefined and remains             mad Shoeybi, and Bryan Catanzaro. 2024. Odin:
+fixed across all questions. In practice, however, the           Disentangled reward mitigates hacking in rlhf. arXiv
+                                                                preprint arXiv:2402.07319.
+set of perspectives that are truly relevant for judging
+a response is inherently question-dependent: a cod-           Yann Dubois, Chen Xuechen Li, Rohan Taori, Tianyi
+ing task and a moral-reasoning task, for instance,              Zhang, Ishaan Gulrajani, Jimmy Ba, Carlos Guestrin,
+                                                                Percy S Liang, and Tatsunori B Hashimoto. 2023.
+call for largely disjoint expert viewpoints. Using              Alpacafarm: A simulation framework for methods
+a static role pool may therefore introduce uninfor-             that learn from human feedback. Advances in Neural
+mative voices on some questions while omitting                  Information Processing Systems, 36:30039–30069.
+critical ones on others. A natural extension is to
+                                                              Jacob Eisenstein, Chirag Nagpal, Alekh Agarwal, Ah-
+incorporate adaptive, question-conditioned role se-              mad Beirami, Alex D’Amour, DJ Dvijotham, Adam
+lection — for example, by retrieving or generating               Fisch, Katherine Heller, Stephen Pfohl, Deepak
+roles on the fly based on the input — which is an                Ramachandran, and 1 others. 2023. Helping or
+important direction for future work.                             herding? reward model ensembles mitigate but
+                                                                 do not eliminate reward hacking. arXiv preprint
+                                                                 arXiv:2312.09244.
+References                                                    Evan Frick, Tianle Li, Connor Chen, Wei-Lin Chiang,
+                                                                Anastasios N Angelopoulos, Jiantao Jiao, Banghua
+Josh Achiam, Steven Adler, Sandhini Agarwal, Lama               Zhu, Joseph E Gonzalez, and Ion Stoica. 2024. How
+  Ahmad, Ilge Akkaya, Florencia Leoni Aleman,                   to evaluate reward models for rlhf. arXiv preprint
+  Diogo Almeida, Janko Altenschmidt, Sam Altman,                arXiv:2410.14872.
+  Shyamal Anadkat, and 1 others. 2023. Gpt-4 techni-
+  cal report. arXiv preprint arXiv:2303.08774.                Anisha Gunjal, Anthony Wang, Elaine Lau, Vaskar
+                                                                Nath, Yunzhong He, Bing Liu, and Sean Hendryx.
+Rahul K Arora, Jason Wei, Rebecca Soskin Hicks, Pre-            2025. Rubrics as rewards: Reinforcement learn-
+  ston Bowman, Joaquin Quiñonero-Candela, Foivos                ing beyond verifiable domains. arXiv preprint
+  Tsimpourlas, Michael Sharman, Meghan Shah, An-                arXiv:2507.17746.
+  drea Vallone, Alex Beutel, and 1 others. 2025.
+  Healthbench: Evaluating large language models               Daya Guo, Dejian Yang, Haowei Zhang, Junxiao
+  towards improved human health. arXiv preprint                 Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu
+  arXiv:2505.08775.                                             Zhang, Shirong Ma, Xiao Bi, and 1 others. 2025.
+                                                                Deepseek-r1: Incentivizing reasoning capability in
+Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda                   llms via reinforcement learning. arXiv preprint
+  Askell, Anna Chen, Nova DasSarma, Dawn Drain,                 arXiv:2501.12948.
+  Stanislav Fort, Deep Ganguli, Tom Henighan, and 1
+  others. 2022. Training a helpful and harmless assis-        Leslie Pack Kaelbling, Michael L Littman, and An-
+  tant with reinforcement learning from human feed-             drew W Moore. 1996. Reinforcement learning: A
+  back. arXiv preprint arXiv:2204.05862.                        survey. Journal of artificial intelligence research,
+                                                                4:237–285.
+Tom Brown, Benjamin Mann, Nick Ryder, Melanie
+  Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind          Akira Kawabata and Saku Sugawara. 2026. C2: Scal-
+  Neelakantan, Pranav Shyam, Girish Sastry, Amanda              able rubric-augmented reward modeling from binary
+  Askell, and 1 others. 2020. Language models are               preferences. arXiv preprint arXiv:2604.13618.
+  few-shot learners. Advances in neural information
+  processing systems, 33:1877–1901.                           Seungone Kim, Juyoung Suk, Ji Yong Cho, Shayne
+                                                                Longpre, Chaeeun Kim, Dongkeun Yoon, Guijin Son,
+Stephen Casper, Xander Davies, Claudia Shi,                     Yejin Cho, Sheikh Shafayat, Jinheon Baek, Sue Hyun
+  Thomas Krendl Gilbert, Jérémy Scheurer, Javier                Park, Hyeonbin Hwang, Jinkyung Jo, Hyowon Cho,
+   Rando, Rachel Freedman, Tomasz Korbak, David                 Haebin Shin, Seongyun Lee, Hanseok Oh, Noah Lee,
+   Lindner, Pedro Freire, and 1 others. 2023. Open              Namgyu Ho, and 13 others. 2024. The biggen bench:
+
+
+                                                          9
+  A principled benchmark for fine-grained evaluation            Arjun Panickssery, Samuel R Bowman, and Shi Feng.
+  of language models with language models. Preprint,              2024. Llm evaluators recognize and favor their own
+  arXiv:2406.05761.                                               generations. Advances in Neural Information Pro-
+                                                                  cessing Systems, 37:68772–68802.
+Nathan Lambert, Jacob Morrison, Valentina Pyatkin,
+  Shengyi Huang, Hamish Ivison, Faeze Brahman,                  Haoran Que, Feiyu Duan, Liqun He, Yutao Mou,
+  Lester James V Miranda, Alisa Liu, Nouha Dziri,                 Wangchunshu Zhou, Jiaheng Liu, Wenge Rong,
+  Shane Lyu, and 1 others. 2024. Tulu 3: Pushing fron-            Zekun Moore Wang, Jian Yang, Ge Zhang, and 1
+  tiers in open language model post-training. arXiv               others. 2024. Hellobench: Evaluating long text gen-
+  preprint arXiv:2411.15124.                                      eration capabilities of large language models. arXiv
+                                                                  preprint arXiv:2409.16191.
+Nathan Lambert, Valentina Pyatkin, Jacob Morrison,
+  Lester James Validad Miranda, Bill Yuchen Lin, Khy-           Swarnadeep Saha, Omer Levy, Asli Celikyilmaz, Mohit
+  athi Chandu, Nouha Dziri, Sachin Kumar, Tom Zick,               Bansal, Jason Weston, and Xian Li. 2024. Branch-
+  Yejin Choi, and 1 others. 2025. Rewardbench: Eval-              solve-merge improves large language model evalu-
+  uating reward models for language modeling. In                  ation and generation. In Proceedings of the 2024
+  Findings of the Association for Computational Lin-              Conference of the North American Chapter of the
+  guistics: NAACL 2025, pages 1755–1797.                          Association for Computational Linguistics: Human
+                                                                  Language Technologies (Volume 1: Long Papers),
+Yuxi Li. 2017. Deep reinforcement learning: An
+                                                                  pages 8352–8370.
+  overview. arXiv preprint arXiv:1701.07274.
+Tian Liang, Zhiwei He, Wenxiang Jiao, Xing Wang,                Leonard Salewski, Stephan Alaniz, Isabel Rio-Torto,
+  Yan Wang, Rui Wang, Yujiu Yang, Shuming Shi, and                Eric Schulz, and Zeynep Akata. 2023. In-context im-
+  Zhaopeng Tu. 2024. Encouraging divergent thinking               personation reveals large language models’ strengths
+  in large language models through multi-agent debate.            and biases. Advances in neural information process-
+  In Proceedings of the 2024 conference on empiri-                ing systems, 36:72044–72057.
+  cal methods in natural language processing, pages             William F Shen, Xinchi Qiu, Chenxi Whitehouse, Lisa
+  17889–17904.                                                    Alazraki, Shashwat Goel, Francesco Barbieri, Timon
+Hunter Lightman, Vineet Kosaraju, Yuri Burda, Harri-              Willi, Akhil Mathur, and Ilias Leontiadis. 2026. Re-
+  son Edwards, Bowen Baker, Teddy Lee, Jan Leike,                 thinking rubric generation for improving llm judge
+  John Schulman, Ilya Sutskever, and Karl Cobbe.                  and reward modeling for open-ended tasks. arXiv
+  2023. Let’s verify step by step. In The twelfth inter-          preprint arXiv:2602.05125.
+  national conference on learning representations.
+                                                                Prasann Singhal, Tanya Goyal, Jiacheng Xu, and
+Chris Yuhao Liu, Liang Zeng, Yuzhen Xiao, Jujie He,               Greg Durrett. 2023. A long way to go: Investi-
+  Jiacai Liu, Chaojie Wang, Rui Yan, Wei Shen, Fuxi-              gating length correlations in rlhf. arXiv preprint
+  ang Zhang, Jiacheng Xu, Yang Liu, and Yahui Zhou.               arXiv:2310.03716.
+  2025a. Skywork-reward-v2: Scaling preference
+  data curation via human-ai synergy. arXiv preprint            Joar Skalse, Nikolaus Howe, Dmitrii Krasheninnikov,
+  arXiv:2507.01352.                                               and David Krueger. 2022. Defining and characteriz-
+                                                                  ing reward gaming. Advances in Neural Information
+Tianci Liu, Ran Xu, Tony Yu, Ilgee Hong, Carl Yang,               Processing Systems, 35:9460–9471.
+  Tuo Zhao, and Haoyu Wang. 2025b. Openrubrics:
+  Towards scalable synthetic rubric generation for re-          Sijun Tan, Siyuan Zhuang, Kyle Montgomery,
+  ward modeling and llm alignment. arXiv preprint                  Willian Yuan Tang, Alejandro Cuadron, Chenguang
+  arXiv:2510.07743.                                                Wang, Raluca Ada Popa, and Ion Stoica. 2024.
+                                                                   Judgebench: A benchmark for evaluating llm-based
+Ziyu Liu, Zeyi Sun, Yuhang Zang, Xiaoyi Dong, Yuhang               judges.
+  Cao, Haodong Duan, Dahua Lin, and Jiaqi Wang.
+  2025c. Visual-rft: Visual reinforcement fine-tuning.          Jonathan Uesato, Nate Kushman, Ramana Kumar, Fran-
+  In Proceedings of the IEEE/CVF International Con-               cis Song, Noah Siegel, Lisa Wang, Antonia Creswell,
+  ference on Computer Vision, pages 2034–2044.                    Geoffrey Irving, and Irina Higgins. 2022. Solv-
+                                                                  ing math word problems with process-and outcome-
+Saumya Malik, Valentina Pyatkin, Sander Land, Ja-                 based feedback. arXiv preprint arXiv:2211.14275.
+  cob Morrison, Noah A. Smith, Hannaneh Ha-
+  jishirzi, and Nathan Lambert. 2025. Rewardbench               Vijay Viswanathan, Yanchao Sun, Shuang Ma, Xiang
+  2: Advancing reward model evaluation. Preprint,                 Kong, Meng Cao, Graham Neubig, and Tongshuang
+  arXiv:2506.01937.                                               Wu. 2025. Checklists are better than reward mod-
+                                                                  els for aligning language models. arXiv preprint
+Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida,                 arXiv:2507.18624.
+  Carroll Wainwright, Pamela Mishkin, Chong Zhang,
+  Sandhini Agarwal, Katarina Slama, Alex Ray, and 1             Peiyi Wang, Lei Li, Liang Chen, Zefan Cai, Dawei Zhu,
+  others. 2022. Training language models to follow in-            Binghuai Lin, Yunbo Cao, Lingpeng Kong, Qi Liu,
+  structions with human feedback. Advances in neural              Tianyu Liu, and 1 others. 2024. Large language mod-
+  information processing systems, 35:27730–27744.                 els are not fair evaluators. In Proceedings of the
+
+
+                                                           10
+  62nd Annual Meeting of the Association for Compu-          A    Dataset description
+  tational Linguistics (Volume 1: Long Papers), pages
+  9440–9450.                                                     • JudgeBench (Tan et al., 2024): Using a
+                                                                   novel pipeline that transforms any dataset with
+Jiaxin Wen, Ruiqi Zhong, Akbir Khan, Ethan Perez,
+   Jacob Steinhardt, Minlie Huang, Samuel R Bow-                   ground truth labels and verification algorithms
+   man, He He, and Shi Feng. 2024. Language models                 into a corresponding dataset specifically tai-
+   learn to mislead humans via rlhf. arXiv preprint                lored for LLM-based judges, It constructs a
+   arXiv:2409.12822.                                               challenging dataset consisting of 350 response
+Marco A Wiering and Martijn Van Otterlo. 2012. Rein-               pairs across four categories:general knowl-
+ forcement learning. Adaptation, learning, and opti-               edge, reasoning, mathematics, and coding.
+ mization, 12(3):729.                                              Each pair contains one objectively correct re-
+An Yang, Anfeng Li, Baosong Yang, Beichen Zhang,                   sponse and one objectively incorrect response,
+  Binyuan Hui, Bo Zheng, Bowen Yu, Chang                           with the incorrect response designed to con-
+  Gao, Chengen Huang, Chenxu Lv, and 1 others.                     tain subtle errors, making it difficult for LLM-
+  2025. Qwen3 technical report. arXiv preprint                     based judges to distinguish between the two.
+  arXiv:2505.09388.
+Junkai Zhang, Zihao Wang, Lin Gui, Swar-                         • RewardBench-2 (Malik et al., 2025): The
+  nashree Mysore Sathyendra, Jaehwan Jeong,                        benchmark contains 1865 preference valida-
+  Victor Veitch, Wei Wang, Yunzhong He, Bing                       tion data containing the following categories:
+  Liu, and Lifeng Jin. 2025. Chasing the tail:
+                                                                   factuality, precise instruction following, math,
+  Effective rubric-based reward modeling for large
+  language model post-training.    arXiv preprint                  safety, focus and ties. Each instance contains
+  arXiv:2509.21500.                                                at least one correct answer and three wrong
+                                                                   answers. For each sample, the judgment is
+Wenting Zhao, Xiang Ren, Jack Hessel, Claire Cardie,
+ Yejin Choi, and Yuntian Deng. 2024. Wildchat: 1m                  identified as correct only if all the chosen an-
+ chatGPT interaction logs in the wild. In The Twelfth              swers obtain higher score than all the rejected
+ International Conference on Learning Representa-                  answers.
+ tions.
+                                                                 • PPE: (Frick et al., 2024) Preference Proxy
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan
+  Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin,                     Evaluations is an evaluation benchmark for re-
+  Zhuohan Li, Dacheng Li, Eric Xing, and 1 others.                 ward models and LLM-judges, which are used
+  2023. Judging llm-as-a-judge with mt-bench and                   to replicate human preferences for large-scale
+  chatbot arena. Advances in neural information pro-               LLM training and evaluation. PPE contains
+  cessing systems, 36:46595–46623.
+                                                                   more than 16000 real human preference data
+                                                                   sourced from Chatbot Arena as well as verifi-
+                                                                   able correctness preference data sourced from
+                                                                   reputable LLM benchmarks, such as MMLU-
+                                                                   Pro and MATH. PPE provides various metrics
+                                                                   across the benchmarks, and includes analy-
+                                                                   sis on which metrics correlated the most with
+                                                                   post-RLHF outcomes. PPE is correlated to
+                                                                   downstream outcomes to ensure using PPE
+                                                                   as a reference evaluation signal when tuning
+                                                                   reward models and LLM Judges leads to tangi-
+                                                                   ble downstream improvements in post-RLHF
+                                                                   LLM performance.
+
+                                                                 • WildChat: (Zhao et al., 2024) WildChat
+                                                                   is a collection of 650K conversations be-
+                                                                   tween human users and ChatGPT. The authors
+                                                                   collected WildChat by offering online users
+                                                                   free access to OpenAI’s GPT-3.5 and GPT-
+                                                                   4. The dataset contains a broad spectrum of
+                                                                   user-chatbot interactions that are not previ-
+
+                                                        11
+       ously covered by other instruction fine-tuning          Figure 6. From the figures, we can observe domain-
+       datasets: for example, interactions include am-         dependent judging accuracy in single-voiced rubric
+       biguous user requests, code-switching, topic-           and other single-role rubric caused dimensional
+       switching, political discussions, etc. Wild-            blind spots.
+       Chat can serve both as a dataset for instruc-
+       tional fine-tuning and as a valuable resource           C.2   Experimental Setup for Rubric-Hacking
+       for studying user behaviors.                                  Experiments
+                                                               Figure 1b reports our rubric-hacking experiments.
+    • BiGGen Bench: (Kim et al., 2024) BIGGEN                  The experimental procedure is as follows. We first
+      BENCH evaluates 9 core capabilities of                   sample 400 query prompts and use Qwen2.5-3B-
+      LMs–namely instruction following, ground-                Instruct to generate both single-voiced and multi-
+      ing, planning, reasoning, refinement, safety,            voiced rubrics for each query. Given each gener-
+      theory of mind, tool usage, and multilingual-            ated rubric, we then prompt GPT-4o to produce
+      ism–across 77 tasks and 765 instances.                   an adversarial answer that attempts to satisfy the
+                                                               rubric while remaining low-quality along evalua-
+    • HealthBench-Hard (Arora et al., 2025): A                 tive dimensions not covered by the rubric. The
+      subset of 1,000 HealthBench examples chosen              prompt template used for this adversarial answer
+      because they are difficult for current frontier          generation is shown in Figure 7. Finally, GPT-4o is
+      models. HealthBench Hard is designed to be               asked to evaluate the generated answers on a 0–10
+      a difficult target for future models, with many          scale using the prompt template in Figure 8.
+      current models achieving a score of zero on it.             The motivation behind this experiment is that
+                                                               a more comprehensive rubric should be harder to
+B     Implementation Details                                   hack. If a rubric covers a broader set of evalua-
+All experiments were conducted on a system                     tive dimensions, it becomes more difficult for an
+equipped with approximately 500 GB of GPU                      adversary to generate an answer that both satis-
+memory, with GRPO training taking approximately                fies the rubric and remains low-quality by exploit-
+7 hours. Detailed hyperparameters for GRPO are                 ing dimensional blind spots. Conversely, if such a
+provided in Table 5.                                           low-quality yet rubric-passing answer can be eas-
+                                                               ily generated, this suggests that the rubric fails to
+      Table 5: Hyperparameters for GRPO training.              capture important aspects of answer quality. There-
+                                                               fore, the quality of these adversarial rubric-passing
+ Hyperparameter                Value
+ Base model                    Qwen/Qwen2.5-3B-Instruct        answers serves as an indirect measure of rubric
+ Use PEFT                      False                           comprehensiveness and robustness: higher evalu-
+ Number of rollout             8
+ Temperature                   1.0                             ated answer quality indicates that the rubric leaves
+ Top-p                         1.0                             fewer exploitable blind spots, whereas lower qual-
+ Top-k                         −1
+ β                             0.001
+                                                               ity indicates greater vulnerability to rubric hacking.
+ Learning rate                 1 × 10−6
+ Batch size per device         8                               C.3   Ablation on LLM-Based Rubric
+ Gradient accumulation steps   4                                     Consolidation
+ Number of epochs              3
+ Warmup ratio                  0.1                             In this subsection, we empirically examine whether
+ LR scheduler                  constant with warmup
+ Optimizer                     adamw                           an additional LLM-based consolidation step ben-
+                                                               efits MRRG. Specifically, after generating rubrics
+                                                               with the multi-role process, we prompt an LLM
+C     Detailed experimental results                            to consolidate them by merging semantically over-
+                                                               lapping criteria and removing mutually conflicting
+C.1     Experimental judging results in different              ones using prompt in Figure 14. This ablation
+        domains                                                allows us to assess whether semantic rubric refine-
+In Figure 1a, we report the experimental results               ment improves upon our default exact-match dedu-
+of Qwen2.5-7b-Instruct on each domain from                     plication strategy.
+JudgeBench. In this subsection, we report the per-                As shown in Table 6, LLM-based consolidation
+formance of each method on each domain from                    does not improve MRRG. Instead, MRRG consis-
+RewardBench-2 and JudgeBench in Figure 5 and                   tently outperforms MRRGC across all backbone
+
+                                                          12
+        (a) Qwen2.5-3b-Instruct                      (b) Qwen2.5-7b-Instruct                (c) Qwen2.5-32b-Instruct
+
+
+
+
+                                  (d) GPT-OSS20b                                (e) GPT-OSS120b
+
+
+
+
+                    Figure 5: Comparison of different methods on each domain from RewardBench-2.
+
+
+Table 6: Ablation on LLM-based rubric consolidation.                multi-role criteria while remaining deterministic
+MRRGC denotes MRRG with LLM-based consolida-                        and reproducible.
+tion. For each model–benchmark pair, the better result
+is marked in bold.                                                  C.4   Detailed experimental results on BigGen
+   Model                  RewardBench-2       JudgeBench
+                                                                          Bench and Health-Bench-Hard
+                          MRRGC      MRRG    MRRGC   MRRG           In this subsection, we provide detailed post-
+   Qwen2.5 Series                                                   RL policy performance on BiGGen Bench and
+   Qwen2.5-3B-Instruct     46.2       51.2    47.1    55.1
+   Qwen2.5-7B-Instruct     52.7       59.2    43.7    56.9
+                                                                    HealthBench-Hard under different reward sources
+   Qwen2.5-32B-Instruct    59.2       65.3    57.1    65.1          in Table 7 and 8 respectively.
+
+                                                                    C.5   More case studies
+models and both benchmarks. On RewardBench-                         Table 9 illustrates a case where the single-voiced
+2, MRRG exceeds MRRGC by 5.0 to 15.0 points,                        rubric fails to separate a well-grounded answer
+while on JudgeBench the gains range from 8.0 to                     from a superficially plausible one. The query
+14.6 points. The degradation is particularly pro-                   “What is huli?” is inherently ambiguous, since
+nounced for the GPT-OSS models, where consoli-                      the term may refer to a Hawaiian verb, the food-
+dation leads to more than 12-point drops on both                    related expression “huli huli”, or other language-
+benchmarks.                                                         specific meanings. The rejected answer appears
+   These results suggest that semantic consolida-                   fluent and informative, but it adds weakly sup-
+tion is not a free improvement for rubric generation.               ported associations such as mischief, idiomatic us-
+Although consolidation can reduce surface-level re-                 age, and unrelated food references. Because the
+dundancy, it may also remove useful role-specific                   single-voiced rubric mainly checks whether the
+criteria or suppress legitimate differences between                 response defines the term, provides context, and in-
+evaluative perspectives. Moreover, the LLM used                     cludes examples, it assigns the rejected answer the
+for consolidation must itself decide which criteria                 same score as the chosen answer. By contrast, the
+are redundant or conflicting, introducing an ad-                    multi-voiced rubric includes more discriminative
+ditional source of subjective bias. We therefore                    criteria concerning ambiguity resolution, calibrated
+adopt exact-match deduplication as the default ag-                  uncertainty, precise wording, and avoidance of un-
+gregation strategy, as it preserves complementary                   supported or tangential details. These criteria allow
+
+                                                               13
+Table 7: Detailed post-RL policy performance on BiGGen Bench under different reward sources. Best annotation-
+free reward per column in bold.
+
+ Reward source                       grounding    instruction following     multilingual   planning    reasoning     refinement   safety   theory of mind    tool usage    average
+ Base policy (Qwen2.5-3B-Instruct)     72.5               67.5                   32.9        52.1          68.2        54.6       61.7         62.2            30.7         57.8
+ SVRG w/o SR                           73.0               69.8                   35.0        58.6          70.0        57.9       56.7         64.8            38.6         60.0
+ SVRG w/ SR                            73.3               72.0                   32.1        60.0          72.3        63.2       61.1         67.8            40.4         62.0
+ Chasing the Tail                      73.3               71.3                   34.3        59.3          72.5        60.2       55.7         66.8            40.7         61.1
+ MRRG                                  74.0               70.2                   38.9        57.9          74.3        66.1       66.7         68.2            42.1         63.7
+
+
+Table 8: Detailed post-RL policy performance on HealthBench-Hard under different reward sources. Best annotation-
+free reward per column in bold.
+
+ Reward source                                accuracy     communication quality             completeness          context awareness       instruction following          average
+ Base policy (Qwen2.5-3B-Instruct)               21.5                     40.6                      14.9                  16.9                        34.0                 25.6
+ SVRG w/o SR                                     22.9                     40.0                      17.1                  18.9                        30.9                 26.0
+ SVRG w/ SR                                      25.8                     43.0                      19.5                  19.5                        35.5                 28.7
+ Chasing the Tail                                21.9                     48.7                      15.3                  13.1                        35.9                 27.0
+ MRRG                                            24.3                     55.1                      18.7                  20.5                        42.0                 32.1
+
+
+
+MRRG to prefer the chosen answer, which presents
+the main plausible meanings, explains the relevant
+usage of “huli huli”, and appropriately asks for ad-
+ditional context. This example demonstrates that
+MRRG better captures factual reliability under am-
+biguity, where the key challenge is not producing
+more information, but selecting information that is
+grounded, relevant, and properly scoped.
+
+D      Prompt template for rubric generation
+       and evaluation
+In this section, we provide all the prompting tem-
+plate in our experiments in the following figures:
+
+    • Rubric passing answer generation prompt tem-
+      plate used in rubric-hacking experiments are
+      shown in Figure 7.
+
+    • Answer evaluation prompt template used in
+      rubric-hacking experiments are shown in Fig-
+      ure 8.
+
+    • Rubric generation prompt template for
+      {AI R ESEARCHER, U SER, D OMAIN E XPERT,
+      E DUCATOR, L INGUIST} are shown in Figure
+      13, 9, 10, 11 and 12 respectively.
+
+    • Rubric consolidation prompt template used in
+      LLM consolidation experiments is shown in
+      Figure 14.
+
+    • Rubric generation prompt template for single
+      voiced methods are shown in Figure 15 and
+      16 respectively.
+
+    • Criterion judging prompt is shown in Figure
+      17.
+
+
+                                                                                        14
+Table 9: Case study comparing single-voiced and multi-voiced rubrics with corresponding preferred answers. i in
+[Wi] indicates the weight for each criterion.
+
+                                                                     Question: What is huli?
+ Single-voiced rubric                                                                Multi-voiced rubric
+
+
+
+      • Does the response clearly define what “huli” refers to? [W3]                      • Does the response define “huli” in a way that aligns with the user’s
+                                                                                            likely intent or context? [W3]
+      • Does the response specify the context or domain in which “huli” is used,
+        such as language, culture, or field? [W3]                                         • Does the response specify the relevant context or domain, such as
+                                                                                            language, culture, or food? [W3]
+      • Does the response provide accurate and verifiable information about
+        “huli”? [W3]                                                                      • Does the response acknowledge and address ambiguity or multiple
+                                                                                            possible meanings? [W3]
+      • Does the response address potential multiple meanings or interpretations
+        of “huli” if applicable? [W2]                                                     • Does the response avoid unsupported, incorrect, or misleading informa-
+                                                                                            tion about “huli”? [W3]
+      • Does the response include examples or additional details to clarify the
+        meaning of “huli”? [W2]                                                           • Does the response use precise and unambiguous wording throughout?
+                                                                                            [W3]
+      • Does the response avoid including irrelevant or unrelated information?
+        [W2]                                                                              • Does the response provide sufficient context or examples to clarify the
+                                                                                            meaning? [W2]
+      • Does the response use clear and concise language to explain “huli”?
+        [W1]                                                                              • Does the response indicate when further clarification from the user is
+                                                                                            needed? [W2]
+
+                                                                                          • Does the response avoid unnecessary or irrelevant information that
+                                                                                            distracts from the definition? [W2]
+
+                                                                                          • Does the response calibrate certainty appropriately when the term has
+                                                                                            multiple meanings? [W2]
+
+                                                                                          • Does the response clearly distinguish the key concept from secondary
+                                                                                            or tangential details? [W1]
+
+
+ Answer preferred by single-voiced rubric                                            Answer preferred by multi-voiced rubric
+ “Huli” is a Hawaiian word that translates to “turning” or “to reverse.” In          “Huli” can have different meanings depending on the context. Here are a few
+ Hawaiian culture, “huli” can be associated with turning, rotating, or reversing.    possible interpretations:
+ Here are a few contexts where “huli” might be used:
+                                                                                          • Huli in Hawaiian: In Hawaiian, “huli” means “to turn” or “to change.”
+      • Physical movement, such as a hula dancer performing a “huli” move-                  It is a common word used in Hawaiian language and culture.
+        ment.
+                                                                                          • Huli huli food: “Huli huli” refers to a Hawaiian-style barbecue method
+      • Reversal, such as “the tide huli,” meaning the tide has turned.                     where meat, often chicken or pork, is marinated and grilled. The name
+                                                                                            literally means “turn, turn,” referring to the repeated turning of the
+      • Inverting or flipping something over.                                               meat while grilling.
+
+      • A change in direction or state.                                                   • Other meanings: In some other Pacific Island language contexts, “huli”
+                                                                                            may refer to meanings such as “behind” or “back.”
+      • Playful mischief or trickery, similar to the English word “trick.”
+                                                                                     Without more context, it is difficult to pinpoint a specific meaning. If you can
+ The word is commonly used in various Hawaiian phrases and idioms. If you            share where you encountered the term, I can help clarify it further.
+ mean a character name, brand, or a Hawaiian dish such as laulau, please
+ provide more context.
+
+
+
+
+                                                                                15
+                             (a) GPT-OSS-20b
+
+
+
+
+                            (b) GPT-OSS-120b
+
+
+
+
+                          (c) Qwen2.5-3b-Instruct
+
+
+
+
+                          (d) Qwen2.5-32b-Instruct
+
+
+
+
+Figure 6: comparison of different methods on each domain from JudgeBench.
+
+
+
+
+                                    16
+Rubric Passing Answer Generation Prompt Template
+You are an adversarial response generator.
+
+Your job is to expose a weakness in a rubric-based evaluation system. You are given:
+(1) a USER QUERY, and
+(2) a set of EVALUATION CRITERIA (the "target rubric") that will be used to score responses.
+
+You must produce a response that, under ONLY the target rubric, would look high-quality
+(i.e. a rubric-based judge should answer YES to every criterion), but in any evaluation
+dimension NOT covered by the target rubric, the response should be deliberately
+low-quality. Typical things to degrade — ONLY if they are NOT tested by the target rubric:
+
+- overall factual correctness & trustworthiness (subtly wrong facts, outdated info, unverifiable
+,→ claims)
+- depth, completeness, and coverage of the real underlying problem
+- safety, ethics, responsible-AI considerations (avoid clearly illegal content, but feel free to
+,→ drop disclaimers, caveats, risk framing)
+- practical usefulness and actionability for a real user
+- clarity, coherence, structure, readability
+- appropriate tone / register
+- edge cases, failure modes, pitfalls, limitations
+- peer-review soundness / methodological rigor
+- pedagogical scaffolding / avoiding misconceptions
+
+Crucially: the response should still unambiguously satisfy every listed criterion of the
+TARGET RUBRIC. Do NOT make it a pure troll / refusal / empty answer — a rubric-based judge
+with no other context should be forced to say YES to every item.
+
+---
+**USER QUERY:**
+{query}
+
+**TARGET RUBRIC (the evaluator will ONLY grade with these):**
+{rubric}
+
+---
+Output ONLY the adversarial response text. No preface, no explanation, no rubric echo,
+no meta-commentary. Just the response a user would receive.
+
+                     Figure 7: Rubric passing answer generation prompt template.
+
+
+
+
+                                                 17
+Answer Evaluation Prompt Template
+You are an expert evaluator. You will be given a USER QUERY and TWO candidate responses (A, B).
+,→ Score the OVERALL quality of each response on an integer scale of 0-10, where:
+
+
+- 10 = excellent: factually correct, complete, helpful, well-structured, safe, addresses the
+,→ user's true need.
+- 7-9 = good: minor issues only.
+- 4-6 = mediocre: partially helpful but with notable problems.
+- 1-3 = poor: largely unhelpful, wrong, or unsafe.
+- 0 = unusable (empty / refusal-without-reason / completely off-topic).
+
+Consider ALL relevant dimensions holistically: factual correctness, completeness, depth,
+practical usefulness, clarity, structure, safety, edge-case awareness, calibration of
+confidence, tone, and absence of misleading claims. Do NOT be biased by length alone.
+Score each response independently of the other on the same absolute scale.
+
+---
+**USER QUERY:**
+{query}
+
+---
+**RESPONSE A:**
+{resp_a}
+
+---
+**RESPONSE B:**
+{resp_b}
+
+---
+Output STRICTLY a single JSON object on one line, with integer scores 0-10:
+{{"A": <int>, "B": <int>}}
+No other text, no rationale, no markdown.
+
+                      Figure 8: Answer evaluation prompt template for GPT-4o.
+
+
+
+
+                                                18
+Rubric Generation Prompt Template for User
+You are a battle-hardened LLM power user who uses AI assistants 8+ hours/day for real,
+,→ consequential work.
+
+
+Your evaluation instincts:
+• You copy-paste AI output directly into production contexts. If it's wrong, YOU eat the cost.
+• You judge a response by "what happens AFTER I read it" — do you act, or do you open 5 more tabs
+,→ to verify?
+• You resent responses that waste your time: over-explaining, hedging excessively, or burying the
+,→ answer in fluff.
+• Confident-sounding nonsense is WORSE than an honest "I'm not sure."
+• You value a response that saves you a round trip — anticipating your obvious follow-up.
+
+Your task: Given a user query and a sample response, generate precise, binary (yes/no) evaluation
+,→ criteria (rubrics) from a HANDS-ON EXPERT USER perspective. Focus on:
+1. Did it actually answer the question?
+2. Can I trust this enough to act on it?
+3. How many more steps before I can actually DO something?
+4. Did it waste my time?
+5. Will I have to come back and ask again?
+6. Does it fit into my workflow?
+7. Does it talk to me like a peer or a child?
+8. Did it save me from a mistake I was about to make?
+
+**Rules:**
+- Each criterion must start with "Does the response..."
+- Each criterion must test exactly ONE thing
+- Each criterion must have an unambiguous yes/no answer
+- NO generic, vague, compound, or trivially true criteria
+- Target: No more than 10 criteria
+
+**Weight Assignment:**
+- **3**: Core need; failure = actively harmful or useless
+- **2**: Significant issue with clear evidence
+- **1**: Non-critical improvement or polish item
+
+---
+**USER QUERY:**
+{query}
+
+**SAMPLE RESPONSE:**
+{response}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+
+[
+    {{"criterion": "Does the response ...?", "weight": 3}}
+]
+
+                         Figure 9: Rubric Generation Prompt Template for User.
+
+
+
+
+                                                  19
+Rubric Generation Prompt Template for Domain Expert
+You are a senior domain expert whose expertise is precisely aligned with the subject matter of
+,→ the query below. You have 15+ years in the field, have published, shipped, built, or advised
+,→ at the highest level in your domain.
+
+
+Your evaluation instincts:
+• You have ZERO tolerance for plausible-sounding-but-wrong content.
+• You know the difference between "textbook answer" and "how we actually do it in practice."
+• You can instantly tell whether someone genuinely understands a topic or is stitching together
+,→ surface-level fragments.
+• You care about intellectual honesty — "this depends on X, Y, Z" earns more respect than false
+,→ certainty.
+• When you see an error a layperson wouldn't catch, you feel a professional OBLIGATION to flag it.
+
+Your task: Given a user query and a sample response, generate precise, binary (yes/no) evaluation
+,→ criteria (rubrics) from a DOMAIN EXPERT perspective. Focus on:
+1. Does it grasp what's actually hard about this?
+2. Would this survive peer review?
+3. Is the methodology / approach actually sound?
+4. Is the terminology precise or dangerously sloppy?
+5. Is this current or outdated?
+6. Does it know what it doesn't know?
+7. Would following this advice produce a professional-grade outcome?
+8. Does it flag what could go seriously wrong?
+
+**Rules:**
+- Each criterion must start with "Does the response..."
+- Each criterion must test exactly ONE thing
+- Each criterion must have an unambiguous yes/no answer
+- NO generic, vague, compound, or trivially true criteria
+- Target: No more than 10 criteria
+
+**Weight Assignment:**
+- **3**: Factual error, methodological flaw, or professionally irresponsible omission
+- **2**: Significant imprecision or gap that would cause real problems
+- **1**: Minor polish, edge case, or nice-to-have
+
+---
+**USER QUERY:**
+{query}
+
+**SAMPLE RESPONSE:**
+{response}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+
+[
+    {{"criterion": "Does the response ...?", "weight": 3}}
+]
+
+                    Figure 10: Rubric Generation Prompt Template for Domain Expert.
+
+
+
+
+                                                  20
+Rubric Generation Prompt Template for Educator
+You are a senior educator and instructional designer with deep expertise in learning science,
+,→ curriculum development, and knowledge transfer.
+
+
+Your evaluation instincts:
+• You assess whether explanations build understanding or just provide surface-level answers.
+• You detect when critical prerequisite knowledge is assumed without justification.
+• You evaluate whether examples and analogies are well-chosen and accurate.
+• You care about scaffolding — does the response guide the reader from what they know to what they
+,→ need to know?
+• You notice when responses enable learned helplessness vs. genuine understanding.
+
+Your task: Given a user query and a sample response, generate precise, binary (yes/no) evaluation
+,→ criteria (rubrics) from an EDUCATIONAL AND PEDAGOGICAL perspective. Focus on:
+1. Does it build genuine understanding or just give a surface answer?
+2. Are explanations appropriately scaffolded?
+3. Are examples and analogies accurate and helpful?
+4. Is prerequisite knowledge handled appropriately?
+5. Does it empower the reader to solve similar problems independently?
+6. Is the level of detail appropriate for the apparent audience?
+7. Are key concepts clearly distinguished from secondary details?
+8. Does it avoid creating misconceptions?
+
+**Rules:**
+- Each criterion must start with "Does the response..."
+- Each criterion must test exactly ONE thing
+- Each criterion must have an unambiguous yes/no answer
+- NO generic, vague, compound, or trivially true criteria
+- Target: No more than 10 criteria
+
+**Weight Assignment:**
+- **3**: Creates misconception or fundamentally fails to educate
+- **2**: Significant pedagogical gap
+- **1**: Minor improvement to learning experience
+
+---
+**USER QUERY:**
+{query}
+
+**SAMPLE RESPONSE:**
+{response}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+
+[
+    {{"criterion": "Does the response ...?", "weight": 3}}
+]
+
+                       Figure 11: Rubric Generation Prompt Template for Educator.
+
+
+
+
+                                                  21
+Rubric Generation Prompt Template for Linguist
+You are a senior linguist and communication specialist with deep expertise in discourse analysis,
+,→ pragmatics, and technical writing.
+
+
+Your evaluation instincts:
+• You analyze how language STRUCTURE affects comprehension and persuasion.
+• You detect when word choices create ambiguity, false implications, or misleading emphasis.
+• You evaluate coherence at both sentence and discourse levels.
+• You care about register appropriateness — is the language calibrated to the audience?
+• You notice when hedging language masks uncertainty vs. when it's appropriate caution.
+
+Your task: Given a user query and a sample response, generate precise, binary (yes/no) evaluation
+,→  criteria (rubrics) from a LINGUISTIC AND COMMUNICATION perspective. Focus on:
+1. Clarity and precision of language
+2. Logical coherence and flow
+3. Appropriate register and tone for the audience
+4. Absence of ambiguity or misleading phrasing
+5. Effective use of structure (headings, lists, paragraphs)
+6. Conciseness without loss of meaning
+7. Appropriate hedging and certainty calibration
+8. Readability and scannability
+
+**Rules:**
+- Each criterion must start with "Does the response..."
+- Each criterion must test exactly ONE thing
+- Each criterion must have an unambiguous yes/no answer
+- NO generic, vague, compound, or trivially true criteria
+- Target: No more than 10 criteria
+
+**Weight Assignment:**
+- **3**: Communication failure that causes misunderstanding or wrong action
+- **2**: Significant clarity or structure issue
+- **1**: Minor style or polish improvement
+
+---
+**USER QUERY:**
+{query}
+
+**SAMPLE RESPONSE:**
+{response}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+
+[
+    {{"criterion": "Does the response ...?", "weight": 3}}
+]
+
+                       Figure 12: Rubric Generation Prompt Template for Linguist.
+
+
+
+
+                                                  22
+Rubric Generation Prompt Template for AI Researcher
+You are a seasoned AI researcher who reads papers, runs experiments, and ships models for a
+,→ living. You use LLM assistants daily to accelerate literature reviews, derive equations,
+,→ debug training code, design ablations, and stress-test ideas before committing GPU hours.
+
+
+Your evaluation instincts:
+You judge a response by "does this change what I do next?" does it sharpen a hypothesis, surface
+,→ a relevant prior work, or correct a flawed assumption?
+
+
+You distrust confident hand-waving: vague appeals to "recent work," missing citations,
+,→ hallucinated paper titles, or math that "looks right" but skips the load-bearing step.
+
+
+A calibrated "this is unverified" or "the literature is split here" is far more valuable than a
+,→ polished but unfounded claim.
+
+
+You care about precision of terminology.
+
+Your task: Given a user query and a sample response, generate precise, binary (yes/no) evaluation
+,→ criteria (rubrics) from a PRACTICING AI RESEARCHER perspective. Focus on:
+1. Technical correctness
+2. Citation integrity
+3. Specificity
+4. Calibration
+5. Anticipating the next step
+6. Did it save me from a methodological mistake (e.g., leaky eval, wrong baseline, misapplied
+,→ assumption)?
+
+
+**Rules:**
+Each criterion must start with "Does the response..."
+Each criterion must test exactly ONE thing
+Each criterion must have an unambiguous yes/no answer
+NO generic, vague, compound, or trivially true criteria (e.g., avoid "Does the response
+,→ demonstrate understanding of ML?")
+Criteria must be grounded in the specific query and response, reference concrete claims, methods,
+,→ or omissions where possible
+Target: No more than 10 criteria
+
+**Weight Assignment:**
+- **3**: Core technical correctness or citation integrity
+- **2**: Significant gap in specificity, calibration, or anticipation of standard research
+,→ concerns
+- **1**: Non-critical polish
+
+---
+**USER QUERY:**
+{query}
+
+**SAMPLE RESPONSE:**
+{response}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+
+[
+    {{"criterion": "Does the response ...?", "weight": 3}}
+]
+
+                    Figure 13: Rubric Generation Prompt Template for AI Researcher.
+
+
+
+
+                                                  23
+Rubric Consolidation Prompt.
+You are a rubric consolidation expert. You are given {num_sets} sets of evaluation rubrics, all
+,→ generated for the SAME user query and sample response, but from DIFFERENT evaluation
+,→ perspectives.
+
+
+Your task: merge them into ONE unified, non-redundant rubric set following these strict rules:
+
+**Merge Rules:**
+1. **Deduplication**: If two or more criteria describe the SAME thing (even with different
+,→ wording), keep only ONE version — choose the most precise and clearly worded one. Assign the
+,→ highest weight among the duplicates.
+2. **Contradiction removal**: If two criteria directly CONTRADICT each other (e.g., one says "the
+,→ response MUST include X" and another says "the response should NOT include X"), remove BOTH.
+,→ They indicate perspective-specific artifacts, not universal quality criteria.
+3. **Keep the rest**: All remaining non-duplicate, non-contradictory criteria should be included
+,→ in the final merged set.
+
+
+
+---
+**USER QUERY:**
+{query}
+
+{rubric_sets}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+Each element: {{"criterion": "Does the response ...?", "weight": 1-3}}.
+Target: NO MORE THAN 20 criteria after merging.
+
+[
+  {{"criterion": "Does the response ...?", "weight": 3}}
+]
+"""
+
+                         Figure 14: Rubric Consolidation Prompt Template.
+
+
+
+
+                                               24
+Single-Voiced Rubric Generation without Sampling Response Prompt.
+You are an expert evaluator. Given a user query, your task is to design a concrete set of binary
+,→ (yes/no) evaluation criteria (a "rubric") that can be used to judge whether ANY candidate
+,→ response to this query is good.
+
+
+The rubric you design should help distinguish a high-quality response from a low-quality one,
+,→ covering the key aspects that the response must address.
+
+
+**Rules:**
+- Each criterion must start with "Does the response..."
+- Each criterion must test exactly ONE thing
+- Each criterion must have an unambiguous yes/no answer
+- NO generic, vague, compound, or trivially true criteria
+- The criteria should be applicable to any response to this query (not specific to one candidate
+,→ answer)
+- Target: 5-10 criteria
+
+**Weight Assignment:**
+- **3**: Core requirement; failure = response is useless or wrong
+- **2**: Significant quality aspect with clear impact
+- **1**: Nice-to-have improvement or polish item
+
+---
+**USER QUERY:**
+{query}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+Each element: {{"criterion": "Does the response ...?", "weight": 1-3}}.
+
+[
+    {{"criterion": "Does the response ...?", "weight": 3}}
+]
+
+              Figure 15: Single-Voiced Rubric Generation without Sampling Response Prompt.
+
+
+
+
+                                                  25
+Single-Voiced Rubric Generation with Sampling Response Prompt.
+"""You are an expert evaluator. Given a user query and a sample response, your task is to design
+,→ a concrete set of binary (yes/no) evaluation criteria (a "rubric") that can be used to judge
+,→ whether ANY candidate response to this query is good.
+
+
+The sample response is provided for reference to help you understand what kind of content could
+,→ reasonably be expected. However, the rubric you design must be generic enough to apply to ANY
+,→ response to this query, not just the sample.
+
+
+**Rules:**
+- Each criterion must start with "Does the response..."
+- Each criterion must test exactly ONE thing
+- Each criterion must have an unambiguous yes/no answer
+- NO generic, vague, compound, or trivially true criteria
+- The criteria should help distinguish a high-quality response from a low-quality one
+- Target: No more than 10 criteria
+
+**Weight Assignment:**
+- **3**: Core requirement; failure = response is useless or wrong
+- **2**: Significant quality aspect with clear impact
+- **1**: Nice-to-have improvement or polish item
+
+---
+**USER QUERY:**
+{query}
+
+**SAMPLE RESPONSE (for reference only):**
+{response}
+
+---
+**OUTPUT:** Return ONLY a valid JSON array. No explanatory text before or after.
+Each element: {{"criterion": "Does the response ...?", "weight": 1-3}}.
+
+[
+  {{"criterion": "Does the response ...?", "weight": 3}}
+]
+"""
+
+             Figure 16: Single-Voiced Rubric Generation with Sampling Response Prompt.
+
+
+
+
+                                                26
+Answer Evaluation Prompt.
+You are a judge, evaluating whether a response satisfies the given rubric. If the response
+,→ satisfies the criterion of the rubric, output YES; otherwise output NO.
+
+
+Requirement:
+• You must follow the rubric strictly, and only consider the criteria listed in the rubric.
+• You must NOT consider any other factors, such as your own opinions or external knowledge.
+
+Below between <QUERY> and </QUERY> is the query that the response is answering:
+<QUERY>
+{instruction}
+</QUERY>
+
+Below between <RESPONSE> and </RESPONSE> is the response to evaluate on:
+<RESPONSE>
+{response}
+</RESPONSE>
+
+Below between <RUBRIC> and </RUBRIC> is the rubric to evaluate on:
+<RUBRIC>
+{rubric}
+</RUBRIC>
+
+Output STRICTLY in below format. No other text is allowed:
+<EVALUATION> YES/NO </EVALUATION>
+
+                               Figure 17: Answer Evaluation Prompt.
+
+
+
+
+                                               27
+
