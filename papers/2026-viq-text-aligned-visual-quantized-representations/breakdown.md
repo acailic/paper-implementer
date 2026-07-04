@@ -504,6 +504,8 @@ ViQ wins 4/9 benchmarks vs InternViT-6B — the document/knowledge-heavy ones (D
 | Qwen2.5-7B | 4k tokens | 46% | >20% |
 | Qwen2.5-7B | 16k tokens | 65% | >40% |
 
+*Source: §4.3.1 prose + Figure 3 (`paper_layout.txt`). The 0.5B forward speedups (70%/78%), the 7B forward speedups (46%/65%), and the step-level figures (>20% at 4k, >40% at 16k) are stated verbatim in §4.3.1. The 1.5B (62%/71%) and 3B (55%/69%) forward speedups are Figure-3 bar-height readings — the paper's prose names only the 0.5B and 7B endpoints — so treat them as approximate.*
+
 **Plain English:** By precomputing discrete codes offline, ViQ eliminates the
 visual encoder from the training loop. For a Qwen2.5-0.5B model at 16k token
 sequence length, forward passes are **78% faster**. Even for large 7B models,

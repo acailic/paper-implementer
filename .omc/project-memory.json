@@ -66,14 +66,14 @@
   "hotPaths": [
     {
       "path": "papers/2026-viq-text-aligned-visual-quantized-representations/breakdown.md",
-      "accessCount": 27,
-      "lastAccessed": 1783121903881,
+      "accessCount": 29,
+      "lastAccessed": 1783126623479,
       "type": "file"
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 21,
-      "lastAccessed": 1783126149929,
+      "accessCount": 23,
+      "lastAccessed": 1783126352838,
       "type": "file"
     },
     {
@@ -173,6 +173,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/paper_layout.txt",
+      "accessCount": 6,
+      "lastAccessed": 1783126575708,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
       "accessCount": 5,
       "lastAccessed": 1783117893190,
@@ -206,12 +212,6 @@
       "path": "papers/tracker.json",
       "accessCount": 2,
       "lastAccessed": 1783117954492,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/paper_layout.txt",
-      "accessCount": 2,
-      "lastAccessed": 1783121458720,
       "type": "file"
     },
     {
