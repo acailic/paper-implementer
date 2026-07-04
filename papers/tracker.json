@@ -1152,7 +1152,43 @@
       ],
       "abstract": "Diffusion Language Models (DLMs) have recently emerged as a promising alternative to autoregressive models. Unlike standard diffusion-based approaches, DLMs are not explicitly conditioned on a timestep, raising a natural question: do these models internally represent denoising progress, and how is such information used downstream? In this work, we show that DLMs do in fact encode a latent representation related to the diffusion timestep within their residual streams. We find that this signal can be reliably extracted using probes across layers, indicating that denoising progress is decodable from internal activations. We further demonstrate that steering the model along a low-dimensional subspace associated with the inferred timestep allows us to systematically modulate its notion of denoising progress, leading to predictable changes in model confidence and entropy. Finally, we analyse the geometry of the identified representation, showing that it exhibits structured and interpretable properties in activation space, and shedding light on how such a signal is processed by these models.",
       "sourcing_note": "Source-first breakdown built from paper.pdf (16pp, 2.9MB) via pdftotext -layout (paper_layout.txt, 2133 lines; 1 explicit table + 23 figures). Table 1 (downstream mean-steering, 2 models x 3 datasets x {base, t_hat=1,25,50,75,100}) transcribed verbatim (lines 1174-1183); Figure 2/13/15 probe R^2 per-layer data strips (LLaDA MLP, Dream MLP, both linear) transcribed as figure-printed numeric rows (the figures underlying data, higher confidence than bar-reads). Source-free reconciliation PASSED: 3200/2800 mean vectors = 100 bins x 32/28 layers; probe R^2>0.5 all layers (LLaDA ALL min 0.74, Dream ALL min 0.80); Dream L25 PCA PC1 91.19% + PC2 5.03% = 96.22% in 2D; LLaDA Table-1 robust (max |delta| 6.4), Dream GSM8K t_hat=100 collapse 68.8->23.1 (-45.7) matches prose; random-control KL ~ half of tau-KL. 17/17 distinctive cells grep-confirmed verbatim. NO numeric prose-vs-table contradiction. 3 inline notes: (1) no explicit inference-timestep is the premise not a gap; (2) probe R^2 strips are figure-embedded data not a standalone table; (3) Dream GSM8K EOS-collapse mechanism is qualitative (paper leaves quantitative analysis to future work). Figure axis-tick values (entropy/confidence/KL curves, cosine heatmaps, drift maps) NOT back-filled - only prose-confirmed qualitative trends quoted. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+    },
+    {
+      "rank": 26,
+      "arxiv_id": "2607.02396",
+      "arxiv_url": "https://arxiv.org/abs/2607.02396",
+      "pdf_url": "https://arxiv.org/pdf/2607.02396",
+      "title": "Fast Multi-dimensional Refusal Subspaces via RFM-AGOP",
+      "authors": [
+        "Thomas Winninger"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "safety / alignment mechanistic interpretability via multi-dimensional refusal-subspace extraction using Recursive Feature Machines (RFM) + Average Gradient Outer Product (AGOP) with probe-informed covariance init + EMA (kernel-method angle on the refusal cone)",
+      "ai_keywords": [
+        "refusal direction",
+        "refusal cone",
+        "multi-dimensional subspace",
+        "Recursive Feature Machine",
+        "RFM",
+        "AGOP",
+        "Average Gradient Outer Product",
+        "Mahalanobis-Laplace kernel",
+        "activation steering",
+        "weight ablation",
+        "linear probe",
+        "jailbreak",
+        "safety alignment",
+        "representation engineering",
+        "Qwen3",
+        "reasoning models",
+        "LLM-as-a-judge",
+        "HarmBench"
+      ],
+      "abstract": "Steering and monitoring activations in Large Language Models (LLMs) are increasingly used for both safety and interpretability. Early work assumed behaviours are encoded along single linear directions, but recent findings suggest complex behaviours, such as the refusal to answer harmful queries, live in multi-dimensional subspaces. However, existing methods for extracting these subspaces are computationally expensive, which becomes prohibitive on reasoning models who produce long reasoning traces. By adapting the Recursive Feature Machine (RFM) algorithm -- which can be computed efficiently -- with a probe-informed initialization, we are able to identify the multi-dimensional refusal subspace in seconds, on reasoning (Qwen 3) and non-reasoning (Qwen 2.5) models. While RFM allows for faster subspace identification, it also showed better performances on the ablation task than its alternatives. More work is planned to better understand the relations between subspaces found by different methods. If confirmed, RFM could be a cheap and scalable complement to existing subspace-extraction methods in LLMs.",
+      "sourcing_note": "Source-first breakdown built from paper.pdf (13pp, 479KB) via pdftotext -layout (paper_layout.txt, 723 lines; 1 explicit table + 6 figures). Table 1 (full ASR, 5 models x 5 methods x k in {0,1,3,5}) transcribed verbatim (lines 256-283); RCO row absent for Qwen3-14B confirmed by caption (no compute). Source-free reconciliation PASSED: 720=500+120+100; merged 1,271 -> m=720; 6 subset sizes {120,320,520,720,920,1120}; 4 languages x 1/4; Llama-Guard-3 91% EN / ~82% multilingual; judge agreement 84%; RFM FLOPs n^2*d=1000^2*5000=5e9; RCO s*b*l*p=5.12e17 x2 ~ 1.02e18 (paper roughly 10^18); hyperparams T=6 L=30 lambda=1e-3, k=10 cov truncation. All Table-1 cells grep-confirmed. 3 flagged notes (not reconciled): (1) abstract RFM-beats-alternatives overclaim - true at k=5 on Qwen2.5/1.7B/4B/8B but FALSE at k=1 on 1.7B (DIM 0.80>RFM 0.73) and k=3 on 1.7B, and RFM collapses on 14B (0.19 vs 8B 0.73) where RCO was not run; (2) Qwen3-1.7B vanilla ASR 0.20 (Table 1) vs 0.22 (sec 5.1 random-ablation baseline) - different measurement runs; (3) conclusion claims larger models encode higher-dim subspaces yet RFM k=5 underfits 14B (0.19) - open problem not evidence of recovery. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     }
   ],
-  "updated_at": "2026-07-04"
+  "updated_at": "2026-07-04T03:50:51.266+00:00"
 }
