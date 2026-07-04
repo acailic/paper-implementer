@@ -66,8 +66,8 @@
   "hotPaths": [
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 47,
-      "lastAccessed": 1783131537365,
+      "accessCount": 49,
+      "lastAccessed": 1783132019582,
       "type": "file"
     },
     {
@@ -233,6 +233,12 @@
       "type": "file"
     },
     {
+      "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/breakdown.md",
+      "accessCount": 3,
+      "lastAccessed": 1783132041718,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-improved-large-language-diffusion-models/paper_layout.txt",
       "accessCount": 2,
       "lastAccessed": 1783125199505,
@@ -278,12 +284,6 @@
       "path": "papers/2026-reasoning-trees-rt-rag-multi-hop-qa/breakdown.md",
       "accessCount": 2,
       "lastAccessed": 1783131143786,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/breakdown.md",
-      "accessCount": 2,
-      "lastAccessed": 1783131875424,
       "type": "file"
     },
     {
@@ -338,6 +338,12 @@
       "path": "papers/2026-verifiable-process-reward-models-structured-reasoning/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783131353264,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-lacuna-localization-precision-llm-unlearning/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783132527561,
       "type": "file"
     }
   ],
