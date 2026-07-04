@@ -553,20 +553,36 @@ On LongBench the same separation sharpens dramatically (body, verbatim):
 
 ### Module ablations (the really load-bearing experiments, §5)
 
-#### M1 — Representation & Storage
+#### M1 — Representation & Storage (Table 3)
 
-| System | Ablation | Variables | EM | F1 | Recall@K | Finding |
-|--------|----------|-----------|:--:|:--:|:--------:|---------|
-| **LightMem** | Raw vs Summary vs Compressed | Content fidelity | **Raw wins all 4** | **Raw wins all 4** | **Raw wins all 4** | **O8:** raw > abstraction |
-| **MemTree** | Flat vs Deeper Tree | Depth of hierarchy | Flat ≈ Deeper (modest gain) | — | — | Hierarchy helps access, can't restore removed content |
+> Source: paper Table 3 (verbatim via `paper_layout.txt`). Column convention: LoCoMo reports exactness metrics {EM, Ans. F1}; LongMemEval reports overlap metrics {Substr. EM, ROUGE-L F1}.
 
-#### M2 — Extraction
+| System | Variant | LoCoMo EM | LoCoMo Ans. F1 | LME Substr. EM | LME ROUGE-L F1 |
+|--------|---------|:---------:|:--------------:|:--------------:|:--------------:|
+| **LightMem** | User-Only Raw | **24.2** | **38.9** | **26.0** | **31.4** |
+| LightMem | User-Only Summary | 8.5 | 15.6 | 11.7 | 17.4 |
+| LightMem | User-Only Compressed | 23.6 | 38.6 | 10.7 | 19.1 |
+| MemTree | Flat-biased | 18.2 | 30.7 | 23.0 | 29.9 |
+| MemTree | Deeper Tree | 18.7 | 31.2 | 23.3 | 30.9 |
+| Mem0 | Default | 3.2 | 6.2 | 9.3 | 16.5 |
+| Mem0 | Graph Store | 3.0 | 6.5 | 8.3 | 15.9 |
 
-| System | Ablation | Extraction strategy | EM (LoCoMo) | Finding |
-|--------|----------|-------------------|:-----------:|---------|
-| **MemoChat** | Heuristic-Topic vs LLM-Topic | Schema-free extraction | Heuristic > LLM | **O9:** preserve context at write time |
-| **MemOS** | Fast-Memorize vs Fine-Memorize | Extraction aggressiveness | **25.5** vs **2.5** | Aggressive filtering kills answerability |
-| **LightMem** | Hybrid-Raw vs User-Only-Raw | Store both turns | Hybrid ≥ User-Only | Store both user + assistant turns |
+**Finding O8 (Content Fidelity):** LightMem **User-Only Raw wins all four metrics.** User-Only Compressed stays close on LoCoMo (Ans. F1 38.6 vs 38.9; EM 23.6 vs 24.2) but collapses on LongMemEval Substr. EM (10.7 vs 26.0) — compression preserves meaning yet loses exact-detail matching. User-Only Summary is substantially weaker everywhere. MemTree's Deeper Tree gives only a modest gain over Flat-biased (~+0.5 per metric), and Mem0's Graph Store ≈ Default — confirming the boundary is *recoverable evidence*, not abstraction depth or structure type.
+
+#### M2 — Extraction (Table 4)
+
+> Source: paper Table 4 (verbatim via `paper_layout.txt`). Same column convention as M1: LoCoMo {EM, Ans. F1} + LongMemEval {Substr. EM, ROUGE-L F1}.
+
+| System | Variant | LoCoMo EM | LoCoMo Ans. F1 | LME Substr. EM | LME ROUGE-L F1 |
+|--------|---------|:---------:|:--------------:|:--------------:|:--------------:|
+| MemoChat | Heuristic Topic | 23.0 | 33.5 | **10.7** | **18.6** |
+| MemoChat | LLM Topic | 22.5 | **34.4** | 7.3 | 15.9 |
+| MemOS | Fast Memorize | **25.5** | **40.8** | 20.7 | 26.1 |
+| MemOS | Fine Memorize | 2.5 | 5.0 | **22.3** | **30.2** |
+| LightMem | User-Only Raw | 24.2 | 38.9 | **26.0** | 31.4 |
+| LightMem | Hybrid Raw | **25.5** | **39.7** | 25.3 | 31.4 |
+
+**Finding O9 (Coverage-Preserving):** the winner is *benchmark-dependent*, not one-sided. MemoChat **Heuristic Topic** wins LongMemEval (Substr. EM 10.7 vs 7.3; ROUGE-L 18.6 vs 15.9) while **LLM Topic** edges LoCoMo Ans. F1 (34.4 vs 33.5). MemOS **Fast Memorize** dominates LoCoMo (25.5 vs 2.5 EM; 40.8 vs 5.0 Ans. F1) yet **Fine Memorize** wins LongMemEval (22.3 vs 20.7 Substr. EM; 30.2 vs 26.1 ROUGE-L). LightMem **Hybrid Raw** (both turns) slightly beats User-Only Raw on LoCoMo (39.7 vs 38.9 Ans. F1) at essentially unchanged LongMemEval. Net: broader, less-selective write-time extraction preserves downstream answerability.
 
 **Key insight — Late Filtering Principle (F7):**
 
@@ -576,35 +592,50 @@ $$
 
 Preserve raw context at write time; filter at read time. Aggressive extraction at write time irreversibly discards potentially useful context.
 
-#### M3 — Retrieval & Routing
+#### M3 — Retrieval & Routing (Table 5)
 
-| System | Ablation | Strategy | Result | Finding |
-|--------|----------|----------|--------|---------|
-| **A-MEM** | Balanced vs Sparse-Leaning | Hybrid retrieval ratio | Balanced > Sparse | **O10:** explicit planning + balanced fusion |
-| **SimpleMem** | Planning vs None vs Planning+Reflect | Agentic retrieval | **Planning > None > Planning+Reflect** 💀 | Reflection adds overhead, no gain |
+> Source: paper Table 5 (verbatim via `paper_layout.txt`). Columns: Ans. F1, Recall (Strict Rec.), Substr. EM, ROUGE-L F1.
+
+| System | Variant | Ans. F1 | Recall | Substr. EM | ROUGE-L F1 |
+|--------|---------|:-------:|:------:|:----------:|:----------:|
+| A-MEM | Hybrid-Balanced | **24.6** | 49.9 | **27.5** | **25.9** |
+| A-MEM | Hybrid Sparse-Leaning | 23.0 | 44.3 | 24.3 | 22.8 |
+| SimpleMem | No Planning | 18.7 | 86.4 | 17.0 | 22.9 |
+| SimpleMem | Planning Only | **20.7** | **90.6** | **21.7** | **27.9** |
+| SimpleMem | Planning + Reflect | 20.0 | 88.6 | 21.3 | 26.1 |
+
+**Finding O10 (Planning & Fusion):** A-MEM **Hybrid-Balanced** beats Sparse-Leaning across all four metrics (24.6 vs 23.0 Ans. F1; 27.5 vs 24.3 Substr. EM). For SimpleMem the correct ranking is **Planning Only > Planning+Reflect > No Planning** (20.7 > 20.0 > 18.7 Ans. F1; 90.6 > 88.6 > 86.4 Recall) — Planning Only is best, reflection adds no gain on top of planning, yet Planning+Reflect still beats No Planning.
 
 **Key insight — Reflection Overhead (F8):**
 
 $$
-\text{Recall@}K(Q_{\text{plan+reflect}}) < \text{Recall@}K(Q_{\text{plan}})
+\text{Recall@}K(Q_{\text{plan}}) > \text{Recall@}K(Q_{\text{plan+reflect}}) > \text{Recall@}K(Q_{\text{none}})
 $$
 
-Reflection in the retrieval loop adds LLM-call overhead with no measurable retrieval gain. Challenges the trend of adding reflection everywhere.
+Planning itself consistently beats direct retrieval; reflection on top of planning adds LLM-call overhead with no retrieval gain. *(An earlier version of this section listed the order as "Planning > None > Planning+Reflect", which inverts the last two — the source table puts Planning+Reflect above No Planning on every column.)*
 
-#### M4 — Maintenance
+#### M4 — Maintenance (Figure 12)
 
-| System | Ablation | Maintenance strategy | Result | Finding |
-|--------|----------|---------------------|--------|---------|
-| **MemoryOS** | Conservative vs Default vs Delayed-Flush | Consolidation timing | **Conservative > Default > Delayed** | **O11:** conservative wins |
-| **MemoChat** | Single-topic vs Multi-topic | Summarization granularity | Multi > Single | Coarse summarization obscures sparse cues |
+> Source: paper Figure 12; numeric values are quoted verbatim from the §5.4 body prose (Ans. F1 / Substr. EM on LoCoMo), not bar-height readings — Fig. 12 is a bar chart with no extractable table.
+
+| System | Variant | Ans. F1 | Substr. EM |
+|--------|---------|:-------:|:----------:|
+| MemoryOS | Conservative-Merge | **23.5** | **22.8** |
+| MemoryOS | Default (immediate consolidation) | 23.2 | 22.4 |
+| MemoryOS | Delayed-Flush | 20.6 | 19.5 |
+| MemoChat | Default (multi-topic) | **16.6** | **18.4** |
+| MemoChat | Topic1 (forced single-topic) | 16.2 | 16.8 |
+| (reference) | Long Context (raw) | — | 23.7 (highest) |
+
+**Finding O11 (Conservative Consolidation):** MemoryOS **Conservative-Merge** edges Default (23.5 vs 23.2 Ans. F1; 22.8 vs 22.4 Substr. EM), while **Delayed-Flush** degrades it (20.6/19.5). MemoChat **multi-topic** beats forced **single-topic** (16.6/18.4 vs 16.2/16.8). Raw Long Context retains the highest Substr. EM (23.7). Maintenance works best under a balanced regime — selective consolidation without leaving evidence unresolved or compressing too aggressively.
 
 **Key insight — Conservative Consolidation (F9):**
 
 $$
-U(S_{\text{consolidate-conservative}}) > U(S_{\text{consolidate-default}}) > U(S_{\text{delayed}})
+U(S_{\text{conservative-merge}}) > U(S_{\text{default}}) > U(S_{\text{delayed-flush}})
 $$
 
-Consolidate incrementally and conservatively. Delaying flush accumulates stale state; aggressive merging loses precision.
+Consolidate selectively and conservatively. Delayed flushing fragments recent evidence at query time; overly coarse single-topic summarization obscures sparse but useful cues.
 
 ### 6.x Summary of All 9 Findings
 
