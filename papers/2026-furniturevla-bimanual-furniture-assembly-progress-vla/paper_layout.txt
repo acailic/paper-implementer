@@ -1,0 +1,834 @@
+                                         FurnitureVLA: Learning Long-Horizon Bimanual Furniture Assembly
+                                                        with Vision-Language-Action Model
+                                                            Chenyang Ma1,2           Yue Yang1,3 Radu Corcodel1 Siddarth Jain1                       Andrew Wu1
+                                                                                          Chiori Hori1† Diego Romeres1
+
+                                        Simulation & Real-World      Bimanual Furniture
+                                                                                                                             Progress-Enhanced VLA Policy
+                                          Teleoperation System         Assembly Tasks
+
+                                                                                                                1                        2                  3                    4
+arXiv:2607.01212v1 [cs.RO] 1 Jul 2026
+
+
+
+
+                                                                                                                1                        2                  3                    4
+
+
+
+
+                                                                                                                1                        2                  3                    4
+
+
+
+
+                                                                                                                1                        2                  3                    4
+
+
+
+
+                                        Fig. 1: Real-scale bimanual furniture assembly with Vision-Language-Action models. We introduce FurnitureVLA, the first systematic
+                                        study of this challenging setting. It comprises a scalable simulation pipeline for data generation and evaluation, and a tailored VR
+                                        teleoperation system for high-quality demonstration collection. We propose a progress-enhanced VLA to tackle long-horizon assembly.
+
+                                           Abstract— Current work on robot furniture assembly mostly                                         I. I NTRODUCTION
+                                        focuses on toy-scale settings or single-arm manipulation. We
+                                        introduce FurnitureVLA, the first systematic study of real-scale               Furniture assembly is a long-standing challenge in robotics
+                                        bimanual furniture assembly using Vision-Language-Action mod-
+                                                                                                                    due to its long-horizon and high-precision nature. Assembling
+                                        els (VLAs). We formalize the task, develop a scalable simulation
+                                        pipeline for expert data generation and evaluation, and build a             a piece of furniture requires manipulating multiple interdepen-
+                                        VR teleoperation system for single-operator bimanual control                dent parts in strict order, where early mistakes can propagate
+                                        to collect high-quality real-world demonstrations. To address               and cause cascading failures [1]–[4]. Successful assembly also
+                                        extreme long-horizon assembly with up to 7 subtasks and 1550                demands tight geometric alignment between mating parts [5]–
+                                        control steps, we propose a progress-enhanced VLA, finetuned
+                                                                                                                    [8]. These challenges are further amplified in real-scale
+                                        on semantically grounded subtasks, that jointly predicts actions
+                                        and a continuous progress signal, enabling automatic subtask                settings: large, heavy components require sustained bimanual
+                                        transitions and reducing compounding errors during inference.               coordination, where two arms must jointly manipulate parts
+                                        We further study perception and control design factors that                 while respecting reachability limits and avoiding kinematic
+                                        critically affect precision in real-scale assembly. FurnitureVLA            singularities throughout the assembly process [9], [10].
+                                        improves average simulation success from 48% to 80% compared
+                                        to baselines across three furniture types, with an additional
+                                                                                                                       The goal of this work is to learn a generalist robot policy
+                                        21% gain from our design factor study. We validate on a real                for real-scale bimanual furniture assembly using Vision-
+                                        Kinova Gen3 platform with only 16% drop on the hardest task.                Language-Action models (VLAs), as shown in Fig. 1. Prior
+                                          1 Mitsubishi Electric Research Laboratories, Cambridge, MA, USA
+                                                                                                                    work focuses on toy-scale or scaled-down furniture with
+                                          2 University of Oxford, Oxford, UK                                        single-arm manipulation [1]–[8]. In this paper, we formalize
+                                          3 University of North Carolina at Chapel Hill, Chapel Hill, NC, USA       real-scale bimanual furniture assembly tasks and build a sys-
+                                          † Corresponding author.                                                   tem with two complementary components. First, we develop
+a scalable bimanual simulation pipeline that generates expert                           II. R ELATED W ORK
+demonstrations via motion planning across diverse furniture         Robot Furniture Assembly. Robot furniture assembly cou-
+types and task horizons. This controlled environment enables        ples long-horizon planning with tight geometric constraints.
+verification of task feasibility under reachability and kinematic   Early work relies on engineered perception and task-and-
+constraints, and serves as a testbed for large-scale evaluation.    motion planning [16], while later work scales this by trans-
+Second, to support real-world deployment, we develop a              lating assembly manuals into structured plans with learned
+VR teleoperation system with design principles tailored for         contact corrections and vision-language alignment [4], [17],
+real-scale bimanual assembly, enabling coordinated dual-arm         [18]. Building on simulation benchmarks [1], [19], learning-
+control by a single teleoperator on a Kinova Gen3 platform          based methods study large-scale imitation learning [3], resid-
+for high-quality demonstration collection.                          ual policies for precision [6], sim-to-real transfer with limited
+   With this system in place, directly finetuning a monolithic      real data [5], [8], [20], and human-robot collaboration [21].
+VLA policy on full-length bimanual demonstrations remains           However, existing work largely targets single-arm, task-
+suboptimal, as current VLA models are most effective on             specific policies in toy-scale settings, leaving open how to
+short-horizon tasks with relaxed geometric precision require-       train a generalist policy for real-scale bimanual assembly.
+ments [11], [12]. Long-horizon trajectories induce distribution
+                                                                    VLAs for Long-Horizon Manipulation. Long-horizon
+drift, where small deviations can drive the policy into out-
+                                                                    execution remains brittle due to error accumulation and
+of-distribution states and lead to compounding errors [13],
+                                                                    covariate shift [13], [14], [22], [23]. A common strategy is
+[14]. To address this, we decompose each assembly into
+                                                                    to decompose long demonstrations into shorter phases. Some
+semantically grounded subtasks and finetune the VLA on
+                                                                    works learn modular skills (e.g., manipulation, movement)
+shorter, language-conditioned segments. This narrows the
+                                                                    with external switching [24]–[26], while others structure
+within-subtask state distribution and provides cues for task
+                                                                    VLAs into reusable modules that replan and recover under a
+stages. Importantly, we define subtask boundaries at stable,
+                                                                    failure detector [27], [28]. A complementary line equips
+contact-free post-retreat arm states rather than at the contact-
+                                                                    VLAs with reasoning to output the next subtask during
+rich states immediately after part assembly. Since post-retreat
+                                                                    execution [29]–[31], but at higher computational cost. Our
+states are free of contact and force constraints, small execution
+                                                                    progress-enhanced VLA enables automatic subtask transitions
+errors are less likely to amplify into large deviations, yielding
+                                                                    during inference without an external stage estimator.
+a more consistent initial state distribution for each subsequent
+subtask and reducing cross-subtask distribution shift. However,     VLAs for Precise Manipulation. Generalist robot policies
+this requires determining when to transition between subtasks       (e.g., VLAs [11], [12], [30], [32]) often remain precision-
+during execution. We address this by introducing a progress-        limited: cross-embodiment standardization can coarsen action
+enhanced VLA that jointly predicts actions and an explicit          representations [33], while discretized action tokenization can
+subtask progress signal to trigger transitions during inference.    fail on dexterous, high-frequency data [34], as observed in
+   Finally, to improve precision in real-scale assembly, we         large-scale real-robot evaluations [35]. ACT [15] uses action
+conduct a focused study of key perception and control design        chunking and temporal ensembling to reduce compounding
+factors, including action horizon, temporal ensembling [15],        error and smooth control, while Openpi Comet [36] shows
+image resolution, and camera viewpoints, and analyze how            that perception and control-loop design choices materially
+these choices affect assembly success. In summary, we               affect manipulation accuracy. We study these factors in real-
+introduce FurnitureVLA, with the following contributions:           scale bimanual assembly and provide concrete insights for
+                                                                    geometric alignment and assembly success.
+  • We present the first systematic study of VLAs for real-
+    scale bimanual furniture assembly and develop a system                        III. TASKS AND S YSTEM S ETUP
+    comprising a scalable simulation pipeline for expert              Our goal is to study real-scale bimanual furniture assembly.
+    demonstration generation via motion planning and large-         To this end, we first formalize the task setting and introduce
+    scale evaluation, together with a VR teleoperation system       key assumptions (Sec. III-A). We then describe our system,
+    with design tailored for real-scale bimanual assembly to        which comprises a scalable simulation pipeline for data
+    enable high-quality real-world data collection.                 generation and evaluation (Sec. III-B), and a VR teleoperation
+  • We propose a progress-enhanced VLA that jointly                 system for high-quality real-world data collection (Sec. III-C).
+    predicts actions and a subtask progress signal, enabling
+    stable long-horizon execution via automatic subtask             A. Bimanual Furniture Assembly Tasks
+    transitions, along with a focused study of design factors       Hardware Setup. Assembly is performed on a tabletop using
+    for improving precision.                                        two Kinova Gen3 7-DoF robot arms, with a Robotiq Hand-E
+  • We demonstrate improved long-horizon stability and              gripper on the left arm and a Robotiq 2F-85 gripper on the
+    assembly precision in simulation, improving average             right. The tabletop schematic is shown in Fig. 3. In addition
+    success from 48% to 80% compared to baselines across            to the front and wrist-mounted cameras commonly used in
+    three furniture types with an additional 21% gain from          prior VLA work [30], we add a rear camera to provide
+    our design factor study, and validate on a real Kinova          complementary views, as large furniture parts and frequent
+    Gen3 platform with only 16% drop on the hardest task.           bimanual interactions often occlude frontal observations.
+  1                                     1) grasp the front right leg, align and insert it into the tabletop using the right arm, release, and retreat
+                    SUBTASK             2) grasp the rear right leg, align and insert it into the tabletop using the right arm, release, and retreat
+                    INSTRUCTION         3) grasp the front left leg, align and insert it into the tabletop using the left arm, release, and retreat
+ASSEMBLE THE                            4) grasp the rear left leg, align and insert it into the tabletop using the right arm, release, and retreat
+LACK SIDE TABLE
+                                        initial state                pick up the leg              pick up the leg               pick up the leg                 pick up the leg          assembled state
+                    ACTION                                           place the leg                place the leg                 place the leg                   place the leg
+ Total: 12 skills
+                    PRIMITIVES                                       retreat                      retreat                       retreat                         retreat
+   650 steps
+
+                                                                                             1                            2                             3                            4
+                    ROBOT
+                    DEMONSTRATION
+
+
+
+                                                                             3 skills                      3 skills                     3 skills                        3 skills
+
+
+                                        1) grasp the right side panel, align and insert it into the bottom panel using the right arm, release, and retreat
+  2                 SUBTASK             2) grasp the center divider, align and insert it into the bottom panel using the right arm, release, and retreat
+                    INSTRUCTION         3) grasp the left side panel, align and insert it into the bottom panel using the left arm, release, and retreat
+                                        4) grasp the top panel, lift it, align it with the assembled panels, and attach it to the bottom panel using both arms
+ASSEMBLE THE
+KALLAX SHELF                            initial state                pick up the panel            pick up the panel             pick up the panel               grasp the panel          assembled state
+                    ACTION
+                                                                     place the panel              place the panel               place the panel                 lift up and rotate
+                    PRIMITIVES                                       retreat                      retreat                       retreat                         align and attach
+ Total: 14 skills
+   850 steps                                                                                                                                                    retreat
+
+                                                                                             1                            2                             3                            4
+                    ROBOT
+                    DEMONSTRATION
+
+
+
+                                                                             3 skills                      3 skills                     3 skills                        5 skills
+
+
+                                        1) grasp the rear seat rail, align and insert it into the right side frame using the right arm, release, and retreat
+  3                 SUBTASK
+                                        2) grasp the front seat rail, align and insert it into the right side frame using the right arm, release, and retreat
+                    INSTRUCTION         3) grasp the lower back rail, align and insert it into the right side frame using the left arm, release, and retreat
+                                        4) grasp the upper back rail, align and insert it into the right side frame using the left arm, release, and retreat
+ASSEMBLE THE
+IVAR CHAIR          ACTION              initial state                pick up the rail             pick up the rail              pick up the rail                pick up the rail
+                                                                     place the rail               place the rail                place the rail                  place the rail
+                    PRIMITIVES                                       retreat                      retreat                       retreat                         retreat
+ Total: 25 skills
+  1550 steps
+                                                                                             1                            2                             3                            4
+                    ROBOT
+                    DEMONSTRATION
+
+
+
+                                                                             3 skills                      3 skills                     3 skills                        3 skills
+
+
+                                        5) grasp the left side frame, lift it, align it with the assembled rails, and attach it to the right side frame using both arms
+                    SUBTASK             6) grasp the assembled chair frame, lift and rotate it upright, move it to the seat assembly location using both arms, and retreat the right arm
+                    INSTRUCTION         7) grasp the seat panel, align it with the chair frame, and attach it using the right arm
+
+
+                                        grasp the frame              grasp the built frame         grasp the panel              assembled state
+                    ACTION
+                                        lift up                      lift up and rotate            place the panel
+                    PRIMITIVES          align and attach             lower and adjust              retreat
+                                        retreat                      retreat
+
+                                                               5                             6                            7
+                    ROBOT
+                    DEMONSTRATION
+
+
+
+                                                 4 skills                    6 skills                      3 skills
+
+
+Fig. 2: Bimanual furniture assembly tasks. These tasks require executing diverse manipulation skills over extremely long horizons. A
+simple item (LACK side table) requires 12 skill executions (650 steps), while a complex assembly (IVAR chair) requires 25 (1550 steps).
+
+
+Assumptions. We make two key assumptions. First, we                                           grounded, as illustrated in Fig. 2. Our tasks exhibit the
+use magnets to attach furniture parts once they are aligned,                                  following properties that make them particularly challenging:
+bypassing the screwing process, which is an orthogonal and
+more challenging problem [37], [38] and difficult to simulate                                1) Long-horizon execution. Each assembly requires complet-
+in physics-based simulators. Prior assembly benchmarks                                       ing a strict sequence of subtasks, with horizons ranging from 4
+similarly avoid screwing [1], [19]. Second, each furniture                                   (LACK, KALLAX) to 7 (IVAR), and 650–1550 control steps
+part is randomly initialized within 3 cm in position and 5◦ in                               (65–155 seconds), exceeding prior benchmarks [39]–[41].
+orientation from its nominal pose, consistent with common                                     2) High-precision insertion. Each subtask requires precise
+settings in VLAs [11], [30], [32].                                                            alignment between mating parts under tight translation and
+                                                                                              rotation thresholds, stricter than prior toy-scale assembly
+Task Properties. We study real-scale bimanual furniture                                       benchmarks [1], [19] (see Sec. III-B).
+assembly using three IKEA items of increasing difficulty:
+LACK side table, KALLAX shelf, and IVAR chair. We                                             3) Diverse manipulation skills. Each subtask is specified
+define subtask decompositions with corresponding language                                     by a structured language instruction (e.g., “grasp, align, and
+instructions that are concise, descriptive, and semantically                                  insert a part”) and requires composing multiple manipulation
+      Front Cam (D435)                                  Rear Cam (D435)
+                                                                                     We compute the relative transformation:
+                                   Robotiq Hand-E                                                            Trel = T−1
+                                                                                                                     b Tk                         (1)
+
+                                   5.0 cm
+                                                                                     and compare it against the ground-truth assembled pose T∗rel .
+                                                                                     A part is considered successfully assembled if:
+                         Quest 3
+                                                                                                    |trel,i − t∗rel,i | ≤ ϵ, i ∈ {x, y, z},
+                                                                                                                                                  (2)
+                                                                                                 cos rrel,j , r∗rel,j ≥ δ, j ∈ {u, v, w},
+                                                                                                                     
+
+                                                                27.9 cm
+                                                      66.0 cm
+                                                                                     where trel,i denotes the i-th component of the translation
+                                     Robotiq 2F-85
+                                                                                     vector and rrel,j denotes the j-th column of the rotation
+
+
+
+
+                                                                          152.4 cm
+                                                                                     matrix of Trel .
+                                     8.5 cm
+                                                            152.4 cm                   We set ϵ = 1 cm for small parts and ϵ = 2 cm for large
+Fig. 3: System setup. The teleoperator wears a Meta Quest 3                          parts, and δ = 0.998 (≈4.0◦ per rotation axis), aligning with
+headset at the neck to track hand poses. A green screen reduces                      FurnitureBench [1] but more demanding given the larger
+visual noise; a white cover occludes the teleoperator. Bottom-right:                 scale of real-world furniture. A full assembly is considered
+tabletop schematic with symmetric dual Kinova placement.                             successful only when all parts satisfy both criteria.
+
+                                                                                     C. Real-World Data Collection via VR Teleoperation
+skills, such as grasping, alignment, insertion, lifting, and
+rotation. As a result, a simple assembly (e.g., LACK with 4                             To support real-world deployment, we develop a VR
+subtasks) involves roughly 12 skill executions, while more                           teleoperation system for high-quality demonstration collection,
+complex assemblies, such as IVAR, can involve 25 skills due                          enabling coordinated dual-arm control by a single teleoperator
+to longer horizons and additional bimanual operations such                           on a Kinova Gen3 platform. The detailed setup is shown in
+as coordinated lifting and rotation of assembled structures.                         Fig. 3. Given the complexity of long-horizon, high-precision
+These skills must be performed under varying conditions,                             bimanual assembly, we adopt the following design principles
+including occlusion, contact-rich insertion, and collision-                          to make teleoperation precise, efficient, and easy to operate:
+aware maneuvering around partially assembled structures.                             1) Decoupled translation and rotation control. All three
+4) Bimanual coordination. Several subtasks require both                              translational axes are controlled simultaneously for smooth
+arms to act in concert over large, heavy parts. For example,                         end-effector motion, while rotation is handled independently
+attaching the KALLAX top panel requires simultaneously                               to improve stability and precision. This is critical for precise
+lifting, rotating, and aligning a full-width panel with both                         insertion subtasks, such as aligning rails in IVAR, where
+arms; assembling IVAR requires lifting and rotating the                              small rotational errors can lead to failure.
+entire partially-assembled chair frame upright before attaching                      2) Pre-defined grasp primitives. We define a set of grasp
+the seat panel. These bimanual subtasks involve up to four                           poses with discrete 90◦ orientation variants, triggered via
+sequential action primitives and must maintain reachability                          button inputs. Upon activation, the end-effector orientation
+and avoid singularities throughout.                                                  snaps to a preset while maintaining its current position,
+                                                                                     removing manual wrist rotation and enforcing consistent, task-
+B. Simulation Data Generation and Success Criteria                                   specific configurations. These presets enable stable grasps of
+                                                                                     slender rails, flat seat panels, and large side frames, reducing
+Data Generation via Motion Planning. We use motion                                   operator burden and improving demonstration consistency.
+planning to generate expert demonstrations in simulation. For
+                                                                                     3) Synchronized bimanual control. We introduce a synchro-
+single-arm actions, we plan end-effector pose trajectories
+                                                                                     nized mode in which both arms execute mirrored commands
+directly. For bimanual actions, we disable physics simulation
+                                                                                     simultaneously, enabling efficient repositioning, alignment,
+and instead plan trajectories for the manipulated object,
+                                                                                     and rotation of large and heavy furniture components. This
+constraining both arms to follow as rigidly attached end-
+                                                                                     is critical for subtasks such as jointly lifting and rotating the
+effectors. All generated trajectories are validated by replaying
+                                                                                     IVAR chair frame, where coordinated motion is required to
+them in simulation and verifying successful assembly. Initial
+                                                                                     maintain stability and achieve accurate placement.
+part placements are carefully designed to ensure feasibility:
+all parts remain within robot reachability, avoid inter-object                          IV. F URNITURE VLA: P ROGRESS -E NHANCED VLA
+collisions during manipulation, and prevent configurations
+                                                                                        We propose a progress-enhanced VLA finetuned on se-
+that lead to kinematic singularities.
+                                                                                     mantically grounded subtasks to mitigate distribution drift in
+Assembly Success Criteria. Following FurnitureBench [1],                             long-horizon tasks, jointly predicting actions and a progress
+we designate one part in each furniture as the base part and                         signal to trigger subtask transitions (Fig. 4). We first describe
+evaluate assembly by measuring the relative pose error of                            continuous progress assignment using action primitives with
+every other part with respect to this base. Let Tb , Tk ∈ SE(3)                      post-retreat subtask boundaries (Sec. IV-A), then how it
+denote the poses of the base part and the k-th part, respectively.                   enables subtask transitions during inference (Sec. IV-B).
+                                                                    1     threshold (𝝉𝒑 )
+                               Progress-Enhanced VLA
+
+
+
+
+                                                        progress
+                                                                   0.67
+
+                                                                   0.33
+
+                                                                    0
+                                                                          pick   place retreat
+                                             Action
+    Observations                  VLM        Expert
+  (images, proprio)             Backbone   (Extended                             𝒂𝑳𝒕
+           Attach the rail
+                                              Dim)                               +
+" 𝒕 ≥ 𝝉𝒑
+𝒑            Current Subtask                                                     𝒂𝑹
+                                                                                  𝒕         ×H
+                                                                                 +                        Fig. 5: Subtask success rates (monotonically decreasing).
+           Attach the frame
+                                                                                    𝒑𝒕 )
+                                                                          progress (!
+             Next Subtask
+                                                                                                             TABLE I: Assembly performance (success rates ↑).
+Fig. 4: FurnitureVLA: progress-enhanced VLA. Each assembly
+is decomposed into subtasks with continuous progress labels derived                                     Method                        LACK   KALLAX   IVAR    Average
+from action primitives. The VLA is finetuned to jointly predict                                         π0.5 (zero-shot)              0.00    0.00     0.00     0.00
+actions and a progress signal, which triggers automatic subtask                                         π0.5 (monolithic finetuned)   0.91    0.11     0.41     0.48
+transitions during inference.                                                                           FurnitureVLA                  0.98    0.85     0.56     0.80
+
+
+Preliminaries. A VLA policy πθ maps an observation ot
+(RGB images and proprioception) and a language instruction                                             are free of contact and force constraints. Small errors are less
+g to robot actions. We represent actions in a continuous                                               likely to amplify, yielding a narrower, more consistent initial-
+absolute end-effector space. For bimanual control, actions for                                         state distribution and reducing cross-subtask distribution shift.
+the left and right arms are defined as aL         R       7
+                                            t , at ∈ R , where each                                    B. Inference and Subtask Transition
+                                                        ⊤
+action is defined as [xt , yt , zt , ut , vt , wt , γt ] , representing                                  At inference time, the policy predicts ãt:t+H−1 conditioned
+the target end-effector pose and gripper state. The full action                                        on the current subtask gk . The predicted progress p̂t triggers
+is formed by concatenation, at ∈ R14 . The policy uses flow                                            subtask transitions when exceeding a threshold. To suppress
+matching [30] to decode a chunk of H future actions in a                                               spurious predictions, we apply a lightweight filter. With a
+single forward pass: πθ (at:t+H−1 | ot , g).                                                           high signal p̂t ≥ τp , a transition is triggered if:
+A. Progress-Enhanced Subtask Finetuning                                                                         ht = (p̂t ≥ τp ),
+Progress Assignment via Action Primitives. We decompose                                                               
+the task g into subtasks G = (g1 , . . . , gK ) and augment                                                           1, ht ∧ ht−1 ,
+                                                                                                                      
+                                                                                                       TRANSIT = 1, ht ∧ ¬ht−1 ∧ ¬ht−2 ∧ ∃ ∆ ≥ 3 : ht−∆ ,
+the 14-dimensional bimanual action at with a scalar progress                                                          
+signal pt , giving ãt = [a⊤         ⊤   15                                                                             0, otherwise.
+                                                                                                                      
+                             t , pt ] ∈ R . Each subtask consists
+of Nk action primitives (Fig. 2), such as pick up, place, and                                                                                                 (4)
+retreat. These primitives discretize progress into Nk uniformly                                        This filters isolated spikes while remaining responsive to
+spaced milestones, with each primitive defining a fixed stage                                          persistent signals. Upon confirmation, the system advances
+of completion (Fig. 4). Let si denote the start timestep of                                            to gk+1 , resets progress, and clears action buffers.
+the i-th primitive, and si+1 the start timestep of the next                                                            V. S IMULATION E XPERIMENTS
+primitive (or the end of the subtask for the final primitive).
+                                                                                                         We examine: 1) how the progress-enhanced VLA improves
+Each
+ i segment     i ∈ {0, . . . , Nk −1} occupies a uniform interval
+       i+1
+                                                                                                      long-horizon execution; 2) how key perception and control
+     ,
+  Nk Nk     , and progress is computed as:
+                                                                                                       design factors affect assembly precision and success and 3)
+                          i   1    t − si                                                              ablations of our design choices.
+              pt =          +   ·          ,           si ≤ t < si+1 .                           (3)
+                         Nk   Nk si+1 − si                                                             A. Implementation Details
+This yields a monotonic signal from 0 to 1 over each                                                   Simulation. We use Isaac Gym [42], extending the Furni-
+subtask. Each segment corresponds to a fixed control objective,                                        tureBench [1] codebase, with furniture 3D models from 3D
+while the motion evolves smoothly within the segment,                                                  Warehouse [43], textures from ambientCG [44], and assets
+making linear interpolation a natural time-parameterization                                            post-processed in Blender 5.0 [45].
+of progress. We finetune the policy via flow matching on
+augmented action chunks, πθ (ãt:t+H−1 | ot , gk ), to jointly                                         Training and Inference. We use π0.5 [30] as the VLA
+predict actions and progress.                                                                          backbone, finetuned for 40,000 steps on 8 NVIDIA L40S
+                                                                                                       GPUs with global batch size 64. Inference runs on a single
+Post-Retreat Subtask Boundaries. We define subtask bound-                                              L40S GPU with τp = 0.95.
+aries after retreat rather than immediately after assembly. Tran-
+sitioning at assembly completion is fragile: small deviations                                          B. Long-Horizon Assembly Performance
+can cause incomplete insertion or unstable contact, leading                                            Setup. We generate 500 demonstrations per furniture for
+to failure. Contact-rich post-assembly states are also highly                                          finetuning and evaluate on 100 rollouts each, training a
+sensitive to execution errors, so small deviations produce                                             single VLA model across all furniture types. Unless otherwise
+large state variations across rollouts, widening the initial-state                                     specified, we use a default configuration for all design factors
+distribution of the next subtask. By contrast, post-retreat states                                     (see Sec. V-C for details).
+                TABLE II: Impact of perception and control design factors on assembly precision (success rates ↑).
+                         Temporal Ensembling                  Action Horizon               Viewpoint                           Resolution
+ Furniture
+               n/a    -0.25    -0.1    0.0    0.1    0.25     5      10       25    full   depth     w/o rear           224       300       448
+ LACK          0.76    0.90    0.98   0.91    0.91   0.92    0.92   0.98   0.75    0.98     0.69          0.45          0.59      0.97      0.98
+ KALLAX        0.83    0.81    0.85   0.44    0.84   0.80    0.43   0.67   0.85    0.85     0.45          0.57          0.77      0.68      0.85
+ IVAR          0.36    0.53    0.56   0.52    0.55   0.54    0.44   0.56   0.41    0.56     0.48          0.34          0.43      0.50      0.56
+ Average       0.65    0.75    0.80   0.62    0.77   0.75    0.60   0.74   0.67    0.80     0.50          0.47          0.60      0.72      0.80
+
+
+                                                                    TABLE III: Ablation studies on demonstration quantity and
+Baselines. We compare against two baselines: π0.5 (zero-shot),      progress signal design (success rates ↑).
+and π0.5 (monolithic finetuned), which uses the unmodified
+                                                                     Method                        LACK      KALLAX            IVAR      Average
+π0.5 backbone finetuned on full demonstrations with a single
+global instruction (e.g., “assemble the IVAR chair” as in            Discrete Progress             0.00          0.00           0.00      0.00
+                                                                     FurnitureVLA (25% demos)      0.53          0.63           0.33      0.50
+Fig. 2) without subtask decomposition or progress modeling.
+                                                                     FurnitureVLA (50% demos)      0.82          0.78           0.44      0.68
+Evaluation Metrics. We report the success rate of full assem-        FurnitureVLA (100% demos)     0.98          0.85           0.56      0.80
+bly (i.e., completing all subtasks). If any preceding subtask
+fails, the rollout terminates, resulting in a monotonically
+decreasing success rate across subtasks.                            Impact of Design Factors. From Table II, temporal ensem-
+                                                                    bling consistently improves assembly success, with λ= − 0.1
+Analysis of Task Performance. From Table I, π0.5 (zero-
+                                                                    performing best across all furniture. We attribute this to
+shot) achieves zero success across all furniture, as our
+                                                                    the need for stable control in real-scale bimanual assembly:
+tasks are highly challenging and out-of-distribution from its
+                                                                    large, heavy parts and coordinated bimanual motion benefit
+pretraining data. FurnitureVLA consistently outperforms π0.5
+                                                                    from smoothing. At λ= − 0.1, roughly 70% of the weight is
+(monolithic finetuned), with the largest gain on KALLAX. We
+                                                                    assigned to the most recent prediction, with the remaining
+attribute this to its large, heavy parts, which make the policy
+                                                                    distributed across prior predictions, providing a good balance
+particularly sensitive to singularities induced by long-horizon
+                                                                    between responsiveness and stability. Action horizons of 10
+drift and compounding errors. Among the three furniture,
+                                                                    and 25 perform best depending on the furniture; notably,
+LACK is the easiest (0.98 success rate), while IVAR is the
+                                                                    KALLAX favors a longer horizon (25), likely because its
+most challenging (0.56). We think this is reasonable, as more
+                                                                    largest and heaviest parts amplify instabilities and require
+complex assembly tasks can lead to a large drop in success,
+                                                                    stronger smoothing. For perception, the rear camera out-
+as observed in prior work [1]. Per-subtask success rates in
+                                                                    performs front-view depth and removing the rear view,
+Fig. 5 further reveal where failures concentrate: for IVAR, the
+                                                                    indicating its effectiveness in mitigating occlusions. Finally,
+fifth subtask is the hardest, requiring both arms to grasp, lift,
+                                                                    higher image resolution consistently improves performance,
+and attach the chair frame to the partially assembled frame.
+                                                                    highlighting the importance of visual precision in assembly.
+C. Design Factors for Assembly Precision
+Setup. We vary the following perception and control design          D. Ablation Studies
+factors. 1) Action horizon: π0.5 predicts chunks of H=50
+actions; we execute only the first 5, 10, or 25 actions                We study the effects of demonstration scale and an
+before replanning, where fewer steps enable more frequent           alternative discrete progress supervision scheme. In this
+replanning and better error recovery at the cost of higher          variant, each subtask k ∈ {1, . . . , K} is assigned a fixed
+overhead and reduced trajectory smoothness. 2) Temporal             scalar value (2k − 1)/(2K), so all observations within a
+ensembling: We maintain a rolling buffer of B overlapping           subtask share the same constant progress. At inference, the
+action chunks and compute the executed actions as a weighted        subtask is determined by discretizing progress into K bins.
+average of all action predictions (excluding the progress              From Table III, performance improves consistently with
+                                                  [t−i]
+dimension) for the current timestep [15], where at      ∈ R14       more data, with the largest gain from 25% to 50%. The
+is the prediction for timestep t made i steps ago:                  smaller improvement from 50% to 100% suggests our
+                   PB−1        [t−i]
+                           wi at                                    demonstration budget achieves a good balance between data
+             ât = i=0 PB−1          , wi = eλi .          (5)      collection cost and performance. Discrete progress fails
+                         i=0 wi                                     completely (zero success across all furniture). We observe
+The progress signal p̂t always uses the most recent prediction,     that after subtask completion, the model fails to advance
+independent of the ensembling buffer. More negative λ               the progress signal and becomes stuck. We attribute this to
+emphasizes recent predictions, while λ=0 gives uniform              the visual similarity between states where a part is nearly
+averaging. 3) Observation viewpoint: We evaluate removing           assembled and assembled, making discrete transitions difficult
+the rear camera or replacing it with front-view depth. 4)           to detect. This supports our continuous progress design,
+Observation resolution: We vary input resolution across             which provides a smooth and unambiguous supervision signal
+224×224, 300×300, and 448×448.                                      throughout each subtask.
+                   1                2                         3   4               5                     1                  2                   3
+
+
+
+
+                   6                7                         8   9               10                    1                  2                   3
+
+
+
+
+Fig. 6: Qualitative real-robot rollouts. (Left) successful long-horizon assembly of the IVAR chair. (Right) emergent self-correction
+behaviors: regrasping for improved contact and fine-grained magnet alignment.
+
+                                                                      TABLE IV: Real-world IVAR chair assembly performance
+                                                                      (success rates ↑). S1–S7 denote sequential subtasks. Full-assembly
+       10.00 mm            10°
+                                                                      success is monotonically decreasing across subtasks, while per-part
+                                                                      success evaluates each subtask independently.
+                                        13.31 mm
+                                                                       Metric              S1    S2         S3     S4     S5     S6     S7
+                         15.13 mm
+
+
+                                                   36.69 mm
+                                                                       Full Assembly SR   0.80   0.73       0.60   0.53   0.47   0.47   0.40
+                                                                       Per-Part SR        0.80   0.80       0.73   0.80   0.67   0.87   0.80
+Fig. 7: Real-world precision requirements. (Left) assembly
+tolerance with magnets. (Right) gripper clearance and multi-magnet
+alignment challenges.                                                 Emergent Behavior and Qualitative Results. We present
+                                                                      qualitative examples of successful real-robot assembly in
+                                                                      Fig. 6 (left). We also observe emergent corrective behaviors,
+                  VI. R EAL -W ORLD E XPERIMENTS
+                                                                      as shown in Fig. 6 (right). In several rollouts, the robot self-
+   We validate our approach on a real bimanual Kinova Gen3            corrects when parts are initially misaligned. For example,
+platform. We test on the most challenging IVAR chair.                 when grasping the seat panel with insufficient contact, the
+                                                                      robot reopens the gripper, adjusts its pose, and regrasp for
+A. Implementation Details                                             a more stable hold. During the attachment of the left chair
+    We use Quest2ROS [46] to map VR controller poses and              frame, the robot performs small corrective motions to align
+inputs to robot end-effector commands. Colored markers                the magnets before insertion. We attribute these behaviors
+(e.g., black and blue tape) are placed on parts to assist             to the teleoperated demonstrations, where similar corrections
+the teleoperator with visual alignment during demonstration           were exhibited and successfully learned by the policy.
+collection. For the collected teleoperated demonstrations, we
+                                                                      C. Per-Part Assembly Performance
+filter no-op actions following DROID [47], but do not trim
+the initial and trailing frames of each non-idle segment, as          Setup and Evaluation. We evaluate each subtask indepen-
+they contain critical signals indicating subtask completion.          dently. We initialize robot and scene at the corresponding
+Training, inference, and parameters follow simulation.                intermediate assembly state and run 15 rollouts per subtask.
+                                                                      Results. From Table IV (row 2), per-part success rates are
+B. Full Assembly Performance                                          consistently higher than full assembly rates, confirming that
+Setup and Evaluation. We collect 100 demonstrations for the           failures accumulate across subtasks rather than stemming
+IVAR chair and evaluate on 15 rollouts. Magnets are installed         from any single catastrophic failure mode. Subtask 5 remains
+in screwing holes. As shown in Fig. 7 (left), assembly requires       the most challenging because of its high precision demands.
+high precision even with magnets: a 1 cm deviation can snap
+                                                                                  VII. C ONCLUSION AND D ISCUSSION
+successfully, but 1.5 cm or a 10◦ tilt causes parts to fall apart.
+Additional precision demands (Fig. 7 right) include limited              We introduce FurnitureVLA, the first systematic study of
+gripper clearance (5 cm Robotiq Hand-E gripper opening vs.            real-scale bimanual furniture assembly with VLAs. We build a
+up to 3.7 cm part thickness) and multi-point alignment when           scalable simulation pipeline and VR teleoperation system for
+engaging up to 8 magnets. Following Sec. V-B, we report               large-scale testbed and data collection, propose a progress-
+full-assembly success rate with monotonically decreasing              enhanced VLA for improved long-horizon execution, and
+per-subtask success.                                                  conduct a focused study of VLA design factors for assembly
+                                                                      precision. We see this work as a step toward deploying VLAs
+Results. Table IV (row 1) shows that real-world performance           in challenging, real-world manipulation tasks.
+is slightly lower than in simulation (Fig. 5), as expected due
+to increased difficulty and noise in real settings. Subtasks          Limitations. Our fixed-base setup limits assembly to furniture
+3–5 are the main bottlenecks: subtasks 3 and 4 suffer from            within the robot’s kinematic workspace; mobile bimanual
+reduced visual detail as the left arm operates farther from the       platforms could handle larger items. We also bypass screwing
+camera, while subtask 5 requires the highest spatial precision        with magnets, extending to tool use remains an open challenge
+due to multi-point alignment.                                         requiring significantly higher precision.
+                               R EFERENCES                                               learning for long-horizon contact-rich robotic assembly,” in Conference
+                                                                                         on Robot Learning, 2025.
+ [1] M. Heo, Y. Lee, D. Lee, and J. J. Lim, “Furniturebench: Reproducible           [23] C. Ma, K. Lu, R. Desai, X. Puig, A. Markham, and N. Trigoni,
+     real-world benchmark for long-horizon complex manipulation,” in                     “Coopera: Continual open-ended human-robot assistance,” in Advances
+     Robotics: Science and Systems, 2023.                                                in Neural Information Processing Systems, 2025.
+ [2] H. Lin, R. Corcodel, and D. Zhao, “Generalize by touching: Tactile             [24] Y. Fan, P. Ding, S. Bai, X. Tong, Y. Zhu, H. Lu, F. Dai, W. Zhao, Y. Liu,
+     ensemble skill transfer for robotic furniture assembly,” in International           S. Huang, Z. Fan, B. Chen, and D. Wang, “Long-vla: Unleashing
+     Conference on Robotics and Automation, 2024.                                        long-horizon capability of vision language action model for robot
+ [3] L. Ankile, A. Simeonov, I. Shenfeld, and P. Agrawal, “JUICER: data-                 manipulation,” in Conference on Robot Learning, 2025.
+     efficient imitation learning for robotic assembly,” in International           [25] R. Yang, Z. An, L. Zhou, and Y. Feng, “Seqvla: Sequential task
+     Conference on Intelligent Robots and Systems, 2024.                                 execution for long-horizon manipulation with completion-aware vision-
+ [4] Y. Tian, J. Jacob, Y. Huang, J. Zhao, E. Gu, P. Ma, A. Zhang, F. Javid,             language-action model,” arXiv preprint arXiv:2509.14138, 2025.
+     B. Romero, S. Chitta et al., “Fabrica: Dual-arm assembly of general            [26] Y. Yang, S. Cheng, Y. Fang, H. Bharadhwaj, M. Ding, G. Bertasius,
+     multi-part objects via integrated planning and learning,” in Conference             and D. Szafir, “Lilo-vla: Compositional long-horizon manipulation via
+     on Robot Learning, 2025.                                                            linked object-centric policies,” arXiv preprint arXiv:2602.21531, 2026.
+ [5] X. Zhang, C. Wang, L. Sun, Z. Wu, X. Zhu, and M. Tomizuka, “Efficient          [27] K. Lu, C. Ma, C. Hori, and D. Romeres, “KitchenVLA: Iterative
+     sim-to-real transfer of contact-rich manipulation skills with online                vision-language corrections for robotic execution of human tasks,”
+     admittance residual learning,” in Conference on Robot Learning, 2023.               in International Conference on Robotics and Automation Workshop
+ [6] L. Ankile, A. Simeonov, I. Shenfeld, M. Torne, and P. Agrawal,                      Safe-VLM, 2025.
+     “From imitation to refinement - residual rl for precise assembly,” in          [28] C. Ma, G. Yang, K. Lu, S. Xu, B. Byrne, N. Trigoni, and A. Markham,
+     International Conference on Robotics and Automation, 2025.                          “Cyclevla: Proactive self-correcting vision-language-action models via
+ [7] M. Noseworthy, B. Tang, B. Wen, A. Handa, C. C. Kessens, N. Roy,                    subtask backtracking and minimum bayes risk decoding,” arXiv preprint
+     D. Fox, F. Ramos, Y. Narang, and I. Akinola, “FORGE: force-guided                   arXiv:2601.02295, 2026.
+     exploration for robust contact-rich manipulation under uncertainty,”           [29] M. Zawalski, W. Chen, K. Pertsch, O. Mees, C. Finn, and S. Levine,
+     Robotics and Automation Letters, 2025.                                              “Robotic control via embodied chain-of-thought reasoning,” in Confer-
+ [8] B. Huang, J. Xu, I. Akinola, W. Yang, B. Sundaralingam, R. O’Flaherty,              ence on Robot Learning, 2024.
+     D. Fox, X. Wang, A. Mousavian, Y. Chao, and Y. Li, “Vt-refine:                 [30] Physical Intelligence, “π 0.5 : a vision-language-action model with open-
+     Learning bimanual assembly with visuo-tactile feedback via simulation               world generalization,” arXiv preprint arXiv:2504.16054, 2025.
+     fine-tuning,” in Conference on Robot Learning, 2025.                           [31] L. X. Shi, B. Ichter, M. R. Equi, L. Ke, K. Pertsch, Q. Vuong, J. Tanner,
+ [9] Z. Fu, T. Z. Zhao, and C. Finn, “Mobile ALOHA: learning bimanual                    A. Walling, H. Wang, N. Fusai, A. Li-Bell, D. Driess, L. Groom,
+     mobile manipulation using low-cost whole-body teleoperation,” in                    S. Levine, and C. Finn, “Hi robot: Open-ended instruction following
+     Conference on Robot Learning, 2024.                                                 with hierarchical vision-language-action models,” in International
+[10] T. Li, J. Truong, J. Yang, A. Clegg, A. Rai, S. Ha, and X. Puig, “Robot-            Conference on Machine Learning, 2025.
+     mover: Learning to move large objects from human demonstrations,”              [32] GR00T Team, “GR00T N1: an open foundation model for generalist
+     arXiv preprint arXiv:2502.05271, 2025.                                              humanoid robots,” arXiv preprint arXiv:2503.14734, 2025.
+[11] M. J. Kim, K. Pertsch, S. Karamcheti, T. Xiao, A. Balakrishna, S. Nair,        [33] Open X-Embodiment Collaboration, “Open x-embodiment: Robotic
+     R. Rafailov, E. P. Foster, P. R. Sanketi, Q. Vuong, T. Kollar, B. Burchfiel,        learning datasets and RT-X models : Open x-embodiment collaboration,”
+     R. Tedrake, D. Sadigh, S. Levine, P. Liang, and C. Finn, “Openvla: An               in International Conference on Robotics and Automation, 2024.
+     open-source vision-language-action model,” in Conference on Robot              [34] Physical Intelligence, “Fast: Efficient action tokenization for vision-
+     Learning, 2024.                                                                     language-action models,” arXiv preprint arXiv:2501.09747, 2025.
+[12] Generalist AI Team, “Gen-0: Embodied foundation models                         [35] P. Atreya, K. Pertsch, T. Lee, M. J. Kim, A. Jain, A. Kuramshin,
+     that scale with physical interaction,” https://generalistai.com/blog/               C. Eppner, C. Neary, E. Hu, F. Ramos et al., “Roboarena: Distributed
+     nov-04-2025-GEN-0, 2025.                                                            real-world evaluation of generalist robot policies,” in Conference on
+[13] S. Ross, G. J. Gordon, and D. Bagnell, “A reduction of imitation                    Robot Learning, 2025.
+     learning and structured prediction to no-regret online learning,” in           [36] J. Bai, Y.-W. Chao, Q. Chen, J. Gu, M. J. Kim, Z. Li, X. Li, T.-Y.
+     International Conference on Artificial Intelligence and Statistics, 2011.           Lin, M.-Y. Liu, N. Ma et al., “Openpi comet: Competition solution
+[14] Y. Yang, L. Zhao, M. Ding, G. Bertasius, and D. Szafir, “BOSS:                      for 2025 behavior challenge,” arXiv preprint arXiv:2512.10071, 2025.
+     benchmark for observation space shift in long-horizon task,” Robotics          [37] S. Han, M. Choi, Y. Shin, G. Jang, D. Lee, J. Cho, J. Park, and J. Bae,
+     and Automation Letters, 2025.                                                       “Screwdriving gripper that mimics human two-handed assembly tasks,”
+[15] T. Z. Zhao, V. Kumar, S. Levine, and C. Finn, “Learning fine-grained                Robotics, 2022.
+     bimanual manipulation with low-cost hardware,” in Robotics: Science            [38] L. Tang and Y. Jia, “Robotic fastening with a manual screwdriver,” in
+     and Systems, 2023.                                                                  International Conference on Robotics and Automation, 2023.
+                                                                                    [39] O. Mees, L. Hermann, E. Rosete-Beas, and W. Burgard, “CALVIN: A
+[16] X. Zhou and Q. Pham, “Can robots assemble an IKEA chair?” Science
+                                                                                         benchmark for language-conditioned policy learning for long-horizon
+     Robotics, 2018.
+                                                                                         robot manipulation tasks,” Robotics and Automation Letters, 2022.
+[17] C. Tie, S. Sun, J. Zhu, Y. Liu, J. Guo, Y. Hu, H. Chen, J. Chen, R. Wu,
+                                                                                    [40] B. Liu, Y. Zhu, C. Gao, Y. Feng, Q. Liu, Y. Zhu, and P. Stone,
+     and L. Shao, “Manual2skill: Learning to read manuals and acquire
+                                                                                         “LIBERO: benchmarking knowledge transfer for lifelong robot learning,”
+     robotic skills for furniture assembly using vision-language models,” in
+                                                                                         in Advances in Neural Information Processing Systems, 2023.
+     Robotics: Science and Systems, 2025.
+                                                                                    [41] S. Nasiriany, A. Maddukuri, L. Zhang, A. Parikh, A. Lo, A. Joshi,
+[18] C. Ma, K. Lu, T.-Y. Cheng, N. Trigoni, and A. Markham, “Spatialpin:
+                                                                                         A. Mandlekar, and Y. Zhu, “Robocasa: Large-scale simulation of
+     Enhancing spatial reasoning capabilities of vision-language models
+                                                                                         everyday tasks for generalist robots,” in Robotics: Science and Systems,
+     through prompting and interacting 3d priors,” in Neural Information
+                                                                                         2024.
+     Processing Systems, 2024.
+                                                                                    [42] V. Makoviychuk, L. Wawrzyniak, Y. Guo, M. Lu, K. Storey, M. Macklin,
+[19] Y. Lee, E. S. Hu, and J. J. Lim, “IKEA furniture assembly environ-                  D. Hoeller, N. Rudin, A. Allshire, A. Handa, and G. State, “Isaac gym:
+     ment for long-horizon complex manipulation tasks,” in International                 High performance GPU based physics simulation for robot learning,”
+     Conference on Robotics and Automation, 2021.                                        in NeurIPS Datasets and Benchmarks, 2021.
+[20] B. Tang, M. A. Lin, I. Akinola, A. Handa, G. S. Sukhatme, F. Ramos,            [43] 3D Warehouse, “3d warehouse,” https://3dwarehouse.sketchup.com/,
+     D. Fox, and Y. Narang, “Industreal: Transferring contact-rich assembly              2026.
+     tasks from simulation to reality,” in Robotics: Science and Systems,           [44] ambientCG, “ambientcg,” https://ambientcg.com/, 2026.
+     2023.                                                                          [45] Blender Foundation, “Blender,” https://www.blender.org, 2025.
+[21] G. Giacomuzzo, M. Terreran, S. Jain, and D. Romeres, “DECAF: a                 [46] M. C. Welle, N. Ingelhag, M. Lippi, M. Wozniak, A. Gasparri, and
+     discrete-event based collaborative human-robot framework for furniture              D. Kragic, “Quest2ros: An app to facilitate teleoperating robots,” in
+     assembly,” in International Conference on Intelligent Robots and                    Workshop on VAM-HRI, 2024.
+     Systems, 2024.                                                                 [47] DROID Team, “DROID: A large-scale in-the-wild robot manipulation
+[22] J. Sun, A. Curtis, Y. You, Y. Xu, M. Koehle, Q. Chen, S. Huang,                     dataset,” in Robotics: Science and Systems, 2024.
+     L. Guibas, S. Chitta, M. Schwager et al., “Arch: Hierarchical hybrid
+                                                                                                    Appendix for FurnitureVLA
+                                                                                      H
+                                                                                              Part Dimensions (W × D × H, cm)
+                                                                                          W
+                      5                                                               D       1) Front right leg: 3.0 × 24.0 × 3.0
+                                                          4           2
+                                                                                              2) Rear right leg: 3.0 × 24.0 × 3.0
+                  2                   4       3                                               3) Front left leg: 3.0 × 24.0 × 3.0
+  1                           3                       5                                       4) Rear left leg: 3.0 × 24.0 × 3.0
+                                                                      1
+                                                                                              5) Tabletop (base part): 33.0 × 33.0 × 3.0
+
+
+
+      LACK Side Table
+
+
+                                                                                              1) Right side panel: 2.2 × 23.4 × 20.2
+                                                              2       4
+                                                                                              2) Center divider: 2.2 × 23.4 × 20.2
+                      4
+                                                                                              3) Left side panel: 2.2 × 23.4 × 20.2
+          3                                       3
+                      2                                                                       4) Top panel: 45.9 × 2.2 × 23.4
+                                  1
+                                                          5               1                   5) Bottom panel (base part): 45.9 × 23.4 × 2.2
+                      5
+
+
+
+          KALLAX Shelf
+
+                              4                           4       3           5               1) Rear seat rail: 1.2 × 30.0 × 5.8
+
+                              3                                                               2) Front seat rail: 1.2 × 30.0 × 5.8
+                                                                                                                                                           Fig. 9: Simulation and real-world observation examples.
+              6
+                                                                                              3) Lower back rail: 3.6 × 30.0 × 5.5                         (Left) simulation rear-view RGB and depth observations. (Right) real-
+  2                                                                                           4) Upper back rail: 3.6 × 30.0 × 5.5
+                                          1           7                                       5) Left side frame: 44.6 × 95.0 × 4.2
+                                                                                                                                                           world observations, including a rear-view image captured by an Intel
+                                                                  1               2
+              5
+                          7                                                                   6) Seat panel: 36.2 × 40.6 × 1.2                             RealSense D435 and two wrist-mounted images from the Kinova
+                                                                              6               7) Right side frame (stage 1 base part): 44.6 × 95.0 × 4.2
+                                                                                                                                                           arms. All images are raw and unprocessed.
+              IVAR Chair
+
+Fig. 8: Furniture part taxonomy and geometric properties.
+Illustration of part naming, dimensions, and base part definition used                                                                                     IVAR Chair Two-Stage Simulation. Isaac Gym does not
+in assembly. For the IVAR chair stage 1 definition, see Sec. B.2.                                                                                          support runtime weld constraints, so once the left side frame,
+                                                                                                                                                           rails, and right side frame are held together by the pose-reset
+                                                      A.                      OVERVIEW                                                                     magnets, the simulator cannot treat the resulting sub-structure
+                                                                                                                                                           as a single rigid body, preventing the final rotation required to
+   This appendix includes: 1) additional details on construct-
+                                                                                                                                                           make the partially assembled chair frame upright and attach
+ing the simulation environment, 2) details of the real-world
+                                                                                                                                                           the seat panel. We therefore split the IVAR chair episode
+system, and 3) more experimental details on training and
+                                                                                                                                                           into two stages. Stage 1 uses the right side frame as the
+results breakdown.
+                                                                                                                                                           base part and assembles the rails and left side frame against
+                      B.              A DDITIONAL D ETAILS OF S IMULATION                                                                                  it. Stage 2 inherits the recorded terminal poses of the seat
+B.1.                  Furniture Models                                                                                                                     panel and partially assembled chair frame from Stage 1, then
+                                                                                                                                                           respawns the partially assembled chair frame as a single rigid
+  The IKEA furniture used can be purchased online. 3D
+                                                                                                                                                           mesh. In stage 2, the world frame is treated as the base
+models and textures are also publicly available and can be
+                                                                                                                                                           reference. This allows us to evaluate whether lifting, rotating,
+used for reproducibility. IKEA serial IDs and links are below:
+                                                                                                                                                           and lowering the chair (subtask 6 in Fig. 2) is successful
+      • LACK side table: [30449908] [3D model] [textures]                                                                                                  based on the relative pose error with respect to the world
+      • KALLAX shelf:[90301555] [3D model] [textures]                                                                                                      frame. Conceptually the task remains a single continuous
+      • IVAR chair: [90263902] [3D model] [textures]                                                                                                       assembly; the staging is purely an engineering workaround
+                                                                                                                                                           for the absence of weld constraints.
+   We illustrate the naming of each furniture part, their
+dimensions, and the definition of the base part in Fig. 8. Part                                                                                            Control and Execution. The dual-arm Kinova Gen3 is
+names are manually defined based on their spatial location                                                                                                 controlled via an operational-space PD controller in the end-
+relative to the base part in the assembled configuration, rather                                                                                           effector frame at 10 Hz.
+than their positions on the tabletop. In simulation, all parts                                                                                             Observations. Each environment provides RGB-D obser-
+are assigned a density of pine wood (450 kg/m3 ), consistent                                                                                               vations from four cameras: wrist-mounted cameras rigidly
+with real IKEA components.                                                                                                                                 attached to the left and right end-effectors, along with a
+B.2.                  Simulation Implementation Details                                                                                                    front and a rear camera. All observations are captured at a
+                                                                                                                                                           native resolution of 1280 × 720. Depth is measured using
+Simulation of Magnets. We implement the simulator in Isaac
+                                                                                                                                                           clipping planes at 0.001 m and 3.5 m; values are clipped
+Gym on top of FurnitureBench. Because Isaac Gym does
+                                                                                                                                                           to [0.001, 3.5] m and linearly normalized to the [0, 255]
+not support runtime weld constraints, we simulate magnetic
+                                                                                                                                                           range. Fig. 9 shows examples of rear-view RGB and depth
+attachment by pose-resetting: at every env.step(), once
+                                                                                                                                                           observations in simulation.
+the relative pose between a moving part and its target falls
+within ϵ translational and δ rotational tolerance, the moving                                                                                              Data Generation Thresholds and Budgets. Scripted demon-
+part is kinematically teleported to maintain its rigid relative                                                                                            strations are generated via per-part motion planning. The
+pose to the base part on every subsequent tick, with linear                                                                                                relative pose threshold for successful assembly is set to
+and angular velocities synchronized.                                                                                                                       ϵ = 5 mm for translation and δ = 0.999 (≈3.0◦ per rotation
+                                                                   Fig. 11: Predefined orientation presets. Left to right: grasp poses
+                                                                   for rail grasping, rail attachment, seat panel grasping, and dual-arm
+                                                                   coordinated grasping of the left side frame.
+
+
+                                                                   via a simple proportional (P) gain, and execute it through the
+                                                                   same Kinova velocity controller.
+
+           Fig. 10: IVAR chair assembly initialization.            Teleoperation Control Mapping. Since the teleoperator
+                                                                   stands opposite the dual-arm system, control is defined in the
+                                                                   teleoperator’s frame rather than the robot’s egocentric frame.
+axis) for rotation. Each episode is capped at a furniture-         Motions are mirrored such that directional commands remain
+specific step budget: 900 steps for IVAR chair stage 1, 650        intuitive (e.g., moving left/right or forward/backward results
+for IVAR chair stage 2, 650 for the LACK side table, and           in the robot moving in the same perceived direction from the
+850 for the KALLAX shelf. Episodes are terminated and              teleoperator’s viewpoint). Controller button mappings are as
+discarded if not all parts are assembled within this budget.       follows (identical on both hands unless noted):
+VLA Policy Evaluation. As detailed in Sec. III-B, for
+                                                                     • Index trigger — engage translation-only control (orien-
+VLA policy evaluation we use relaxed thresholds than data
+                                                                       tation frozen); releasing freezes the arm (clutching).
+generation: ϵ = 1 cm for small parts and ϵ = 2 cm for large
+                                                                     • Middle trigger — engage rotation-only control (position
+parts, with δ = 0.998 (≈4.0◦ per rotation axis). The part
+                                                                       frozen).
+classification is as follows:
+                                                                     • Both triggers held — full 6-DoF velocity control.
+  • Small parts: LACK (front right leg, rear right leg, front        • Lower face button (A on right, X on left) — toggle
+    left leg, rear left leg); KALLAX (right side panel, center         the corresponding gripper open/closed.
+    divider, left side panel); IVAR (rear seat rail, front seat      • B button (right) — emergency stop on both arms; Y
+    rail, lower back rail, upper back rail)                            button (left) — trigger a dual-arm coordinated bring-to-
+  • Large parts: KALLAX (top panel); IVAR (left side                   pose preset (Fig. 11).
+    frame, partially assembled chair frame, seat panel)              • Left thumbstick up — home both arms to the simulator-
+                                                                       matched reset pose (interruptible only by B/Y).
+   For evaluation, we extend the data generation budgets by          • Left/right/down thumbstick — snap the end-effector to
+100 steps to 1000 (IVAR chair stage 1), 750 (IVAR chair                a predefined orientation preset while holding its current
+stage 2), 750 (LACK side table), and 950 (KALLAX shelf).               position (Fig. 11).
+                                                                     • Both index triggers held simultaneously — transla-
+      C.     A DDITIONAL D ETAILS OF R EAL S YSTEM
+                                                                       tion sync mode: the left arm mirrors the right arm’s
+Control and Execution. We operate both arms in end-effector            translation.
+space. At each 10 Hz control step, the system computes a             • Both middle triggers held simultaneously — rotation
+target end-effector pose delta for each arm, converts it into          sync mode: the left arm mirrors the right arm’s rotation
+a Cartesian twist, and executes it via the Kinova Cartesian            (combining both yields fully mirrored 6-DoF motion).
+velocity controller, which performs low-level joint-velocity
+tracking on-board. Data collection and VLA inference share         Observations. Fig. 9 shows rear and wrist camera images
+this same end-effector-delta → velocity-controller interface,      captured by the system.
+differing only in the source of the end-effector pose deltas.
+                                                                   Furniture Setup and Initialization. We use small
+   We teleoperate the dual Kinova Gen3 arms using a Meta
+                                                                   neodymium (NdFeB) magnets. The magnets are cylindrical,
+Quest 3 headset with Quest2ROS, which streams 6-DoF
+                                                                   with a diameter of approximately 6 mm and thickness of
+controller poses at approximately 72 Hz. For each arm, the
+                                                                   2 mm, and provide sufficient holding force to stabilize parts
+teleoperation node differentiates consecutive VR poses to
+                                                                   upon contact. Magnets are attached inside screwing holes
+obtain end-effector pose deltas, transforms them from the
+                                                                   using epoxy glue. Fig. 10 shows an example initialization of
+VR frame to the arm base frame, and forwards the resulting
+                                                                   the IVAR chair assembly.
+twists directly to the velocity controller.
+   At deployment, the VLA policy outputs sequences of              Demonstration Processing. Raw demonstrations are recorded
+absolute end-effector pose targets. For each arm, we compute       at 10 Hz. After applying a DROID-style no-op filter, the
+the delta to the current pose, convert it into a Cartesian twist   average duration per demonstration is reduced from 3 min to
+                                   TABLE V: Finetuning hyperparameters of FurnitureVLA.
+Hyperparameter                  Value
+pretrained checkpoint           pi05_base
+# GPUs                          8 × NVIDIA L40S (48GB VRAM)
+learning rate (LR)              2.5 × 10−5 (cosine decay to 2.5 × 10−6 over 30K steps, with 1K-step linear warmup)
+optimizer                       AdamW (β1 =0.9, β2 =0.95, ϵ=10−8 , weight decay 10−10 , grad-norm clip 1.0)
+effective batch size            64 (8 per GPU, no gradient accumulation)
+# train steps                   40K
+# denoising steps (inference)   10 (flow-matching)
+input images                    4 RGB views: 1 front, 2 wrist-mounted, 1 rear
+input image size                448 × 448
+use observation history         no (single-step inputs)
+action chunk size (H)           50 steps
+action dimensions               15 (14 robot + 1 progress)
+use proprio (robot state)       yes (discretized and inlined into the language prompt)
+use LoRA                        no (full finetune)
+# trainable parameters          ∼2.6B total (2.3B PaliGemma-2B backbone + 311M Gemma-300M action expert + <1M action/state
+                                projection heads)
+image augmentations             resize-with-pad
+
+
+2.5 min for the IVAR chair.
+      D.   A DDITIONAL E XPERIMENTS AND D ETAILS
+Training Hyperparameters. Table V lists the hyperparam-
+eters used to finetune FurnitureVLA on the π0.5 backbone.
+We perform full finetuning.
+Resolution Upscaling. To retain fine-grained visual cues
+for contact-rich bimanual assembly, we increase the input
+resolution of the PaliGemma–SigLIP vision backbone from its
+pretrained 224×224 to 448×448. The target resolution aligns
+with the SigLIP So400m/14 patch size, yielding a 32×32
+token grid (448/14 = 32) without truncation. Input images
+are resized with aspect-ratio-preserving interpolation and zero-
+padded to 448×448. The pretrained positional embeddings
+(24×24) are resized to match the new 32×32 token grid via
+bicubic interpolation. All other pretrained parameters are kept
+unchanged, and the backbone is finetuned end-to-end with
+the action expert.
+Simulation Results Breakdown. We visualize subtask suc-
+cess rates from Table II and Table III in Fig. 12.
+Fig. 12: Subtask success rates under different design choices. Results correspond to Table II and Table III.
+
