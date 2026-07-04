@@ -96,6 +96,22 @@ flowchart TD
     Filter --> Monitor
 ```
 
+**Agentic quality judge reliability (Table 1 — verbatim):** The quality filter above is operationalized by an agentic judge (MiniSWEAgent exploring the repo) that emits two dimension labels — `instruct_clear` (is the instruction self-contained?) and `instruct_ut_align` (do the tests cover the instruction?) — aggregated into `overall_good`. Table 1 measures the judge against a human-annotated benchmark (precision / recall / F1 per dimension; `#Turns` = mean / min / max):
+
+| Strategy | #Turns (mean / min / max) | instruct_clear (P / R / F1) | instruct_ut_align (P / R / F1) |
+|----------|:--:|:--:|:--:|
+| 3-voting, Qwen-Plus | 37 / 17 / 92 | 97.26 / 92.21 / **94.67** | 74.00 / 78.72 / 76.29 |
+| 5-voting, Qwen-Max | 24 / 14 / 40 | 97.18 / 89.61 / 93.24 | 72.73 / 85.11 / 78.43 |
+| 3-voting, Qwen-Max | 24 / 15 / 45 | 95.50 / 92.21 / 93.83 | 73.47 / 76.60 / 75.00 |
+| + Examples (few-shot) | 25 / 15 / 46 | 100.00 / 85.71 / 92.31 | 78.72 / 78.72 / 78.72 |
+| + Examples + GT patch | 27 / 17 / 57 | 100.00 / 83.12 / 90.78 | 75.93 / 87.23 / **81.19** |
+
+> **Takeaways (match paper §2.2 prose):**
+> - **`instruct_clear` is easy, `instruct_ut_align` is hard.** Clear F1 stays ≥ 92.3 across every config; alignment F1 never exceeds 81.2 — judging whether tests *cover* the instruction requires inferring behavioral coverage from source, not just reading the prompt.
+> - **Few-shot examples lift alignment *precision*** (73.47 → 78.72 vs the 3-voting Qwen-Max base) but cost recall; **adding the GT patch lifts alignment *recall*** (78.72 → 87.23) and yields the **best alignment F1 = 81.19**.
+> - **More voting = fewer turns, not better accuracy.** 5-voting Qwen-Max (24 mean turns) matches 3-voting accuracy at ~60% of the turn budget — the reference-information ablations, not vote count, are what move the alignment metric.
+> - *Sourcing:* verbatim from Table 1 (paper_layout.txt lines 176–184). The judge underpins the SWE-Universe quality filter; Figure 2/3/4 then show filtered data lifts the good-task ratio and improves RL on SWE-bench Multilingual/Pro without hurting Verified.
+
 **Hacking-susceptible behaviors analysis:**
 
 | Category | Behavior | Freq. (%) | Resolved (% Δ<sub>base</sub>) | φ corr. |
