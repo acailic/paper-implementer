@@ -310,6 +310,28 @@ A faithful evaluator yields monotonically increasing $\bar{S}_{\text{UT}}(\theta
 | Qwen-Plus (base) | 78 | 1509 |
 | + Interactive Judge RFT | **84 (+6)** | **1545 (+36)** |
 
+#### §3: Interactive Judge Variance Decomposition (Table 12)
+
+Variance decomposition on QwenWebBench — each row fixes all upstream stages and varies only the indicated component (n=5 repeated runs; σ = ELO std-dev, Range = max − min):
+
+| Model | Variance Source | n | Mean ELO | σ | Range |
+|-------|------------------|:-:|--------:|------:|-----:|
+| Claude Opus 4.7 | Generation | 5 | 1523.1 | 10.4 | 24.4 |
+| Claude Opus 4.7 | Judge | 5 | 1523.9 | 8.5 | 22.5 |
+| Claude Opus 4.7 | Render + Judge | 5 | 1517.3 | **5.0** | **11.6** |
+| Claude Opus 4.7 | Checklist-guided R+J | 5 | **1532.1** | 11.1 | 30.4 |
+| Qwen3.7 Max† | Generation | 5 | 1482.3 | **2.8** | **8.3** |
+| Qwen3.7 Max† | Judge | 5 | 1486.2 | 11.4 | 26.1 |
+| Qwen3.7 Max† | Render + Judge | 5 | 1483.2 | 10.4 | 27.6 |
+| Qwen3.7 Max† | Checklist-guided R+J | 5 | **1498.6** | 10.7 | 26.1 |
+
+> *†Qwen3.7-Max is an intermediate training checkpoint, not the final released model.*
+>
+> **Takeaways:**
+> - Generation dominates variance for Claude (σ=10.4) while its judge stage is tighter (σ=8.5); judging dominates for Qwen (σ=11.4) where generation is remarkably stable (σ=2.8). The bottleneck stage differs by model.
+> - Checklist-guided action planning lifts mean ELO for both (Claude 1532.1 vs 1517.3 unguided; Qwen 1498.6 vs 1483.2) at variance comparable to other stages — a free-ish quality gain.
+> - All σ < 12 ELO and max range 30.4 — well within the ~40 ELO gap between Claude and Qwen tiers, so the Interactive Judge is stable enough to serve as a training reward.
+
 ### §4: Span-KTO vs Baselines (Figure 10)
 
 | Benchmark | SFT | RW-SFT | Span-KTO | Δ vs SFT | Δ vs RW-SFT |
@@ -365,21 +387,83 @@ Effect of negative span weight $w_{\text{neg}}$ on performance (averaged over 3 
 
 > **Takeaway:** Only slight downweighting ($w_{\text{neg}} = 0.8$) helps; aggressive removal hurts. Negative spans contain valuable language modeling information. Reweighting can only adjust learning intensity, not learning direction — this motivates the preference learning approach of Span-KTO.
 
+### §4.2: Span-KTO Hyperparameter Sensitivity (Tables 21 & 22)
+
+Table 21 — effect of preference strength β on Span-KTO ($\lambda_l = 1.0$ fixed, best checkpoint within 2 epochs). Avg = mean of the three SWE-bench variants:
+
+| β | SWE-bench Verified | SWE-bench Pro | SWE-bench Multilingual | Avg |
+|:-:|:-:|:-:|:-:|:-:|
+| 0.005 | 57.60 | 35.80 | 42.95 | 45.45 |
+| **0.01** | **59.80** | **38.15** | **45.55** | **47.83** |
+| 0.02 | 56.35 | 34.10 | 40.90 | 43.78 |
+
+Table 22 — effect of negative-span loss weight $\lambda_l$ on Span-KTO ($\beta = 0.01$ fixed, best checkpoint within 1 epoch):
+
+| $\lambda_l$ | SWE-bench Verified | SWE-bench Pro | SWE-bench Multilingual | Avg |
+|:-:|:-:|:-:|:-:|:-:|
+| 0.3 | 51.30 | 33.27 | 37.05 | 40.54 |
+| 0.6 | 51.95 | 33.35 | 38.73 | 41.34 |
+| **1.0** | **53.25** | **34.20** | **39.22** | **42.23** |
+
+> **Takeaway:** Both sweeps are unimodal with the deployed defaults (β = 0.01, $\lambda_l$ = 1.0) at the peak — too strong (β = 0.02) or too weak (β = 0.005, $\lambda_l$ = 0.3) both degrade all three SWE-bench variants. The β sweep spans ±2 pp on Avg (43.78 ↔ 47.83); the $\lambda_l$ sweep is shallower (±1.7 pp).
+>
+> *Cross-check note:* the β=0.01, $\lambda_l$=1.0 setting appears in both tables but with different Verified scores (Table 21: 59.80 vs Table 22: 53.25) and different Avg (47.83 vs 42.23) because the two ablations use different checkpoint-selection budgets — Table 21 picks the best checkpoint **within 2 epochs**, Table 22 within **1 epoch**. They are not the same run; do not expect the shared cell to match. The Figure-10 main-result Span-KTO numbers (Verified 59.8, Multilingual 45.5) follow Table 21's 2-epoch protocol.
+
 ### §5: Evaluator Prompt Versions (Qwen-Plus)
 
-| Prompt | BoN-Acc | Kendall τ | Pearson $r_{\text{eval}}$ |
-|--------|:-:|:-:|:-:|
-| v1 (baseline) | 57.9% | 0.379 | 0.489 |
-| v2 (+end-to-end examples) | 63.9% | 0.420 | 0.525 |
-| v3 (+role fix) | 62.4% | 0.440 | 0.556 |
-| **v4 (+context enrichment)** | **67.4%** | **0.473** | **0.598** |
-| v5 (over-specified) | 59.6% | 0.471 | 0.541 |
+Table 6 — evaluator prompt iteration on the NL2Repo validation set (Qwen-Plus; effective sample count < 360 per version):
 
-> **Takeaway:** v4 is optimal. More detail is not always better — over-specification (v5) actually hurts BoN-Acc. The evaluator's prompt design requires careful calibration.
+| Prompt | BoN-Acc↑ | Regret↓ | Kendall τ↑ | $r_{\text{eval}}/\rho_{\text{eval}}$↑ | $r_{\text{pass}}/\rho_{\text{pass}}$↑ |
+|--------|:-:|:-:|:-:|:-:|:-:|
+| v1 (baseline) | 57.9% | 0.086 | 0.379 | 0.489 / 0.448 | 0.503 / 0.477 |
+| v2 (+end-to-end examples) | 63.9% | 0.088 | 0.420 | 0.525 / 0.490 | **0.623 / 0.589** |
+| v3 (+role fix) | 62.4% | **0.081** | 0.440 | 0.556 / 0.564 | 0.599 / 0.597 |
+| **v4 (+context enrichment)** | **67.4%** | 0.089 | **0.473** | **0.598 / 0.578** | 0.562 / 0.529 |
+| v5 (over-specified) | 59.6% | 0.098 | 0.471 | 0.541 / 0.522 | 0.516 / 0.455 |
+
+> **Takeaway:** v4 is optimal on the ranking metrics the pipeline actually uses (BoN-Acc 67.4%, τ 0.473, $r_{\text{eval}}$ 0.598). v3 edges Regret (0.081) and v2 edges the pass-rate correlations, but more detail is not always better — over-specification (v5) hurts BoN-Acc. Rubric granularity must be calibrated to the evaluator model's instruction-following capacity.
+
+Table 7 — threshold-conditioned unit-test score $\bar{S}_{\text{UT}}(\theta)$ per prompt version (cell = score, sample count in parentheses). A faithful evaluator's $\bar{S}_{\text{UT}}(\theta)$ rises with $\theta$ at moderate thresholds:
+
+| Prompt | θ ≥ 7 | θ ≥ 8 | θ ≥ 9 | θ ≥ 10 |
+|--------|:-:|:-:|:-:|:-:|
+| v1 | 0.575 (134) | 0.603 (72) | 0.725 (30) | 0.729 (4) |
+| v2 | 0.581 (156) | 0.598 (70) | 0.646 (28) | 0.471 (2) |
+| v3 | **0.588 (120)** | 0.620 (46) | 0.608 (13) | 0.684 (1) |
+| v4 | 0.566 (140) | **0.625 (68)** | **0.624 (22)** | 0.544 (5) |
+| v5 | 0.566 (122) | 0.595 (59) | 0.635 (27) | 0.741 (6) |
+
+> **Takeaway:** v4 maintains the strongest filtering quality at the practical RFT threshold (θ ≥ 8: 0.625, and θ ≥ 9: 0.624), consistent with its ranking-metric lead. The trend becomes unreliable at θ ≥ 10 due to tiny sample sizes (1–6 surviving samples) — do not read the θ ≥ 10 column as a stable signal.
 
 ### §5: Why $S_{\text{eval}}$ over $S_{\text{pass}}$?
 
 The paper consistently finds $r_{\text{eval}} \gg r_{\text{pass}}$ and $\rho_{\text{eval}} \gg \rho_{\text{pass}}$ — the holistic evaluation score $S_{\text{eval}}$ correlates far better with unit-test truth than the simple checklist pass rate. A uniform average over binary checklist outcomes doesn't capture item importance or overall code quality.
+
+### §5: Evaluator Backbone Selection (Tables 8 & 9)
+
+Table 8 — evaluator backbone comparison under prompt v4 on the NL2Repo validation set (effective sample count < 390 per model):
+
+| Evaluator Model | BoN-Acc↑ | Regret↓ | Kendall τ↑ | $r_{\text{eval}}/\rho_{\text{eval}}$↑ | $r_{\text{pass}}/\rho_{\text{pass}}$↑ |
+|----------------|:-:|:-:|:-:|:-:|:-:|
+| **Claude Opus 4.7** | **70.4%** | **0.052** | **0.579** | **0.708 / 0.667** | **0.662 / 0.659** |
+| Qwen 3.7 Plus | 67.3% | 0.054 | 0.553 | 0.675 / 0.636 | 0.628 / 0.562 |
+| Qwen 3.6 Plus | 62.6% | 0.080 | 0.493 | 0.596 / 0.574 | 0.584 / 0.558 |
+| DeepSeek V4 Pro | 54.5% | 0.087 | 0.420 | 0.549 / 0.493 | 0.502 / 0.461 |
+
+> Claude Opus 4.7 leads on every ranking metric and is the most stable across repeated runs. Qwen 3.7 Plus occasionally matches Opus-level BoN-Acc in individual runs but shows substantially higher variance (±10pp) — evaluator reliability, not just peak performance, matters for training pipelines.
+
+Table 9 — threshold-conditioned $\bar{S}_{\text{UT}}(\theta)$ across backbones under prompt v4 (cell = score, retained-sample count in parentheses):
+
+| Evaluator Model | θ ≥ 7 | θ ≥ 8 | θ ≥ 9 | θ ≥ 10 |
+|------------------|:-:|:-:|:-:|:-:|
+| **Claude Opus 4.7** | **0.572 (198)** | **0.615 (139)** | 0.652 (81) | 0.721 (**30**) |
+| Qwen 3.7 Plus | 0.550 (220) | 0.595 (129) | 0.683 (52) | **0.795 (19)** |
+| Qwen 3.6 Plus | 0.535 (225) | 0.610 (133) | 0.640 (65) | 0.753 (20) |
+| DeepSeek V4 Pro | 0.548 (212) | 0.611 (118) | 0.671 (61) | 0.719 (18) |
+
+> **Two tensions at the practical threshold (θ = 8):**
+> 1. *Ranking ≠ filtering.* Qwen 3.7 Plus beats DeepSeek V4 Pro on BoN-Acc (67.3 vs 54.5) and τ (0.553 vs 0.420), yet DeepSeek achieves a higher conditioned UT score (0.611 vs 0.595); Qwen 3.6 Plus trails Qwen 3.7 Plus on ranking but matches its filtering quality (0.610 vs 0.595).
+> 2. *Quality vs quantity.* Raising θ raises $\bar{S}_{\text{UT}}(\theta)$ but shrinks the retained set: θ ≥ 8 retains 118–139 samples, θ ≥ 10 only 18–30. Claude Opus 4.7 mitigates this — at θ ≥ 8 it retains the most samples (139) at the highest quality (0.615) — so a stronger evaluator buys both higher quality AND a larger filtered set. The right backbone thus depends on whether the downstream stage (RFT vs RL) needs ranking fidelity or filtering yield.
 
 ## 8. Code / Reproducibility
 

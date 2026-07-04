@@ -72,8 +72,8 @@
     },
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 19,
-      "lastAccessed": 1783125507312,
+      "accessCount": 20,
+      "lastAccessed": 1783125711558,
       "type": "file"
     },
     {
@@ -92,6 +92,12 @@
       "path": "papers/2026-are-we-ready-for-an-agent/breakdown.md",
       "accessCount": 12,
       "lastAccessed": 1783125061618,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
+      "accessCount": 12,
+      "lastAccessed": 1783126068557,
       "type": "file"
     },
     {
@@ -188,12 +194,6 @@
       "path": "papers/2026-domainshuttle-freeform-open-domain-subject-driven/paper_layout.txt",
       "accessCount": 4,
       "lastAccessed": 1783122800773,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
-      "accessCount": 3,
-      "lastAccessed": 1783118125289,
       "type": "file"
     },
     {
