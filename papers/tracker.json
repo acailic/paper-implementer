@@ -840,7 +840,46 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "note": "Added iter 33 (gnhf). Fresh source-first breakdown from arXiv PDF (8pp, WWW '26). NEW SUBAREA for repo: retrieval-augmented generation / multi-hop QA reasoning — unrelated to inference-efficiency lineage and a retrieval+reasoning-structure counterpart to the agentic-RL lineage. All 4 numeric tables verbatim (T1 dataset stats MuSiQue/2WikiMQA/HotpotQA, T2 main results 2 models x up to 13 methods, T3 ablation 4 components, T5 max-tree-depth 1-4); T4+T6 qualitative reasoning-chain examples summarized. Headline (every cell RT-RAG leads): GPT-4o-mini 64.92 F1/52.33 EM, Qwen2.5-14B 63.32 F1/51.33 EM; largest per-dataset gain 2WikiMQA +12.69 F1. Method: consensus-validated reasoning tree T=(V,E) + post-order retrieval + adaptive leaf conversion on [none] + rejection sampling + query rewriting. Hyperparams: embedding text-embedding-3-small, reranker bge-reranker-base, k=45/15, consensus=5, rejection=5, refine<=3. Source-free reconciliation passed: T2 Avg col reproduces (RT-RAG (54.42+75.08+65.26)/3=64.92 etc.); T3 deltas recompute; T5 depth-4 row == T2/T3 RT-RAG (main config = max-depth-4). NO paper-internal numeric inconsistency (unlike iter 30/31); only mild tension = 'depth-3 optimal' prose vs depth-4 main config, flagged in Limitations."
+    },
+    {
+      "title": "Beyond Outcome Verification: Verifiable Process Reward Models for Structured Reasoning",
+      "authors": [
+        "Massimiliano Pronesti",
+        "Anya Belz",
+        "Yufang Hou"
+      ],
+      "year": "2026",
+      "arxiv_id": "2601.17223",
+      "arxiv_url": "https://arxiv.org/abs/2601.17223",
+      "pdf_url": "https://arxiv.org/pdf/2601.17223",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Reinforcement learning with verifiable rewards (RLVR) has shown that large language models (LLMs) can be substantially improved using outcome-level verification signals, such as unit tests for code or exact-match checks for mathematics. However, outcome-only RLVR provides rewards solely at the terminal step of reasoning, offering no guarantees about whether the model followed a valid intermediate process. Existing process-supervision approaches score intermediate Chain-of-Thought (CoT) steps using neural judges, which reintroduce opacity, bias, and opportunities for reward hacking. We introduce Verifiable Process Reward Models (VPRMs), a reinforcement-learning framework in which intermediate reasoning steps are checked by deterministic, rule-based verifiers grounded in explicit task guidelines. We prove that under mild reward-separation assumptions VPRMs assign positive expected weight to correct reasoning trajectories and negative weight to inconsistent ones (Theorem 1). Applied to risk-of-bias assessment for medical evidence synthesis, a domain where guideline-defined criteria and rule-based decision paths enable programmatic verification of reasoning traces, VPRMs generate reasoning that adheres closely to domain rules and achieve substantially higher coherence between step-level decisions and final labels. Results show that VPRMs achieve up to 20% higher F1 than state-of-the-art models and 6.5% higher than verifiable outcome rewards, with substantial gains in evidence grounding and logical coherence.",
+      "ai_keywords": [
+        "process reward models",
+        "verifiable rewards",
+        "RLVR",
+        "reinforcement learning",
+        "risk of bias",
+        "medical evidence synthesis",
+        "structured reasoning",
+        "GRPO",
+        "DAPO",
+        "chain-of-thought verification",
+        "clinical NLP",
+        "systematic reviews",
+        "Cochrane"
+      ],
+      "popularity": 0,
+      "citation_count": 0,
+      "pwc_url": "",
+      "rank": 16,
+      "status": "analyzed",
+      "folder": "2026-verifiable-process-reward-models-structured-reasoning",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "note": "Source-first build (iter 34). VPRMs replace neural step-judges with deterministic rule-based verifiers on the Cochrane risk-of-bias decision tree; Theorem 1 reward-separation guarantee. All 7 numeric tables (1-7) verbatim; Table 8 qualitative. GRPO-VPRM wins all 6 result cols (87.9/76.7 CF), +6.4/+6.5 over outcome-only GRPO, +9.7/+20.6 over best neural PRM. Coherence 89.5 vs ~50 baseline. Flagged 1 paper-internal prose-vs-table inconsistency inline: abstract '20% higher F1' magnitude matches Accuracy (+20.8 vs GPT-OSS-120B), not F1 (+26.9)."
     }
   ],
-  "updated_at": "2026-07-04T04:30:00+00:00"
+  "updated_at": "2026-07-04"
 }
