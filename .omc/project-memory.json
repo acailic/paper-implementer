@@ -66,8 +66,8 @@
   "hotPaths": [
     {
       "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 39,
-      "lastAccessed": 1783129356505,
+      "accessCount": 41,
+      "lastAccessed": 1783129932041,
       "type": "file"
     },
     {
@@ -197,6 +197,12 @@
       "type": "file"
     },
     {
+      "path": "papers/tracker.json",
+      "accessCount": 5,
+      "lastAccessed": 1783130269819,
+      "type": "file"
+    },
+    {
       "path": "papers/2026-the-verification-horizon-no-silver-bullet/paper.txt",
       "accessCount": 4,
       "lastAccessed": 1783118004985,
@@ -212,12 +218,6 @@
       "path": "papers/2026-are-we-ready-for-an-agent/paper_layout.txt",
       "accessCount": 3,
       "lastAccessed": 1783124934269,
-      "type": "file"
-    },
-    {
-      "path": "papers/tracker.json",
-      "accessCount": 3,
-      "lastAccessed": 1783128457805,
       "type": "file"
     },
     {
@@ -302,6 +302,12 @@
       "path": "papers/2026-speculating-experts-accelerates-moe-inference/breakdown.md",
       "accessCount": 1,
       "lastAccessed": 1783129773915,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-spin-unifying-sparse-attention-hierarchical-memory/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783130240266,
       "type": "file"
     }
   ],

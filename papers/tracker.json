@@ -750,7 +750,55 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "note": "Added iter 31 (gnhf). Fresh source-first breakdown from arXiv PDF (9pp); all 3 explicit tables (T1 accuracy 12 rows, T2 model config, T3 hardware) verbatim, all 12 Average cells reconcile source-free. New MoE-inference subarea sibling to jetspec (speculation-based). 1 paper-internal inconsistency flagged inline: section 6.3 '37% GSM8k recovery' prose contradicts T1 (Hybrid-PF GSM8k 0.946 vs baseline 0.950 = ~99% gap recovered). Figure 7-8 TPOT bar values are figure-derived; only prose-confirmed ranges stated."
+    },
+    {
+      "title": "Spin: Unifying Sparse Attention with Hierarchical Memory for Scalable Long-Context LLM Serving",
+      "authors": [
+        "Zihan Zhao",
+        "Baotong Lu",
+        "Shengjie Lin",
+        "Yizou Chen",
+        "Jing Liu",
+        "Yanqi Zhang",
+        "Ziming Miao",
+        "Ming-Chang Yang",
+        "Haiying Shen",
+        "Qi Chen",
+        "Fan Yang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2604.26837",
+      "arxiv_url": "https://arxiv.org/abs/2604.26837",
+      "pdf_url": "https://arxiv.org/pdf/2604.26837",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Long-context LLM serving is bottlenecked by the cost of scaling KV-cache management and attention over long sequences. Dynamic sparse attention reduces the compute and KV-access volume, but its system-level gains have been limited by the lack of unified abstractions for sparsity (each algorithm re-implements its own KV management) and by irregular GPU-CPU KV retrieval that erodes sparsity benefits. We present Spin, a sparse-attention-aware inference framework that abstracts diverse sparse attention algorithms into a common five-operation pipeline (Index, Select, Attention as algorithm-specific; Offload, Retrieve as shared data movement) keyed on a partition abstraction, and builds a KV-cache management system for the GPU-CPU hierarchy with three design decisions: (1) partition abstraction that decouples algorithm-defined sparsity units from hardware-efficient page granularity, (2) dynamic locality-aware KV management with a bucketed LRU that exploits cross-step temporal locality, and (3) OS-style hierarchical (multi-level) metadata that scales with the physical working set rather than the worst-case address space. Built on vLLM with three representative sparse attention algorithms (ShadowKV, RetroInfer, SeerAttention-R), Spin is evaluated across three models (Qwen3-14B/32B, Llama-3.1-70B), two long-context benchmarks (LongBench-v2, LongGenBench), and both A100 and B200 GPUs, delivering 1.66-5.66x higher end-to-end throughput and 7-9x lower TTFT than vLLM, with larger gains at higher request rates. Spin also improves throughput by up to 2.39x over the original implementations of sparse attention, and its hierarchical metadata reduces metadata HBM consumption by 49-78x.",
+      "ai_keywords": [
+        "long-context LLM serving",
+        "dynamic sparse attention",
+        "KV cache management",
+        "GPU-CPU memory hierarchy",
+        "KV offloading",
+        "partition abstraction",
+        "locality-aware caching",
+        "bucketed LRU",
+        "hierarchical metadata",
+        "multi-level indexing",
+        "vLLM",
+        "ShadowKV",
+        "RetroInfer",
+        "SeerAttention"
+      ],
+      "popularity": null,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2604.26837",
+      "rank": 14,
+      "status": "done",
+      "folder": "papers/2026-spin-unifying-sparse-attention-hierarchical-memory",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "note": "Added iter 32 (gnhf). Fresh source-first breakdown from arXiv PDF (10pp, 1170 layout lines); all 3 explicit tables verbatim (T1 operation mappings across ShadowKV/RetroInfer/SeerAttention-R, T2 workload characteristics LongBench-v2/LongGenBench, T3 Spin-powered system configs). NEW SUBAREA for repo: long-context serving / sparse-attention runtime — sibling to inference-efficiency papers jetspec (token-level spec-decode) + speculating-experts (expert-level offload); Spin attacks the attention + KV-memory level. Headline (prose-confirmed, no figure back-fill): 1.66-5.66x throughput, 7-9x lower TTFT, 8.4-58% decode-latency reduction vs original sparse impl (up to 2.39x), 49-78x metadata HBM reduction. Models Qwen3-14B/32B + Llama-3.1-70B on A100 + B200. 1 paper-internal wording note: abstract spells 'hierachical' once (body uses 'hierarchical') — transcribed uniformly; the 49-78x figure is consistent across abstract+body+Fig-15 derivation (13.9-17.4x x 3.5-4.5x). Figure bar values not back-filled."
     }
   ],
-  "updated_at": "2026-07-04T03:50:00+00:00"
+  "updated_at": "2026-07-04T04:30:00+00:00"
 }
