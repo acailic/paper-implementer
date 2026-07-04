@@ -1226,6 +1226,51 @@
    "abstract": "Speculative decoding accelerates autoregressive generation by drafting a block of tokens that the target model verifies left-to-right, committing only the longest accepted prefix. Block (DLM-style) drafters predict the whole block in parallel, which is fast but trained with a full-block cross-entropy that supervises every position against the gold continuation -- even though inference discards every token after the first rejection. Recent acceptance-aware objectives patch this by reweighting the full-block loss; we instead use teacher-forced learning as a motivation for how supervision should concentrate on the accepted prefix. A mask-only block drafter has no input-side channel for gold-prefix conditioning, so AUF approximates that prefix-sensitive supervision on the loss side by keeping the cross-entropy support only through the drafter's first predicted failure. AUF is a single, detached change to the CE support -- no auxiliary objective, no verifier rollouts, and no change to the inference pipeline or the exactness contract. Within fixed drafter backbones and serving settings on Qwen3-8B, AUF raises the DFlash drafter's average emitted length tau, averaged over six benchmarks, from 2.40 to 2.61, with a gain on every benchmark, and transfers to Domino's two-branch head (2.56 to 2.68). Two findings sharpen the picture: the decay-only baseline reaches higher token accuracy on the shared block mask yet decodes worse, and on DFlash, once AUF truncates the support, the standard exponential position-decay weighting becomes empirically inert.",
    "sourcing_note": "Source-first breakdown built from paper.pdf (10pp, 3.3MB) via pdftotext -layout (paper_layout.txt, 644 lines). All 4 explicit tables transcribed verbatim with sourcing line-ranges (T1 lines 203-216 unified weighted-CE objective comparison 6 methods; T2 402-413 DFlash tau 2 temp x 3 methods x 6 benchmarks; T3 416-435 Domino 7 AUF variants support assignment -- caption-wrap trap, T3 caption mid-line at 416 sharing a layout row with 5.1 prose; T4 484-505 Domino tau 2 temp x 8 methods x 6 benchmarks). Source-free reconciliation: every Avg cell = unweighted mean of 6 per-benchmark tau; all 14 Table-4 Avg cells recompute to displayed 2-dp under both rounding conventions (0 mismatch); Table-2 Decay-row cells (2.405->2.40, 2.305->2.31) are display-rounding noise from full-precision tau (not a defect, flagged inline). Abstract headline deltas recompute (DFlash +0.21, Domino +0.12); 'gain on every benchmark' verified per-cell DFlash T0/T1; 'all AUF variants beat decay' verified T4 T0/T1; bold reconstruction T0=B-AUF+D(2.68), T1=B-AUF(2.53). NO numeric prose-vs-table contradiction. 3 inline notes (caption-wrap trap, bold-lost-in-pdftotext reconstruction, display-rounding boundary subtlety).",
    "subarea_lineage": "speculative-decoding (drafter training-objective angle) -- distinct from jetspec (parallel tree drafting architecture) and speculating-experts (MoE serving); sibling-in-mechanism to iLLaDA/subliminal-clocks (parallel DLM prediction setting)"
+  },
+  {
+   "rank": 28,
+   "arxiv_id": "2607.02291",
+   "arxiv_url": "https://arxiv.org/abs/2607.02291",
+   "pdf_url": "https://arxiv.org/pdf/2607.02291",
+   "title": "Optimizing Visual Generative Models via Distribution-wise Rewards",
+   "authors": [
+    "Ruihang Li",
+    "Mengde Xu",
+    "Shuyang Gu",
+    "Leigang Qu",
+    "Fuli Feng",
+    "Han Hu",
+    "Wenjie Wang"
+   ],
+   "year": 2026,
+   "code_url": "",
+   "project_page": "",
+   "subarea": "distribution-wise / population-level reward design for visual-generation RL: replace per-sample reward models (CLIP/HPS/ImageReward) with a Fréchet-distance FID signal over a generated reference set, made cheap by a subset-replace strategy (replace n=50 of N=5000 images per step, score the swap via R=-FID[(G\\g)∪g',G_real]); attacks reward hacking / mode collapse that sample-wise rewards cause; deployed two ways -- (1) direct policy-gradient RL fine-tuning of SiT-XL/2 (FID 8.30->5.77), (2) RL over post-hoc model-merging coefficients (EDM2-XS 3.74->3.52) which sidesteps the SDE-train/ODE-infer mismatch",
+   "ai_keywords": [
+    "distribution-wise reward",
+    "sample-wise reward",
+    "reward hacking",
+    "mode collapse",
+    "FID as reward",
+    "subset-replace strategy",
+    "flow matching RL",
+    "policy gradient",
+    "GRPO",
+    "diffusion RL",
+    "SiT",
+    "EDM2",
+    "ImageNet",
+    "model merging",
+    "EMA",
+    "train-inference inconsistency",
+    "SDE ODE gap",
+    "denoising reduction",
+    "FDDINOv2",
+    "diversity preservation"
+   ],
+   "abstract": "Conventional RL for visual generation uses sample-wise reward models, which drives reward hacking that degrades image diversity and introduces visual anomalies. We instead fine-tune generative models with distribution-wise rewards that account for the data distribution of samples, mitigating the mode collapse that occurs when all samples optimize the same direction independently. To overcome the prohibitive cost of estimating distribution-wise rewards, we introduce a subset-replace strategy that updates only a small subset of a generated reference set to provide dense reward signals. We also apply RL to optimize post-hoc model-merging coefficients, mitigating the train-inference inconsistency caused by introducing SDEs in regular RL. Our approach improves FID-50K across base models, from 8.30 to 5.77 for SiT and from 3.74 to 3.52 for EDM2.",
+   "sourcing_note": "Source-first breakdown built from paper.pdf (18pp, 4.7MB) via pdftotext -layout (paper_layout.txt, 1168 lines, 6 explicit tables + 10 figures). All 6 tables transcribed verbatim with sourcing line-ranges (T1 L304 ImageNet 256 FID+FDDINOv2; T2 L481 ImageNet 512 FID merging; T3 L970 adaptation-bias training/denoising-step grid; T4 L955 cross-metric 8 metrics; T5 L983 intra-step FID CV vs replacement size; T6 L1002 per-step cost). Caption-wrap trap reused (iters 38/39/45): ^Table N: regex misses T2/T3/T4 because captions share a layout row with body text -- bare 'Table N.' grep finds them; pdftotext drops bold so 'best in bold' reconstructed from row-max. Source-free reconciliation PASSED: every Table-4 Change % recomputes from its 2 cells (7/8 exact; FDDINOv2 prints 28.5% but recomputes 28.43% -- 0.1pp rounding flag); Table-6 four timed fractions sum 220.0s and recompute to 100.0%; reward-model ratio 304/24=12.7x; headline deltas recompute (SiT -30.5%, EDM2-XS -5.9%, EDM2-S -2.0%); Table-1 RL FID 5.77 == Table-3 row450/(250,50K) 5.77 == Table-4 +Ours(RL) 5.77 (3-table cross-agreement). Figure curves (Fig 3/4/5) NOT back-filled -- only prose-confirmed optima (N=5000, n=50, global-top-25%, batch-level, refresh=10, pure-RL) + Fig-4b SDE/ODE gap recorded; Figs 6-10 qualitative sample grids.",
+   "subarea_lineage": "visual-generation RL reward design (distribution-wise / population-level granularity) -- sibling-in-spirit to danceopd (on-policy generative-field distillation for editing) and the agentic-RL lineage, but the mechanism is reward-signal granularity (sample-wise -> distribution-wise); FID-as-reward + subset-replace estimator is the novel contribution"
   }
  ],
  "updated_at": "2026-07-04T03:59:37Z"

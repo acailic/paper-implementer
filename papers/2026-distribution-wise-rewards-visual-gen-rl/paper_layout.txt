@@ -1,0 +1,1169 @@
+                                                Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+                                                Ruihang Li 1 2 3 Mengde Xu 3 Shuyang Gu 3 Leigang Qu 4 Fuli Feng 1 Han Hu 3 Wenjie Wang 1
+
+
+                                                                 Abstract                                     Chang et al., 2026; Crowson et al., 2024; Wang et al., 2024)
+                                             Conventional reinforcement learning strategies                   and training strategies (Yu et al., 2024b; Huang et al., 2024;
+                                             for visual generation typically employ sample-                   Hang et al., 2024). In the post-training stage, reinforce-
+                                             wise reward functions, yet this practice frequently              ment learning (RL) with sample-wise reward models (Fan
+                                             results in reward hacking that degrades image                    et al., 2023; Wu et al., 2023b; Kirstain et al., 2023; Xu et al.,
+arXiv:2607.02291v1 [cs.LG] 2 Jul 2026
+
+
+
+
+                                             diversity and introduces visual anomalies. To                    2023; Wang et al., 2025) is employed to align model out-
+                                             address these limitations, we present a novel                    puts with human preferences. Nevertheless, reinforcement
+                                             framework that finetunes generative models using                 fine-tuning driven by sample-wise rewards is prone to re-
+                                             distribution-wise rewards, ensuring better align-                ward hacking (Weng, 2024; Amodei et al., 2016; Everitt
+                                             ment with real-world data distributions. Un-                     et al., 2017; Gao et al., 2023; Wen et al., 2024; Liu et al.,
+                                             like rewards that evaluate samples individually,                 2025; Li et al., 2025a), often introducing visual artifacts
+                                             distribution-wise reward accounts for the data dis-              and diminishing the diversity of generated images (Ku et al.,
+                                             tribution of the samples, mitigating the mode col-               2024; Xue et al., 2025; Miao et al., 2024; Liu et al., 2025),
+                                             lapse problem that occurs when all samples op-                   as shown in Figure 1. In contrast, distribution-wise metrics
+                                             timize towards the same direction independently.                 quantify diversity and mode coverage, penalizing generators
+                                             To overcome the prohibitive computational cost of                that miss modes or exhibit low diversity (Borji, 2022; Ku
+                                             estimating these rewards, we introduce a subset-                 et al., 2024; Cai et al., 2025). Early studies also confirmed
+                                             replace strategy that efficiently provides reward                their consistency with human judgment and their sensitiv-
+                                             signals by updating only a small subset of a gen-                ity to subtle shifts in the real distribution (Heusel et al.,
+                                             erated reference set. Additionally, we apply RL                  2017; Borji, 2022), indicating greater robustness compared
+                                             to optimize post-hoc model merging coefficients,                 to sample-wise metrics. Moreover, alignment with a refer-
+                                             potentially mitigating the train-inference inconsis-             ence distribution that captures holistic, high-level attributes
+                                             tency caused by introducing stochastic differential              such as visual quality and aesthetics beyond the reach of
+                                             equation (SDE) in regular RL practices. Exten-                   sample-wise metrics, opens new avenues for improvement.
+                                             sive experiments show our approach significantly                 In this work, we propose a RL approach based on
+                                             improves FID-50K across various base models,                     distribution-wise rewards to improve coverage of the real-
+                                             from 8.30 to 5.77 for SiT and from 3.74 to 3.52                  world data distribution, achieving both high visual fidelity in
+                                             for EDM2. Qualitative evaluation also confirms                   samples and broad generation diversity. Quantifying the dis-
+                                             that our method enhances perceptual quality while                crepancy between two distributions is a well-studied prob-
+                                             preserving sample diversity.                                     lem, with established metrics like KL divergence (Joyce,
+                                                                                                              2011), MMD (Gretton et al., 2006) and Wasserstein dis-
+                                                                                                              tance (Villani, 2009). In the field of image generation,
+                                        1. Introduction                                                       Fréchet Inception Distance (FID) (Heusel et al., 2017; Jaya-
+                                        Visual generative models are designed to approximate the              sumana et al., 2024; Chong & Forsyth, 2020) is a widely
+                                        complex probability distribution of real-world images and             used metric for assessing the degree of fit between the
+                                        videos. Existing studies have advanced this objective by              learned and real image distribution (Karras et al., 2022;
+                                        improving network architectures (Karras et al., 2022; 2024;           2024; Chang et al., 2026; Crowson et al., 2024; Wang et al.,
+                                                                                                              2024; Yu et al., 2024b; Huang et al., 2024; Hang et al., 2024).
+                                            1
+                                              University of Science and Technology of China 2 Shanghai        Compared to sample-wise metrics like CLIP Score (Hessel
+                                        Innovation Institute 3 Hunyuan Frontier Lab, Tencent 4 National       et al., 2021) and HPS (Wu et al., 2023b;a), distribution-
+                                        University of Singapore. Correspondence to: Wenjie Wang <wen-         based metrics provide a better evaluation of how well the
+                                        jiewang@ustc.edu.cn>, Leigang Qu <leigangqu@gmail.com>.
+                                                                                                              generative model covers the real distribution and can iden-
+                                        Proceedings of the 43 rd International Conference on Machine          tify incorrect fits (Heusel et al., 2017; Gretton et al., 2006;
+                                        Learning, Seoul, South Korea. PMLR 306, 2026. Copyright 2026          Villani, 2009). As a widely used metric in image generation,
+                                        by the author(s).
+
+                                                                                                          1
+                               Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+
+           Without RL
+
+
+
+       Sample-wise RL
+
+
+
+Distribution-wise RL
+              (Ours)
+
+
+Figure 1. Visualization of class-conditional image generation using varied initial noises. The baseline model (without RL, first row, FID
+8.30) frequently produces visual artifacts, such as incorrect text rendering, spurious elements, distortion, and vignetting. Applying a
+sample-wise RL reward 1 leads to severe reward hacking (second row, FID 34.26), causing a collapse in sample diversity and introducing
+artifacts like bizarre rainbow patterns. In contrast, our distribution-wise reward (third row, FID 5.77) significantly mitigates these
+defects, enhancing overall generation quality and better aligning the learned distribution with the real data.
+
+FID has been validated to correlate well with human per-               In this work, we propose distribution-wise reward for RL
+ception of visual quality, while also providing a balanced             training. Specifically, we use a novel subset-replace strat-
+assessment of both fidelity and diversity (Heusel et al., 2017;        egy to obtain dense distribution-wise reward signals at a low
+Salimans et al., 2016; Barratt & Sharma, 2018). Given these            compute cost. First, we generate a reference set of images
+advantages, we choose FID as the distribution-wise metric              and compute its FID against the target distribution as a start-
+to measure the generative model’s fitting capability and use           ing point. During rollouts, a small subset of this reference
+it as the reward signal for reinforcement fine-tuning.                 set is replaced by newly generated samples, and the FID of
+                                                                       the updated set is used as a dense reward signal. While this
+Training with distribution-wise rewards remains underex-
+                                                                       signal can be used to directly fine-tune the entire model, and
+plored. Existing RL approaches for image generation (Black
+                                                                       indeed shows promise on models like SiT (Ma et al., 2024),
+et al., 2023; Fan et al., 2023; Xue et al., 2025; Liu et al.,
+                                                                       such an approach still requires an SDE-based training for-
+2025; Li et al., 2025a) generally treat the denoising pro-
+                                                                       mulation (Fan et al., 2023; Liu et al., 2025; Xue et al., 2025;
+cess as a Markov Decision Process (MDP) in a stochas-
+                                                                       He et al., 2025), inheriting the train-inference inconsistency
+tic environment (Fan et al., 2023; Liu et al., 2025), em-
+                                                                       issue. Inspired by EDM2 (Karras et al., 2024), we explore a
+ploying sample-wise reward models (Fan et al., 2023; Wu
+                                                                       more effective optimization strategy: applying our reward
+et al., 2023b; Kirstain et al., 2023; Xu et al., 2023; Wang
+                                                                       signal to search for optimal post-hoc model merging coeffi-
+et al., 2025) to obtain reward signals for each denoising
+                                                                       cients, instead of fine-tuning all parameters directly. This
+trajectory, and utilize Group Relative Policy Optimization
+                                                                       paradigm decouples the RL optimization from the denoising
+(GRPO) (Shao et al., 2024; Guo et al., 2025) to optimize the
+                                                                       process, thereby eliminating the potential train-inference
+entire state–action sequence. However, directly optimizing
+                                                                       gap caused by SDE.
+with distribution-wise rewards requires computing statis-
+tical metrics on a huge set of images (e.g., 50K samples               Specifically, the subset-replace strategy first computes a
+for FID), incurring significant computational cost. Besides,           base FID on a class-balanced reference set of moderately-
+such distribution-wise metrics can’t provide reward signals            sized generated images. During the rollout phase, a small
+for each individual denoising trajectories that is necessary           subset (0.01× of the reference set) of images in the reference
+for RL training. Moreover, we observed that performance                set are randomly replaced with newly generated samples of
+improvements from RL fine-tuning in a SDE-based stochas-               the same corresponding classes. The FID of this partially up-
+tic environment (Fan et al., 2023; Liu et al., 2025; He et al.,        dated set (replaced FID) is then computed, and its negative
+2025; Wang & Yu, 2025) for exploration do not fully trans-             value serves as the reward signal for the related subset of
+late to the faster, ODE-based deterministic sampling used              images. Experiments on SiT (Ma et al., 2024) demonstrate
+during inference process. This discrepancy highlights a                that our method significantly reduces the FID from 8.30 to
+significant train-inference inconsistency and motivates the            5.77, and the FDDINOv2 from 230.39 to 164.88. For post-hoc
+search for alternative optimization methods that avoids the            model merging coefficient optimization, our strategy im-
+performance gap between SDE-based training and ODE-                    proves the FID-50K from 3.74 to 3.52 on the EDM2 (Karras
+based inference.                                                       et al., 2024) model, highlighting its power as a lightweight,
+   1
+    We use ImageReward (Xu et al., 2023) as the sample-wise            train both the sample-wise and distribution-wise RL models until
+reward model, formatting prompts as “an image of {class                the reward saturates.
+name}” to adapt to the class-conditional generation setting, and
+
+
+                                                                   2
+                                      Optimizing Visual Generative Models via Distribution-wise Rewards
+
+                                                ② Replace Old Subset        ③ Reward Calculation &                                         Checkpoints Pool
+    ① Reference Set Generation                                                                                                                                              learnable
+                                                                                                                                                                                        𝒛
+                                                 with New Images                Normalization                                                                               embedding
+                                                                                                                                                                                                EMANet
+
+                                                                                                                                                 …
+                                                                                                                                                                             𝐰
+                                                                                                                                                                             != 𝑤!! , 𝑤!" , … , 𝑤
+                                                                                                                                                                                                ! #!
+                                                                                                                                           M!
+                                                                             𝑅%                                            𝐴"%                   …         M"!
+                                                                                                                                                                             𝝈 = 𝜎! , 𝜎" , … , 𝜎#!
+
+
+
+
+                                                                                    Batch-level Advantage Normalization
+        Reference Set 𝒢
+
+
+
+
+                                                                                                                                                                                                              Policy Gradient Update
+                                    Subset
+                                                                                                                                                Gaussian sampling         𝐰 = 𝑤! , 𝑤" , … , 𝑤#!
+                                                                                                                                                   multiple times         𝑤$ ∼ 𝒩(𝑤
+                                                                                                                                                                                 ! $ , 𝜎$ )
+                                                                             𝑅&                                            𝐴" &
+                                                                                                                                     (!)             ())            (*)                                (+)
+                                    Replacing
+                                                                                                                                   M#$%&$         M#$%&$          M#$%&$                …         M#$%&$
+
+                                                               ...           ...                                           ...
+       generate   periodically                                                                                                                             Subset-replace Strategy
+
+
+                                                                                                                                    R(!)           R())            R(*)                 …              R(+)
+                 Diffusion
+              Policy Network
+                                                                             𝑅'                                            𝐴" '
+                                                                                                                                                 Batch-level Advantage Normalization
+                                                   Policy Gradient Update
+
+
+                                 (1) Subset-replace Strategy                                                                                     (2) Post-hoc Model Merging with RL
+Figure 2. Illustration of our proposed RL framework with distribution-wise rewards. (1) Subset-replace Strategy: Initially, a reference
+set is generated using the diffusion policy. During rollout, a random subset is replaced with newly generated samples in the same classes.
+The distribution-wise metric of the resulting set acts as a reward, which is then normalized into an advantage signal to update the model
+via policy gradient. The reference set is regenerated periodically. (2) Post-hoc Model Merging with RL: The distribution-wise reward
+signal can guide a lightweight policy to learn the optimal weights for merging a pool of model checkpoints. This efficiently creates an
+improved model, while allowing the rollout process to utilize ODE-based inference.
+
+plug-and-play module for enhancing pretrained models.                                                                     by applying policy gradients to the score function (Song
+                                                                                                                          et al., 2020), enabling preference-aligned image genera-
+Our contributions are summarized as follows:
+                                                                                                                          tion (Black et al., 2023; Fan et al., 2023; Fan & Lee, 2023;
+                                                                                                                          Lee et al., 2023). Offline Direct Preference Optimization
+  1. We analyze the limitations of reinforcement learning
+                                                                                                                          was later introduced for text-to-image tasks (Wallace et al.,
+     with sample-wise reward functions, showing that they
+                                                                                                                          2024), though distributional shift in pairwise data motivated
+     are susceptible to reward hacking, which degrades dis-
+                                                                                                                          online methods with step-aware preference models (Yuan
+     tributional fidelity and introduces artifacts while reduc-
+                                                                                                                          et al., 2024; Liang et al., 2025). More recently, GRPO-based
+     ing diversity.
+                                                                                                                          approaches (Tong et al., 2025; Liu et al., 2025; Xue et al.,
+  2. We propose a RL framework with distribution-wise                                                                     2025) have advanced RL-enhanced generation with sample-
+     rewards by the subset-replace strategy. This provides a                                                              wise reward models, with (Liu et al., 2025; Xue et al., 2025)
+     robust alternative to conventional sample-wise rewards,                                                              extending GRPO to flow matching via ODE–SDE reformu-
+     which are vulnerable to reward hacking. Through ex-                                                                  lation. (Liu et al., 2025; Xue et al., 2025; Li et al., 2025a)
+     tensive experiments, we derive an effective and optimal                                                              found that reward hacking occurs in the RL process. In
+     training recipe that reduces the FID-50K of SiT from                                                                 this work, we explore the potential to mitigate this issue
+     8.30 to 5.77 and the FDDINOv2 score from 230.39 to                                                                   with distribution-wise rewards. (He et al., 2025; Li et al.,
+     164.88 without requiring additional training data or                                                                 2025a) further employ hybrid SDE–ODE to rollout denois-
+     architectural modifications.                                                                                         ing trajectories to accelerate training. (Wang & Yu, 2025)
+                                                                                                                          points out the SDE formulation in common RL practices
+  3. To resolve the train-inference inconsistency of SDE-                                                                 is injecting greater level of noise than the original ODE,
+     based RL, we propose a post-hoc optimization of                                                                      leading to a train-inference inconsistency. In this paper, we
+     model merging coefficients with distribution-wise re-                                                                applies RL to optimize post-hoc model merging coefficients,
+     ward signals using ODE-based denoising procedure.                                                                    eliminating the need for SDE-based rollouts and resolving
+     This training paradigm improves EDM2’s FID-50K                                                                       the train-inference inconsistency of SDE-based RL.
+     score from 3.74 to 3.52, validating a more consistent
+     and effective approach to model refinement.
+                                                                                                                          Distribution-wise Metrics. Distribution-wise metrics are
+2. Related Work                                                                                                           widely used in training and evaluating neural networks. KL
+                                                                                                                          Divergence (Joyce, 2011), which is often included as a reg-
+Reinforcement Learning in Image Generation. Early                                                                         ularization term in RL (Fan et al., 2023; Liu et al., 2025;
+works adapted reinforcement learning to diffusion models                                                                  He et al., 2025; Shao et al., 2024; Guo et al., 2025), mea-
+
+                                                                                                            3
+                              Optimizing Visual Generative Models via Distribution-wise Rewards
+
+sures the difference between distributions but can be un-               linear interpolations between the two samples are defined as
+stable when one distribution assigns zero probability to
+regions where the other has non-zero probability. Max-                               xt = (1 − t)x0 + tx1 ,       t ∈ [0, 1].          (1)
+imum Mean Discrepancy (MMD) (Gretton et al., 2006)
+compares distributions by their means in a Reproducing                  A time-dependent velocity field vθ (xt , t) is then learned
+Kernel Hilbert Space. While non-parametric and robust,                  by minimizing the flow-matching objective (Lipman et al.,
+MMD can struggle with high-dimensional data and is sen-                 2022), given by
+sitive to outliers (Lerasle et al., 2019). Frechet Inception
+                                                                        LFM (θ) = Et, x0 , x1 ∥ v − vθ (xt , t)∥22 ,
+                                                                                                                 
+Distance (FID) (Heusel et al., 2017), on the other hand,                                                                  v = x 1 − x0 .
+has become the preferred metric to evaluate image genera-                                                                            (2)
+tion models (Karras et al., 2022; 2024; Chang et al., 2026;
+Crowson et al., 2024; Wang et al., 2024; Yu et al., 2024b;              Denoising as a MDP. (Black et al., 2023; Liu et al., 2025)
+Huang et al., 2024; Hang et al., 2024). By comparing feature            cast the iterative denoising procedure in flow matching mod-
+distributions of real and generated data using a pre-trained            els as a Markov Decision Process (MDP) (S, A, ρ0 , P, R),
+Inception network (Szegedy et al., 2016; Heusel et al., 2017),          where R is the reward of this denoising trajectory. Given
+FID reflects how well a generative model fits the real im-              a class label c ∈ C, at step t, the state is written as
+age distribution with lower computational cost and greater              st ≜ (c, t, xt ), the action corresponds to the model’s pre-
+statistical robustness. In this work, we introduce a tractable          diction at ≜ xt−1 , and the policy is defined by π(at |
+online formulation of the FID, allowing it to be effectively            st ) ≜ pθ (xt−1 | xt , c). The transition is deterministic, i.e.,
+used as a direct distribution-wise reward signal to guide RL            P (st+1 | st , at ) ≜ (δc , δt−1 , δxt−1 ), and the initial distri-
+in image generation.                                                    bution is specified as ρ0 (s0 ) ≜ (p(c), δT , N (0, I)), where
+                                                                        δy denotes the Dirac delta distribution centered at y.
+
+                                                                        3.2. Subset-Replace Strategy
+Model Merging. Model averaging (Izmailov et al., 2018;
+Polyak & Juditsky, 1992; Tarvainen & Valpola, 2017; Yaz                 Existing RL approaches in diffusion models generally for-
+et al., 2018) has become an widely-adopted techniques in                mulate the denoising process as a MDP in a stochastic envi-
+the pre-training of state-of-the-art image synthesis mod-               ronment (Fan et al., 2023; Liu et al., 2025; Xue et al., 2025;
+els (Balaji et al., 2022; Dhariwal & Nichol, 2021; Ho et al.,           Li et al., 2025a), where a sample-wise reward (Xu et al.,
+2022; Karras et al., 2019; Nichol & Dhariwal, 2021; Pee-                2023; Wang et al., 2025; Wu et al., 2023b; Kirstain et al.,
+bles & Xie, 2023; Ma et al., 2024; Karras et al., 2022). In             2023) is used as the optimization signal for each denoising
+the domain of large language models, several studies have               trajectory. Directly replacing this with a distribution-wise
+similarly explored the use of model averaging during both               reward is infeasible: computing such reward typically re-
+pre-training (Li et al., 2025b; 2022; Sanyal et al., 2023; Liu          quires a very large number of trajectories (about 50k images
+et al., 2024; Yang et al., 2023; Dubey et al., 2024; Tian et al.,       and their denoising trajectories for FID), and assigning the
+2025) and post-training (Ilharco et al., 2022; Yu et al., 2024a;        same scalar reward to all trajectories leads to overly sparse
+Zhou et al., 2024) to improve overall performance and en-               feedback, providing little guidance for optimization.
+hance training stability. However, existing approaches such
+                                                                        To address these limitations, we propose a subset-replace
+as exponential moving average (EMA) (Morales-Brotons
+                                                                        strategy for computing distribution-wise rewards, as demon-
+et al., 2024) perform model merging during training, which
+                                                                        strated in Figure 2. Specifically, we first construct a class-
+makes tuning their hyperparameters computationally ex-
+                                                                        balanced moderately-sized reference set G of N generated
+pensive. (Karras et al., 2024) addresses this limitation by
+                                                                        images with the initial pretrained model. During rollout, a
+introducing a post-hoc EMA strategy, where the optimal
+                                                                        small subset of n images g ⊆ G is randomly replaced with
+averaging profile is determined through grid search after
+                                                                        newly generated samples g ′ of the same classes. We then
+training. Building on this idea, we propose to optimize the
+                                                                        compute the FID of the partially updated set (G \ g) ∪ g ′ ,
+model merging hyperparameters with reinforcement learn-
+                                                                        denoted as replaced FID, whose negative value is used as
+ing, guided by reward signals rather than exhaustive search.
+                                                                        the reward signal for the associated n denoising trajectories,
+                                                                        as shown in Equation 4. To mitigate discrepancies between
+3. Method                                                               the reference set and the current model distribution, the ref-
+                                                                        erence set is periodically regenerated using the latest model
+3.1. Preliminaries
+                                                                        during training. Compared with directly using FID-50K as
+Flow Matching. Let x0 ∼ X0 be drawn from the real                       the reward signal, this strategy substantially reduces com-
+data distribution and x1 ∼ X1 from a noise distribution.                putational cost while yielding denser and more informative
+Following the rectified flow framework (Liu et al., 2022),              rewards for model optimization.
+
+                                                                    4
+                                Optimizing Visual Generative Models via Distribution-wise Rewards
+
+Table 1. FID (Heusel et al., 2017; Salimans et al., 2016; Barratt &        the same class distribution, and calculate the reward R as:
+Sharma, 2018) and FDDINOv2 (Stein et al., 2023; Karras et al., 2024)
+results on ImageNet 256×256. Our results demonstrate that fine-
+tuning pretrained visual generative models with a distribution-wise                      R(gi′ ) = −FID[(G \ gi ) ∪ gi′ , G],                        (4)
+reward function is highly effective. This approach significantly
+enhances the visual quality of generated images within a minimal           where G denotes the ground-truth image set of the same size
+number of training steps while preserving generative diversity. We         as G. Then, the advantage of i-th subset is calculated by:
+validate that the proposed subset-replace strategy provides a robust
+distribution-wise reward signal for both Rejection Sampling (RS)                                 R(gi′ ) − mean({R(gi′ )}B i=1 )
+and Policy Gradient Reinforcement Training (RL). Applying our                           Âi =                                    .                   (5)
+method to a pretrained SiT model reduces the FID-50K score from                                         std({R(gi′ )}B
+                                                                                                                     i=1 )
+8.30 to 6.98 (RS) and 5.77 (RL), validating its efficacy in enhanc-
+ing perceptual quality. The FDDINOv2 metric exhibits a congruent           Considering the complete denoising trajectory
+reduction, confirming the generalizability of this improvement             (xi,j   i,j             i,j
+                                                                              T , xT −1 , . . . , x0 ) of the j-th image in the i-
+across different feature extractors and demonstrating that our ap-         th subset, the resulting image subset is given by
+proach is not overfitting to a single metric’s feature space.              gi′ = {xi,1     i,2         i,n
+                                                                                     0 , x0 , . . . , x0 }. Reinforcement fine-tuning then
+                                                                           optimizes the policy model θ by maximizing the following
+   Model              Training Steps     FID ↓     FDDINOv2 ↓
+                                                                           objective as Liu et al. (2025):
+   ADM                    1.98M          10.94           -
+   ADM-U                  1.98M          7.49            -
+                                                                             JFlow-RL (θ) = Ec∼C,{xi }G
+                                                                                                      i=1 ∼πθ            (·|c) f (r, Â, θ, ε, β),   (6)
+   LDM-8                   4.8M          15.51           -                                                        old
+
+   LDM-4                  178K           10.56           -
+   DiT-XL/2               400K           19.50           -                 where πθold is the initial pretrained policy, and
+   DiT-XL/2                 7M            9.60           -
+   SiT-XL/2                400K          17.20         -                       f (r, Â, θ, ε, β)
+   SiT-XL/2                 7M            8.30       230.39                            B         n     T −1
+     + Ours (RS)           + 120         6.98        183.75                         1 X1X1 X
+                                                                               =
+     + Ours (RL)           + 450         5.77        164.88                        B i=1 n j=1 T t=0
+                                                                                                                                  
+We apply the subset-replace strategy to obtain distribution-                       min rti,j (θ) Âi , clip rti,j (θ), 1 − ε, 1 + ε Âi
+wise reward signals, and perform direct reinforcement fine-                                              !
+tuning of diffusion models based on them. Following (Fan                           − β DKL (πθ || πref ) ,
+et al., 2023; Liu et al., 2025), we learn a policy πθ that maxi-
+mizes the expected cumulative reward, typically formulated
+as:                                                                                          pθ (xi,j    i,j
+                                                                                                  t−1 | xt , c)
+                                                                               rti,j (θ) =                           .
+                                                                                             pθold (xi,j    i,j
+                                                                                                     t−1 | xt , c)
+max E(s0 ,a0 ,...,sT ,aT )∼πθ
+ θ
+    " T                                                          #
+     X                                                        
+             R(st , at ) − β DKL πθ (· | st ) || πref (· | st )    .       3.3. Post-hoc Model Merging with Distribution-wise
+        t=0                                                                     Reward
+                                                        (3)
+                                                                           While directly applying our distribution-wise reward signal
+where the KL-divergence DKL from a reference policy πref ,
+                                                                           for fine-tuning with subset-replace strategy is a straightfor-
+scaled by β, serves as a regularization penalty. We adopt
+                                                                           ward approach, our experiments in Section 4.3 expose an
+a lightweight variant (Shao et al., 2024; Hu, 2025) of tra-
+                                                                           issue of train-inference inconsistency. Specifically, while
+ditional policy gradient methods (Schulman et al., 2015;
+                                                                           existing RL methods on diffusion models (Fan et al., 2023;
+2017), which estimates the advantage without requiring a
+                                                                           Xue et al., 2025; Liu et al., 2025) rely on SDEs to provide
+value function. Our early experiments presented in Sec-
+                                                                           the stochasticity necessary for the RL process, we observe
+tion 4.3 found that batch-level normalization outperforms
+                                                                           that the performance gains from this stochastic environment
+group-level normalization under our setting, as also ob-
+                                                                           fail to transfer robustly to the ODE-based deterministic sam-
+served in (Hu, 2025; Xie et al., 2025).
+                                                                           plers (Karras et al., 2022; 2024; Ma et al., 2024) used for
+To formalize the above process, let the reference set G con-               standard inference. To bridge this gap, we introduce a post-
+sist of N generated images. At each iteration, a subset g                  hoc optimization strategy inspired by EDM2 (Karras et al.,
+of n randomly selected images is replaced. Considering                     2024). Our method uses RL with distribution-wise rewards
+rollouts with batch size B, the replaced subset is denoted by              to find optimal model merging coefficients, thereby elimi-
+{gi }B                                               B
+     i=1 , with the corresponding class labels {ci }i=1 . We               nating the dependence on complex SDE solvers (Fan et al.,
+                B                        ′ B
+substitute {gi }i=1 with a new subset {gi }i=1 that preserves              2023; Liu et al., 2025; Xue et al., 2025) during RL training.
+
+                                                                       5
+                                    Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+Figure 3. Ablation studies on hyperparameters in RL with subset-replace strategy. (a) Reference set size. The relationship between set
+size and FID-50K is non-monotonic. While performance generally improves as the size increases from 2,500 to 10,000, the 7,500-sample
+set exhibits significant degradation, performing worse than even smaller sets. (b) Number of images to replace. We evaluate replacing
+50, 100, and 200 images in the subset-replace strategy. A smaller replacement size of 50 images yields the best FID-5K performance after
+100 training steps. (c) Impact of rollout sample selection strategies. Selecting the global top 25% of samples is optimal. Per-process
+selection methods are inferior, and retaining low-quality samples hinders training.
+
+          8.75       Reference Set Size                                            #Replace Images
+                      2500            7500                   20                             50                      20
+          8.50        5000            10000                                                 100
+                                                                                            200
+                                                             18                                                     18
+FID-50K
+
+
+
+
+          8.25
+
+
+                                                    FID-5K
+
+
+
+
+                                                                                                           FID-5K
+          8.00                                                                                                                  All
+                                                             16                                                     16          Global Top 25%
+          7.75                                                                                                                  Local Top 25%
+                                                                                                                                Local Top 50%
+          7.50                                               14                                                     14          Local T+B 25%
+
+                 0      50        100         150                 0   50         100    150     200                        0          50         100   150
+                       Training Steps                                  Training Steps                                                Training Steps
+                         (a)                                               (b)                                                           (c)
+
+Model merging is a widely used technique in deep learning,
+and early works in large language models (Li et al., 2025b;                                   wi ∼ N (w̄i (z; πθema ), σi (z; πθema ))                   (8)
+Yu et al., 2024a; Zhou et al., 2024) and visual generation
+models (Balaji et al., 2022; Dhariwal & Nichol, 2021; Ho                          and their corresponding probabilities pwi are computed as:
+et al., 2022; Karras et al., 2019; Nichol & Dhariwal, 2021;
+                                                                                                                    (wi − w̄i )2
+                                                                                                                                
+Peebles & Xie, 2023; Ma et al., 2024; Karras et al., 2022)                                            1
+has demonstrated its effectiveness in stabilizing training and                              pwi = p        exp −                   .     (9)
+                                                                                                     2πσi2              2σi2
+improving model performance. The most common approach
+is Exponential Moving Average (EMA) (Morales-Brotons                             We regard the coefficients involved in constructing the
+et al., 2024), which maintains a separate EMA copy of the                        merged model Mmerge as a vector w = (w1 , w2 , . . . , wNc ).
+model and updates it throughout training. However, this re-                      The reward corresponding to each w is computed using
+quires fixing the merging hyperparameters in advance, often                      the subset-replace strategy. During rollouts, we generate
+resulting in suboptimal choices. (Karras et al., 2024) shows                     a batch of B such coefficient vectors {w(j) }B
+                                                                                                                              j=1 , with the
+that by carefully designing the averaging formulation of                          corresponding merged models denoted as {Mmerge }B
+                                                                                                                                                 (j)
+                                                                                                                                  j=1 . For
+model replicas during training, it is possible to approximate                                        (j)
+the EMA version after training. This allows the merging                           each model Mmerge , we first construct a reference set Gj ,
+hyperparameters to be adjusted retrospectively based on                           from which Ns subsets {gk }N    s
+                                                                                                                 k=1 are selected. For each sub-
+downstream performance metrics.                                                   set gk , we replace it with Nr newly generated sets of images
+                                                                                     ′
+                                                                                  {gk,p }N  r
+                                                                                          p=1 , obtaining a reward collection
+To formulate it, let Nc sequential checkpoints along the
+training trajectory be denoted as {Mi }Ni=1 , where Mi repre-
+                                          c
+                                                                                                                         (j)
+sents the parameters of the i-th model. These checkpoints                                                      {Rk,p }Ns , Nr
+                                                                                                                      k=1,p=1 .
+are then merged into a single final model Mmerge , where
+each checkpoint is assigned a weighting coefficient wi . The                      Finally, the overall reward for coefficient vector w(j) is
+merged model is computed as:                                                      defined as the simple average:
+                               Nc
+                               X
+                                                                                                                          s X rN     N
+                     Mmerge =      w i Mi                 (7)                                                        1 X         (j)
+                                        i=1
+                                                                                                     R(j) =                     Rk,p .                 (10)
+                                                                                                                    Ns Nr
+We optimize the model merging coefficients wi using RL. To                                                                  p=1k=1
+introduce the stochasticity and related probabilities required
+for the RL procedure, we employ a simple MLP policy                              We compute the advantages at the batch level (Hu, 2025)
+network πθema (EMANet) to generate the mean w̄i and stan-                        across B reward values and use them to update parameters
+dard deviation σi of each coefficient from a learnable input                     θema of the policy model. Since the stochasticity in the
+embedding z. The final values wi are then sampled from a                         RL process originates from the coefficient vectors w gen-
+Gaussian distribution                                                            erated by πθema , it is unnecessary to introduce additional
+
+                                                                            6
+                             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+randomness in the diffusion denoising process. Therefore,             Table 2. FID results on ImageNet 512×512. The EDM2 baseline
+                                                                      results are achieved through post-hoc model merging, with coeffi-
+we employ efficient ODE sampling (Karras et al., 2022;                cients optimized via extensive grid search, as detailed in (Karras
+2024) throughout the image generation process.                        et al., 2024). Results show that using RL to obtain better model
+                                                                      merging coefficients is an effective method to boost the perfor-
+                                                                      mance of pretrained models.
+4. Experiments
+4.1. Reinforcement Fine-tuning with Distribution-wise                         Model                                    FID ↓
+     Reward                                                                   ADM (Dhariwal & Nichol, 2021)             23.24
+                                                                              ADM-U                                      9.96
+We use ImageNet (Deng et al., 2009) in 256×256 resolution
+                                                                              DiT-XL/2 (Peebles & Xie, 2023)            12.03
+as our main dataset following (Ma et al., 2025), and per-
+form full parameter reinforcement fine-tuning on SiT (Ma                      EDM2-XS (Karras et al., 2024)              3.74
+et al., 2024). To lower the training cost, we adopt the de-                     + RL-EMA                                 3.52
+noising reduction technique introduced in (Liu et al., 2025):                 EDM2-S                                     2.57
+the number of denoising steps is set to 50 during training                      + RL-EMA                                 2.52
+and 250 steps during evaluation, following the optimal in-
+ference settings in (Ma et al., 2024). We first validated
+the feasibility of the subset-replace strategy as well as the
+distribution-wise reward signal under the rejection sampling
+                                                                      any additional curated training data or architectural mod-
+fine-tuning (RS) setting, and then applied it to the standard
+                                                                      ifications. Further incorporating RL, SiT-XL achieves an
+RL setting. During RS training, we only use the samples
+                                                                      FID-50K of 5.77 and an FDDINOv2 of 164.88 with a small
+with the highest distribution-wise reward values. Table 1
+                                                                      amount of additional training, substantially improving the
+summarizes FID-50K results of our methods as well as
+                                                                      ability to model image distribution.
+several earlier pretrained models on the ImageNet dataset,
+following the widely-used evaluation protocol (Karras et al.,
+                                                                      4.2. Post-hoc Model Merging with Distribution-wise
+2024; Peebles & Xie, 2023; Ma et al., 2024). To demon-
+                                                                           Reward
+strate that our method’s efficacy generalizes across different
+feature representations, we also report FDDINOv2 (Stein et al.,       Following prior settings (Karras et al., 2024), we perform
+2023; Karras et al., 2024) scores. This metric computes the           experiments on ImageNet (Deng et al., 2009) (512×512)
+Fréchet Distance of DINOv2 (Oquab et al., 2023) features             with models of various sizes to demonstrate the generality
+on 50K ImageNet images, for which we adopt the same                   of our method. The results are presented in Table 2.
+evaluation setting from (Karras et al., 2024).
+                                                                      We set Nc = 8 to compose the final model Mmerge . Starting
+For batch-level advantage normalization, we compute the               from latest official checkpoints (Karras et al., 2024), we
+mean and standard deviation across all processes. In the RL           select checkpoints for every 192 × 220 training images,
+practice, we found that optimization becomes challenging              resulting in a checkpoint pool of Nc = 8 checkpoints. A
+when training on the entire set of rollout samples. To mit-           simple 3-layer MLP is employed as the policy network to
+igate this, we retain only the top 25% of samples ranked              obtain the model merging coefficients w, with the sampling
+by advantage for parameter update, and further perform                standard deviation fixed to 1.
+detailed ablation experiments in Section 4.3. We adopt an
+on-policy RL setting in which each rollout sample is used             As shown in Table 2, by optimizing several parameters
+only once for updating the model. Besides, we parallelize             (Nc = 8 in our setting), our method reduces FID from 3.74
+reference set generation by distributing tasks across pro-            to 3.52 on EDM2-XS and from 2.57 to 2.52 on EDM2-S.
+cesses and synchronizing the full set to all workers. To              These results demonstrate that reinforcement learning can
+balance efficiency and quality, we refresh the reference set          effectively optimize model-merging coefficients, yielding
+with the current model every 10 steps. We performed exper-            further improvements to pretrained models without resort-
+iments on 16 NVIDIA Hopper GPUs, and the experiment                   ing to complex SDE solvers or training techniques such
+that yielded the best FID-50K score completed in approxi-             as denoising reduction (Liu et al., 2025), which has been
+mately 20 hours.                                                      observed to cause model collapse issues at certain denoising
+                                                                      steps.
+Experimental results in Table 1 demonstrate that a simple
+subset-replace strategy provides an effective distribution-           4.3. Ablation Study
+wise reward signal for model optimization. Under the sim-
+ple RS setting, SiT-XL reduces the FID-50K from 8.30 to               We systematically evaluate the influence of key hyperpa-
+6.98 and FDDINOv2 from 230.39 to 183.75, without requiring            rameters and components in our subset-replace strategy,
+                                                                      following the experimental protocol in Section 4.1.
+
+                                                                  7
+                                                                           Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+Figure 4. Analysis of key design choices for our RL training pipeline. (a) Batch-level advantage normalization for advantages
+outperforms group-level constantly, yielding faster convergence regardless of whether all or only the top 25% of rollout samples are used
+for training. (b) The performance gap from training-inference inconsistency. A model trained with SDE-based rollouts shows a steadily
+improving FID score when evaluated with an SDE solver while its performance stagnates when using an ODE solver at the same 250
+denoising steps. (c) RL training after Rejection Sampling fine-tuning (RS) provided no performance gain, likely due to overfitting from
+the RS phase. We therefore adopted a pure RL approach.
+                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                            5 6
+                                                                                                                                                                                                                                                           5 /  D I W H U  5 6
+                                                                                                           
+                                                                                                                                                                                                                                                           5 /  R Q O \
+                                                                                                                                                                                                   
+
+
+
+
+                                                                                        ) , '    .
+ ) , '   .
+
+
+
+
+                                                                                                                                                                                        ) , '   .
+                                                                                                                                                                                                   
+                               E D W F K  O H Y H O   D O O                                                                                                                                     
+                               E D W F K  O H Y H O   W R S                                                                                                                                 
+                               J U R X S  O H Y H O   D O O                                                           6 R O Y H U  7 \ S H V                                                      
+                                 J U R X S  O H Y H O   W R S                                                6 ' (                                   2 ' (
+                                                                                                                                                                                                      
+                                                                                                                                                                                                            
+                                            7 U D L Q L Q J  6 W H S V                                                           7 U D L Q L Q J  6 W H S V                                                                   7 U D L Q L Q J  6 W H S V
+                                               (a)                                                                                    (b)                                                                                          (c)
+
+Advantages normalization. We compare batch-level and                                                                                                 mance. Retaining lower-quality samples slows convergence,
+group-level normalization using either all rollout samples                                                                                           and filtering based on local process rankings proves inferior
+or only the top 25% with the highest global advantages                                                                                               to the global ranking approach.
+(our default setting). As shown in Figure 4a, batch-level
+normalization consistently yields faster convergence in both                                                                                         Performance gap between SDE-based training and ODE-
+settings. Consequently, we adopt batch-level normalization                                                                                           based inference. We employ SDE for rollouts to enable
+for advantage computation in our final experiments.                                                                                                  exploration but typically use ODE solvers for efficient in-
+                                                                                                                                                     ference. Figure 4b reveals that SDE-trained models show
+Size of the reference set. We investigate the trade-off                                                                                              negligible gains when evaluated with ODE solvers, high-
+between reward fidelity and computational cost by evaluat-                                                                                           lighting a significant train-inference inconsistency. This
+ing reference set sizes of 2,500, 5,000, 7,500, and 10,000.                                                                                          aligns with the known dynamic mismatch between SDE
+Small sets lack representativeness, while excessively large                                                                                          and ODE solvers (Deveney et al., 2025). Furthermore, we
+sets introduce noise, as the replaced batch becomes a statis-                                                                                        observe an adaptation bias toward the training denoising
+tically insignificant fraction of the total. Figure 3a (report-                                                                                      schedule under the denoising reduction paradigm (see Ap-
+ing FID-50K at 250 steps) reveals a non-monotonic trend:                                                                                             pendix A.1 for details), where performance under the train-
+while increasing size from 2,500 to 5,000 improves perfor-                                                                                           ing schedule saturates early while the evaluation schedule
+mance, the 7,500-sample configuration proves unstable. The                                                                                           continues to improve. To resolve this, we propose using RL
+5,000-sample set offers the optimal balance between rep-                                                                                             to optimize post-hoc model merging coefficients, allowing
+resentativeness and stability, which we adopt for our main                                                                                           the use of ODE-based rollouts directly during training.
+experiments.
+                                                                                                                                                     Pure RL is better than RS-then-RL. Following com-
+Number of images to replace during rollout. The re-                                                                                                  mon practices in LLMs, we applied the pretrain-SFT-RL
+placement subset size involves a trade-off between signal                                                                                            paradigm for RL training with distribution-wise reward,
+noise and sparsity. Small subsets are prone to sampling vari-                                                                                        where SFT is replaced by reject sampling fine-tuning (RS)
+ance, while large ones increase cost and signal sparsity. We                                                                                         in our case. However, the results in Figure 4c indicate that
+tested subset sizes of 50, 100, and 200 with a fixed reference                                                                                       further RL training on the model after RS does not improve
+set of 5,000. As shown in Figure 3b, a size of 50 achieves                                                                                           performance, likely due to overfitting from the RS phase.
+optimal generation quality with the lowest computational                                                                                             Therefore, in the final experiments, we adopted a pure RL
+overhead, making it our chosen setting.                                                                                                              setting.
+
+Select best samples during RL training. We analyzed                                                                                                  5. Conclusion
+the impact of selecting different sample subsets for train-
+ing: using all samples, local top 25% or 50% (per process),                                                                                          To address the limitations of sample-wise rewards in RL for
+global top 25%, and top+bottom 25%. Figure 3c demon-                                                                                                 visual generation, such as reward hacking and reduced diver-
+strates that the global top 25% setting yields the best perfor-                                                                                      sity, we propose a novel framework using distribution-wise
+
+                                                                                                                                          8
+                              Optimizing Visual Generative Models via Distribution-wise Rewards
+
+rewards enabled by an efficient subset-replace strategy. Our             Training diffusion models with reinforcement learning.
+method demonstrates significant versatility and effective-               arXiv preprint arXiv:2305.13301, 2023.
+ness across multiple scenarios. Through direct fine-tuning,
+it substantially improves the FID-50K score of SiT from                Borji, A. Pros and cons of gan evaluation measures: New de-
+8.30 to 5.77 and the FDDINOv2 score from 230.39 to 164.88.               velopments. Computer Vision and Image Understanding,
+Furthermore, when applied to post-hoc model merging opti-                215:103329, 2022.
+mization, it reduces the FID of EDM2-XS from 3.74 to 3.52              Cai, Y., Liu, S., Tian, C., and Xie, L. Fr\’{e} chet power-
+and from 2.57 to 2.52 for EDM2-S, while resolving train-                 scenario distance: A metric for evaluating generative ai
+inference inconsistencies in SDE-based RL. These findings                models across multiple time-scales in smart grids. arXiv
+validate our approach as an effective method for enhancing               preprint arXiv:2505.08082, 2025.
+the distributional fidelity and perceptual quality of modern
+generative models.                                                     Chang, Z., Koulieris, G. A., Chang, H. J., and Shum, H. P.
+                                                                         On the design fundamentals of diffusion models: A sur-
+                                                                         vey. Pattern Recognition, 169:111934, 2026.
+Acknowledgments
+                                                                       Chong, M. J. and Forsyth, D. Effectively unbiased fid and
+This work is supported by the National Natural Science
+                                                                         inception score and where to find them. In Proceedings of
+Foundation of China (U25B2071).
+                                                                         the IEEE/CVF conference on computer vision and pattern
+                                                                         recognition, pp. 6070–6079, 2020.
+Impact Statement
+                                                                       Crowson, K., Baumann, S. A., Birch, A., Abraham, T. M.,
+This paper presents work whose goal is to advance the field              Kaplan, D. Z., and Shippole, E. Scalable high-resolution
+of Machine Learning, specifically in improving the align-                pixel-space image synthesis with hourglass diffusion
+ment and fidelity of visual generative models. By introduc-              transformers. In Forty-first International Conference on
+ing a distribution-wise reinforcement learning framework,                Machine Learning, 2024.
+our approach effectively mitigates the “reward hacking” phe-
+nomenon often observed in sample-wise RL, which tends to               Deng, J., Dong, W., Socher, R., Li, L.-J., Li, K., and Fei-Fei,
+diminish generation diversity. From a societal perspective,              L. Imagenet: A large-scale hierarchical image database.
+maintaining high diversity and mode coverage is crucial                  In 2009 IEEE conference on computer vision and pattern
+for ensuring that generative models fairly represent the full            recognition, pp. 248–255. Ieee, 2009.
+spectrum of the underlying data distribution, rather than col-         Deveney, T., Stanczuk, J., Kreusser, L., Budd, C., and
+lapsing to a few dominant modes. While improvements in                   Schönlieb, C.-B. Closing the ode–sde gap in score-
+photorealism carry inherent risks regarding potential misuse             based diffusion models through the fokker–planck equa-
+for misinformation or deepfakes, our work focuses on align-              tion. Philosophical Transactions A, 383(2298):20240503,
+ing models more faithfully to the reference data distribution            2025.
+without introducing external biases or artifacts. We believe
+that robust, distribution-preserving alignment techniques are          Dhariwal, P. and Nichol, A. Diffusion models beat gans
+essential for developing reliable and representative genera-             on image synthesis. Advances in neural information
+tive systems.                                                            processing systems, 34:8780–8794, 2021.
+                                                                       Dubey, A., Jauhri, A., Pandey, A., Kadian, A., Al-Dahle,
+References                                                              A., Letman, A., Mathur, A., Schelten, A., Yang, A., Fan,
+Amodei, D., Olah, C., Steinhardt, J., Christiano, P., Schul-            A., et al. The llama 3 herd of models. arXiv e-prints, pp.
+ man, J., and Mané, D. Concrete problems in ai safety.                  arXiv–2407, 2024.
+ arXiv preprint arXiv:1606.06565, 2016.                                Everitt, T., Krakovna, V., Orseau, L., Hutter, M., and Legg,
+                                                                         S. Reinforcement learning with a corrupted reward chan-
+Balaji, Y., Nah, S., Huang, X., Vahdat, A., Song, J., Zhang,             nel. arXiv preprint arXiv:1705.08417, 2017.
+  Q., Kreis, K., Aittala, M., Aila, T., Laine, S., et al. ediff-
+  i: Text-to-image diffusion models with an ensemble of                Fan, Y. and Lee, K. Optimizing ddpm sampling with short-
+  expert denoisers. arXiv preprint arXiv:2211.01324, 2022.               cut fine-tuning. arXiv preprint arXiv:2301.13362, 2023.
+                                                                       Fan, Y., Watkins, O., Du, Y., Liu, H., Ryu, M., Boutilier,
+Barratt, S. and Sharma, R. A note on the inception score.                C., Abbeel, P., Ghavamzadeh, M., Lee, K., and Lee, K.
+  arXiv preprint arXiv:1801.01973, 2018.                                 Dpok: Reinforcement learning for fine-tuning text-to-
+                                                                         image diffusion models. Advances in Neural Information
+Black, K., Janner, M., Du, Y., Kostrikov, I., and Levine, S.             Processing Systems, 36:79858–79885, 2023.
+
+                                                                   9
+                             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+Gao, L., Schulman, J., and Hilton, J. Scaling laws for reward          better evaluation metric for image generation. In Proceed-
+  model overoptimization. In International Conference on               ings of the IEEE/CVF Conference on Computer Vision
+  Machine Learning, pp. 10835–10866. PMLR, 2023.                       and Pattern Recognition, pp. 9307–9315, 2024.
+
+Gretton, A., Borgwardt, K., Rasch, M., Schölkopf, B., and           Joyce, J. M. Kullback-leibler divergence. In International
+  Smola, A. A kernel method for the two-sample-problem.                encyclopedia of statistical science, pp. 720–722. Springer,
+  Advances in neural information processing systems, 19,               2011.
+  2006.
+                                                                     Karras, T., Laine, S., and Aila, T. A style-based generator
+Guo, D., Yang, D., Zhang, H., Song, J., Zhang, R., Xu, R.,             architecture for generative adversarial networks. In Pro-
+  Zhu, Q., Ma, S., Wang, P., Bi, X., et al. Deepseek-r1: In-           ceedings of the IEEE/CVF conference on computer vision
+  centivizing reasoning capability in llms via reinforcement           and pattern recognition, pp. 4401–4410, 2019.
+  learning. arXiv preprint arXiv:2501.12948, 2025.                   Karras, T., Aittala, M., Aila, T., and Laine, S. Elucidating
+Hang, T., Gu, S., Geng, X., and Guo, B. Improved                       the design space of diffusion-based generative models.
+  noise schedule for diffusion training. arXiv preprint               Advances in neural information processing systems, 35:
+  arXiv:2407.03297, 2024.                                              26565–26577, 2022.
+                                                                     Karras, T., Aittala, M., Lehtinen, J., Hellsten, J., Aila, T.,
+He, X., Fu, S., Zhao, Y., Li, W., Yang, J., Yin, D., Rao, F.,
+                                                                       and Laine, S. Analyzing and improving the training
+  and Zhang, B. Tempflow-grpo: When timing matters for
+                                                                       dynamics of diffusion models. In Proceedings of the
+  grpo in flow models. arXiv preprint arXiv:2508.04324,
+                                                                       IEEE/CVF Conference on Computer Vision and Pattern
+  2025.
+                                                                       Recognition, pp. 24174–24184, 2024.
+Hessel, J., Holtzman, A., Forbes, M., Bras, R. L., and Choi,         Kirstain, Y., Polyak, A., Singer, U., Matiana, S., Penna, J.,
+  Y. Clipscore: A reference-free evaluation metric for im-             and Levy, O. Pick-a-pic: An open dataset of user prefer-
+  age captioning. arXiv preprint arXiv:2104.08718, 2021.               ences for text-to-image generation. Advances in Neural
+Heusel, M., Ramsauer, H., Unterthiner, T., Nessler, B., and            Information Processing Systems, 36:36652–36663, 2023.
+  Hochreiter, S. Gans trained by a two time-scale update             Ku, M., Jiang, D., Wei, C., Yue, X., and Chen, W. Viescore:
+  rule converge to a local nash equilibrium. Advances in               Towards explainable metrics for conditional image syn-
+  neural information processing systems, 30, 2017.                     thesis evaluation. In Proceedings of the 62nd Annual
+Ho, J., Saharia, C., Chan, W., Fleet, D. J., Norouzi, M.,              Meeting of the Association for Computational Linguistics
+  and Salimans, T. Cascaded diffusion models for high                 (Volume 1: Long Papers), pp. 12268–12290, 2024.
+  fidelity image generation. Journal of Machine Learning             Lee, K., Liu, H., Ryu, M., Watkins, O., Du, Y., Boutilier, C.,
+ Research, 23(47):1–33, 2022.                                          Abbeel, P., Ghavamzadeh, M., and Gu, S. S. Aligning text-
+                                                                       to-image models using human feedback. arXiv preprint
+Hu, J. Reinforce++: A simple and efficient approach
+                                                                       arXiv:2302.12192, 2023.
+  for aligning large language models. arXiv preprint
+  arXiv:2501.03262, 2025.                                            Lerasle, M., Szabó, Z., Mathieu, T., and Lecué, G. Monk
+                                                                       outlier-robust mean embedding estimation by median-of-
+Huang, X., Salaun, C., Vasconcelos, C., Theobalt, C.,                  means. In International conference on machine learning,
+  Oztireli, C., and Singh, G. Blue noise for diffusion mod-            pp. 3782–3793. PMLR, 2019.
+  els. In ACM SIGGRAPH 2024 conference papers, pp.
+ 1–11, 2024.                                                         Li, J., Cui, Y., Huang, T., Ma, Y., Fan, C., Yang,
+                                                                       M., and Zhong, Z. Mixgrpo: Unlocking flow-based
+Ilharco, G., Ribeiro, M. T., Wortsman, M., Gururangan, S.,             grpo efficiency with mixed ode-sde. arXiv preprint
+   Schmidt, L., Hajishirzi, H., and Farhadi, A. Editing mod-           arXiv:2507.21802, 2025a.
+   els with task arithmetic. arXiv preprint arXiv:2212.04089,
+   2022.                                                             Li, T., Huang, Z., Tao, Q., Wu, Y., and Huang, X. Trainable
+                                                                       weight averaging: Efficient training by optimizing histor-
+Izmailov, P., Podoprikhin, D., Garipov, T., Vetrov, D.,                 ical solutions. In The Eleventh International Conference
+  and Wilson, A. G.       Averaging weights leads to                    on Learning Representations, 2022.
+  wider optima and better generalization. arXiv preprint
+  arXiv:1803.05407, 2018.                                            Li, Y., Ma, Y., Yan, S., Zhang, C., Liu, J., Lu, J., Xu, Z.,
+                                                                       Chen, M., Wang, M., Zhan, S., et al. Model merging
+Jayasumana, S., Ramalingam, S., Veit, A., Glasner, D.,                 in pre-training of large language models. arXiv preprint
+  Chakrabarti, A., and Kumar, S. Rethinking fid: Towards a             arXiv:2505.12082, 2025b.
+
+                                                                10
+                             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+Liang, Z., Yuan, Y., Gu, S., Chen, B., Hang, T., Cheng, M.,           Peebles, W. and Xie, S. Scalable diffusion models with
+  Li, J., and Zheng, L. Aesthetic post-training diffusion               transformers. In Proceedings of the IEEE/CVF interna-
+  models from generic preferences with step-by-step prefer-             tional conference on computer vision, pp. 4195–4205,
+  ence optimization. In Proceedings of the Computer Vision              2023.
+  and Pattern Recognition Conference, pp. 13199–13208,
+                                                                      Polyak, B. T. and Juditsky, A. B. Acceleration of stochastic
+  2025.
+                                                                        approximation by averaging. SIAM journal on control
+Lipman, Y., Chen, R. T., Ben-Hamu, H., Nickel, M., and                  and optimization, 30(4):838–855, 1992.
+  Le, M. Flow matching for generative modeling. arXiv                 Salimans, T., Goodfellow, I., Zaremba, W., Cheung, V.,
+  preprint arXiv:2210.02747, 2022.                                      Radford, A., and Chen, X. Improved techniques for
+                                                                        training gans. Advances in neural information processing
+Liu, D., Wang, Z., Wang, B., Chen, W., Li, C., Tu, Z.,
+                                                                        systems, 29, 2016.
+  Chu, D., Li, B., and Sui, D. Checkpoint merging via
+  bayesian optimization in llm pretraining. arXiv preprint            Sanyal, S., Neerkaje, A., Kaddour, J., Kumar, A., and Sang-
+  arXiv:2403.19390, 2024.                                               havi, S. Early weight averaging meets high learning rates
+                                                                        for llm pre-training. arXiv preprint arXiv:2306.03241,
+Liu, J., Liu, G., Liang, J., Li, Y., Liu, J., Wang, X., Wan,            2023.
+  P., Zhang, D., and Ouyang, W. Flow-grpo: Training
+  flow matching models via online rl. arXiv preprint                  Schulman, J., Levine, S., Abbeel, P., Jordan, M., and Moritz,
+  arXiv:2505.05470, 2025.                                               P. Trust region policy optimization. In International
+                                                                        conference on machine learning, pp. 1889–1897. PMLR,
+Liu, X., Gong, C., and Liu, Q. Flow straight and fast:                  2015.
+  Learning to generate and transfer data with rectified flow.
+                                                                      Schulman, J., Wolski, F., Dhariwal, P., Radford, A., and
+  arXiv preprint arXiv:2209.03003, 2022.
+                                                                        Klimov, O. Proximal policy optimization algorithms.
+Ma, N., Goldstein, M., Albergo, M. S., Boffi, N. M., Vanden-            arXiv preprint arXiv:1707.06347, 2017.
+ Eijnden, E., and Xie, S. Sit: Exploring flow and diffusion-          Shao, Z., Wang, P., Zhu, Q., Xu, R., Song, J., Bi, X., Zhang,
+ based generative models with scalable interpolant trans-               H., Zhang, M., Li, Y., Wu, Y., et al. Deepseekmath: Push-
+ formers. In European Conference on Computer Vision,                    ing the limits of mathematical reasoning in open language
+ pp. 23–40. Springer, 2024.                                             models. arXiv preprint arXiv:2402.03300, 2024.
+Ma, N., Tong, S., Jia, H., Hu, H., Su, Y.-C., Zhang, M., Yang,        Song, Y., Sohl-Dickstein, J., Kingma, D. P., Kumar, A., Er-
+ X., Li, Y., Jaakkola, T., Jia, X., et al. Inference-time               mon, S., and Poole, B. Score-based generative modeling
+ scaling for diffusion models beyond scaling denoising                  through stochastic differential equations. arXiv preprint
+ steps. arXiv preprint arXiv:2501.09732, 2025.                          arXiv:2011.13456, 2020.
+
+Miao, Z., Wang, J., Wang, Z., Yang, Z., Wang, L., Qiu,                Stein, G., Cresswell, J., Hosseinzadeh, R., Sui, Y., Ross, B.,
+ Q., and Liu, Z. Training diffusion models towards di-                  Villecroze, V., Liu, Z., Caterini, A. L., Taylor, E., and
+ verse image generation with reinforcement learning. In                 Loaiza-Ganem, G. Exposing flaws of generative model
+ Proceedings of the IEEE/CVF Conference on Computer                     evaluation metrics and their unfair treatment of diffusion
+ Vision and Pattern Recognition, pp. 10844–10853, 2024.                 models. Advances in Neural Information Processing
+                                                                        Systems, 36:3732–3784, 2023.
+Morales-Brotons, D., Vogels, T., and Hendrikx, H. Ex-
+                                                                      Szegedy, C., Vanhoucke, V., Ioffe, S., Shlens, J., and Wojna,
+ ponential moving average of weights in deep learning:
+                                                                        Z. Rethinking the inception architecture for computer vi-
+ Dynamics and benefits. arXiv preprint arXiv:2411.18704,
+                                                                        sion. In Proceedings of the IEEE conference on computer
+ 2024.
+                                                                        vision and pattern recognition, pp. 2818–2826, 2016.
+Nichol, A. Q. and Dhariwal, P. Improved denoising diffu-              Tarvainen, A. and Valpola, H. Mean teachers are better role
+  sion probabilistic models. In International conference on             models: Weight-averaged consistency targets improve
+  machine learning, pp. 8162–8171. PMLR, 2021.                          semi-supervised deep learning results. Advances in neural
+                                                                        information processing systems, 30, 2017.
+Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec,
+  M., Khalidov, V., Fernandez, P., Haziza, D., Massa, F., El-         Tian, C., Wang, J., Zhao, Q., Chen, K., Liu, J., Liu, Z., Mao,
+  Nouby, A., et al. Dinov2: Learning robust visual features             J., Zhao, W. X., Zhang, Z., and Zhou, J. Wsm: Decay-
+ without supervision. arXiv preprint arXiv:2304.07193,                  free learning rate schedule via checkpoint merging for
+  2023.                                                                 llm pre-training. arXiv preprint arXiv:2507.17634, 2025.
+
+                                                                 11
+                             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+Tong, C., Guo, Z., Zhang, R., Shan, W., Wei, X., Xing,                Xue, Z., Wu, J., Gao, Y., Kong, F., Zhu, L., Chen, M.,
+  Z., Li, H., and Heng, P.-A. Delving into rl for image                 Liu, Z., Liu, W., Guo, Q., Huang, W., et al. Dancegrpo:
+  generation with cot: A study on dpo vs. grpo. arXiv                   Unleashing grpo on visual generation. arXiv preprint
+  preprint arXiv:2505.17017, 2025.                                      arXiv:2505.07818, 2025.
+
+Villani, C. The wasserstein distances. In Optimal transport:          Yang, A., Xiao, B., Wang, B., Zhang, B., Bian, C., Yin,
+  old and new, pp. 93–111. Springer, 2009.                              C., Lv, C., Pan, D., Wang, D., Yan, D., et al. Baichuan
+                                                                        2: Open large-scale language models. arXiv preprint
+Wallace, B., Dang, M., Rafailov, R., Zhou, L., Lou, A.,                 arXiv:2309.10305, 2023.
+ Purushwalkam, S., Ermon, S., Xiong, C., Joty, S., and
+ Naik, N. Diffusion model alignment using direct pref-                Yaz, Y., Foo, C.-S., Winkler, S., Yap, K.-H., Piliouras, G.,
+ erence optimization. In Proceedings of the IEEE/CVF                    Chandrasekhar, V., et al. The unusual effectiveness of
+ Conference on Computer Vision and Pattern Recognition,                 averaging in gan training. In International Conference on
+ pp. 8228–8238, 2024.                                                   Learning Representations, 2018.
+
+Wang, F. and Yu, Z. Coefficients-preserving sampling for re-          Yu, L., Yu, B., Yu, H., Huang, F., and Li, Y. Language
+ inforcement learning with flow matching. arXiv preprint                models are super mario: Absorbing abilities from homol-
+ arXiv:2509.05952, 2025.                                                ogous models as a free lunch. In Forty-first International
+                                                                        Conference on Machine Learning, 2024a.
+Wang, Y., He, Y., and Tao, M. Evaluating the design space
+ of diffusion-based generative models. Advances in Neural             Yu, S., Kwak, S., Jang, H., Jeong, J., Huang, J., Shin, J.,
+ Information Processing Systems, 37:19307–19352, 2024.                  and Xie, S. Representation alignment for generation:
+                                                                        Training diffusion transformers is easier than you think.
+Wang, Y., Zang, Y., Li, H., Jin, C., and Wang, J. Unified re-           arXiv preprint arXiv:2410.06940, 2024b.
+ ward model for multimodal understanding and generation.
+ arXiv preprint arXiv:2503.05236, 2025.                               Yuan, H., Chen, Z., Ji, K., and Gu, Q. Self-play fine-tuning
+                                                                        of diffusion models for text-to-image generation. Ad-
+Wen, J., Zhong, R., Khan, A., Perez, E., Steinhardt, J.,                vances in Neural Information Processing Systems, 37:
+ Huang, M., Bowman, S. R., He, H., and Feng, S. Lan-                    73366–73398, 2024.
+ guage models learn to mislead humans via rlhf. arXiv
+ preprint arXiv:2409.12822, 2024.                                     Zhou, Y., Song, L., Wang, B., and Chen, W. Metagpt:
+                                                                        Merging large language models using model exclusive
+Weng, L.    Reward hacking in reinforcement learn-                      task arithmetic. arXiv preprint arXiv:2406.11385, 2024.
+ ing.    lilianweng.github.io, Nov 2024.     URL
+ https://lilianweng.github.io/posts/
+ 2024-11-28-reward-hacking/.
+
+Wu, X., Hao, Y., Sun, K., Chen, Y., Zhu, F., Zhao, R., and Li,
+ H. Human preference score v2: A solid benchmark for
+ evaluating human preferences of text-to-image synthesis.
+ arXiv preprint arXiv:2306.09341, 2023a.
+
+Wu, X., Sun, K., Zhu, F., Zhao, R., and Li, H. Human
+ preference score: Better aligning text-to-image models
+ with human preference. In Proceedings of the IEEE/CVF
+ International Conference on Computer Vision, pp. 2096–
+ 2105, 2023b.
+
+Xie, T., Gao, Z., Ren, Q., Luo, H., Hong, Y., Dai, B., Zhou,
+  J., Qiu, K., Wu, Z., and Luo, C. Logic-rl: Unleashing llm
+  reasoning with rule-based reinforcement learning. arXiv
+  preprint arXiv:2502.14768, 2025.
+
+Xu, J., Liu, X., Wu, Y., Tong, Y., Li, Q., Ding, M., Tang,
+ J., and Dong, Y. Imagereward: Learning and evaluat-
+  ing human preferences for text-to-image generation. Ad-
+  vances in Neural Information Processing Systems, 36:
+ 15903–15935, 2023.
+
+                                                                 12
+                               Optimizing Visual Generative Models via Distribution-wise Rewards
+
+A. Hyperparameter Details
+Our model is fine-tuned using the Adam optimizer (β1 = 0.9, β2 = 0.999, no weight decay) with a constant learning rate of
+1 × 10−5 . During policy gradient updates, rollouts are performed with global batch size of 128, and the KL-divergence
+regularization scaler β is set to 0. The policy network is updated once per rollout step with a global batch size of 128.
+
+A.1. More Ablation Studies
+Reference Set Refresh Interval. In training with the subset-replace strategy, the reference set is periodically regenerated
+by the current model after a fixed number of steps. Large intervals cause the reference set to lag behind, reducing reward
+representativeness, while small intervals incur unnecessary overhead. We conduct ablation experiments with intervals of 5,
+10, and 20, using the FID-5K of the reference set as the evaluation metric. As shown in Figure 5, an interval of 10 achieves
+the best final generation performance while maintaining a balanced computational cost.
+
+
+                                           21                                 Reference Set Refresh Interval
+                                                                                       5              20
+                                           20                                          10
+                                           19
+
+                                           18
+                                  FID-5K
+
+
+
+
+                                           17
+
+                                           16
+
+                                           15
+
+                                           14
+
+                                                0   20   40    60        80    100      120     140     160
+                                                                Training Steps
+
+Figure 5. Ablation results on reference set refresh interval. We compare intervals of 5, 10, and 20 training steps, finding that 10 steps
+achieves the best FID-5K score by providing a good balance between reward representativeness and computational overhead.
+
+
+
+
+Adaptation bias toward the training denoising schedule. We observed that after the model reaches its optimal perfor-
+mance, its performance gradually deteriorates as RL training continues. Our experiments suggest that this phenomenon is
+not due to general overfitting, but rather an adaptation bias toward the specific denoising schedule used during training under
+the denoising reduction paradigm (Liu et al., 2025). In the setup described in Section 4.1, the model adopts 50 denoising
+steps during training to generate a reference set of 5k images for FID-5K@50, while evaluation uses 250 denoising steps on
+50k images for FID-50K@250. We also measured FID-5K@250 and FID-50K@50 for comparison. As shown in Table 3,
+performance under the 50-step training schedule quickly saturates around 250 training steps and then steadily declines,
+whereas performance under the 250-step inference schedule continues to improve for another 200 training steps. This
+divergence highlights an adaptation bias toward the training denoising schedule, pointing to a underexplored characteristic
+of the denoising reduction paradigm that requires further investigation.
+
+B. Cross-Metric Evaluation
+To verify that improvements from our distribution-wise reward training are not specific to the FID metric or the Inception-v3
+feature space, we evaluate the fine-tuned SiT model (at 450 training steps) on a comprehensive set of independent metrics.
+As shown in Table 4, all metrics consistently improve, confirming genuine distributional improvement. Notably, FDDINOv2
+uses DINOv2 (Oquab et al., 2023) features entirely different from Inception-v3, providing strong evidence against Inception-
+specific exploitation. Precision and Density improvements indicate enhanced sample fidelity, while the modest Recall
+decrease and Coverage increase demonstrate that diversity is well preserved.
+
+                                                                    13
+                               Optimizing Visual Generative Models via Distribution-wise Rewards
+
+                                          Denoising Steps                             50                 250
+                                                            FID-#img           5K          50K      5K         50K
+                                                                  0           20.92        13.78   14.54       8.86
+
+
+
+
+                                         ← Training Steps
+                                                                 50           14.80        8.34    12.13       6.56
+                                                                100           13.55        7.57    13.09       7.12
+                                                                250           13.30        7.73    12.57       6.81
+                                                                400           13.60        7.79    12.13       6.23
+                                                                450           14.15        7.93    11.48       5.77
+                                                                500           14.50        8.24    11.63       6.04
+Table 3. The model exhibits an adaptation bias toward the training denoising schedule while training under denoising reduction paradigm.
+With 50 denoising steps for training and 250 for evaluation, performance with 50 steps saturated and worsened after 100 training steps,
+while 250-step performance remained improving.
+
+
+Table 4. Cross-metric evaluation on SiT-XL/2 (ImageNet 256×256). All metrics are evaluated at 450 training steps using the same
+fine-tuned model. KID and MMD use Inception-v3 features with polynomial and Gaussian kernels respectively; FDDINOv2 uses DINOv2
+features.
+
+                                      Metric                       SiT Original            + Ours (RL)     Change
+                                      FID↓                              8.30                  5.77         ↓30.5%
+                                      KID↓                             0.0043                0.0020        ↓53.5%
+                                      MMD↓                             0.0029                0.0015        ↓48.3%
+                                      FDDINOv2 ↓                       230.39                164.88        ↓28.5%
+                                      Precision↑                       0.6983                0.7286        ↑4.3%
+                                      Recall↑                          0.7527                0.7262        −3.5%
+                                      Density↑                         0.7673                0.8594        ↑12.0%
+                                      Coverage↑                        0.8698                0.8950        ↑2.9%
+
+
+C. Reward Variance Analysis
+A potential concern with the subset-replace strategy is whether replacing only a small subset (e.g., 50 out of 5,000 images)
+introduces excessive noise in the reward signal. We provide a detailed variance analysis to demonstrate the stability of our
+reward computation.
+
+Overall reward stability. Across 450 training steps, the reward coefficient of variation (CV) is 4.67%, and the intra-step
+FID CV caused by random replacement positions is only 0.14%. This indicates that the replacement position noise is
+negligible compared to actual sample quality differences.
+
+Variance across replacement sizes. We measure the intra-step FID CV for different replacement subset sizes while
+keeping the reference set fixed at 5,000 images. As shown in Table 5, all CVs remain very low regardless of replacement
+size.
+
+Table 5. Intra-step FID coefficient of variation (CV) for different replacement sizes. The low CV values confirm that the reward signal
+remains stable across all tested configurations.
+
+                                 Replacement Size                       4        8           16     32         50     100
+                                 FID CV (%)                            0.09     0.11        0.12   0.20        0.28   0.37
+
+
+Mechanisms bounding variance impact. Three mechanisms prevent noisy reward estimates from destabilizing policy
+optimization: (1) best-of-N selection filters low-quality samples before replacement, (2) ratio clipping (ε = 0.0001) prevents
+large policy updates from any single step, and (3) advantage normalization standardizes the reward signal across the batch.
+Over the entire training, zero destructive policy updates were observed, and training exhibits stable, monotonic convergence.
+
+                                                                                 14
+                              Optimizing Visual Generative Models via Distribution-wise Rewards
+
+D. Computational Cost Analysis
+We profile the per-step computational cost of our method on 8× L40S GPUs to quantify the overhead introduced by the
+distribution-wise reward computation.
+
+Table 6. Per-step computational cost breakdown for RL fine-tuning with the subset-replace strategy. The FID matrix computation is the
+only cost unique to our method; rollout generation and policy training are shared with any sample-wise RL approach.
+
+                                  Component                            Time (s)     Fraction (%)
+                                  Rollout generation                     22.7           10.3
+                                  Policy training                        157.3          71.5
+                                  FID matrix computation                 17.6           8.0
+                                  Other (data loading, sync, etc.)       22.4           10.2
+                                  Pool regeneration (amortized)            –             4.6
+
+The FID matrix computation, which is the only component unique to our distribution-wise reward approach, accounts for
+only 8.0% of the total step time. The dominant costs—rollout generation (10.3%) and policy training (71.5%)—are shared
+with any RL fine-tuning method. Additionally, our reward model (Inception-v3, 24M parameters) is 12.7× smaller than
+typical sample-wise reward models (e.g., CLIP ViT-L, 304M parameters), further reducing memory and compute overhead.
+The reference set is regenerated every 10 steps, adding approximately 4.6% amortized overhead.
+
+E. Limitations
+Our current experiments focus on class-conditional ImageNet generation. Extending the subset-replace strategy to open-
+vocabulary text-to-image settings requires further exploration of how to construct representative reference sets without
+predefined class labels. Additionally, the reference set regeneration interval and size are currently tuned via ablation; an
+adaptive scheduling mechanism that adjusts these based on training dynamics could further improve efficiency and is left for
+future work.
+
+F. Qualitative Results
+We visualize the image generation results of the pretrained SiT-XL/2 model and the model fine-tuned with distribution-wise
+reward RL from Section 4.1, as shown in Figures 6 to 10.
+
+
+
+
+                                                                 15
+             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+                Figure 6. Uncurated samples of class label "airliner" (404)
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+                 Figure 7. Uncurated samples of class label "balloon" (417)
+
+
+
+                                            16
+             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+              Figure 8. Uncurated samples of class label "giant panda" (388)
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+                   Figure 9. Uncurated samples of class label "lion" (291)
+
+
+
+                                             17
+             Optimizing Visual Generative Models via Distribution-wise Rewards
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+
+Without RL
+
+
+
+
+  Ours
+
+
+
+                  Figure 10. Uncurated samples of class label "zebra" (340)
+
+
+
+
+                                             18
+
