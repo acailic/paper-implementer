@@ -420,29 +420,32 @@ Skill-GRPO without inference skills is 14.8 points *worse* than plain GRPO, demo
 
 Both skill levels contribute, but episode-level skills carry more weight on ALFWorld while step-level skills are relatively more important on WebShop. The routing ablation shows that simply using both skills everywhere is worse than critical-first routing — precision at the right moments matters.
 
-### 6.4 Sample Efficiency
+### 6.4 Sample Efficiency (Table 7)
 
-| Data fraction | GRPO | OPID | OPID vs. full-data GRPO |
-|--------------|------|------|--------------------------|
-| 60% | — | 71.9 | $\approx$ GRPO at 100% (75.0) |
-| 80% | — | 78.9 | $>$ GRPO at 100% (75.0) |
+| Data fraction | GRPO | OPID | $\Delta$ |
+|---------------|------|------|----------|
+| 20%  | 27.3 | 36.7 | +9.4 |
+| 40%  | 42.2 | 54.7 | +12.5 |
+| 60%  | 56.3 | **71.9** | +15.6 |
+| 80%  | 58.6 | **78.9** | +20.3 |
 | 100% | 75.0 | **84.3** | +9.3 |
 
-OPID at 60% of training data approximately matches GRPO at 100%. This demonstrates that dense token-level supervision from skill distillation extracts significantly more learning signal per rollout than sparse outcome rewards alone.
+OPID's advantage is largest in the low- and mid-data regimes: the Δ grows from +9.4 at 20% to a peak of **+20.3 at 80%**, then narrows back to +9.3 at 100% as GRPO finally gets enough rollouts to catch up. Notably OPID trained on **60%** of the data (71.9) already approaches full-data GRPO (75.0), and OPID at 80% (78.9) *exceeds* full-data GRPO — confirming that dense token-level skill supervision extracts substantially more learning signal per rollout than sparse outcome rewards alone.
 
-> **Sourcing note (§6.4):** The 100% row (GRPO 75.0 / OPID 84.3) is from Table 1. The 60% (71.9) and 80% (78.9) OPID values are **Figure 4 bar-height readings** — they appear in no table, and the paper states only the qualitative claim that OPID "approaches full-data GRPO performance using about 60% of the data." Treat the 60%/80% absolutes as approximate.
+> **Source:** Appendix C.1, Table 7 (verbatim 5-fraction grid; Qwen2.5-3B-Instruct, ALFWorld success rate). The paper's §C.1 prose explicitly cites the +15.6 (60%) and +20.3 (80%) figures.
 
-### 6.5 Cross-Domain Generalization (ALFWorld Unseen)
+### 6.5 Cross-Domain Generalization (ALFWorld Unseen, Table 8)
 
-| Setting | GRPO | OPID | $\Delta$ |
-|---------|------|------|----------|
-| ALFWorld Unseen (avg) | 70.9 | **78.6** | +7.7 |
-| — Look task | 52.0 | **78.7** | +26.7 |
-| — Heat task | 60.0 | **78.5** | +18.5 |
+| Method | Pick | Look | Clean | Heat | Cool | Pick2 | Avg. |
+|--------|------|------|-------|------|------|-------|------|
+| ReAct  | 17.4 | 6.7  | 8.8   | 7.4  | 9.1  | 0.0   | 8.2  |
+| GRPO   | 73.9 | 60.0 | 82.4  | 59.3 | 72.7 | **76.9** | 70.9 |
+| **OPID** | **78.3** | **86.7** | **82.4** | **77.8** | **77.3** | 69.2 | **78.6** |
+| $\Delta$ (OPID−GRPO) | +4.4 | +26.7 | +0.0 | +18.5 | +4.6 | −7.7 | +7.7 |
 
-OPID's learned skills generalize to unseen task types, with particularly large gains on Look (+26.7) and Heat (+18.5). This suggests the distilled skills capture generalizable decision principles rather than task-specific memorization.
+OPID's distilled skills transfer to unseen task types (+7.7 Avg over GRPO), with the largest gains exactly where the no-skill ReAct baseline collapses hardest — **Look (+26.7)** and **Heat (+18.5)** (ReAct manages only 6.7 / 7.4 there). Clean is a tie (82.4 = 82.4). The one regression is **Pick2 (−7.7)**, where GRPO's already-strong 76.9 leaves little headroom. The pattern indicates the distilled episode-level workflows and step-level decision rules capture generalizable decision principles rather than memorized training trajectories.
 
-> **Sourcing note (§6.5):** The entire ALFWorld-Unseen grid (Avg 70.9→78.6 and every per-task Look/Heat cell) comes from **Figure 5 bar-height readings** — the paper provides no numeric unseen-split table. The Avg (70.9→78.6, +7.7) and the "particularly large gains on Look and Heat" ordering are corroborated by the figure's Avg-column bars and the §4.2 prose; the per-task absolutes (52.0/78.7, 60.0/78.5) are approximate bar readings.
+> **Source:** Appendix C.2, Table 8 (verbatim 6-task grid; Qwen2.5-3B-Instruct, ALFWorld Unseen split). The paper's §4.2 multi-backbone prose corroborates the +7.7 Avg gain and the "particularly clear gains on Look and Heat" ordering.
 
 ### 6.6 Training Dynamics
 
