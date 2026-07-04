@@ -1319,7 +1319,62 @@
       "abstract": "Language models (LMs) raise an intriguing alternative to vector-based retrieval: conditioning on an in-context corpus and directly generating a relevant answer. However, prior work has largely focused on proprietary systems or the smaller-scale reranking task, leaving corpus-scale in-context retrieval largely unexplored. We present the first systematic study of in-context retrieval on two scales practical retrievers demand: million-token corpora and length-generalization far beyond training-time sizes. We introduce BlockSearch, a 0.6B LM retriever whose architectural and training modifications improve over prior LM baselines and length-generalize up to 10x beyond its training regime. Nevertheless, retrieval still collapses under more extreme extrapolation. We trace this failure to an attention dilution effect: as the corpus grows, irrelevant documents dominate the softmax denominator, reducing the normalized mass on the gold document even when its pre-softmax score stays high. Motivated by this analysis, we introduce length-aware adjustments to the attention softmax and document-level sparse attention. At the million-token scale, our model matches dense retrieval on widely studied benchmarks (MS MARCO, NQ) while outperforming the concurrent model MSA despite being 7x smaller, and significantly outperforms dense retrieval on tasks requiring entirely different notions of similarity (LIMIT), achieving a 3x higher score.",
       "sourcing_note": "Source-first breakdown built from paper.pdf (26pp incl appendices, 0.66MB) via pdftotext -layout (paper_layout.txt, 1418 lines, 15 explicit tables + 7 figures). All 15 tables transcribed verbatim with sourcing line-ranges: T1 attention-output decomp L461, T2 main Recall@1 L524, T3 LIMIT Recall@1 L589, T4 dataset stats L860, T5 RLHN mix L890, T6 variant hyperparams L930, T7 shared hyperparams L950, T8 Qwen3-dense config L993, T9 signal/noise L1071, T10 Recall@5 L1243, T11 HotpotQA Recall@2 L1258, T12 LIMIT Recall@2 L1306, T13 LIMIT Recall@5 L1320, T14 OBLIQ stats L1354, T15 OBLIQ results L1395. Source-free reconciliation PASSED: RLHN total 522,487 exact; token budgets recompute (94.8/116.3/139.6 x Nmax); 7x=6.67; SSMax 82x=16.5/0.2; routing within 1.4 of dense; LIMIT ~3x anchors N=500 (2.93x). 1 inline flag: GoldShare prose 'factor ~130' vs 0.91/0.01=91x (rounding tension; underlying ~0.007). Figure curves (Fig 1/2/3) NOT back-filled; only prose-confirmed numbers + explicit tables.",
       "subarea_lineage": "Corpus-scale in-context retrieval (retrieval-as-decoding) -- eval-foundations + long-context lineage, distinct from inference-efficiency and agentic-RL lineages. Retrieval-as-decoding counterpart to RT-RAG (retrieval+reasoning-structure); mechanistic sibling to attention-sink/sparse-attention work (Streaming-LLM, gpt-oss, MSA, MoBA, Quest). First repo paper on LM-as-retriever / corpus-scale ICR / attention-dilution diagnosis."
+    },
+    {
+      "rank": 30,
+      "arxiv_id": "2607.02137",
+      "arxiv_url": "https://arxiv.org/abs/2607.02137",
+      "pdf_url": "https://arxiv.org/pdf/2607.02137",
+      "title": "ART for Diffusion Sampling: Continuous-Time Control and Actor-Critic Learning",
+      "authors": [
+        "Yilie Huang",
+        "Wenpin Tang",
+        "Xun Yu Zhou"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "Continuous-time optimal control / continuous-time RL (CTRL) for diffusion-sampling timestep-schedule design. ART (Adaptive Reparameterized Time) treats the speed of a reparameterized sampling clock theta(t)=psi'(t) as the control, so a uniform grid on the learned clock induces adaptive timesteps in physical diffusion time under a hard time-budget integral=constraint. Objective penalizes a leading-order Euler local-error surrogate |Q(x,psi)|*theta^2 (Q = probability-flow stiffness indicator). ART-RL is an auxiliary randomized formulation with Gaussian policies N(mu, lambda/|Q|) (variance tied to stiffness); Theorem 1 proves the mean mu* of the optimal Gaussian policy is exactly optimal for the original deterministic ART (randomization is a technical device for applying CTRL theory, not exploration). Theorems 2-3 give policy-evaluation + policy-improvement moment identities -> continuous-time actor-critic (Algorithm 1). Distilled to a precomputed grid -> zero inference overhead vs Uniform/EDM/DPM. ART-RL wins every one of 62 result cells across 1-D (W2), CIFAR-10 (Euler/Heun), MNIST small-model RK4 (LeNet-FID), cross-timestep/cross-dataset/EDM2-latent transfer (FID + Inception Score). Headline: CIFAR-10 Heun NFE=35 FID 1.82 vs EDM 1.85. Touches NO weights -- only the timestep grid.",
+      "ai_keywords": [
+        "diffusion sampling",
+        "timestep schedule",
+        "time discretization",
+        "score-based diffusion",
+        "probability flow ODE",
+        "continuous-time control",
+        "optimal control",
+        "HJB equation",
+        "Hamilton-Jacobi-Bellman",
+        "continuous-time RL",
+        "CTRL",
+        "actor-critic",
+        "policy evaluation",
+        "policy improvement",
+        "Gaussian policy",
+        "time reparameterization",
+        "adaptive timesteps",
+        "NFE",
+        "EDM",
+        "EDM2",
+        "DPM-Solver",
+        "Euler discretization",
+        "Heun solver",
+        "RK4",
+        "FID",
+        "CIFAR-10",
+        "ImageNet-512",
+        "schedule transferability"
+      ],
+      "abstract": "We study timestep allocation for score-based diffusion sampling, where a learned reverse-time dynamics is discretized on a finite grid. Uniform and hand-crafted schedules are standard choices, but they rely on ad hoc, fixed prescriptions and can therefore be suboptimal. To address this limitation, we propose Adaptive Reparameterized Time (ART), a continuous-time control formulation that learns a time change by treating the speed of the sampling clock as the control, so that a uniform grid on the learned clock induces adaptive timesteps in the original diffusion time. Based on a leading-order Euler error surrogate, ART provides a principled objective for allocating timesteps along the sampling trajectory. To solve this potentially high-dimensional deterministic control problem, we introduce ART-RL, an auxiliary randomized formulation with Gaussian policies that turns schedule learning into a continuous-time reinforcement learning problem. We prove that ART-RL is equivalent to ART at optimality, in the sense that the mean of the former's optimal Gaussian policy is optimal for the latter. We further establish policy evaluation and policy improvement characterizations and derive trajectory-based moment identities that yield implementable actor-critic updates for solving ART-RL. We conduct experiments ranging from controlled low-dimensional settings to image generation, and show that ART-learned schedules, when plugged into existing diffusion samplers by changing only the timestep grid, consistently improve sample quality over strong baseline schedules at matched budgets. The learned schedules also exhibit broad generalizability with superior performances, transferring without retraining across sampling budgets, datasets, solvers, pipelines, and representation spaces.",
+      "popularity": 0,
+      "citation_count": 0,
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-art-diffusion-sampling-continuous-time-control",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "sourcing_note": "Source-first breakdown from paper_layout.txt (pdftotext -layout, 1675 lines, 8 explicit tables + 14 figures + Algorithm 1 + Theorems 1-3). All 8 tables transcribed verbatim with sourcing line-ranges (T1 L1070, T2 L1126, T3 L1171, T4 L1205, T5 L1268, T6 L1295, T7 L1330, T8 L1576). Source-free reconciliation PASSED: NFE<->K relationships all reconcile (Heun 2K-1, Euler K, RK4 4K-3); K=2 DPM==EDM degeneracy confirmed cross-table (5 tables); ART-RL best in all 62 result cells (script-verified); all prose claims reconcile (NFE=35 1.82-vs-1.85 + 3 matched runs; DPM/EDM ordering claims). No numeric prose-vs-table contradiction. Eq glyphs LaTeX-scrambled in layout dump; equations cited by number + described. Fresh subarea: continuous-time optimal control / CTRL for diffusion-sampling schedule design -- no prior repo paper covers control theory for diffusion. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     }
   ],
-  "updated_at": "2026-07-04"
+  "updated_at": "2026-07-04T06:29:08"
 }
