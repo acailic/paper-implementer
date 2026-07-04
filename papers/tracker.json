@@ -2812,6 +2812,56 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "ICML 2026 PMLR 306. UCSB + MIT-IBM Watson AI Lab (IBM Research). 18pp (file AND pdfinfo both 18pp, NO page-count defect this iter). Source-first breakdown (7 tables verbatim + Eqs 1-2 + 11 honest-scope notes). Python-verified: Table-1 best/2nd-best-across-all-datasets confirmed for Group B excl GPT-4o (rank1 OpenbookQA/MMSU, rank2 GSM8k/Truthful/MLC/MLCpro); emphasis-detection SOTA F1 60.84 = 2.12x next-best (Fun 28.76); all F1 cells recompute harmonic-mean from own P/R. CAUGHT genuine cross-table run-drift (iter-65 ReContext / iter-70 SUNTA / iter-74 PointDiT class): Table-2 SpeechCombine row vs Table-5 lambda=0.85 row (same default config) -- 4 cells differ while 4 match exactly: UnderEmo 52.70 vs 50.75 (d1.95), EmphGen P 25.91 vs 26.16, R 39.90 vs 40.17, F1 31.42 vs 31.68; EmphDet P/R/F1 + GenEmo Score byte-match. lambda-sweep re-ran the stochastic LLM-as-judge/emphasis-detector tasks. Also: '<1% of training data' borderline (30k/3M=1.00%); SDQA named in 4.2 prose but absent from Table-1(a); format-forcing carries ~half the emph-det F1 (T6 53.14->27.73). Sibling-in-spirit to mi-epo (iter 69, weight/preference vectors) + DSGNAR (iter 67); uniquely speech + model-arithmetic. No numeric prose-vs-table contradiction beyond the T2-vs-T5 run-drift."
+    },
+    {
+      "rank": 60,
+      "arxiv_id": "2607.02088",
+      "arxiv_url": "https://arxiv.org/abs/2607.02088",
+      "pdf_url": "https://arxiv.org/pdf/2607.02088",
+      "title": "Fourier Neural Operators for Rayleigh-Bénard Convection",
+      "authors": [
+        "Chelsea Maria John",
+        "Thibaut Lunet",
+        "Sebastian Götschel",
+        "Andreas Herten",
+        "Stefan Kesselheim",
+        "Daniel Ruprecht"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "Fourier Neural Operator (FNO) surrogate modeling of 2D Rayleigh-Bénard convection (turbulent fluid PDE): lean FNO that predicts TIME INCREMENTS dU=dt^-1(U(t+dt)-U(t)) rather than full solutions, turning the FNO into a data-driven one-step integrator. Increment objective cuts avg relative L2 error ~24x vs solution objective (Table 1: 5.8e-5 vs 1.4e-3); the solution-objective FNO is 10x WORSE than the identity predictor. Architecture upgrade (4x1D-conv lift/project P,Q + cosine LR) adds ~2.8x (Improved avg 2.1e-5, 314772 params, 1.26 MB, 7 ms). Mesh-invariance finding: FNO interpolates to unseen grids (512x128 from 256x64-trained) at same ~1e-4 order, but finer inference grids do NOT improve accuracy -- (512,128) is 4.5x WORSE than training grid; accuracy is bounded by TRAINING-DATA resolution. Distinct from dsgnar iter 67 (PINN optimiser) -- FNO is operator-learning architecture that generalises across meshes unlike PINNs. Dedalus ground truth, RK443, dt=1e-3, Pr=1, Ra=1e7. Vs Straat et al. FNO3D: 23x smaller (132 MB vs 3037 MB), 15-45x faster (10-30 ms vs 450 ms), comparable INITIAL accuracy (t=0.5 0.032 < Straat 0.04) but 2.8x WORSE at end of 30s horizon (0.11 vs 0.04). Positioned as Parareal coarse propagator (aspirational, undemonstrated).",
+      "ai_keywords": [
+        "Fourier Neural Operator",
+        "FNO",
+        "neural operator",
+        "operator learning",
+        "Rayleigh-Bénard convection",
+        "RBC",
+        "turbulent convection",
+        "fluid dynamics PDE surrogate",
+        "time-increment prediction",
+        "one-step integrator",
+        "mesh invariance",
+        "resolution invariance",
+        "spectral convolution",
+        "Dedalus",
+        "Parareal",
+        "coarse propagator",
+        "space-time parallel",
+        "autoregressive rollout",
+        "relative L2 error",
+        "science ML"
+      ],
+      "abstract": "We propose an improved Fourier Neural Operator (FNO) for modeling two-dimensional Rayleigh-Bénard convection by predicting time increments instead of full solutions, achieving higher accuracy than a standard FNO baseline. The resulting model is compact (314k parameters, 1.26 MB) and fast (7 ms inference), while maintaining similar accuracy as demonstrated in previous benchmarks. We show that although FNOs generalize to finer meshes, accuracy remains limited by the resolution of the training data.",
+      "popularity": "",
+      "citation_count": "",
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "papers/2026-fno-rayleigh-benard-convection",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "notes": "8pp (file misreports 1pp, pdfinfo=8, defect recurs). 5 tables + Eqs 1-4. Source-first reconciliation (Python-verified): Table-1 averages EXACT (Inc 5.8e-5, Sol 1.4e-3, IdErr 1.4e-4); increment beats identity, solution 10x WORSE than identity. Cross-table identities byte-exact: T2 Baseline==T1 Solution, T4 (256,64)==T2 Improved (both 2.1e-5). CAUGHT lone-cell avg defect: Table 3 row dt=0.001 Average stated 8.2e-5 recomputes 5.35e-5 (53% overstatement; other 3 rows OK). CAUGHT magnitude-headline overstatement: section 4.1 'two orders of magnitude' = avg 24.4x (1.39 orders); per-var max p 58x (1.76); only conclusion 'up to two orders' via Improved-vs-Baseline-Solution 69x (1.84) borderline. CAUGHT T3<->T2 cross-table run-drift (single-step dt=0.001 differs 2.5-4x). 0.11-vs-0.04 Straat = end-horizon vs reported (FNO better at t=0.5). Sibling to dsgnar iter 67 (physics-ML/PDE; FNO operator-learning vs PINN optimiser) + soap-muon/dsgnar science-ML-efficiency lineage."
     }
   ]
 }
