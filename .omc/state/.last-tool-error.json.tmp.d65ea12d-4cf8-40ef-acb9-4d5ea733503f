@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /tmp && pdftotext -layout mtrl.pdf mtrl_layout.txt 2>/dev/null; echo \\\"lines: $(wc -l < mtrl_layout.txt)\\\"; echo \\\"=== TABLE/FIGURE CAPTIONS ===\\\"; rtk grep -nE \\\"^\\\\s*(Table|Figure|Tab...",
+  "error": "Exit code 2\n/bin/bash: eval: line 1: syntax error near unexpected token `)'\n/bin/bash: eval: line 1: `cd /tmp && pdftotext -layout mtrl.pdf mtrl_layout.txt 2>/dev/null; echo \"lines: $(wc -l < mtrl_layout.txt)\"; echo \"=== TABLE/FIGURE CAPTIONS ===\"; rtk grep -nE \"^\\s*(Table|Figure|Tab\\.) \"Figure |Table |Tab\\.?|[0-9])\\s*[0-9]\" mtrl_layout.txt | grep -iE \"table|figure\" mtrl_layout.txt | grep -nPiE \"(Table|Figure|Tab\\.) [0-9]+\" mtrl_layout.txt | head -50'",
+  "timestamp": "2026-07-04T01:37:16.932Z",
+  "retry_count": 1
+}

@@ -498,7 +498,7 @@
       "pdf_url": "https://arxiv.org/pdf/2606.28133.pdf",
       "code_url": "",
       "project_page": "https://translation-as-a-bridging-action.github.io/",
-      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a π_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
+      "abstract": "We study whether we can learn novel manipulation skills from human actions to a bi-manual robot with parallel grippers. Human action data is cheap, abundant, and diverse, making it one of the most promising resources for scaling up robot learning. Yet transferring skills from humans to robots remains hard: most prior work treats humans as just another bi-manual 6DoF embodiment, where hand-pose estimates are noisy and the contact patterns of human fingers differ fundamentally from those of a parallel gripper. We argue that learning rotation-inclusive action signals from human data is therefore sub-optimal, and instead propose a bridging action representation: the relative wrist translation within the initial head-camera frame, an action space shared by humans and robots. To handle the potential absence of certain action components in different embodiments, we build a \u03c0_0-like vision-language-action model with interleaved action tokens and attention masking. On a suite of novel bi-manual manipulation tasks, our bridging action transfers human manipulation knowledge to robots far more effectively than noisy 6DoF human actions and scales with the amount of human data.",
       "ai_keywords": [
         "bi-manual manipulation",
         "parallel grippers",
@@ -673,7 +673,45 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "note": "Added iter 29 (gnhf). Fresh source-first breakdown built from arXiv PDF; all 9 tables verbatim. New subarea for repo (long-horizon tool-use RL)."
+    },
+    {
+      "title": "Multi-Turn Reinforcement Learning for Tool-Calling Agents with Iterative Reward Calibration",
+      "authors": [
+        "Wachiravit Modecrua",
+        "Krittanon Kaewtawee",
+        "Krittin Pachtrachai",
+        "Touchapon Kraisingkorn"
+      ],
+      "year": "2026",
+      "arxiv_id": "2604.02869",
+      "arxiv_url": "https://arxiv.org/abs/2604.02869",
+      "pdf_url": "https://arxiv.org/pdf/2604.02869",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Training tool-calling agents with reinforcement learning on multi-turn tasks remains challenging due to sparse outcome rewards and difficult credit assignment across conversation turns. We present the first application of MT-GRPO (Multi-Turn Group Relative Policy Optimization) combined with GTPO (Generalized Token-level Policy Optimization) for training a tool-calling agent on realistic customer service tasks with an LLM-based user simulator. Through systematic analysis of training rollouts, we discover that naively designed dense per-turn rewards degrade performance by up to 14 percentage points due to misalignment between reward discriminativeness and advantage direction. We introduce Iterative Reward Calibration (IRC), a methodology for designing per-turn rewards using empirical discriminative analysis of rollout data, and show that our GTPO hybrid advantage formulation eliminates the advantage misalignment problem. Applied to the Tau-Bench airline benchmark, our approach improves Qwen3.5-4B from 63.8% to 66.7% (+2.9pp) and Qwen3-30B-A3B from 58.0% to 69.5% (+11.5pp) \u2014 with the trained 4B model exceeding GPT-4.1 (49.4%) and GPT-4o (42.8%) despite being ~50x smaller, and the 30.5B MoE model approaching Claude Sonnet 4.5 (70.0%).",
+      "ai_keywords": [
+        "reinforcement learning",
+        "multi-turn RL",
+        "tool-calling agents",
+        "MT-GRPO",
+        "GTPO",
+        "advantage misalignment",
+        "reward calibration",
+        "Tau-Bench",
+        "credit assignment",
+        "dense vs sparse rewards",
+        "customer service agents"
+      ],
+      "popularity": null,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2604.02869",
+      "rank": 12,
+      "status": "done",
+      "folder": "papers/2026-multi-turn-rl-tool-calling-iterative-reward-calibration",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "note": "Added iter 30 (gnhf). Fresh source-first breakdown from arXiv PDF; all 9 tables verbatim. New agentic-RL sibling (MT-GRPO+GTPO first applied to tool-calling; IRC methodology). 3 paper-internal inconsistencies flagged inline (V8 68.0 vs headline 66.7; T9 69.3 vs V6 range; \u00a78.1 LRs vs T6 LRs)."
     }
   ],
-  "updated_at": "2026-07-04T01:33:48.046984+00:00"
+  "updated_at": "2026-07-04"
 }

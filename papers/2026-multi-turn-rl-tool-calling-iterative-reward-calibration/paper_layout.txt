@@ -1,0 +1,527 @@
+                                                          Multi-Turn Reinforcement Learning for Tool-Calling Agents
+                                                                      with Iterative Reward Calibration
+
+
+                                        Wachiravit Modecrua*         Krittanon Kaewtawee∗ Krittin Pachtrachai∗ Touchapon Kraisingkorn
+                                                                      Amity Research and Application Center (ARAC)
+                                                                {wachiravit, touchapon, krittin.pac}@amity.co
+arXiv:2604.02869v1 [cs.AI] 3 Apr 2026
+
+
+
+
+                                                                      Abstract                              service, web navigation, and software engineer-
+                                                                                                            ing (Yao et al., 2023; Schick et al., 2023). How-
+                                                    Training tool-calling agents with reinforcement         ever, training these agents with reinforcement learn-
+                                                    learning on multi-turn tasks remains challeng-
+                                                                                                            ing (RL) remains challenging: conversations span
+                                                    ing due to sparse outcome rewards and dif-
+                                                    ficult credit assignment across conversation            many turns with interleaved tool calls, rewards are
+                                                    turns. We present the first application of MT-          typically sparse (binary task success), and credit
+                                                    GRPO (Multi-Turn Group Relative Policy Op-              assignment across turns is difficult.
+                                                    timization) combined with GTPO (General-                   Recent work has proposed per-turn reward sig-
+                                                    ized Token-level Policy Optimization) for train-        nals to improve credit assignment. MT-GRPO
+                                                    ing a tool-calling agent on realistic customer          (Zhang et al., 2025) normalizes rewards within
+                                                    service tasks with an LLM-based user simu-
+                                                                                                            rollout groups at each turn position, while GTPO
+                                                    lator. Through systematic analysis of train-
+                                                    ing rollouts, we discover that naïvely designed         (Ding et al., 2025) applies discounted returns. How-
+                                                    dense per-turn rewards degrade performance by           ever, these methods have only been evaluated on
+                                                    up to 14 percentage points due to misalignment          question-answering and math tasks—never on re-
+                                                    between reward discriminativeness and advan-            alistic multi-turn agentic tasks involving tool calls,
+                                                    tage direction. We introduce Iterative Reward           database mutations, and LLM-based user simula-
+                                                    Calibration (IRC), a methodology for design-            tors.
+                                                    ing per-turn rewards using empirical discrim-
+                                                                                                               We bridge this gap by applying MT-GRPO +
+                                                    inative analysis of rollout data, and show that
+                                                    our GTPO hybrid advantage formulation elimi-            GTPO to Tau-Bench (Yao et al., 2024), a realis-
+                                                    nates the advantage misalignment problem. Ap-           tic airline customer service benchmark requiring
+                                                    plied to the Tau-Bench airline benchmark, our           database operations, policy adherence, and multi-
+                                                    approach improves Qwen3.5-4B from 63.8%                 step reasoning. This is, to our knowledge, the first
+                                                    to 66.7% (+2.9pp) and Qwen3-30B-A3B from                application of these techniques to multi-turn tool-
+                                                    58.0% to 69.5% (+11.5pp)—with the trained               calling agents trained with a user simulator. Our
+                                                    4B model exceeding GPT-4.1 (49.4%) and GPT-
+                                                                                                            investigation reveals several surprising findings:
+                                                    4o (42.8%) despite being ∼50× smaller, and
+                                                    the 30.5B MoE model approaching Claude Son-
+                                                    net 4.5 (70.0%). To our knowledge, these are                 Dense per-turn rewards designed with
+                                                    the first published RL training results on Tau-              reasonable intuition can catastrophi-
+                                                    Bench. We release our code, reward calibration               cally degrade performance compared to
+                                                    analysis, and training recipes.1                             sparse rewards—not because the reward
+                                                                                                                 values are wrong, but because their dis-
+                                            1       Introduction                                                 criminative power is misaligned with the
+                                            Large language models have demonstrated impres-                      advantage computation.
+                                            sive capabilities as tool-calling agents, handling
+                                            complex multi-turn interactions such as customer                Figure 1 illustrates the core problem and our so-
+                                                * Equal contribution.
+                                                                                                            lution: how reward signals flow from turns to ad-
+                                                1
+                                                 Code and training recipes will be released upon publica-   vantages under GRPO, naïve MT-GRPO, and our
+                                            tion.                                                           calibrated approach.
+   Training produces striking qualitative improve-           are agent responses, and ti are tool responses.
+ments. On a representative task requiring flight can-        The agent may call zero or more tools per turn.
+cellation under policy constraints and user manipu-          A conversation of K turns produces trajectory
+lation (flattery), the base model generates 56 turns         τ = (h1 , a1 , . . . , hK , aK ). Task success is deter-
+of verbose but ineffective reasoning (0% action              mined by whether the final database state matches
+accuracy, 27 minutes). After training, the model             a ground-truth target, yielding binary outcome
+completes the same task in 28 turns with 100% ac-            R ∈ {0, 1}.
+tion accuracy in approximately 10 minutes (50%
+fewer turns, 65% faster, and 3.5 times less verbose          2.2    GRPO and MT-GRPO
+while achieving perfect tool argument selection).            Group Relative Policy Optimization (GRPO; Shao
+   We make three contributions:                              et al., 2024) normalizes rewards within groups of
+                                                             N rollouts per prompt: Ai = (Ri − µR )/(σR + ϵ).
+1. First MT-GRPO + GTPO for agentic tool-                    MT-GRPO (Zhang et al., 2025) extends this with
+calling. We combine per-turn group-normalized                per-turn credit assignment:
+advantages (MT-GRPO) with discounted returns
+                                                                                     K−1
+and dampened outcome advantages (GTPO) for                                           X
+                                                                            Ai,k =         AIi,l + AO
+                                                                                                    i            (1)
+training tool-calling agents with user simulators
+                                                                                     l=k
+(§3). Our GTPO hybrid formulation eliminates
+advantage misalignment that arises with standard             where AIi,l = (ri,l − µrl )/(σrl + ϵ) is the group-
+MT-GRPO under dense rewards.                                 normalized per-turn advantage at position l, and
+                                                             AOi = (oi − µo )/(σo + ϵ) is the group-normalized
+2. Iterative Reward Calibration (IRC). A sys-                outcome advantage.
+tematic methodology for designing per-turn re-
+wards using discriminative analysis of rollout data          2.3    Tau-Bench
+(§4). Rather than assigning rewards by intuition,            Tau-Bench (Yao et al., 2024) evaluates tool-calling
+IRC measures the empirical correlation between               agents on realistic customer service tasks. The air-
+each reward tier and task success, then adjusts              line domain includes tasks requiring flight search,
+values accordingly. We show that read-only tool              reservation management, cancellation, and policy-
+calls should receive zero reward (not positive), non-        compliant responses. Each task specifies a cus-
+golden state-changing calls should be penalized,             tomer profile, a natural language instruction for
+and deep argument comparison eliminates 23.5%                a simulated user, a sequence of golden actions
+false positives in action matching.                          (ground-truth tool calls with arguments), and a tar-
+                                                             get database state verified by hash comparison. The
+3. Consistent improvements across model scales.              benchmark uses an LLM-based user simulator and
+Our method improves both Qwen3.5-4B (+2.9pp,                 reports pass rate. The benchmark has two versions:
+from 63.8% to 66.7%) and Qwen3-30B-A3B MoE                   Tau-Bench (v1), which we use for training, and
+(+11.5pp, from 58.0% to 69.5%) on Tau-Bench air-             Tau2-Bench (v2), a separate updated task set that
+line (§6). Both MT-GRPO and IRC independently                we use for evaluation. This train/test split ensures
+contribute gains at both scales, and their combina-          that our reported results reflect generalization to
+tion yields the best results. The trained 4B model           unseen tasks.
+exceeds frontier models 50 times its size, establish-
+ing the first RL training results on this benchmark          3     Method: MT-GRPO + GTPO Hybrid
+with an 8-version ablation study.
+                                                             3.1    Challenge: Advantage Misalignment
+2     Background                                             Applying MT-GRPO with dense per-turn rewards
+                                                             to tool-calling agents reveals a fundamental prob-
+2.1    Multi-Turn Tool-Calling Agents                        lem. For reward tiers with small positive values
+We consider an agent that interacts with both a              (e.g., read-only tool calls rewarded at 0.3), the per-
+user and a set of tools over multiple conversa-              turn advantage AI is weakly positive but the out-
+tion turns. At each turn k, the agent generates              come advantage |AO | can be much larger. In failing
+a response ak conditioned on the conversation                rollouts, AO ≈ −0.87 overwhelms AI ≈ +0.05,
+history hk = (s, u1 , a1 , t1 , u2 , . . . , uk ), where s   producing a net suppressing signal for read-only
+is the system prompt, ui are user messages, ai               turns—the opposite of the intended effect (Table 1).
+                            (a) GRPO — Outcome reward only
+                                                                                                                          Turn types
+                                                                                                                                Read-only tool
+               rewards       get_user        get_res         book            msg          cancel           R=1
+                                                                                                                                State-changing tool
+                                r=0
+                                 +             r=0
+                                                +             r=0
+                                                               +            r=0
+                                                                             +             r=0
+                                                                                            +                                   Text message
+
+          advantage                                                                                                       Advantage bars
+                                  Same advantage for all turns → no per-turn credit assignment
+                                                                                                                                Reinforce
+                                                                                                                                Suppress
+                                                                                                                                Dead (zero grad.)
+                            (b) MT-GRPO — Naïve dense rewards
+
+               rewards       get_user        get_res         book            msg          cancel           R=0   (fail)
+                                                                                                                               IRC Pipeline
+                                                                                                                             See Algorithm 1
+                               r=0.3          r=0.3          r=1.0
+                                                               +
+                                                                           r=0.0          r=1.0
+                                                                                            +                                     (§4)
+          advantage              −              −                           −−
+                              |AO | ≫ |AI |: read-only turns suppressed despite being necessary
+
+
+
+
+                            (c) IRC + GTPO hybrid (ours)
+
+               rewards       get_user        get_res         book            msg          cancel           R=0   (fail)
+
+
+                               r=0.0          r=0.0           ++
+                                                             r=1.0         r=0.0           ++
+                                                                                          r=1.0
+
+          advantage
+                         Gradient focused on gold actions only; non-discriminative turns → zero gradient
+
+
+Figure 1: Comparison of reward-to-advantage signal across three approaches, shown for a failing rollout (R=0)
+with 5 turns. Top row: per-turn reward values; bottom row: resulting training advantage (green = reinforce,
+red = suppress, gray = zero gradient). (a) GRPO uses outcome-only reward—all turns get the same uniform
+advantage, providing no credit assignment. (b) MT-GRPO with naïve dense rewards (e.g., read-only=0.3) suffers
+from advantage misalignment: the outcome advantage AO overwhelms small per-turn advantages, causing necessary
+read-only turns to be suppressed (red box). (c) Our IRC method calibrates rewards using discriminative analysis
+(right panel): read-only gets r=0 (non-discriminative), focusing gradient entirely on gold actions. GTPO hybrid
+dampens AO via λ=0.3, eliminating all advantage mismatches.
+
+
+      Tier                       AI        AI + A O          Aligned?                  where GN(·) denotes group normalization across
+      Gold exact              +1.22           +1.22              ✓                     rollouts at the same prompt, γ = 0.9 is the discount
+      Soft match              +0.11           −0.11              ×                     factor, and λ = 0.3 dampens the outcome advan-
+      Read-only               +0.05           −0.65              ×                     tage. This achieves zero advantage mismatches
+      State-change            +0.03           −1.45              ✓*
+      Error                   −0.15           −0.15              ✓                     (vs. 2 for standard MT-GRPO) while reducing dead
+                                                                                       turns from 11% to 1.4%.
+Table 1: Advantage direction analysis under standard                                      The key insight is that discounting naturally at-
+MT-GRPO with dense rewards. Read-only and soft                                         tenuates the outcome’s influence on early turns (via
+match show misalignment: AI reinforces but AI + AO                                     γ K−k ), while the dampened λ · AO preserves a
+suppresses. * State-change suppression is correct (98.5%
+                                                                                       weaker but correctly-directed outcome signal. Ta-
+occur in failing rollouts).
+                                                                                       ble 2 validates this across simulation of 5,952 roll-
+                                                                                       outs.
+3.2    GTPO Hybrid Advantage
+                                                                                        3.3      Dead Turn Gradient Focusing
+We resolve this misalignment by combining
+GTPO’s discounted returns with a dampened out-                                          Our analysis reveals that sparse rewards are “acci-
+come advantage:                                                                         dentally perfect” for a phenomenon we call dead
+                                                                                        turn gradient focusing. With sparse rewards,
+                     K−1                                                              27.5% of turns are “dead” (zero variance across
+      hybrid
+                      X
+  Ai,k          = GN      γ l−k ri,l + γ K−k oi                                         rollout groups, yielding zero gradient). These
+                               l=k
+                                                                             (2)        dead turns occur at routine positions (read-only
+                                                    + λ · AO
+                                                           i
+                                                                                        lookups, conversational messages), naturally focus-
+    Method                   Mis-          Corr         Dead    Algorithm 1 Iterative Reward Calibration (IRC)
+                            matches      (adv,out)      turns
+                                                                 1: procedure IRC(πθ , E, C, G)
+    MT-GRPO (V5)                 2            0.836     11.0%    2:     Input: policy πθ , environment E, tiers C,
+    GTPO γ=0.9                   0            0.414      1.1%
+    Hybrid γ=0.9, λ=0.3          0            0.489     1.4%        golden actions G
+                                                                 3:     Output: calibrated reward r
+Table 2: Advantage formulation comparison on 5,952               4:     Initialize rc for all c ∈ C
+V5 rollouts. The hybrid combines zero mismatches                 5:     repeat
+(from GTPO) with reasonable outcome correlation                  6:         Collect buffer B = {(τi , oi )}N
+                                                                                                           i=1
+(from λ-dampened AO ).                                           7:         Classify each turn k in τi :
+                                                                 8:             Match tool call with G
+          Gradient Target            Sparse     Dense
+                                                                 9:              Assign tier c(i, k) ∈ {gold, soft,
+          Gold + Soft (useful)       86.4%      47.5%               read, state, error, duplicate, message}
+          Read + State (noisy)        0.0%      26.5%
+          Dead (zero gradient)       27.5%      11.0%           10:         for each c ∈ C do
+                                                                11:              Compute            ρc            =
+Table 3: Gradient allocation by target type. Sparse                 PointBiserial(1[c ∈ τi ], oi )
+rewards naturally focus gradient on outcome-relevant            12:              if |ρc | > δ then
+turns.                                                          13:                   rc ← α · ρc
+                                                                14:              else
+ing 86.4% of live gradient on gold-diverse positions            15:                   rc ← 0
+where correct vs. incorrect actions diverge. Dense              16:              end if
+rewards reduce dead turns to 11% but fill them with             17:         end for
+wrong-direction gradient: 26.5% of gradient goes                18:         Compute AIi,k ← GN(rc(i,k) )
+to suppressing read/state turns (Table 3).                      19:         Compute AO     i ← GN(oi )
+                                                                20:         Check alignment for all c ∈ C:
+4     Iterative Reward Calibration                              21:               sign(E[AI + λAO | c]) =
+                                                                    intended_sign(c)
+4.1     Motivation: Why Dense Rewards Fail
+                                                                22:         Flag mismatches
+We designed an initial dense reward function with               23:     until no mismatches and Corr(r̄i , oi ) > η
+tiers: gold exact (1.0), soft match (0.5–0.99), read-           24:     return r
+only (0.3), state-change (0.1), message-only (0.0),             25: end procedure
+error (−0.1), duplicate (−0.2). Training with these
+rewards (V5) produced a 14pp degradation on
+Tau2-Bench compared to sparse rewards (V3): 54%                   Table 4 shows the discriminative analysis from
+vs. 68% pass rate, despite similar rollout perfor-              our initial iteration that drove the key calibration
+mance (∼56% outcome pass).                                      changes.
+4.2     The IRC Methodology                                     4.3    Deep Argument Comparison
+Based on discriminative analysis of 5,952 rollouts,             A critical source of reward noise is false positives
+we propose IRC, a systematic procedure for cali-                in golden action matching. Tool call arguments are
+brating per-turn dense rewards (Algorithm 1). The               nested JSON structures where semantically equiv-
+key insight is that reward values should be pro-                alent calls can differ in key ordering, type repre-
+portional to discriminative power—the empirical                 sentation (string “123” vs. integer 123), and empty
+correlation between a reward tier’s presence and                value handling. Our _deep_equal function nor-
+task success—rather than set by intuition.                      malizes arguments by sorting dict lists, coercing
+   The algorithm operates in a loop: collect rollouts           numeric strings, removing empty values, and com-
+(line 3), measure each tier’s point-biserial correla-           paring recursively. This eliminates 23.5% of false
+tion with binary task success (lines 6–9), then ver-            positives, significantly reducing reward noise.
+ify that the resulting advantages after group normal-
+ization point in the intended direction (lines 10–13).          5     Experimental Setup
+Convergence requires zero advantage mismatches
+and sufficient reward–outcome correlation. In prac-             5.1    Models
+tice, we found 2–3 iterations sufficient.                       We experiment with two model families:
+  Tier         Pass%     Fail%    Gap    Action              Model                     Size   Pass%      ∆
+  Gold exact      68.4     1.3   +67.1   Keep 1.0            Frontier models (proprietary)
+  Soft match      54.2    45.8    +8.4   Keep 0.5+           GPT-4.1 nano               —      14.0     —
+  Read-only       50.1    50.0    +0.1   0.3 → 0.0           Claude 3.5 Haiku           —      22.8     —
+  State-chg        1.0     2.6    −1.6   0.1 → −0.1          GPT-4o                     —      42.8     —
+  Error           12.0    88.0   −76.0   Keep −0.1           GPT-4.1                    —      49.4     —
+                                                             Claude Sonnet 4.5          —      70.0     —
+Table 4: Discriminative power of each reward tier. Gap       Our models (open-weight)
+= frequency in passing − failing rollouts. Read-only         Qwen3.5-4B (base)        4B       63.8      —
+has near-zero discriminative power (+0.1pp) and was            + MT-GRPO (ours)       4B       64.6    +0.8
+                                                               + IRC (ours)           4B       66.7    +2.9
+reduced to 0.0. State-change was flipped to −0.1.
+                                                             Qwen3-30B-A3B (base) 30.5B        58.0      —
+                                                               + MT-GRPO (ours)       30.5B    68.0   +10.0
+                                                               + IRC (ours)           30.5B    69.5   +11.5
+Qwen3-30B-A3B MoE (30.5B total, 3B active).
+A Mixture-of-Experts model starting from an SFT          Table 5: Tau-Bench airline pass rates. Both MT-GRPO
+                                                         and IRC consistently improve both model scales, with
+checkpoint fine-tuned on Qwen3-32B reasoning
+                                                         IRC providing additional gains over MT-GRPO alone:
+traces. Base performance: 58.0% on Tau-Bench             +2.9pp for 4B and +11.5pp for 30.5B MoE. The trained
+airline.                                                 4B model exceeds GPT-4.1 and GPT-4o despite being
+                                                         ∼50 times smaller.
+Qwen3.5-4B (4B dense). A dense model with
+GDN attention, trained directly from the base
+checkpoint. Base performance: 63.8%.                     6     Results
+   All experiments use the verl framework (Sheng         6.1    Main Results
+et al., 2024) with Megatron-Core on 8 NVIDIA
+                                                         Table 5 compares our trained models against fron-
+H20 GPUs (96GB each).
+                                                         tier baselines.
+                                                            Table 5 presents a 2-by-2 comparison across
+5.2      Training Configuration                          model scales and training methods. MT-GRPO
+Training set. We train on the Tau-Bench (v1)             with sparse rewards already improves both mod-
+airline domain, which provides the task prompts,         els (+0.8pp for 4B, +10pp for MoE), and adding
+golden actions, and database states used for RL          IRC provides further gains in both cases (66.7%
+rollouts. Training rollouts use DeepSeek-V3 as the       and 69.5%, respectively). Crucially, naïve RL
+user simulator.                                          training with dense rewards degrades both mod-
+                                                         els (V5 in Tables 6–7), demonstrating that proper
+                                                         reward calibration via IRC is essential. The 4B
+Hyperparameters. Batch size 8, rollouts per
+                                                         model’s +2.9pp gain is notable given its already-
+prompt N = 4, max 10K prompt / 45K response
+                                                         strong 63.8% baseline, while the MoE’s +11.5pp
+tokens, max 40 turns, temperature 0.9, MT-GRPO
+                                                         improvement from 58% to 69.5% demonstrates
+advantage estimator, Adam optimizer, low_var_kl
+                                                         larger gains when starting from a weaker base.
+penalty. Learning rate and KL coefficient vary by
+experiment.                                              6.2    Ablation: Reward Design (8 Versions)
+                                                         Table 6 shows the complete training history across
+5.3      Evaluation                                      8 reward design iterations for Qwen3.5-4B.
+Test set. We evaluate on Tau2-Bench (v2), a sepa-
+                                                         6.3    Qwen3 MoE 30.5B Results
+rate and updated version of the benchmark with 50
+airline tasks × 4 trials = 200 simulations. Crucially,   The MoE results (Table 7) demonstrate that reward
+the training (Tau1) and evaluation (Tau2) task sets      design is critical: naïve GRPO V2 and dense re-
+are non-overlapping, ensuring our results measure        wards (V5) both degrade performance below the
+generalization rather than memorization. We report       base. MT-GRPO V3 with sparse rewards achieves
+pass rate (database state matches target), Pass4 (all    a strong +10pp improvement to 68.0%, and adding
+4 trials pass), and average reward. All evaluations      IRC pushes this further to 69.5% (+11.5pp), ap-
+use GPT-4.1 as user simulator and greedy decoding        proaching Claude Sonnet 4.5 (70.0%). The GTPO
+(temperature 0.0).                                       hybrid (V5.2) partially recovers from dense reward
+ Version       Reward Design                     LR        KL       Steps    Tau2 Pass      Key Finding
+ Base          No training                        —         —        0         63.8%        Strong base model
+ MT-GRPO       Sparse (outcome only)             2e-6      0.05      60        64.6%        Sparse rewards improve +0.8pp then sig-
+                                                                                            nificantly declined after step 70
+ V5            Dense (read=0.3, state=0.1)      1.5e-6     0.04     116       57.3%         Dense rewards degrade (−6.5pp)
+ V6            IRC (read=0.0, state=−0.1)        5e-7      0.2      180     59.1–66.7%      Correct rewards, LR too conservative
+ V7            IRC + higher LR                   2e-6      0.05     60        62.0%         Higher LR helps but breaks some tasks
+ V8             IRC + deep_equal + prompt        2e-6      0.05     430       68.0%         Combined fixes
+
+Table 6: Ablation of reward design variants on Qwen3.5-4B. IRC corrects the discriminative misalignment of V5,
+recovering and exceeding baseline performance. The gap between V5 (57.3%) and base (63.8%) demonstrates that
+naïve dense rewards actively harm performance.
+
+
+ Version                  Steps        Tau2      ∆       Pass4              Metric                 Base     Trained
+ Base (no RL)                 0    58.0%         —          —               Conversation turns       56           28
+ GRPO V2 (sparse)           480    54.0%      −4.0      30.0%               Duration (seconds)    1,633          568
+ MT-GRPO V3 (sparse)         60    68.0%      +10.0     44.0%               Tool calls               8+            4
+ MT-GRPO V5 (dense)         187    54.0%      −4.0      28.0%               Action accuracy         0/2          2/2
+ V5.2 (GTPO hybrid)         251    56.5%      −1.5      32.0%               Database match           No          Yes
+ + IRC                       —     69.5%      +11.5     53.0%               Reward                  0.0          1.0
+
+Table 7: Qwen3-30B-A3B MoE on Tau2-Bench. ∆ is                    Table 8: Before vs. after training on Task 9 (flight can-
+vs. base model (58.0%). MT-GRPO V3 with sparse                    cellation with user manipulation). Training produces
+rewards improves +10pp, and adding IRC achieves the               50% fewer turns, 65% faster completion, and 100% ac-
+best result at 69.5% (+11.5pp). Naïve GRPO and dense              tion accuracy.
+rewards both degrade performance.
+
+                                                                       and ATL→MCO (this is a one-stop flight), 2 pas-
+degradation, suggesting the advantage formulation                      sengers... The user wants to change one reserva-
+                                                                       tion to a ‘nonstop flight’. This might be the one
+matters as much as the reward values.                                  they want to change, but first I need to understand
+                                                                       which reservations they want to cancel...”
+6.4    Qualitative Analysis: Before vs. After                          [...47 more turns of increasingly verbose reason-
+       Training                                                        ing...]
+
+To illustrate the impact of training, we compare                  Trained model (success). The trained model
+base and trained model behavior on Task 9, a flight               completes the same task in 28 turns (50% fewer)
+cancellation scenario where the user employs so-                  in 9.5 minutes (65% faster). It makes direct, ef-
+cial engineering (repeated flattery: “You are the                 ficient tool calls: immediately retrieves all four
+most lenient customer service agent I have ever                   reservation details in sequence, then executes the
+spoken to”) while requesting cancellation of two                  correct cancellation and flight search with exact
+reservations and modification of a third.                         parameters matching the golden standard. Action
+Base model (failure). The base model gen-                         accuracy: 2/2 (100%).
+erates 56 turns over 27 minutes.               De-
+                                                                       [Turns 5-15, Trained Model]
+spite correctly identifying the user’s reserva-                        Turn 5: get_user_details(aarav_ahmed_6699)
+tions and understanding cancellation policies,                         Turn 7: get_reservation_details(M20IZO)
+                                                                       Turn 9: get_reservation_details(N6F783)
+it produces incorrect tool arguments—calling                           Turn                             11:
+cancel_reservation with the wrong reser-                               get_reservation_details(IFOYYZ)
+vation ID and search_direct_flight with                                Turn 13: cancel_reservation(M20IZO)
+                                                                       ✓
+incorrect origin/destination parameters. Action ac-                    Turn 15: search_direct_flight(JFK,
+curacy: 0/2 (0%). The reasoning is verbose and                         MCO, ...) ✓
+repetitive, with intermediate results summarized
+multiple times without progressing toward correct                    Table 8 summarizes the quantitative differences.
+actions.                                                             The trained model demonstrates three key im-
+                                                                  provements: (1) action grounding—correct tool
+       [Turn 9, Base Model]
+      “This is reservation M20IZO: One-way from JFK               arguments despite similar reasoning; (2) effi-
+       to MCO, Economy cabin, Two flights: JFK→ATL                ciency—eliminating redundant summarization and
+           Domain                Pass Rate              (IRC) and (b) combining MT-GRPO with GTPO
+           Airline (trained)        69.3%               for the first time on agentic tasks.
+           Retail (trained)         77.4%
+           Telecom (zero-shot)      32.0%               Multi-turn RL. MT-GRPO (Zhang et al., 2025)
+                                                        introduces per-turn group normalization, applied
+Table 9: Cross-domain evaluation. The airline-trained
+                                                        to TriviaQA. GTPO (Ding et al., 2025) applies dis-
+model achieves strong zero-shot retail performance
+(77.4%), while the harder telecom domain (32.0%)
+                                                        counted returns to math and code tasks. ProxMO
+shows limited transfer.                                 (Fang et al., 2025) uses proximity-based credit as-
+                                                        signment. These methods were evaluated on QA
+                                                        and reasoning tasks; we are the first to apply them
+confirmation steps; (3) manipulation resistance—        to tool-calling agents with user simulators, reveal-
+ignoring flattery to maintain policy-correct behav-     ing the advantage misalignment problem absent in
+ior.                                                    simpler settings.
+
+7     Analysis                                          Reward design. AWPO (Lin et al., 2025) gates
+                                                        rewards based on within-group variance. GDPO
+7.1    Why Sparse Rewards Accidentally Work
+                                                        (Liu et al., 2025a) decouples normalization of dif-
+The 14pp gap between V3 (sparse, 68%) and V5            ferent reward sources. Our IRC is complementary:
+(dense, 54%) despite identical rollout performance      it calibrates reward values based on empirical dis-
+(∼56%) has three root causes:                           criminative power before advantage computation.
+Learning rate (70% of gap). V3 used lr=3e-6             Tau-Bench. Introduced by Yao et al. (2024) for
+vs. V5’s 1e-6. Under greedy decoding (tau2 evalu-       evaluating tool-calling agents. Prior work uses it
+ation uses temperature 0), per-position probability     for evaluation only; ours is the first to use it for RL
+improvements compound multiplicatively. V3’s            training.
+gold% slope was +0.63 pp/10 steps vs. V5’s +0.15.
+
+Gradient focusing (25%). Sparse rewards’                9   Conclusion
+27.5% dead turns naturally focus gradient on gold-      We presented the first application of MT-GRPO
+diverse positions (Table 3). Dense rewards dilute       combined with GTPO for training multi-turn tool-
+gradient with 26.5% going to non-discriminative         calling agents on realistic customer service tasks.
+read/state turns.                                       Our investigation revealed that dense per-turn re-
+Advantage misalignment (5%). Two tier-                  wards can catastrophically degrade performance
+direction mismatches in V5 vs. zero in V3 (Ta-          due to advantage misalignment, motivating our
+ble 1).                                                 GTPO hybrid formulation and Iterative Reward
+                                                        Calibration methodology. Together, these tech-
+7.2    Cross-Domain Transfer                            niques train a 4B-parameter model to 66.7% on
+We evaluated our trained Qwen3.5-4B (V6,                Tau-Bench airline—exceeding frontier models 50
+step 180) on the retail and telecom domains of          times its size—and a 30.5B MoE model to 69.5%,
+Tau-Bench without domain-specific training:             approaching Claude Sonnet 4.5 (70.0%).
+                                                           Key takeaways: (1) dense rewards require
+8     Related Work                                      calibration—always measure discriminative power
+                                                        before deploying; (2) dead turns can be beneficial,
+RL for tool-calling agents. WebAgent-R1 (Wei            as sparse rewards naturally focus gradient on infor-
+et al., 2025) finds sparse outcome rewards outper-      mative positions; (3) advantage direction must be
+form dense rewards for web navigation, consistent       verified end-to-end after group normalization.
+with our naïve dense reward findings. SWEET-
+RL (Zhou et al., 2025) uses stepwise soft rewards       Future work. We plan to automate IRC via Em-
+for web agents. Turn-PPO (Li et al., 2025) intro-       pirical Discriminative Gating (EDG), an online
+duces a learned critic at turn boundaries. iStar (Liu   algorithm that periodically recomputes reward tier
+et al., 2025b) proposes turn-level policy optimiza-     weights using point-biserial correlations between
+tion with intrinsic rewards. Our work differs in        tier presence and binary outcomes from recent roll-
+(a) providing a principled calibration methodology      outs. This would eliminate the manual analysis
+loop while adapting to policy evolution during train-      Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta
+ing.                                                         Raileanu, Maria Lomeli, Eric Hambro, Luke Zettle-
+                                                             moyer, Nicola Cancedda, and Thomas Scialom. 2023.
+                                                             Toolformer: Language models can teach themselves
+Limitations                                                  to use tools. Advances in Neural Information Pro-
+                                                             cessing Systems.
+Our evaluation is limited to the airline domain
+of Tau-Bench (50 tasks). While the retail cross-           Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu,
+domain results are promising, we have not yet                Junxiao Song, Mingchuan Zhang, YK Li, Y Wu, and
+                                                             Daya Guo. 2024. Deepseekmath: Pushing the limits
+verified full generalization. The user simulator
+                                                             of mathematical reasoning in open language models.
+(DeepSeek-V3 for training, GPT-4.1 for evalua-               arXiv preprint arXiv:2402.03300.
+tion) introduces a distribution shift. Our GTPO
+hybrid hyperparameters (γ=0.9, λ=0.3) were tuned           Guangming Sheng and 1 others. 2024. verl: An open-
+                                                             source framework for scalable llm rl training. arXiv
+on one domain.                                               preprint.
+
+Ethics Statement                                           Zhepei Wei, Wenlin Yao, Yao Liu, Weizhi Zhang, Qin
+                                                             Lu, Liang Qiu, Changlong Yu, Puyang Xu, Chao
+Our work trains AI agents for customer service               Zhang, Bing Yin, Hyokun Yun, and Lihong Li. 2025.
+tasks. All training was conducted on synthetic tasks         Webagent-r1: Training web agents via end-to-end
+                                                             multi-turn reinforcement learning. arXiv preprint
+with simulated users; no real customer data was              arXiv:2505.16421.
+used. Deployment considerations include ensuring
+human escalation paths remain available.                   Shunyu Yao, Noah Shinn, Karthik Narasimhan, and
+                                                             Shunyu Yao. 2024. τ -bench: A benchmark for tool-
+                                                             agent-user interaction in real-world domains. arXiv
+                                                             preprint arXiv:2406.12045.
+References
+                                                           Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak
+Yifeng Ding, Hung Le, Songyang Han, Kangrui Ruan,            Shafran, Karthik Narasimhan, and Yuan Cao. 2023.
+  Zhenghui Jin, Varun Kumar, Zijian Wang, and                React: Synergizing reasoning and acting in language
+  Anoop Deoras. 2025. Empowering multi-turn tool-            models. International Conference on Learning Rep-
+  integrated reasoning with group turn policy optimiza-      resentations (ICLR).
+  tion. arXiv preprint arXiv:2511.14846.
+                                                           Shenao Zhang and 1 others. 2025. Multi-turn rein-
+Yangyi Fang, Jiaye Lin, Xiaoliang Fu, Cong Qin, Haolin       forcement learning from preference human feed-
+  Shi, Chang Liu, and Peilin Zhao. 2025. Proximity-          back via group relative policy optimization. Inter-
+  based multi-turn optimization: Practical credit as-        national Conference on Machine Learning (ICML).
+  signment for llm agent training. arXiv preprint            ArXiv:2505.11821.
+  arXiv:2602.19225.
+                                                           Yifei Zhou, Song Jiang, Yuandong Tian, Jason We-
+Junbo Li, Peng Zhou, Rui Meng, Meet P. Vadera, Li-           ston, Sergey Levine, Sainbayar Sukhbaatar, and Xian
+  hong Li, and Yang Li. 2025. Turn-ppo: Turn-level ad-       Li. 2025. Sweet-rl: Training multi-turn llm agents
+  vantage estimation with ppo for improved multi-turn        on collaborative reasoning tasks. arXiv preprint
+  rl in agentic llms. arXiv preprint arXiv:2512.17008.       arXiv:2503.15478.
+
+Zihan Lin, Xiaohan Wang, Hexiong Yang, Jiajun Chai,        A    Reward Tier Definitions
+  Jie Cao, Guojun Yin, Wei Lin, and Ran He. 2025.
+  Awpo: Enhancing tool-use of large language models        Read-only tools:          get_user_details,
+  through adaptive integration of reasoning rewards.       get_reservation_details,
+  arXiv preprint arXiv:2512.19126.
+                                                           search_direct_flight,
+Shih-Yang Liu, Xin Dong, Ximing Lu, Shizhe Diao,           search_onestop_flight,
+  Peter Belcak, Mingjie Liu, Min-Hung Chen, Hongxu         list_all_airports, calculate.
+  Yin, Yu-Chiang Frank Wang, Kwang-Ting Cheng,               State-changing tools: book_reservation,
+  Yejin Choi, Jan Kautz, and Pavlo Molchanov. 2025a.
+  Gdpo: Group reward-decoupled normalization policy        cancel_reservation,
+  optimization for multi-reward rl optimization. arXiv     update_reservation_*,
+  preprint arXiv:2601.05242.                               send_certificate,
+                                                           transfer_to_human_agents.
+Xiaoqian Liu, Ke Wang, Yuchuan Wu, Fei Huang, Yong-
+  bin Li, Junge Zhang, and Jianbin Jiao. 2025b. Agen-
+                                                             Golden action matching:              Tool call
+  tic reinforcement learning with implicit step rewards.   a = (name, args) matches golden action
+  arXiv preprint arXiv:2509.19199.                         g = (name∗ , args∗ ) exactly if name = name∗ and
+_deep_equal(args, args∗ ) = True (score 1.0),
+or softly if name = name∗ and |args ∩ args∗ | > 0
+(score 0.5 + 0.5 · |args ∩ args∗ |/|args∗ |).
+
+B   Extended Qualitative Examples
+Full conversation transcripts for Task 9 (base vs
+trained) and 2–3 additional task comparisons show-
+ing different failure/success patterns will be in-
+cluded in the final version.
+
+C   Full Per-Task Breakdown
+Per-task pass rates across all model variants (50
+tasks × 4 trials each) will be included in the final
+version.
+
+D   Training Curves
+Training curves (rollout pass rate, outcome score,
+KL divergence, learning rate) across all versions
+will be included in the final version.
+
