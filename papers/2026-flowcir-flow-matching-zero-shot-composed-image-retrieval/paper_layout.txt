@@ -1,0 +1,977 @@
+                                        FlowCIR: Semantic Transport via Flow Matching
+                                            for Zero-Shot Composed Image Retrieval
+
+                                        Zhenqi He1 , Ziqi Jiang1 , Yuanpei Liu2 , Yanghao Wang1 , Teng Wang2 ,
+                                                                    and Long Chen1†
+                                                 1
+                                                     The Hong Kong University of Science and Technology, Hong Kong SAR
+                                                             2
+                                                               The University of Hong Kong, Hong Kong SAR
+                                                                zheci@connect.ust.hk, longchen@ust.hk
+arXiv:2607.02284v1 [cs.CV] 2 Jul 2026
+
+
+
+
+                                                     Abstract. Zero-shot composed image retrieval (ZS-CIR) aims to re-
+                                                     trieve a target image by editing a reference image with a natural-language
+                                                     instruction, without relying on domain-specific annotated triplets. Most
+                                                     existing ZS-CIR methods rely on textual inversion to translate the ref-
+                                                     erence image into pseudo-text tokens and then compose them with the
+                                                     instruction via simple concatenation in the text space, which can be
+                                                     lossy and brittle for fine-grained semantics. In this work, we propose a
+                                                     new paradigm, namely FlowCIR, that casts ZS-CIR as conditional
+                                                     semantic transport between reference and target embeddings. Leverag-
+                                                     ing conditional flow matching, our model learns a lightweight transport
+                                                     field that maps the instruction representation toward a target-aligned
+                                                     query embedding conditioned on the reference image. Since FlowCIR
+                                                     operates on pre-extracted VLM embeddings and trains only a small
+                                                     transport module without updating the image or text encoder, it of-
+                                                     fers a computationally efficient training protocol compared with prior
+                                                     textual-inversion-based approaches. We further identify negation and re-
+                                                     moval as a major failure mode of VLM-based composition. To address
+                                                     this, we propose an inference-only Multi-Negative Steering strategy that
+                                                     steers a negation-containing relative instruction away from its negated
+                                                     semantics, mitigating the limited negation handling of VLMs and im-
+                                                     proving robustness on negation-heavy queries. Extensive experiments on
+                                                     standard CIR benchmarks demonstrate that FlowCIR achieves strong
+                                                     and competitive performance compared with recent ZS-CIR methods.
+                                                     Project page: https://hkust-longgroup.github.io/FlowCIR
+
+                                                     Keywords: Zero-shot Composed Image Retrieval · Flow Matching · Se-
+                                                     mantic Transport
+
+
+                                        1       Introduction
+
+                                        Composed image retrieval (CIR) [5, 11, 13, 17, 38, 48, 57] offers a practical vi-
+                                        sual search interface: rather than describing a target image from scratch, a user
+                                        provides a reference image and a relative instruction, and the system retrieves
+                                            †
+                                                Corresponding author.
+2       He et al.
+
+
+
+
+Fig. 1: (a) Illustration of Composed Image Retrieval. (b) Prior methods are composed
+by textual inversion and token-level fusion in text space. (c) FlowCIR composes via
+conditional flow matching to produce a target-oriented retrieval query.
+
+
+
+
+images that match the intended edit (see Fig. 1(a)). Previous approaches [5, 46]
+are supervised and rely on human-annotated triplets whose large-scale collection
+is laborious and time-consuming. In addition, models trained on a particular
+dataset or domain often generalize poorly beyond their training distribution.
+These limitations motivate the zero-shot setting [4, 44], which studies CIR with-
+out domain-specific annotations and typically relies on unsupervised objectives
+or synthetic supervision to learn more transferable representations.
+    Recent zero-shot CIR methods [4, 19,                                                                               FlowCIR(Ours)
+                                                              26.5                                                           0.5h
+44, 47] largely build on textual inversion                                                                          Top performance
+                                                              26.0                                                  & Lowest Cost
+over well-aligned vision–language mod-                                                       iSEARLE
+
+                                                              25.5                            12h          LinCIR
+els [30,41], effectively reducing cross-modal
+                                              CIRR recall 1
+
+
+
+
+                                                              25.0                                          4h
+                                                                                                  SEARLE
+composition to a text-only manipulation                       24.5
+                                                                             Pic2Word
+problem. Concretely, they learn a projec-                     24.0
+                                                                                                    32h
+
+                                                                              128h
+
+tor to transfer the reference image Ir into                   23.5
+
+a small set of pseudo-text tokens and com-                    23.0
+
+pose them with the relative instruction Tr                    22.5
+                                                                     7   8        9     10   11       12         13     14          15
+in the text space to form a retrieval query,                CIRCO mAP5
+
+which is then matched against gallery im-
+age embeddings as shown in Fig. 1(b). This Fig. 2: Performance on CIRCO
+paradigm rests on the key assumption that (mAP5) and CIRR (Recall1) with
+the semantics of an image can be faithfully training hours (in single GPU) as
+captured by a few textual tokens and ma- bubble size.
+nipulated entirely within a textual space. However, this assumption is often
+impractical: compressing a rich reference image into only a handful of tokens
+inevitably loses fine-grained visual cues, so the composed representation may
+miss essential semantics needed for accurate retrieval. Moreover, learning an
+effective inversion projector often requires substantial computation, typically
+involving hours of large-batch contrastive training on multiple GPUs with web-
+scale image–text data [18,19,44]. These limitations motivate a more reliable and
+                                                                   FlowCIR        3
+
+training-efficient mechanism for cross-modal composition beyond textual inver-
+sion.
+    In this paper, we reframe zero-shot CIR as a semantic transport problem
+between the reference and target distributions in the embedding space of vision–
+language models, and accordingly employ flow matching to bridge the two distri-
+butions. Building on this view, we introduce FlowCIR. Formally, FlowCIR
+learns a conditional transport that maps the relative-instruction text embed-
+ding to a target-oriented text embedding, conditioned on the reference image
+embedding. Different from prior methods that form retrieval queries via static
+token operations in text space, we perform composition as a continuous semantic
+transport through conditional flow matching, which better preserves semantics
+and enables a progressive, reference-guided composition process. This formula-
+tion provides a principled mechanism for cross-modal composition and is also
+training-efficient: we only learn a lightweight conditional velocity field, enabling
+training within about one hour on a single GPU. As illustrated in Fig. 2, our
+method achieves strong performance on both CIRR and CIRCO while incurring
+substantially lower training cost than prior baselines.
+    Meanwhile, as our transport is initialized from the instruction embedding,
+it may be influenced by a known weakness of CLIP-style VLMs: negation is
+often geometrically ambiguous in the text space [3,42]. For example, expressions
+such as “a dog” and “remove/no dog” may lie undesirably close, providing an
+unreliable starting signal and biasing the transfer toward the negated concept.
+Therefore, inspired by [42], we propose an inference-only multi-negative steering
+strategy that explicitly pushes the composed instruction representation away
+from negative semantic directions, alleviating affirmative/negated collapse in
+CLIP space and improving retrieval on negation-heavy queries.
+    In summary, our contributions are threefold. (i) We introduce FlowCIR,
+a new paradigm for zero-shot composed image retrieval by conditional semantic
+transport in embedding space. (ii) We propose a multi-negative steering strategy
+that substantially improves robustness to negation and removal instructions, a
+prominent failure mode of CLIP-based composition. (iii) We achieve consistent
+improvements on standard CIR benchmarks, while remaining training-efficient.
+
+
+2   Related Work
+
+Zero-Shot Composed Image Retrieval. Existing ZS-CIR methods can be
+broadly grouped into three lines. (1) Textual-inversion based methods [4, 7, 19,
+44, 47] convert image information into learnable pseudo tokens, and then per-
+form composition in the text embedding space for retrieval; representative works
+include Pic2Word [44] and SEARLE [4] and subsequent variants that design
+context-dependent mappings [47] or multiple pseudo words [12] to enhance con-
+trollability. (2) Generative-based methods introduce generative models (e.g., dif-
+fusion models) to synthesize target-oriented features [18] or leverage large-scale
+pretrained image generators (e.g., Stable Diffusion [43]) to produce pseudo tar-
+get images as auxiliary visual evidence [49]. (3) MLLM-based training-free meth-
+4       He et al.
+
+ods [27, 45, 60] leverage large vision–language models to obtain richer textual
+signals without task-specific training: they first caption the reference image with
+a VLM and then use an LLM/MLLM to parse, rewrite, or decompose the mod-
+ification instruction and fuse it with the caption to form a composed query for
+retrieval [27, 33, 55], at the cost of extra inference-time computation.
+    In contrast to the above paradigms, we formulate composed image retrieval
+as conditional semantic transport and instantiate composition with conditional
+flow matching, which directly fuses the reference image evidence and relative in-
+struction via a learned velocity field rather than token inversion, image synthesis,
+or inference-time prompting. Moreover, unlike DualCIR [60] and CoTMR [45]
+that leverage positive/negative semantics mainly by constructing separate tex-
+tual queries and fusing image-text similarity scores, the Multi-Negative Steering
+aims to reshape the instruction embedding by steering it away from negative
+semantics.
+Flow Matching (FM). FM learns a time-conditioned velocity field (a neu-
+ral ODE) that transports samples along a predefined probability path from a
+simple prior to the data distribution by directly regressing the corresponding
+velocities [2,34,37]. Early studies [14,16] instantiate this transport from noise to
+images, achieving high-fidelity synthesis on par with diffusion models [23] while
+retaining simpler training and sampling dynamics. More recent text-to-image FM
+variants [21,35] further learn cross-modal transports from text embeddings to im-
+age embeddings, enabling direct language-to-vision generation through learned
+velocity fields. Beyond text-conditioned synthesis, FM has also been adapted
+to visual domain transfer problems such as monocular depth estimation [20]
+and semantic segmentation [6, 53], by formulating them as transport between
+distributions defined over different visual representations.
+Generative Models for Perception. Beyond synthesis, modern generative
+models have become increasingly useful for visual recognition and perception
+tasks [8,9,29,36,40,50–52]. One prominent direction leverages generators as data
+engines, producing realistic and diverse samples to mitigate limited supervision
+and improve performance in fine-grained recognition [15, 25], few-shot learn-
+ing [51], long-tailed classification [28], and category discovery [36]. In parallel,
+a complementary line uses the generative process for recognition itself: text-to-
+image diffusion models can be repurposed as zero-shot or few-shot classifiers by
+evaluating class-conditioned denoising likelihoods [8, 9, 29], with efficiency im-
+proved via hierarchical prompting [39] and auxiliary image encoders [40]. More
+recent studies further explore parameterizing few-shot adaptation through diffu-
+sion time steps to capture subtle attributes [56], and selecting or optimizing the
+injected noise to stabilize and strengthen the recognition pipeline [52]. FMA [26]
+and HFM [31] employ unconditional flow matching to bridge image and text
+within VLM embedding space for few-shot learning, and FlowComposer [22]
+employs flow matching for compositional zero-shot learning.
+  In contrast to the above methods, we are the first to explore conditional flow
+matching for composed image retrieval.
+                                                                                                                                                                                                     FlowCIR    5
+
+3     Method
+3.1   Preliminaries
+Flow Matching. Flow Matching [2, 34] aims to learn a continuous-time trans-
+port between two distributions (X0 → X1 ) by regressing a time-dependent ve-
+locity field. Under the rectified flow formulation [37], a linear path is defined
+between paired samples (x0 ∼ X0 , x1 ∼ X1 ) as xt = (1 − t)x0 + tx1 , t ∈ [0, 1],
+whose ground-truth velocity is constant: v ⋆ (xt , t) = x1 − x0 . A neural velocity
+field vθ (xt , t) is then trained by minimizing
+
+                    \mathcal {L}_{\mathrm {FM}}(\theta ) = \mathbb {E}_{\bm {x}_0,\bm {x}_1,t} \Bigl [ \bigl \| \bm {v}_{\theta }(\bm {x}_t,t) - (\bm {x}_1-\bm {x}_0) \bigr \|_2^2 \Bigr ],                   (1)
+
+which is equivalent to matching the marginal velocity field in the original flow-
+matching formulation [34, 37]. Once trained, transport is performed by solving
+the ODE dxdt = vθ (xt , t) from t = 0 to t = 1. Conditional flow matching extends
+            t
+
+
+this formulation by conditioning the velocity field on the condition c, yielding
+
+                        \mathcal {L}^{(\mathrm {FM})}_{\mathrm {cond}}(\theta ) = \mathbb {E} \Bigl [ \bigl \| \bm {v}_\theta (\bm {x}_t,t,\bm {c}) - (\bm {x}_1-\bm {x}_0) \bigr \|_2^2 \Bigr ].              (2)
+
+In our setting, we adopt this conditional formulation to transport the relative
+instruction embedding toward the target text embedding, conditioned on the
+reference image embedding.
+Problem Setup and Notation. Given a gallery of candidate images D =
+{Ii }Ni=1 , zero-shot composed image retrieval (ZS-CIR) considers a query triplet
+⟨Ir , Tr , It ⟩, where Ir is a reference image, Tr is a relative text instruction de-
+scribing the desired modification to Ir , and It is the target image satisfying the
+instruction. The goal is to compose the visual content of Ir with the seman-
+tics of Tr to retrieve It from D. In the zero-shot setting, training does not use
+CIR-specific triplets from the target benchmarks, but instead relies on external
+supervision such as large-scale image–text data or synthesized tuples.
+     In the following, given ⟨Ir , Tr , It ⟩, we denote a target-side text description
+associated with It as Tt . We encode both images and texts into a shared VLM
+embedding space, and denote all embeddings by x. Using a pretrained image
+encoder EI (·) and text encoder ET (·), we obtain ℓ2 -normalized features xIr =
+EI (Ir )/∥EI (Ir )∥, xTr = ET (Tr )/∥ET (Tr )∥, xTt = ET (Tt )/∥ET (Tt )∥, and xIt =
+EI (It )/∥EI (It )∥. Here, xIr , xTr , xTt , and xIt denote the embeddings of the
+reference image, relative instruction, target-side text, and target image.
+
+3.2   Conditional Flow Matching for Semantic Transport
+We train in a zero-shot manner using synthesized compositions of the form
+⟨Ir , Tr , Tt , It ⟩, where Ir is a reference image, Tr is a relative instruction, and
+(Tt , It ) describes the target side. Our model then learns a conditional semantic
+transport mapping (xTr , xIr ) 7→ xTt within the embedding space. We utilize
+conditional flow matching to model composition as semantic transport. Given a
+6                                     He et al.
+
+tuple and the extracted features, we sample a time scalar t ∼ U (0, 1) and con-
+struct the interpolated state along a linear path as xt = (1 − t)xTr + t xTt . Our
+flow matching network fθ predicts a time-dependent velocity conditioned on the
+reference image v̂θ = fθ (xt , t, xIr ), and is trained to match the ground-truth
+constant velocity v ⋆ = xTt − xTr via the flow-matching regression objective:
+
+                                                                                                             \mathcal {L}_{\mathrm {FM}} = \mathbb {E}\!\left [\left \|\hat {\bm {v}}_\theta (\bm {x}_t,t,\bm {x}_{I_r})-(\bm {x}_{T_t}-\bm {x}_{T_r})\right \|_2^2\right ].                                                                                                                                                                                                                (3)
+
+Besides regressing the velocity, we adopt a contrastive retrieval objective where
+the predicted text embedding and the ground-truth image embedding (x̂Tt , xIt )
+form a positive pair, and we mine top-K hard negatives from the remaining
+target-image embeddings in the minibatch to sharpen discrimination against
+challenging distractors. We first form a predicted target text embedding x̂Tt by
+a one-step transport from time t to 1: x̂Tt = xt + (1 − t) v̂θ (xt , t, xIr ), and com-
+pute a sampled InfoNCE loss over the positive and the selected hard negatives.
+Specifically, we define the hard-negative index set as the top-K most similar
+candidates to the query (excluding the positive):
+
+                                                                                                                \mathcal {H}_K(\hat {\bm {x}}_{T_t}) =\operatorname {TopK}\!\left ( \left \{\, \Big \langle \tfrac {\hat {\bm {x}}_{T_t}}{\|\hat {\bm {x}}_{T_t}\|},\, \bm {x}^{\,j}_{I_t}\Big \rangle \,\right \}_{j\neq i} \right ),                                                                                                                                                      (4)
+
+where TopK(·) returns the indices of the K largest similarities in the minibatch.
+The resulting top-K InfoNCE objective is
+
+
+      \mathcal {L}_{\mathrm {RET}} = -\log \frac {\exp \!\left (\big \langle \tfrac {\hat {\bm {x}}_{T_t}}{\|\hat {\bm {x}}_{T_t}\|},\, \bm {x}_{I_t}\big \rangle /\tau \right )} {\exp \!\left (\big \langle \tfrac {\hat {\bm {x}}_{T_t}}{\|\hat {\bm {x}}_{T_t}\|},\, \bm {x}_{I_t}\big \rangle /\tau \right ) +\sum _{j\in \mathcal {H}_K(\hat {\bm {x}}_{T_t})}\exp \!\left (\big \langle \tfrac {\hat {\bm {x}}_{T_t}}{\|\hat {\bm {x}}_{T_t}\|},\, \bm {x}^{\,j}_{I_t}\big \rangle /\tau \right )},  (5)
+
+
+where xIjt denotes the target-image embedding of the j-th sample in the mini-
+batch, τ is a temperature scalar, and HK (x̂Tt ) indexes the K hardest negatives.
+The overall training objective is L = LFM + λ LRET , where λ balances the learn-
+ing of FM and retrieval. During inference, we adopt the same one-step transport
+scheme for efficiency: predicting the velocity fθ (xTr , xIr , 0) yields direct one-
+step transport to x̂Tt , which is then used to retrieve images by nearest-neighbor
+search in the gallery embedding space.
+
+3.3                         Multi-Negative Steering Strategy
+Negation-heavy instructions (e.g., “no dog”, “remove stripes”) often induce am-
+biguous geometry in contrastive text spaces, where affirmative and negated
+descriptions can collapse to nearby directions [3]. To address this issue with-
+out additional training, we propose an inference-only multi-negative steering
+strategy. During inference, given a relative instruction Tr , we decompose it
+into an affirmative intent Tra and a set of negated concepts {Tr,k n K
+                                                                     }k=1 using
+a lightweight parser (e.g., a small LLM with simple rule-based heuristics), and
+encode them as normalized embeddings xTra = ET (Tra )/∥ET (Tra )∥ and xTr,kn  =
+                                                                                                                                                                                                                                                                                        FlowCIR                                                      7
+
+                                                                                                (a) Training                                                                                                                                                                   (b) Inference
+                                                                                                                                                                                                                                            Reference Image                                              Relative Text
+   Synthesized Data                                                                Frozen VLMs                                                  Linear Interpolation                                                                                                                                     Convertible car
+                                                                                                                                                                                                                                                                                                        without an ice lip
+                                                                                                                                                                                                                                                                                                                        𝑇&
+                           Synthesized                                                                                                          𝑥!"                             𝑥#                        𝑥!!
+                         Reference Image
+                                                                                                                               𝑥""                 𝑥! = 1 − 𝑡 𝑥"" + 𝑡𝑥"!
+                                                                                                𝑬𝑰                             𝑥"!
+                                                                                                                                                                                                                                                                                 Convertible car
+                                                                                                                                                                                                                                                                                                𝑇%&
+                                                                                                                                                                                                                                                                                                                              Ice Lip
+                                                                                                                                                                                                                                                                                                                                    𝑇'&
+  show the butterfly
+  with its wings
+  open as if it is
+                           Instruction Text
+                                                                                                                                             𝑥!                                                                                                                                                      Multi-Negative
+  about to take off                                                                                                                                                         CFM                                                                                                                        Steering
+                                                                                                                                             𝑥""
+                                                                                                                                                                     𝑓# (𝑥! , 𝑥$" , 𝑡)                                                                                                                            𝑥$
+                                                                                                                                                                                                                                                                                                                   !!   𝑥 !!" 𝑥!
+                                                                                                                                                                                                                                                                                                                                !
+
+
+                              Synthesized
+                                                                                                                                               t                                                                                                                                                                               𝑥 !!#
+
+                             Target Image                                                                                   𝑥!"
+                                                                                               𝑬𝑻                           𝑥!!                                                                FM Loss                                                                                                     Push away from
+                                                                                                                                                                                                                                                              CFM                                         negative instruction
+                                                                                                                                                       Predicted
+  A blue morpho
+                                                                                                                                                       Velocity
+                                                                                                                                                                 𝑣#$                                      𝑣∗
+  butterfly perched
+                                Target Text
+  on a leaf with its
+  wings open in the
+  Amazon.                                                                                                                                                                                                                                         One-Step Transport
+                                                                                                                                                                                                                                                                   𝑥#
+                                                                                                                                                                                                                                                                    %!
+                                                                                                                                 -
+   Top-K Hard Negative Mining                                              Pos                                                                           𝑥#
+                                                                                                                                                          %! = 1 − 𝑡 𝑣
+                                                                                                                                                                     #$ + 𝑡𝑥#
+                                                                                              𝑥"!
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                       Nearest-neighbor
+                                                                                                                                +                              One-Step Transport
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                          Retrieval
+                                                                                                                     …
+                                                                                      Neg                            …                                                 Retrieval Loss
+
+                                                                                                                          K
+
+
+
+Fig. 3: Framework overview of FlowCIR. (a) In training, FlowCIR learns a condi-
+tional flow-matching transport from relative-instruction embeddings to target-oriented
+text embeddings under the reference-image condition, together with top-K hard-
+negative retrieval supervision. (b) In inference, an inference-only Multi-Negative Steer-
+ing module adjusts negation-containing instructions before one-step transport for target
+image retrieval.
+
+
+      n          n
+ET (Tr,k )/∥ET (Tr,k )∥. Our goal is to construct a steered instruction embedding
+                                                                            K
+x̂Tr that remains aligned with xTra while being repelled from all {xTr,kn }
+                                                                            k=1 .
+    Following SpaceVLM [42], we model each concept as a hyper-spherical cap in
+the embedding space: for a normalized point x and a cosine threshold δ ∈ [−1, 1],
+the cap region is defined as R(x) = {z ∈ Rd | x⊤ z ≥ δ}. Accordingly, a
+feasible negation-aware representation should lie close to the affirmative intent
+but outside the neighborhoods induced by negatives, yielding
+
+
+                                                                                    \mathcal {R}(T_r)=\mathcal {R}(\bm {x}_{T_r^{a}})\cap \bigcap _{k=1}^{K}\mathcal {R}^c(\bm {x}_{T_{r,k}^{n}}),                                                                                                                                        (6)
+
+
+where Rc (·) denotes the complement. To obtain a single embedding compatible
+with our transport model, we extend this construction by computing, for each
+negative xTr,k
+            n , a closed-form “center” direction:
+
+
+
+
+                         \tilde {\bm {d}}_k = \bm {x}_{T_r^{a}}\frac {\sin \!\left (\alpha +\tfrac {\theta _k}{2}\right )}{\sin \theta _k} - \bm {x}_{T_{r,k}^{n}}\frac {\sin \!\left (\alpha -\tfrac {\theta _k}{2}\right )}{\sin \theta _k}, \qquad \bm {d}_k=\frac {\tilde {\bm {d}}_k}{\|\tilde {\bm {d}}_k\|},                       (7)
+
+where α = arccos(δ) is set by a cosine-margin hyperparameter δ ∈ [−1, 1] con-
+trolling the hyper-spherical cap region size, and θk = arccos(x⊤
+                                                               Tra xTr,k ). When θk
+                                                                     n
+8       He et al.
+
+is very small, we use d˜k = xTra − xTr,k
+                                     n   for numerical stability. We then aggregate
+and normalize these directions to form the steered instruction embedding:
+
+                                                 \hat {\bm {x}}_{T_r} = \frac {1}{K}\sum _{k=1}^{K}\bm {d}_k, \qquad \hat {\bm {x}}_{T_r}\leftarrow \frac {\hat {\bm {x}}_{T_r}}{\|\hat {\bm {x}}_{T_r}\|},     (8)
+
+and replace the original instruction embedding with x̂Tr in our transport pipeline,
+such that the composed representation remains aligned with the affirmative se-
+mantics while being repelled from all negative directions in the embedding space.
+
+3.4   Theoretical Justification
+We provide a theoretical justification for applying conditional flow matching for
+zero-shot CIR. Formally, standard flow matching is designed for distribution-
+level transport, where reaching any valid target mode is sufficient, whereas com-
+posed image retrieval requires instance-specific semantic alignment: for a given
+pair (xIr , xTr ), the model should recover its corresponding target xTt rather
+than an arbitrary mode. Below, we analyze (1) why conditioning on the refer-
+ence image is necessary, and (2) when the learned conditional velocity yields
+exact point-to-point semantic transport.
+Ambiguity of Unconditional Flow. In realistic composed retrieval data, a
+single relative instruction xTr (e.g., Make the dog look up at the sky) can cor-
+respond to multiple valid targets {Itk }K    k=1 . As a result, without conditioning on
+the reference image, the same source instruction embedding xTr is associated
+with a multi-modal conditional target distribution p(xTt | xTr ).
+Proposition 1 (Mean Collapse). For an unconditioned flow, the marginal
+velocity field v ⋆ (xt ) deterministically transports xTr to the semantic expectation:
+
+                                                         x_{T_r} + \int _0^1 {v}^\star (x_t) \mathrm {d}t = \mathbb {E}[x_{T_t}|x_{T_r}] \label {eq:mean_collapse}                                              (9)
+
+                                                           / {x1Tt , . . . , xK
+Therefore, when p(xTt | xTr ) is multi-modal, E[xTt |xTr ] ∈                  Tt }, which
+induces a mean-collapse tendency and may prevent recovery of the correct target.
+Semantic Transport via Conditioning. To disambiguate the transport di-
+rection, we condition the transport on the reference image embedding xIr . We
+construct the conditional probability path to establish exact point-to-point se-
+mantic transport as:
+
+               p_t(x_t|x_1 = x_{T_t}^i, x_{I_r}^i) = \begin {cases} \delta (x_t - x_{T_r}^i), & t = 0 \\ \delta (t x_{T_t}^i + (1 - t)x_{T_r}^i), & t \in (0,1] \end {cases} \label {eq:conditional_path}      (10)
+
+
+Subsequently, a corresponding velocity v ⋆ (xt |xiTt , xiIr ) is defined to generate this
+path pt , and we introduce the following proposition:
+Proposition 2 (Semantic Transport). Under above assumption, the marginal
+velocity field is mathematically identical to the exact conditional velocity field:
+
+                                                      \bm {v}^{\star }(\bm {x}_t,t,\bm {x}_{I_r}) = \bm {v}^\star (\bm {x}_t,t|\bm {x}_{I_r}^i, \bm {x}_{T_t}^i) \label {eq:marginal_identity}                 (11)
+                                                                                                                                                                         FlowCIR     9
+
+Consequently, integrating this velocity along the path yields exact point-to-point
+semantic transport from xiTr strictly towards its corresponding target xiTt :
+
+                          \bm {x}_{T_t} = \bm {x}_{T_r} + \int _0^1 {\bm {v}}^{\star }(\bm {x}_t,t,\bm {x}_{I_r})\,\mathrm {d}t. \label {eq:exact_semantic_transport}              (12)
+
+We provide the detailed proof in the supplementary material. This suggests
+that, under the idealized conditional path assumption, reference conditioning can
+reduce multimodal ambiguity and support point-to-point semantic alignment.
+
+
+4     Experiments
+4.1   Setups and Implementations
+Datasets. Following prior zero-shot CIR works [1, 4, 44], we evaluate on three
+standard benchmarks: CIRR [38], CIRCO [4] and Fashion-IQ [54]. CIRR consists
+of real-world image pairs with relative captions describing the desired transfor-
+mation from a reference to a target. CIRCO further scales composed retrieval to
+diverse everyday objects and scenes with more challenging distractors. Fashion-
+IQ is an e-commerce fashion benchmark, where queries pair a product image
+with a brief modification text to retrieve the edited item.
+Implementation Details. Following prior zero-shot CIR works, we use CLIP [41]
+as the frozen vision–language backbone and report results with two variants:
+ViT-B/32 and ViT-L/14. For the flow matching model, we adopt the lightweight
+network design from MAR [32], implemented as a deep residual MLP with
+timestep conditioning. We train our model on the HQ-Edit-200k [24] synthetic
+image-editing dataset, which contains reference images paired with editing in-
+structions, the corresponding edited results, and associated textual descriptions,
+matching the supervision signals required by our transport-based formulation.
+For multi-negative steering, we first apply a rule-based strategy to identify
+negation-related instructions by checking whether the query contains keywords
+such as no, without, remove, and replace. For the detected cases, we further
+use a lightweight language model, TinyLlama-1.1B-Chat-v1.0 [59], to decouple
+the negative component from the original instruction, which is then used to con-
+struct the additional negative steering signal at inference time. Unless otherwise
+specified, all experiments are conducted on a single NVIDIA RTX 3090 GPU
+with 24GB memory. Further details on datasets, optimization, and hyperparam-
+eters are deferred to the supplementary material.
+
+4.2   Main Results
+Tab. 1 and Tab. 2 compare FlowCIR with both textual-inversion-based meth-
+ods (including Pic2Word [44], SEARLE [4], LinCIR [19] and iSEARLE [1])
+and generative-based methods (including Compo-Diff [18] and CIG [49]) on
+CIRR [38], CIRCO [4], and Fashion-IQ [54] under CLIP ViT-B/32 and ViT-
+L/14 backbones, together with training cost. Overall, our method achieves the
+10              He et al.
+
+Table 1: Comparison on CIRR (R@1/5/10) and CIRCO (mAP@5/10/25/50) under
+CLIP ViT-B/32 and ViT-L/14 backbones, including training cost. The best result of
+each category is shown in bold, and the second best is underlined.
+
+                                                           CIRR                        CIRCO
+ Backbone Method                      Training Costs
+                                                       R@1 R@5 R@10 mAP@5 mAP@10 mAP@25 mAP@50
+                 Image-only                 –         6.7 23.0    59.2    1.5    1.9        2.3    2.6
+                 Text-only                  –        21.8 45.2    57.4    2.5    2.6        2.9    3.1
+                 PALAVRA [10]               –        16.6 43.5    58.5    4.6    5.3        6.3    6.8
+     ViT-B/32
+
+
+
+
+                 SEARLE [4]             8 A100, 4h   24.3 53.3    66.1    8.9    9.4       10.6   11.2
+                 iSEARLE [1]            A100, 12h    25.2 55.7    68.1   10.6   11.2       12.5   13.3
+                 SEARLE + CIG [49]         NA        25.3 54.8    68.1   10.2   10.6       11.8   12.5
+                 MagicLens [58]        64 TPU, 6h    27.0 58.0    70.9   23.1   23.8       25.8   26.7
+                 Ours                 RTX 3090, 0.5h 25.5 56.5    69.8   13.1   13.4       14.6   15.3
+                 Image-only                  –        7.3 23.0    33.3    2.5    3.1        3.9    4.4
+                 Text-only                   –       20.9 44.0    55.4    3.3    3.7        4.1    4.4
+                 Pic2Word [44]          8 A100, 16h  23.9 51.7    65.3    8.7    9.5       10.6   11.3
+                 SEARLE [4]             8 A100, 4h   24.2 52.4    66.3   11.7   12.7       14.3   15.1
+                 Context-I2W [47]       8 A100 24h   25.6 55.1    68.5     –      –          –      –
+     ViT-L/14
+
+
+
+
+                 LinCIR [19]           8 A100, 0.5h  25.0 53.3    66.7   12.6   13.6       15.0   15.9
+                 LinCIR + CIG [49]          NA       25.6 54.8    67.6   13.0   13.6       15.1   16.0
+                 Compo-Diff [18]      128 A100, 231h 18.2 53.1    70.8   12.6   13.4       15.8   16.4
+                 iSEARLE [1]                12       25.4 54.1    67.5   11.3   12.7       14.5   15.3
+                 MagicLens [58]        128 TPU, 6h   30.1 61.7    74.4   29.6   30.8       33.4   34.4
+                 MCL (LLaMA2-7B) [33]       NA       26.2 56.8    70.0   17.7   18.9       20.8   21.7
+                 Ours                 RTX 3090, 0.5h 26.2 56.1    68.6   14.9   15.7       17.3   18.2
+
+
+
+
+strongest or highly competitive performance across benchmarks while requiring
+substantially less training than prior methods. For completeness, we also include
+comparisons with methods relying on substantially stronger external resources,
+including MagicLens [58], which is trained on 36.7M private triplets with several
+TPUs, and MCL [33], which utilizes an external LLM.
+CIRR & CIRCO. On the more challenging CIRR and CIRCO benchmarks,
+FlowCIR achieves the strongest or highly competitive performance among prior
+public-data textual-inversion and generative ZS-CIR baselines, while remaining
+competitive with methods that rely on substantially stronger external resources.
+With CLIP ViT-B/32, our method improves over the strongest competing base-
+line by 1.4% on CIRR R@5 (55.7 → 56.5), and 23.6% (10.6 → 13.1) on CIRCO
+mAP@5. The gains become more evident under CLIP ViT-L/14: compared with
+the previous best results, FlowCIR improves CIRR R@1 by 2.3% (25.6 → 26.2)
+and CIRCO mAP@5 by 14.6% (13.0 → 14.9). Notably, these improvements are
+obtained with only 0.5 hours of training on a single GPU, compared with the
+reported multi-GPU training costs of prior inversion-based methods, and dra-
+matically higher costs for generative approaches, which are typically reported on
+substantially larger 80GB GPUs. This confirms that our flow-based conditional
+semantic transport is not only more accurate than existing textual-inversion and
+generative baselines, but also markedly more training-efficient.
+
+Fashion-IQ. Tab. 2 further demonstrates that FlowCIR generalizes to the
+e-commerce setting of Fashion-IQ [54]. Under CLIP ViT-B/32, FlowCIR im-
+                                                                                           FlowCIR       11
+
+Table 2: Comparison on Fashion-IQ under CLIP ViT-B/32 and ViT-L/14 backbones,
+reported in Recall@10 and Recall@50 for Dress/Shirt/Toptee and their average.
+
+                                                                  Fashion-IQ
+              Backbone Methods
+                                                Dress          Shirt      Toptee      Average
+                       Image-only            3.9 10.8 7.5 14.0 6.2 13.4 5.9 12.7
+                       Text-only            13.6 31.8 20.3 35.3 20.2 40.5 18.0 35.9
+               CLIP-
+                       PALAVRA [10]         17.3 35.9 21.5 37.1 20.6 38.8 19.8 37.3
+              ViT-B/32
+                       SEARLE [4]           18.2 38.6 24.8 41.1 25.6 46.2 22.9 42.0
+                       MagicLens [58]       21.5 41.3 27.3 48.8 30.2 52.3 26.3 47.4
+                       Ours                 24.8 41.8 19.1 40.1 26.4 47.8 23.4 43.2
+                       Text-only        18.3 30.1 13.6 30.0 17.4 33.9 16.4 31.3
+                       Image-only       10.7 19.9 4.5 12.2 8.4 16.5 7.8 16.2
+                       Pic2Word [44]    20.0 40.2 26.2 43.6 27.9 47.4 24.7 43.7
+               CLIP-
+                       SEARLE [4]       20.5 43.1 26.9 45.6 29.3 50.0 25.6 46.2
+              ViT-L/14
+                       Context-I2W [47] 23.1 45.3 29.7 48.6 30.6 52.9 27.8 48.9
+                       LinCIR [19]      20.9 42.4 29.1 46.8 28.8 50.2 26.3 46.5
+                       MagicLens [58]   25.5 46.1 32.7 53.8 34.0 57.7 30.7 52.5
+                       Ours             31.6 48.5 24.4 44.3 33.2 53.9 29.7 48.9
+
+
+Table 3: Ablation studies of different components in FlowCIR on CIRR [38] and
+CIRCO [4]. We evaluate the contributions of Conditional Flow Matching (CFM) and
+Multi-Negative Steering (Neg-Steering).
+
+                  CFM     Neg-Steering          CIRR                           CIRCO
+                  § 3.2      § 3.3       R@1    R@5 R@10         mAP@5     mAP@10 mAP@25        mAP@50
+      Text-Only    ✗           ✗         20.9   44.0    55.4        3.3         3.7      4.1      4.4
+         (1)       ✗           ✓         21.1   45.7    58.0        2.5         2.8      3.2      3.4
+         (2)       ✓           ✗         26.1   53.8    67.0       13.5        14.2     15.7     16.6
+      FlowCIR      ✓           ✓         26.2   56.1    68.6       14.9        15.7     17.3     18.2
+
+
+
+
+proves the best prior method by +2.2% (22.9 → 23.4) in average R@10 and
++2.9% (42.0 → 43.2) in average R@50. Under CLIP ViT-L/14, it yields a
++6.8% (26.3 → 29.7) gain in average R@10 and matches the best prior R@50.
+Although the relative gains are smaller than those on CIRR/CIRCO, we at-
+tribute this to the domain-specific and fine-grained nature of Fashion-IQ, where
+many queries focus on subtle local fashion attributes and thus leave less room
+for semantic transport to yield larger improvements. Overall, FlowCIR remains
+consistently competitive and attains the best average performance.
+
+4.3    Diagnostic Analysis
+Component Analysis. We conduct ablations to quantify the contributions
+of the two key components in FlowCIR: Conditional Flow Matching (CFM)
+and inference-time Multi-Negative Steering (Neg-Steering). As shown in Tab. 3,
+we report results on CIRR and CIRCO by progressively adding these compo-
+nents on top of a text-only baseline. First, the text-only baseline provides only
+limited performance, and adding the multi-negative steering alone on top of
+the textual instruction (Row (1)) does not constitute a reliable solution. Al-
+though it brings a slight improvement on CIRR, it degrades performance on
+12     He et al.
+
+Table 4: Hyperparameter analysis of FlowCIR on CIRR and CIRCO, including λ,
+the hard-negative ratio K, and the comparison between FM and direct regression.
+
+                        CIRR                           CIRCO
+      Param.
+                    Val      Test                 Val          Test
+                 R@1 R@10 R@1 R@10           mAP@5 mAP@25 mAP@5 mAP@25
+      λ = 0.1    25.4   69.3   25.9   67.2    10.2   13.1     10.6     12.5
+      λ = 0.3    26.2   69.7   26.4   68.1    13.9   15.7     14.2     16.8
+      λ = 0.5    26.6   69.6   26.2   68.6    14.8   16.9     14.9     17.3
+      λ = 0.7    26.1   69.5   26.2   68.5    14.8   17.0     15.2     17.6
+      λ = 0.9    26.0   69.5   25.8   68.4    14.5   16.8     14.8     17.2
+     K = 161
+             B   26.1   69.2   25.8   65.8    13.9   15.7     14.2     16.7
+     K = 81 B    26.6   69.6   26.2   68.6    14.8   16.9     14.9     17.3
+     K = 4B1
+                 25.8   58.8   25.5   67.6    13.5   15.2     13.7     16.0
+     Regressor   23.7   67.6   23.8   66.1    11.9   14.1     12.3     14.3
+        FM       26.6   69.6   26.2   68.6    14.8   16.9     14.9     17.3
+
+
+
+
+CIRCO, suggesting that refining the text-side instruction alone is insufficient for
+accurate cross-modal retrieval. Second, introducing Conditional Flow Match-
+ing (Row (2)) yields a substantial improvement. This clearly demonstrates the
+advantage of modeling composition as semantic transport: rather than directly
+manipulating text features, the model learns a reference-conditioned flow that
+transports the instruction representation toward target semantics, resulting in
+much stronger cross-modal composition. The particularly large gains on CIRCO,
+together with the consistent improvements on CIRR, confirm that flow matching
+is an effective mechanism for composing visual and textual signals in zero-shot
+retrieval. Third, adding Multi-Negative Steering on top of CFM leads to fur-
+ther and consistent gains, yielding the full FlowCIR model with the best overall
+performance. These results show that CFM is the main driver of performance,
+highlighting the effectiveness of flow-based semantic transport for cross-modal
+composition, while Multi-Negative Steering is complementary and further im-
+proves robustness by reducing ambiguity caused by negated semantics.
+Hyperparameter analysis. Table 4 studies two important hyperparameters
+in FlowCIR, tuned on a held-out validation split: the weight λ of the retrieval
+objective and the hard-negative ratio K, where K is defined as the proportion
+of mined negatives relative to the minibatch size (B). Overall, the method is
+stable across a broad range of settings, but moderate values consistently work
+best. For λ, using a very small value (e.g., λ = 0.1) leads to weaker CIRCO
+performance, indicating insufficient retrieval supervision, while overly large val-
+ues do not bring further gains. The best overall trade-off is achieved around
+λ = 0.5, which yields the strongest or near-strongest results on both CIRR and
+                                                                              1
+CIRCO. For hard-negative mining, selecting too few negatives (e.g., K = 16      B)
+                                   1
+or too many negatives (e.g., K = 4 B) is suboptimal, whereas a moderate choice
+K = 18 B gives the best overall performance. This suggests that an appropriate
+number of hard negatives is important: too few fail to provide sufficient discrim-
+inative pressure, while too many may introduce noisy distractors.
+                                                                    FlowCIR    13
+
+   Table 5: Transport target space analysis of FlowCIR on CIRR and CIRCO.
+
+        Target Space           CIRR                      CIRCO
+                        R@1    R@5 R@10      mAP@5   mAP@10 mAP@25    mAP@50
+      Image Embedding   23.8   50.4   62.2    12.7    13.0   14.3      15.0
+       Text Embedding   26.2   56.1   68.6    14.9    15.7   17.3      18.2
+
+
+Flows vs. Regressor. We further analyze the rationale of our flow match-
+ing design by comparing it with a direct regressor variant that uses the same
+model architecture and the same reference-image conditioning, but directly re-
+gresses the target residual instead of learning a time-dependent transport field.
+As shown in the bottom part of Table 4, replacing flow matching with direct
+regression leads to a clear performance drop across all metrics, especially on
+CIRCO, where mAP@5 decreases from 14.8 to 12.3 on the test set. In contrast,
+the flow-matching model consistently achieves the best results on both validation
+and test splits. This comparison shows that learning a time-conditioned trans-
+port field is more effective and has stronger generalization ability than directly
+regressing the final embedding, likely because flow matching provides a more
+structured optimization target and better captures the semantic transition from
+instruction to target under the reference condition.
+Transport Target Space Analysis. We additionally study a key design choice
+in FlowCIR: whether the transport process should target the image embedding
+space or the text embedding space. As shown in Tab. 5, transporting toward the
+target text embedding consistently outperforms transporting toward the target
+image embedding on both CIRR and CIRCO. This comparison is closely related
+to prior generative-based methods such as Compo-Diff [18], which aim to con-
+ditionally generate target image embeddings. In contrast, our goal is semantic
+transport: given the reference image and relative instruction, we transport the
+query toward the target text embedding and then use this transported repre-
+sentation for retrieval. We favor the text space for two reasons. First, composed
+retrieval is inherently one-to-many, so supervising the model with a specific tar-
+get image embedding may over-emphasize instance-level visual details, whereas
+target text embeddings provide a more semantics-centered signal. Second, trans-
+porting from relative text to target text forms a more homogeneous mapping,
+which is easier to learn than a cross-space text-to-image transport. These re-
+sults support our design choice of modeling zero-shot CIR as text-side semantic
+transport rather than direct prediction in the image space.
+
+4.4    Qualitative Analysis
+Effect of reference-conditioned transport. Fig. 4 illustrates that our method
+effectively composes cross-modal signals while preserving reference-image seman-
+tics, even under the same relative instruction. In the first two examples, the
+instruction “make the dog look up at the sky” yields different retrieval behav-
+iors depending on the reference: when the reference is a bulldog-like dog, the
+retrieved results largely preserve its breed and appearance while changing the
+14          He et al.
+
+Reference Image      Relative Text                       Top-5 Retrieved Images
+
+                  Make the dog look up Retrieval
+                  at the sky
+
+
+                  Make the dog look up Retrieval
+                  at the sky
+
+
+
+                  The outfit of the lady Retrieval
+                  has changed from blue
+                  to red .
+
+                  The outfit of the lady
+                                         Retrieval
+                  has changed from blue
+                  to red .
+
+
+                 Remove the toy and
+                 zoom in on the dog‘s face Retrieval
+                 while it is looking left
+                 with a red collar on.
+                                          Retrieval
+     +with Multi-Negative Steering
+
+
+
+                Remove the snow and
+                                         Retrieval
+                add a man holding the
+                dogs with leashes
+
+      +with Multi-Negative Steering      Retrieval
+
+
+
+
+Fig. 4: Qualitative retrieval results illustrating the effect of reference-conditioned trans-
+port and Multi-Negative Steering. Predicted targets are marked with for correct re-
+trievals and for incorrect ones.
+
+
+pose; when the reference is a fluffy white dog, the retrieved images remain visu-
+ally consistent with that appearance and mainly modify the head orientation. A
+similar phenomenon appears in the third and fourth examples with the instruc-
+tion “the outfit of the lady has changed from blue to red,” where the retrieved
+results preserve the person’s pose and cloth style while modifying the cloth-
+ing attribute. In the fourth example, although there may be no exact target in
+the gallery, the retrieved images still remain close in clothing style and visual
+appearance, further showing that our model effectively combines the reference
+visual cues with the textual modification. Overall, these examples show that
+FlowCIR enables effective cross-modal composition by jointly preserving the
+intended textual modification and the reference-image semantics; even under the
+same instruction, different reference conditions lead to distinct retrieval results.
+Effect of multi-negative steering. The bottom examples in Fig. 4 highlight
+the benefit of Multi-Negative Steering on negation-heavy instructions. Without
+steering, retrieval often remains biased toward the negated concepts, reflecting
+                                                                     FlowCIR        15
+
+the well-known difficulty of CLIP-style embeddings in separating affirmative and
+negated semantics. For instance, for “remove the toy and zoom in on the dog’s
+face while it is looking left with a red collar on”, the unsteered results still often
+contain distracting toys or irrelevant objects, whereas applying Multi-Negative
+Steering yields more dog-face-centered results and better respects the intended
+removal. Likewise, for “remove the snow and add a man holding the dogs with
+leashes,” the unsteered retrieval remains dominated by snowy scenes, while the
+steered version more consistently retrieves images with a human, leashes, and
+non-snowy environments. These examples show that Multi-Negative Steering
+effectively pushes the composed representation away from undesired semantic
+directions, alleviating negation collapse and improving retrieval faithfulness.
+
+
+5    Conclusion
+
+In this paper, we introduce FlowCIR, a new paradigm for zero-shot composed
+image retrieval that formulates composition as conditioned semantic transport
+via flow matching in the embedding space. Instead of reducing cross-modal com-
+position to static token operations in text space, our method learns a lightweight
+conditional velocity field that transports the instruction representation toward a
+target-aligned query embedding under the guidance of the reference image. We
+further propose an inference-only Multi-Negative Steering strategy that steers a
+negation-containing relative instruction away from its negated semantics, mit-
+igating the limited negation handling of VLMs and improving robustness on
+negation-heavy queries. Extensive experiments on three common benchmarks
+demonstrate that FlowCIR achieves highly competitive performance among
+recent ZS-CIR methods, while offering a lightweight training protocol. We hope
+this work can inspire future research on flow-based compositional retrieval and
+open up a new paradigm for cross-modal retrieval beyond static composition.
+
+Acknowledgments. This work was supported by National Natural Science
+Foundation of China (NSFC) Young Scientists Fund Category C (62402408), Na-
+tional Natural Science Foundation of China (NSFC) Young Scientists Fund Cat-
+egory B (62522216), Hong Kong SAR Research Grants Council (RGC) Early Ca-
+reer Scheme (26208924), and Hong Kong SAR Research Grants Council (RGC)
+General Research Fund (16219025).
+
+
+References
+ 1. Agnolucci, L., Baldrati, A., Bertini, M., Del Bimbo, A.: isearle: Improving textual
+    inversion for zero-shot composed image retrieval. arXiv preprint arXiv:2405.02951
+    (2024)
+ 2. Albergo, M.S., Vanden-Eijnden, E.: Building normalizing flows with stochastic
+    interpolants. In: ICLR (2023)
+ 3. Alhamoud, K., Alshammari, S., Tian, Y., Li, G., Torr, P.H., Kim, Y., Ghassemi,
+    M.: Vision-language models do not understand negation. In: CVPR (2025)
+16      He et al.
+
+ 4. Baldrati, A., Agnolucci, L., Bertini, M., Del Bimbo, A.: Zero-shot composed image
+    retrieval with textual inversion. In: ICCV (2023)
+ 5. Baldrati, A., Bertini, M., Uricchio, T., Del Bimbo, A.: Effective conditioned and
+    composed image retrieval combining clip-based features. In: CVPR (2022)
+ 6. Bogensperger, L., Narnhofer, D., Falk, A., Schindler, K., Pock, T.: Flowsdf: Flow
+    matching for medical image segmentation using distance transforms. IJCV (2025)
+ 7. Byun, J., Jeong, S., Kim, W., Chun, S., Moon, T.: An efficient post-hoc framework
+    for reducing task discrepancy of text encoders for composed image retrieval. In:
+    ICCV (2025)
+ 8. Chen, H., Dong, Y., Wang, Z., Yang, X., Duan, C., Su, H., Zhu, J.: Robust classi-
+    fication via a single diffusion model. arXiv preprint arXiv:2305.15241 (2023)
+ 9. Clark, K., Jaini, P.: Text-to-image diffusion models are zero shot classifiers. In:
+    NeurIPS (2023)
+10. Cohen, N., Gal, R., Meirom, E.A., Chechik, G., Atzmon, Y.: “this is my unicorn,
+    fluffy”: Personalizing frozen vision-language representations. In: ECCV (2022)
+11. Delmas, G., Sampaio de Rezende, R., Csurka, G., Larlus, D.: Artemis: Attention-
+    based retrieval with text-explicit matching and implicit similarity. In: ICLR (2022)
+12. Du, Y., Wang, M., Zhou, W., Hui, S., Li, H.: Image2sentence based asymmetrical
+    zero-shot composed image retrieval. In: ICLR (2024)
+13. Duan, S., Sun, Y., Peng, D., Liu, Z., Song, X., Hu, P.: Fuzzy multimodal learning
+    for trusted cross-modal retrieval. In: CVPR (2025)
+14. Esser, P., Kulal, S., Blattmann, A., Entezari, R., Müller, J., Saini, H., Levi, Y.,
+    Lorenz, D., Sauer, A., Boesel, F., et al.: Scaling rectified flow transformers for
+    high-resolution image synthesis. In: ICML (2024)
+15. Fu, Y., Chen, C., Qiao, Y., Yu, Y.: Dreamda: Generative data augmentation with
+    diffusion models. arXiv preprint arXiv:2403.12803 (2024)
+16. Geng, Z., Deng, M., Bai, X., Kolter, J.Z., He, K.: Mean flows for one-step generative
+    modeling. In: NeurIPS (2025)
+17. Goenka, S., Zheng, Z., Jaiswal, A., Chada, R., Wu, Y., Hedau, V., Natarajan, P.:
+    Fashionvlp: Vision language transformer for fashion retrieval with feedback. In:
+    CVPR (2022)
+18. Gu, G., Chun, S., Kim, W., Jun, H., Kang, Y., Yun, S.: Compodiff: Versatile
+    composed image retrieval with latent diffusion. TMLR (2024)
+19. Gu, G., Chun, S., Kim, W., Kang, Y., Yun, S.: Language-only training of zero-shot
+    composed image retrieval. In: CVPR (2024)
+20. Gui, M., Schusterbauer, J., Prestel, U., Ma, P., Kotovenko, D., Grebenkova, O.,
+    Baumann, S.A., Hu, V.T., Ommer, B.: Depthfm: Fast generative monocular depth
+    estimation with flow matching. In: AAAI (2025)
+21. He, J., Yu, Q., Liu, Q., Chen, L.C.: Flowtok: Flowing seamlessly across text and
+    image tokens. In: ICCV (2025)
+22. He, Z., Li, L., Chen, L.: Flowcomposer: Composable flows for compositional zero-
+    shot learning. In: CVPR (2026)
+23. Ho, J., Jain, A., Abbeel, P.: Denoising diffusion probabilistic models. NeurIPS
+    (2020)
+24. Hui, M., Yang, S., Zhao, B., Shi, Y., Wang, H., Wang, P., Zhou, Y., Xie, C.: Hq-
+    edit: A high-quality dataset for instruction-based image editing. In: ICLR (2025)
+25. Islam, K., Zaheer, M.Z., Mahmood, A., Nandakumar, K.: Diffusemix: Label-
+    preserving data augmentation with diffusion models. In: CVPR (2024)
+26. Jiang, Z., Wang, Y., Chen, L.: Exploring cross-modal flows for few-shot learning.
+    In: ICLR (2026)
+                                                                       FlowCIR         17
+
+27. Karthik, S., Roth, K., Mancini, M., Akata, Z.: Vision-by-language for training-free
+    compositional image retrieval. In: ICLR (2024)
+28. Koh, G., Oh, H.J., Noh, J., Jeong, W.K.: Synthetic data augmentation using pre-
+    trained diffusion models for long-tailed food image classification. In: CVPR (2025)
+29. Li, A.C., Prabhudesai, M., Duggal, S., Brown, E., Pathak, D.: Your diffusion model
+    is secretly a zero-shot classifier. In: ICCV (2023)
+30. Li, J., et al.: Blip: Bootstrapping language-image pre-training for unified vision-
+    language understanding and generation. In: ICML (2022)
+31. Li, L., Jiang, Z., Ye, G., He, Z., Li, J., Xiao, J., Cheng, K.T., Chen, L.: Path-
+    decoupled hyperbolic flow matching for few-shot adaptation. In: ICML (2026)
+32. Li, T., Tian, Y., Li, H., Deng, M., He, K.: Autoregressive image generation without
+    vector quantization. In: NeurIPS (2024)
+33. Li, W., Fan, H., Wong, Y., Yang, Y., Kankanhalli, M.S.: Improving context under-
+    standing in multimodal large language models via multimodal composition learn-
+    ing. In: ICML (2024)
+34. Lipman, Y., Chen, R.T.Q., Ben-Hamu, H., Nickel, M., Le, M.: Flow matching for
+    generative modeling. In: ICLR (2023)
+35. Liu, Q., Yin, X., Yuille, A., Brown, A., Singh, M.: Flowing from words to pixels:
+    A noise-free framework for cross-modality evolution. In: CVPR (2025)
+36. Liu, X., Pu, N., Zheng, H., Li, W., Sebe, N., Zhong, Z.: Generate, refine, and
+    encode: Leveraging synthesized novel samples for on-the-fly fine-grained category
+    discovery. In: ICCV (2025)
+37. Liu, X., Gong, C., Liu, Q.: Flow straight and fast: Learning to generate and transfer
+    data with rectified flow. In: ICLR (2023)
+38. Liu, Z., Rodriguez-Opazo, C., Teney, D., Gould, S.: Image retrieval on real-life
+    images with pre-trained vision-and-language models. In: CVPR (2021)
+39. Ning, W., Chang, D., Tong, Y., He, Z., Liang, K., Ma, Z.: Hierarchical prompting
+    for diffusion classifiers. In: ACCV (2024)
+40. Qi, Z., Liu, B., Zhang, S., Li, B., Xu, Z., Xiong, H., Xie, Z.: A simple and efficient
+    baseline for zero-shot generative classification. arXiv preprint arXiv:2412.12594
+    (2024)
+41. Radford, A., Kim, J.W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., Sastry,
+    G., Askell, A., Mishkin, P., Clark, J., et al.: Learning transferable visual models
+    from natural language supervision. In: ICML (2021)
+42. Ranjbar, S.K., Alhamoud, K., Ghassemi, M.: Spacevlm: Sub-space modeling of
+    negation in vision-language models. arXiv preprint arXiv:2511.12331 (2025)
+43. Rombach, R., Blattmann, A., Lorenz, D., Esser, P., Ommer, B.: High-resolution
+    image synthesis with latent diffusion models. In: CVPR (2022)
+44. Saito, K., Sohn, K., Zhang, X., Li, C.L., Lee, C.Y., Saenko, K., Pfister, T.:
+    Pic2word: Mapping pictures to words for zero-shot composed image retrieval. In:
+    CVPR (2023)
+45. Sun, Z., Jing, D., Lu, Z.: Cotmr: Chain-of-thought multi-scale reasoning for
+    training-free zero-shot composed image retrieval. In: ICCV (2025)
+46. Tang, H., Wang, J., Zhao, M., Meng, G., Luo, R., Chen, L., Xia, S.T.: Heteroge-
+    neous uncertainty-guided composed image retrieval with fine-grained probabilistic
+    learning. In: AAAI (2026)
+47. Tang, Y., Yu, J., Gai, K., Zhuang, J., Xiong, G., Hu, Y., Wu, Q.: Context-i2w:
+    Mapping images to context-dependent words for accurate zero-shot composed im-
+    age retrieval. In: AAAI (2024)
+48. Vo, N., Jiang, L., Sun, C., Murphy, K., Li, L.J., Fei-Fei, L., Hays, J.: Composing
+    text and image for image retrieval-an empirical odyssey. In: CVPR (2019)
+18      He et al.
+
+49. Wang, L., Ao, W., Boddeti, V.N., Lim, S.N.: Generative zero-shot composed image
+    retrieval. In: CVPR (2025)
+50. Wang, Y., Chen, H., Liu, J., He, Z., Liu, R., Wang, Z., Chen, L.: Lisa: Likelihood
+    score alignment for visual-condition controllable generation (2026)
+51. Wang, Y., Chen, L.: Inversion circle interpolation: Diffusion-based image augmen-
+    tation for data-scarce classification. In: CVPR (2025)
+52. Wang, Y., Chen, L.: Noise matters: Optimizing matching noise for diffusion clas-
+    sifiers. In: NeurIPS (2025)
+53. Wang, Z., Jiang, D., Li, L., Dang, S., Li, C., Yang, H., Dai, G., Wang, M., Wang,
+    J.: Deforming videos to masks: Flow matching for referring video segmentation.
+    arXiv preprint arXiv:2510.06139 (2025)
+54. Wu, H., Gao, Y., Guo, X., Al-Halah, Z., Rennie, S., Grauman, K., Feris, R.: Fashion
+    iq: A new dataset towards retrieving images by natural language feedback. In:
+    CVPR (2021)
+55. Yang, Z., Xue, D., Qian, S., Dong, W., Xu, C.: Ldre: Llm-based divergent reasoning
+    and ensemble for zero-shot composed image retrieval. In: Proceedings of the 47th
+    International ACM SIGIR conference on research and development in information
+    retrieval (2024)
+56. Yue, Z., Zhou, P., Hong, R., Zhang, H., Sun, Q.: Few-shot learner parameterization
+    by diffusion time-steps. In: CVPR (2024)
+57. Zhan, G., Liu, Y., Han, K., Xie, W., Zisserman, A.: Elip: Enhanced visual-
+    language foundation models for image retrieval. In: 2025 International Conference
+    on Content-Based Multimedia Indexing (CBMI). pp. 1–8. IEEE (2025)
+58. Zhang, K., Luan, Y., Hu, H., Lee, K., Qiao, S., Chen, W., Su, Y., Chang, M.W.:
+    MagicLens: Self-supervised image retrieval with open-ended instructions. In: ICML
+    (2024)
+59. Zhang, P., Zeng, G., Wang, T., Lu, W.: Tinyllama: An open-source small language
+    model (2024)
+60. Zhao, J., Li, J., Lian, D., Sun, L., Lv, P.: Dualcir: Enhancing training-free com-
+    posed image retrieval via dual-directional descriptions. In: 2025 IEEE/CVF Winter
+    Conference on Applications of Computer Vision (WACV) (2025)
+
