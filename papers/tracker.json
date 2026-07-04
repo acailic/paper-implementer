@@ -1983,6 +1983,56 @@
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1774 lines, 31pp, 10 explicit tables + Theorems 1-2 + Counter-examples 1-2 + Lemmas 1-2). All result tables transcribed verbatim with sourcing line-ranges (T1 sym/asym L337-342, T2 IQL L406-409, T7 CQL L1708-1711, T8 IQL-C L1729-1732, T9 IQL-AC L1740-1743, T10 train-contexts L1759-1774) and hyperparams T3-T6. Source-free reconciliation PASSED: sym test stays 0.99 at eta_max=10 (10x max return) while asym collapses 0.76->0.23 monotonically (T1); DAC-Output strict max on IQL Mixed 0.96/Suboptimal 0.85 and CQL Expert 0.96/Mixed 0.78 (T2/T7); critic-only DA no-op within +-0.06 (T8); -AC ~ -A within +-0.08 (T9); eta=0.01 sym==asym by construction. 5 honest-scope flags: (1) eta=0.01 sym==asym is by construction; (2) asym Train collapses 0.51 at eta=10 (training-failure artifact, deviates from Thm-2 training-optimality assumption); (3) DAC-Output not strict point-max on Expert (Aug-D-Online 0.99 vs 0.98, bolded via overlapping CI); (4) single env + 2 algos; (5) infinite-width theory vs finite MLP. 0 transcription defects."
+    },
+    {
+      "rank": 44,
+      "arxiv_id": "2607.02491",
+      "arxiv_url": "https://arxiv.org/abs/2607.02491",
+      "pdf_url": "https://arxiv.org/pdf/2607.02491",
+      "title": "G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models",
+      "authors": [
+        "Timo Bertram",
+        "Sidhant Bhavnani",
+        "Richard Freinschlag",
+        "Erich Kobler",
+        "Andreas Mayr",
+        "Günter Klambauer"
+      ],
+      "year": 2026,
+      "code_url": "",
+      "project_page": "",
+      "subarea": "neuro-symbolic search guidance / SAT-solver acceleration (CDCL phase initialization + backtracking branching order from a symbol-equivariant Recurrent Reasoning Model)",
+      "ai_keywords": [
+        "neuro-symbolic",
+        "recurrent reasoning models",
+        "RRM",
+        "SE-RRM",
+        "symbol equivariance",
+        "SAT solving",
+        "CDCL",
+        "Glucose",
+        "CaDiCaL",
+        "CP-SAT",
+        "constraint satisfaction",
+        "Sudoku",
+        "search guidance",
+        "phase initialization",
+        "branching heuristic",
+        "looped transformers",
+        "combinatorial search",
+        "extrapolation",
+        "Solve-Learn-Extrapolate",
+        "neuro-symbolic integration"
+      ],
+      "abstract": "Looped Transformers have recently gained significant attention in machine learning as a powerful attention-based architectural paradigm integrating iterative refinement with recurrent parameter sharing. Variants of this architecture have shown promising results on ARC-AGI and Sudoku, both of which are considered to require multi-step reasoning. Looped transformers give rise to recurrent reasoning models (RRMs), such as the Hierarchical Reasoning Model (HRM) and the Tiny Recursive Model (TRM). Despite their success, RRMs provide no guarantees of correctness: each iteration predicts a complete problem assignment and greedy decoding can yield constraint-violating solutions. In this work, we focus on SE-RRMs, a symbol-equivariant instantiation of RRMs that exhibits improved extrapolation to larger problem sizes. We propose a neuro-symbolic approach, \"Guiding with Recurrent Reasoning Models\" (G-RRM), which integrates SE-RRMs with symbolic solvers for constraint satisfaction problems. SE-RRMs act as neural solvers that generate full solution proposals and guide classical symbolic solvers, such as backtracking or SAT-based methods like Glucose 4.1 and CaDiCaL 3.0.0, that produce globally correct solutions. Centrally, we investigate when neural guidance with G-RRM improves the search efficiency of symbolic solvers. Our experiments show that the efficacy of G-RRM depends on two conditions: first, the problem instances must have an expansive combinatorial search space to expose potential gains, and second, the solver architecture must be capable of dynamically overwriting its branching choices to recover when neural hints are imperfect. When these conditions hold, guidance drives median conflict counts to zero and yields significant wall-clock speedups: on 9x9 Sudoku, where the SE-RRM correctly solves 91.1% of instances, backtracking accelerates by 33.3x and Glucose 4.1 by 1.70x (median, p<0.001), with Glucose 4.1 retaining a 1.17x speedup on perfect-hint 25x25 grids. In contrast, CaDiCaL 3.0.0, whose runtime is overhead-dominated and which always respects the injected branching hints rather than overwriting them, shows no significant speedup (median 1.02x, n.s.) and even a small significant mean slowdown (0.90x) on 9x9. These results delineate the regimes in which neural guidance translates into practical speedups.",
+      "popularity": "",
+      "citation_count": "",
+      "pwc_url": "",
+      "status": "broken-down",
+      "folder": "2026-g-rrm-guiding-symbolic-solvers-recurrent-reasoning",
+      "started_at": "2026-07-04",
+      "finished_at": "2026-07-04",
+      "sourcing_note": "Source-first breakdown built from arXiv 2607.02491 (836KB PDF, 19pp). paper_layout.txt = pdftotext -layout (1088 lines, 5 explicit tables: T1 conflict-count percentiles L419-452, T2 wall-clock L470-506, T3 notation L934-987, T4 CP-SAT configs L998-1003, T5 CP-SAT perf L1030-1043). Source-free reconciliation PASSED: 39/42 Table-2 speedups recompute within +/-0.012 (3 backtracking cells = full-precision-vs-3dp-display rounding, the iter-45/51 display-boundary pattern, NOT transcription errors); abstract headlines 33.3x/1.70x/1.17x/1.02x/0.90x each match a stated speedup; Table-5 C3-vs-C2 83.3% conflict reduction + 1.85x/1.17x/1.20x wall-clock ratios reconcile to paper-stated 83%/1.9x/1.2x/1.2x within rounding; C4 0.0 mean conflicts at 9x9 = 91.1% FSR feasible + repaired. NO numeric prose-vs-table contradiction. Key honest-scope flags: wall-clock EXCLUDES SE-RRM inference time; Sudoku-only; backtracking is custom Python (cross-solver magnitudes not comparable); cadical3 mean slowdown is phase-init overhead artifact not search degradation; FSR non-monotonic (91.1/22.0/51.1%) tracks empty-cell density not grid size. Central citable contribution = two-condition theory (search-dominated + solver-overwrites-hints), isolated by cadical3-vs-glucose4 contrast. NO figure back-fill."
     }
   ]
 }

@@ -1,0 +1,1089 @@
+                                        1–19
+
+
+
+
+                                        G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning
+                                                               Models
+
+
+                                        Timo Bertram1
+                                        Sidhant Bhavnani2
+                                        Richard Freinschlag1
+                                        Erich Kobler1,3
+                                        Andreas Mayr1
+                                        Günter Klambauer1,3
+arXiv:2607.02491v1 [cs.AI] 2 Jul 2026
+
+
+
+
+                                        1
+                                           ELLIS Unit Linz, LIT AI Lab & Institute for Machine Learning, Johannes Kepler University Linz,
+                                        Austria
+                                        2
+                                          Institute for Symbolic Artificial Intelligence, Johannes Kepler University Linz, Austria
+                                        3
+                                          Clinical Research Institute for Medical AI, Johannes Kepler University Linz, Austria
+
+
+
+
+                                                                                       Abstract
+                                               Looped Transformers have recently gained significant attention in machine learning as a
+                                               powerful attention-based architectural paradigm integrating iterative refinement with re-
+                                               current parameter sharing. Variants of this architecture have shown promising results
+                                               on ARC-AGI and Sudoku, both of which are considered to require multi-step reasoning.
+                                               Looped transformers give rise to recurrent reasoning models (RRMs), such as the Hier-
+                                               archical Reasoning Model (HRM) and the Tiny Recursive Model (TRM). Despite their
+                                               success, RRMs provide no guarantees of correctness: each iteration predicts a complete
+                                               problem assignment and greedy decoding can yield constraint-violating solutions. In this
+                                               work, we focus on SE-RRMs, a symbol-equivariant instantiation of RRMs that exhibits
+                                               improved extrapolation to larger problem sizes. We propose a neuro-symbolic approach,
+                                               “Guiding with Recurrent Reasoning Models” (G-RRM), which integrates SE-RRMs with
+                                               symbolic solvers for constraint satisfaction problems. SE-RRMs act as neural solvers that
+                                               generate full solution proposals and guide classical symbolic solvers, such as backtracking
+                                               or SAT-based methods like Glucose 4.1 and CaDiCaL 3.0.0, that produce globally cor-
+                                               rect solutions. Centrally, we investigate when neural guidance with G-RRM improves the
+                                               search efficiency of symbolic solvers. Our experiments show that the efficacy of G-RRM
+                                               depends on two conditions: first, the problem instances must have an expansive combina-
+                                               torial search space to expose potential gains, and second, the solver architecture must be
+                                               capable of dynamically overwriting its branching choices to recover when neural hints are
+                                               imperfect. When these conditions hold, guidance drives median conflict counts to zero and
+                                               yields significant wall-clock speedups: on 9 × 9 Sudoku, where the SE-RRM correctly solves
+                                               91.1% of instances, backtracking accelerates by 33.3× and Glucose 4.1 by 1.70× (median,
+                                               p < 0.001), with Glucose 4.1 retaining a 1.17× speedup on perfect-hint 25 × 25 grids. In
+                                               contrast, CaDiCaL 3.0.0, whose runtime is overhead-dominated and which always respects
+                                               the injected branching hints rather than overwriting them, shows no significant speedup
+                                               (median 1.02×, n.s.) and even a small significant mean slowdown (0.90×) on 9 × 9. These
+                                               results delineate the regimes in which neural guidance translates into practical speedups.
+
+
+                                        © T. Bertram, S. Bhavnani, R. Freinschlag, E. Kobler, A. Mayr & G. Klambauer.
+              Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+                    1   0   1   1                                               1     0   1   1
+
+
+                        δ                                                             δ
+
+
+
+
+                    1 2 3 4                                                     1 2 3 4
+                    3 4 1 2                            1    2    3    4         3 4 1 2
+                    2 1 4 3                                                     2 1 4 3
+                                                      0.8 0.07 0.1 0.03
+                    4     1                                                     4     1
+          1 2 3 4   1 2 3 4         1 2 3 4                                     1 2 3 4
+          3 4 1 2   3 4 1 2         3 4 1 2            1    2    3    4         3 4 1 2
+          2 1 4 3   2 1 4 3         2 1 4 3                                     2 1 4 3
+                                                      0.04 0.03 0.9 0.03
+          4 1 1     4 2 1           4 3 1                                       4 3 1
+                            1 2 3 4     1 2 3 4                             1 2 3 4       1 2 3 4
+                            3 4 1 2     3 4 1 2        1    2    3    4     3 4 1 2       3 4 1 2
+                            2 1 4 3     2 1 4 3                             2 1 4 3       2 1 4 3
+                                                      0.7   0.2 0.05 0.05
+                            4 3 1 1     4 3 2 1                             4 3 1 1       4 3 2 1
+                                        1 2 3 4                                           1 2 3 4
+                                        3 4 1 2                                           3 4 1 2
+                                        2 1 4 3                                           2 1 4 3
+                                        4 3 2 1                                           4 3 2 1
+
+
+
+
+Figure 1: Comparison of a naive search approach (left) to G-RRM (right). Naive search
+          follows a heuristic order of digits, while guided search uses a neural network to
+          order symbol assignments based on confidence.
+
+
+
+1. Introduction
+Looped Transformers/Recurrent Reasoning Models to Solve Combinatorial Prob-
+lems. Due to their parameter efficiency and inherent capability to execute iterative al-
+gorithmic procedures through recursive state updates, looped transformers (Yang et al.,
+2024) offer a promising framework for solving complex combinatorial problems. However,
+they lack the capacity for rigorous logical verification (Renkhoff et al., 2024), raising the
+question of how to effectively pair their predictive strength with the exact constraints of
+symbolic methods. At this interface, Recurrent Reasoning Models (RRMs), such as Hierar-
+chical Reasoning Models (HRMs) (Wang et al., 2025) and Tiny Recursive Models (TRMs)
+(Jolicoeur-Martineau, 2025), have emerged as specialized looped transformers. Despite be-
+ing called reasoning models, these models do not alter the inherently inductive nature of
+machine learning, as they perform no deductive logic. Rather, they apply a learned opera-
+tor to iteratively update an internal state. Nevertheless, they exhibit remarkable predictive
+performance on heavily constrained tasks. This high accuracy is unlocked by a scalable
+training methodology that leverages intermediate supervision and stop-gradient operations
+between individual loop iterations to efficiently optimize deeply looped structures. Conse-
+quently, this training paradigm has allowed RRMs to achieve strong empirical results across
+combinatorial domains, such as Sudoku puzzles and abstract visual reasoning tasks from the
+ARC-AGI benchmark (Chollet et al., 2025).
+
+Boolean Satisfiability and Modern SAT Solvers. Combinatorial problems are tradi-
+tionally encoded as instances of the Boolean Satisfiability (SAT) problem, the foundational
+NP-complete problem in theoretical computer science, to provide logical guarantees of cor-
+
+                                                  2
+       G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+rectness. Over the past decades, practical SAT solving has evolved from a purely theoretical
+challenge into an industrial-grade methodology driven by various advancements in algo-
+rithms, heuristics and data structures that can solve large instances.
+
+Sudoku as an Established Combinatorial Benchmark. Sudoku puzzles serve as an
+ideal and widely adopted combinatorial benchmark. Despite their conceptual simplicity,
+a Sudoku puzzle embodies a rigorous Constraint Satisfaction Problem (CSP) governed by
+strict, non-local rules. Given a grid partially filled with digits, the task is to assign symbols
+to all remaining cells while ensuring that each row, column, and subgrid contains every
+symbol exactly once. The generalized decision problem is NP-complete (Yato and Seta,
+2003), highlighting its intrinsic computational difficulty. Despite its simple rules, Sudoku
+poses significant challenges for neural networks. Purely neural approaches often generate
+locally plausible but globally inconsistent assignments and struggle to extrapolate to unseen
+grid sizes or symbol sets (Long, 2023; Seely et al., 2025; Giannoulis et al., 2025; Vamsi et al.,
+2021). Our approach aims to solve this problem by combining neural approaches with exact
+solvers, which prevents inconsistent assignments and guarantees correctness.
+
+Neurosymbolic Integration. To formalize the interplay between these empirical neural
+approximations and exact deductive logic, we contextualize our approach within Kautz’s
+taxonomy of neural-symbolic integration (Kautz, 2022). Architecturally, a pipeline that
+feeds the predictive outputs of a recurrent reasoning model (RRM) into a downstream sym-
+bolic SAT solver most closely aligns with a Neuro | Symbolic system (Type 3). While Kautz
+frames a fully integrated Neuro[Symbolic] architecture (Type 6), where symbolic constraints
+are natively embedded within the neural execution graph, as the ultimate paradigm for
+combinatorial reasoning, achieving this state with 100% correctness remains open.
+     Existing neuro-symbolic frameworks highlight these limitations when applied to hard
+constraint tasks. For instance, the neuro-symbolic solver of Hathidara and Pandey (2023)
+remains restricted to Sudoku puzzles with at most eight missing entries, while oscillatory neu-
+ral network approaches fail when more than roughly half of the cells are unfilled (Haverkort
+et al., 2025). Even more general neuro-symbolic learning frameworks, such as semantic con-
+straint strengthening, achieve only modest solve rates of around 28% and do not reliably
+solve full, high-difficulty instances (Ahmed et al., 2023; Wang et al., 2019).
+     In contrast, recent architectural innovations have closed this empirical performance gap.
+Recurrent reasoning models have substantially advanced pure neural Sudoku solving, achiev-
+ing solve rates of roughly 70% on extremely difficult 9 × 9 puzzles with more than half of
+the digits missing. Building on this progress, symbol-equivariant RRMs (SE-RRMs) further
+raise this fully solved rate to over 90%, while remaining exceptionally compact and trainable
+from small instances (Freinschlag et al., 2026).
+     A recurrent reasoning model can propose a full solution to a puzzle in a single forward
+pass, but it cannot certify it satisfies all constraints. A symbolic solver offers the counterpart:
+it guarantees correctness without prior knowledge of promising solutions. Coupling the sub-
+symbolic and symbolic components lets the RRM serve as a prior for the solver’s search.
+When the network is correct, the solver verifies an assignment with no extra search; when
+it is wrong, the solver falls back on its own completeness guarantees and potentially takes
+advantage of promising subareas of the search space.
+
+                                                3
+               Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+    We show that the benefit of this combination is dependent on two factors: (i) the prob-
+lem’s expansive search space dominates the solver’s runtime for an instance, and (ii) the
+ability of the solver to dynamically overwrite its branching choices to exploit the hints of
+the neural model. Consequently, the accuracy of the hints also determines the benefit.
+
+Overview. In this work, we introduce Guiding with Recurrent Reasoning Models (G-
+RRM), a neuro-symbolic framework in which symbolic solvers are guided by the predictive
+symbol probabilities of a trained Symbol-Equivariant RRM. The paper is organized as fol-
+lows. Section 2 formalizes the problem setting and defines the search-guidance mechanism
+for backtracking and CDCL solvers. Section 3 presents our experimental evaluation across
+Sudoku grids of varying sizes, benchmarking G-RRM against naive backtracking and the
+modern SAT solvers Glucose 4.1 and CaDiCaL 3.0.0. Section 4 concludes our findings and
+identifies the conditions under which neural guidance improves solver efficiency. Finally,
+Section 5 outlines limitations of our work and Section 6 describes future work.
+
+
+2. Problem Setting and Methodological Background
+2.1. Recurrent Reasoning Models
+We briefly review recurrent reasoning models (RRMs), including HRM (Wang et al., 2025),
+TRM (Jolicoeur-Martineau, 2025), and SE-RRM (Freinschlag et al., 2026). Throughout,
+we follow the notation of Freinschlag et al. (2026). For a more in-depth explanation, please
+refer to Appendix A.
+
+Problem Setting and Notation. RRMs have been developed for structured problem-solving
+tasks, such as Sudoku solving or maze navigation, where both the input and the possible
+solutions consist of assignments of discrete values to grid cells. A task instance is represented
+as a tuple of discrete symbols X = (x1 , . . . , xI ), xi ∈ Σ, where I is the number of grid cells
+and Σ is a symbol alphabet with K := |Σ| symbols (e.g., digits and an additional mask
+symbol). A solution is represented analogously as Y = (y1 , . . . , yI ) with yi ∈ Σ.
+
+Operational Principle. RRMs are specialized looped transformer architectures proposed
+for multi-step reasoning, where the same Transformer-based computational block is repeat-
+edly reused to iteratively refine an internal latent representation (see (2) in Appendix A).
+As looped transformers, RRMs are highly parameter-efficient due to extensive parameter
+sharing across recurrent iterations. Their practical success is largely attributed to a scalable
+training methodology based on deep supervision and stop-gradient operations. HRM and
+TRM mainly differ in how they architecturally realize recurrent computation.
+
+Symbol-Equivariant RRMs (SE-RRMs). SE-RRMs modify the standard RRM for-
+mulation to achieve symbol equivariance. They introduce an explicit symbol axis into the
+latent representation, yielding rank-3 tensors of shape D × I × K instead of the standard
+rank-2 representations of shape D × I, where D is the feature dimension. This change is
+reflected in corresponding adaptations of both the input encoding and the recurrent update,
+in particular through the inclusion of attention over the symbol dimension.
+    SE-RRM provides per-cell symbol distributions that remain meaningful even when the
+symbol set changes, making it a natural candidate as a learned policy for symbolic search,
+
+                                               4
+       G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+e.g., for variable ordering in backtracking. This is the key interface for guiding symbolic
+methods.
+
+2.2. Symbolic Search and Verification
+2.2.1. Backtracking Search
+Backtracking uses depth-first search to explore possible solutions in a search tree while
+continuously checking constraints and undoing choices when violations occur. For Sudoku,
+it starts from a partially filled puzzle and repeatedly selects empty cells to fill. Nodes
+in the search tree correspond to partially filled puzzles, while edges represent valid digit
+assignments to a previously empty cell.
+    Whenever the algorithm reaches a state in which an empty cell has no valid digit avail-
+able, the current partial solution cannot be extended to a complete solution. In this case,
+the algorithm backtracks by undoing the most recent assignment and exploring alternative
+edges. This process is repeated until either a complete valid Sudoku solution is found or all
+possible assignments have been exhausted.
+    This strategy guarantees completeness: if a valid Sudoku solution exists, backtracking
+will eventually find it by systematically exploring all feasible assignments.
+
+2.2.2. Sudoku as a SAT Problem
+To solve Sudoku using highly optimized modern SAT solvers, the puzzle must be encoded
+as a formula in Conjunctive Normal Form (CNF). We introduce Boolean variables xr,c,v
+indicating that cell (r, c) contains value v, where r, c, v ∈ {1, . . . , N } for
+                                                                              √ an N√ × N grid.
+Every Sudoku rule constrains a given region (a cell, row, column, or N × N box) to
+contain exactly one instance of a value.WWe enforce this using a standard structural encoding
+where an At-Least-One (ALO) clause N      v=1 xr,c,v ensures that every cell is assigned at least
+one digit, while pairwise At-Most-One (AMO) clauses (¬xr,c,v ∨ ¬xr,c,w ) for v ̸= w forbid
+duplicate assignments so no cell contains multiple values. This identical ALO/AMO pattern
+is applied across all rows, columns, and boxes to enforce global constraint satisfaction.
+Prefilled cells are permanently fixed to true via unit clauses xr,c,v .
+    The resulting CNF formula is satisfiable if and only if a valid Sudoku completion exists.
+The full encoding requires N 3 variables and yields 11,988 base clauses for 9 × 9, 123,904 for
+16 × 16, and 752,500 for 25 × 25 grids.
+
+2.2.3. SAT Solving
+Modern Conflict-Driven Clause Learning (CDCL) SAT solvers, like Glucose 4.1 (glucose4)
+(Audemard and Simon, 2017) and CaDiCaL 3.0.0 (cadical3) (Biere et al., 2024), evaluate
+propositional formulas in CNF by combining systematic search with logical deduction and
+dynamic clause database management. Rather than traversing the search space chronologi-
+cally, a CDCL solver relies on three key foundational features, which we discuss below.
+Heuristic Selection (Variables and Phases). The solver dynamically selects unas-
+signed variables using scoring metrics like Variable State Independent Decaying Sum (VSIDS)
+(Moskewicz et al., 2001). For each chosen variable, the solver must also select a literal po-
+larity (phase) to determine which truth value to explore first.
+
+                                               5
+               Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+Conflict-Driven Learning and Backjumping. When an assignment triggers a logical
+contradiction, the solver analyzes the root cause via an implication graph to derive a globally
+valid learned clause. It then executes a non-chronological backjump to the deepest decision
+level where the learned clause becomes a unit, permanently pruning the invalid search space.
+
+Restarts and Database Management. To escape local minima and heavy-tailed run-
+time distributions, the solver periodically flushes its active assignment stack (the trail) and
+returns to the root level. Crucially, it preserves its cached variable phases, heuristic scores,
+and highly active learned clauses during a restart. To prevent memory bloat, it concurrently
+purges low-utility learned clauses.
+
+
+2.3. G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+2.3.1. General Strategy
+
+We propose G-RRM, a framework that couples recurrent reasoning models with symbolic
+solvers through search guidance (Figure 1). We instantiate the recurrent model as an SE-
+RRM, trained on pairs of partially filled Sudoku grids and their corresponding solutions.
+    At inference time, SE-RRM assigns a score to each variable–value pair, yielding a matrix
+Ŷ ∈ RI×K , where Ŷi,d reflects the model’s preference for assigning value d to variable i.
+For each variable i, these scores define a permutation
+
+                                     πi = arg sort Ŷi,d ,                                  (1)
+                                           d∈{1,...,K}
+
+
+where arg sort returns indices in ascending order of the scores, i.e., from lowest to highest
+value. The most preferred value for a variable i is therefore given by the last element of the
+permutation, d∗i = πi (K).
+    The resulting ordering guides a downstream symbolic solver during search by prioritizing
+candidate values in decreasing order of their SE-RRM scores, thereby affecting variable
+selection, branching decisions, or the order of candidate exploration.
+    When SE-RRM predictions are accurate, the solver can reach a solution with little or
+no additional search, effectively reducing the process to a sequence of decisions that can
+be verified efficiently. When predictions are imperfect, they still bias the search towards
+promising regions of the search space, while the solver explores alternatives as needed.
+    Importantly, G-RRM does not restrict the search space; it only determines the order of
+exploration while preserving all feasible assignments. Consequently, correctness and com-
+pleteness of the underlying symbolic solver remain unchanged, and improvements arise solely
+from more efficient search ordering.
+    Because neural guidance influences only the direction of branching decisions, its efficacy
+depends on both the instance and the solver architecture. G-RRM can yield substantial
+benefits on search-dominated instances where decision-tree exploration forms the primary
+bottleneck, such as in backtracking and glucose4. However, these gains can be masked in
+solvers with high structural or startup overhead, such as cadical3, where initial startup
+costs persist independently of conflict reduction.
+
+                                               6
+        G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+2.3.2. G-RRM for Backtracking
+The efficiency of backtracking strongly depends on the order in which cells and digits are
+explored. Good exploration directly reduces the size of the search tree and leads to faster
+solution times. Our approach combines a classical cell-selection heuristic with neural guid-
+ance for digit selection. We use backtracking as the simplest example of G-RRM, making
+the improvements more pronounced, as the efficiency of backtracking is directly tied to the
+explored search space.
+
+Cell Selection Heuristic. At each step, the algorithm must choose one of the remaining
+empty cells. To reduce the size of the search tree, we select the cell with the fewest valid
+candidate digits. This is the well-known minimum remaining values heuristic and helps
+expose contradictions early, often reducing the amount of search required to solve the puzzle.
+
+Digit Selection through Neural Guidance. After selecting a cell, the algorithm must
+decide in which order its valid candidate digits should be explored. Classical backtracking
+implementations typically use a fixed ordering. Instead, we use the predictions of a trained
+SE-RRM to guide this decision.
+
+2.3.3. G-RRM for CDCL SAT Solvers
+Neural guidance in CDCL solvers attaches to the phase selection: at each decision point,
+the solver chooses an unassigned variable together with a polarity (True or False) to try
+first. This choice determines which region of the search space the solver explores before any
+conflict is encountered. Correct phase assignment eliminates backtracking entirely; wrong
+assignment forces the solver to discover and escape an infeasible subspace before recovering.
+We exploit solver control over this heuristic by initializing phases from SE-RRM predictions
+before search begins by setting variable phases from the highest-scored digit d∗i . The Boolean
+variable xri ,ci ,d∗i is initialized to 1, and the variables xri ,ci ,d are initialized as 0 for all d ̸= d∗i .
+Because SE-RRM suggests full solution proposals over all grid cells simultaneously, we map
+the network’s high-confidence predictions directly onto the initial Boolean polarities (phases)
+of the CNF variables. When the model’s hints are highly accurate, the solver can traverse
+a valid path to the solution with zero or minimal conflicts. The normal configuration omits
+this step, relying solely on the solver’s built-in heuristics.
+     We leverage two popular CDCL solvers to evaluate how they interact with this neural
+phase guidance: glucose4 and cadical3. Crucially, these solvers manage phase initial-
+ization and internal recovery differently when external hints conflict with the underlying
+logic:
+
+    • cadical3: This solver strictly honors externally set literal phases. Provided phases
+      persist across restarts, forcing the solver to consistently prioritize the externally in-
+      jected search direction unless explicitly overridden by hard learned clause constraints.
+
+    • glucose4: This solver adopts a more fluid approach and may override initial external
+      phases on restart via its native VSIDS-driven reinitialization mechanism. This design
+      yields a significantly faster self-correction loop, allowing the solver to rapidly recover
+      and diverge from faulty hints directing the search into an infeasible subspace.
+
+                                                      7
+                Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+3. Experimental Evaluation
+
+In this section, we evaluate G-RRM by benchmarking different solvers’ default configurations
+against their SE-RRM–guided variants to quantify the impact of neural guidance on solver
+efficiency for Sudoku puzzles of different sizes. For training details of the SE-RRM, see
+Appendix B. Additional CP-SAT experiments are located in Appendix C.
+   Because reduced conflicts directly lead to runtime savings for search-dominated solvers,
+we quantify the efficiency of G-RRM via changes in conflict counts alongside wall-clock
+time (see Table 1 and Table 2). In addition, we report the fully-solved rate (FSR), which
+denotes the fraction of Sudoku instances that SE-RRM immediately predicts correctly, for
+each benchmarked grid size.
+    For the SAT solvers, we interface with glucose4 and cadical3 via the PySAT Python
+library (Ignatiev et al., 2018, 2024), integrating the neural outputs directly into the solver
+via phase initialization. For the wall-clock time experiments, we separately evaluate the
+advantage of neural guidance for cases with perfect neural predictions and for cases where
+the predictions contain errors. We do not aim to directly compare the performance of back-
+tracking and the CDCL solvers, as we use a custom Python implementation of backtracking.
+Rather, we compare the normal and guided version of each solver.
+
+
+
+
+Table 1: Conflict count percentiles (Normal vs. Guided) across grid sizes and solvers. Bold
+         marks the best value at each percentile. Backtracking conflicts denote DFS search
+         dead-ends and are not directly comparable in magnitude to CDCL conflicts.
+
+Grid    SE-RRM FSR Solver                Mode      p50     p75     p90       p95       p99       Max
+                                        Normal 2865.0 9747.8 17932.9 24791.5 42058.6 192185.0
+                        backtrackinga
+                                        Guided 0.0     0.0     0.0   5166.3 18457.5 555689.0
+
+9×9         91.1%b                      Normal    19.0    39.0     62.0     75.9      116.6      201
+                        glucose4
+                                        Guided    0.0     0.0      0.0      30.8      73.5       188
+                                        Normal    13.0    31.0     53.0     72.0      102.0      155
+                        cadical3
+                                        Guided    0.0     0.0      0.0      27.7      80.3       174
+                                        Normal    93.0   173.8    242.6    284.1     507.9       598
+                        glucose4
+                                        Guided    43.5   151.3    277.0    395.8     767.1       779
+16×16       22.0%
+                                        Normal    72.5   122.8    184.1    258.1     469.3       502
+                        cadical3
+                                        Guided    56.5   129.8    257.3    366.5     477.1       581
+                                        Normal    49.5    78.3    210.8    244.6     392.3       468
+                        glucose4
+                                        Guided    0.0     51.0    136.8    264.0     488.6       502
+25×25       51.1%
+                                        Normal    28.0    71.0    147.3    174.9     392.2       410
+                        cadical3
+                                        Guided    0.0     49.8    148.7    161.4     328.6       366
+a
+  Standard backtracking is too inefficient to solve puzzles larger than 9 × 9.
+b
+  In this work, we use a different set of 9 × 9 puzzles than the authors of SE-RRM, which explains the
+slightly lower fully-solved rate on 9 × 9 Sudokus compared to Freinschlag et al. (2026).
+
+
+                                                   8
+           G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+Conflict Counts (Table 1). Neural guidance tends to reduce conflict counts most con-
+sistently at the median: on 9 × 9, it drives the median (and p90) to zero across solvers,
+reflecting the instances perfectly solved by the SE-RRM. On 16 × 16 and 25 × 25, it col-
+lapses or markedly lowers the median (e.g., −53.2% for glucose4 and −22.1% for cadical3 at
+16 × 16; zero median at 25 × 25), with smaller or mixed effects in the upper tail. These con-
+flict reductions do not necessarily translate into significant wall-clock speedups, presumably
+because runtime is not search-dominated.
+
+
+Table 2: Wall-clock solve times (ms) of normal and guided SAT solvers across all grid sizes.
+         Speedup > 1 indicates that neural guidance reduces solve time. Significance of
+         each speedup is from a paired test on per-instance solve times across the test
+         set (Wilcoxon signed-rank for Median rows; paired t-test for Mean rows): ***
+         p<0.001, ** p<0.01, * p<0.05, n.s. = not significant. Seeds were collapsed per
+         instance (mean over 3 runs) before aggregation. Note that the significance for the
+         Median rows is more relevant, as the t-test on Mean rows is less informative due
+         to the heavy-tailed distributions.
+
+Grid    Solver          Metric                   All Puzzles                   Perfect (acc = 1.0)               Imperfect (acc < 1.0)
+                                      Normal Guided Speedup Significant Normal Guided Speedup Significant Normal Guided Speedup Significant
+                        Median (ms) 20.503    0.617   33.251×   ***     18.230   0.606   30.101×   ***    41.535 42.601    0.975×    n.s.
+        backtrackinga
+                        Mean (ms)   47.479    6.133    7.741×   ***     45.556   0.601   75.750×   ***    67.197 62.848    1.069×    n.s.
+
+9×9                     Median (ms)   0.348   0.205   1.699×    ***      0.337   0.202   1.666×    ***     0.451   0.450   1.003×    n.s.
+        glucose4
+                        Mean (ms)     0.419   0.245   1.710×    ***      0.404   0.213   1.896×    ***     0.575   0.573   1.003×    n.s.
+                        Median (ms)   5.517   5.405   1.021×    n.s.    5.455    5.307   1.028×    n.s.   6.074    5.876   1.034×    n.s.
+        cadical3
+                        Mean (ms)     4.262   4.759   0.896×    ***     4.125    4.622   0.892×    ***    5.672    6.167   0.920×    n.s.
+                        Median (ms)   2.671   1.998   1.337×    n.s.     2.967   1.346   2.204×    ***    2.647    2.627   1.008×    n.s.
+        glucose4
+                        Mean (ms)     3.158   2.974   1.062×    n.s.     3.245   1.369   2.371×    ***    3.134    3.427   0.914×    n.s.
+16×16
+                        Median (ms) 22.903 22.599     1.013×    n.s.    22.767 21.680    1.050×     *     22.903 22.988    0.996×    n.s.
+        cadical3
+                        Mean (ms)   22.730 22.457     1.012×    n.s.    22.178 20.935    1.059×    n.s.   22.886 22.886    1.000×    n.s.
+                        Median (ms)   6.403   5.779   1.108×     **      6.200   5.305   1.169×    ***    6.538    6.494   1.007×    n.s.
+        glucose4
+                        Mean (ms)     6.778   6.334   1.070×      *      6.374   5.415   1.177×    ***    7.201    7.294   0.987×    n.s.
+25×25
+                        Median (ms) 74.474 73.424     1.014×    n.s.    72.419 71.739    1.009×    n.s.   77.260 77.328    0.999×    n.s.
+        cadical3
+                        Mean (ms)   73.104 71.989     1.016×    n.s.    69.422 70.690    0.982×    n.s.   76.955 73.346    1.049×    n.s.
+a
+    Standard backtracking is too inefficient to solve puzzles larger than 9 × 9.
+
+Wall-Clock Time (Table 2). Backtracking shows large, statistically significant speedups
+on all puzzles and perfect puzzles (33.251× and 30.101× respectively) in 9 × 9, as reduced
+conflicts directly lead to faster runtime. On imperfect solutions, the results are mixed and
+not significant.
+    glucose4 consistently converts conflict savings into statistically significant wall-clock
+speedups: 1.699× overall and 1.666× on perfect-hint instances at 9×9, with perfect-hint
+speedups of 2.204× and 1.169× at 16×16 and 25×25, respectively. Speedups on all puzzles
+and imperfect hints for 16×16 and 25×25 are mostly non-significant, only reaching moderate
+significance on all puzzles for 25 × 25. The diminishing returns at larger scales reflect a
+growing share of solve time spent outside the search.
+    cadical3 shows no consistent wall-clock benefit and provides the only statistically signif-
+icant slowdown using G-RRM. The solver is overhead-dominated: its internal bookkeeping
+is largely independent of conflict count, so eliminating conflicts does not proportionally
+reduce runtime. On 9×9, phase initialization adds ∼1.7 ms on instances cadical3 would
+
+                                                                       9
+               Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+have solved trivially, producing a 0.896× aggregate mean. On the more reliable median,
+cadical3 shows no significant change (1.021×, n.s.); the only significant effect is a small
+mean slowdown attributable to fixed phase-initialization overhead. On 16 × 16 and 25×25,
+search accounts for a tiny fraction of the solve budget, leaving guidance as a non-significant,
+near-zero impact.
+
+
+4. Conclusion
+
+We propose G-RRM, a neuro-symbolic framework in which a symbol-equivariant recurrent
+reasoning model (SE-RRM) guides the search of exact symbolic solvers. The neural model
+provides probabilistic preferences over candidate assignments from a single forward pass,
+while a symbolic solver enforces global constraints and guarantees correctness. This combi-
+nation reduces the effective search space compared to only using a solver and still retains
+the completeness of the symbolic algorithm; improvements arise from more efficient search.
+In essence, G-RRM converts a high-accuracy but unverified neural solver into one with
+guaranteed correctness.
+    The central question of this work is under what conditions G-RRM reduces search cost.
+Our results show that reductions in search cost are strongly tied to the solver architecture
+and the instance-level correctness of the neural model. On perfect-hint instances, guidance
+resolves puzzles with zero conflicts across all grid sizes and solvers. For the search-dominated
+backtracking and glucose4, this translates into statistically significant wall-clock speedups
+in all cases. For the overhead-dominated cadical3 it does not, as its runtime is largely
+independent of conflict count. On imperfect-hint instances, the outcome depends on solver
+architecture and hint quality. Although we see slight speedups in some instances, e.g., a
+1.069× speedup in mean time for backtracking on 9 × 9, no result is statistically significant.
+This can be explained by the confidence of the SE-RRM: independent of being correct in
+its assignments, the majority of predictions strongly favor one option. When the model is
+confidently incorrect, it leads the search towards incorrect paths, which cancel the speedup
+of promising directions.
+
+
+5. Limitations
+
+Our evaluation isolates the effect of neural guidance, which introduces some limitations to
+the results.
+    First, all reported wall-clock times refer to the symbolic solver. Inference time for
+SE-RRM is not included, as it was precomputed separately. Incorporating inference time
+would entangle batch size, GPU hardware, and implementation-specific optimizations, mak-
+ing comparisons difficult. Our objective in this work is to isolate the impact of neural guid-
+ance itself, rather than to maximize engineering performance. Accordingly, our SE-RRM
+implementation is a straightforward research prototype and does not exploit the full range
+of possible performance optimizations.
+    Second, our study is confined to Sudoku. While Sudoku is an established combinatorial
+benchmark, we do not confirm our results on other domains.
+
+                                              10
+       G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+6. Future Work
+Beyond Sudoku, G-RRM suggests a general strategy for combinatorial problems whose sym-
+bolic search cost grows exponentially with size. We call it Solve–Learn–Extrapolate (SLE):
+(i) solve small instances exactly with a symbolic solver, (ii) learn an SE-RRM on these valid
+solutions, and (iii) extrapolate to larger instances, where SE-RRM hints guide the solver
+through the search space. Since G-RRM preserves completeness, new solutions are valid
+and can be fed back to re-train the SE-RRM before advancing to the next size, lifting the
+frontier of tractable sizes using only valid data. Our experiments realize a first step of this
+loop: the SE-RRM trained on 9 × 9 Sudokus and fine-tuned on a small number of larger
+grids (Appendix B) produces hints that guide solvers on 16 × 16 and 25 × 25 instances,
+demonstrating SLE in miniature. Assessing SLE on harder problem families is a promising
+direction for future work.
+
+
+Acknowledgements
+The ELLIS Unit Linz, the LIT AI Lab, the Institute for Machine Learning, are supported by
+the Federal State Upper Austria. We thank the projects FWF AIRI FG 9-N (10.55776/FG9),
+AI4GreenHeatingGrids (FFG-899943), Stars4Waters (HORIZON-CL6-2021-CLIMATE-01-
+01), FWF Bilateral Artificial Intelligence (10.55776/COE12). We thank NXAI GmbH, Audi
+AG, Merck Healthcare KGaA, GLS (Univ. Waterloo), TÜV Holding GmbH, Software Com-
+petence Center Hagenberg GmbH, dSPACE GmbH, TRUMPF SE + Co. KG.
+
+
+References
+Kareem Ahmed, Kai-Wei Chang, and Guy Van den Broeck. Semantic strengthening of neuro-
+ symbolic learning. In International Conference on Artificial Intelligence and Statistics,
+ pages 10252–10261. PMLR, 2023.
+
+Gilles Audemard and Laurent Simon. Glucose and syrup in the SAT’17. Proceedings of SAT
+  Competition, pages 16–17, 2017.
+
+Armin Biere, Tobias Faller, Katalin Fazekas, Mathias Fleury, Nils Froleyks, and Florian
+  Pollitt. CaDiCaL 2.0. In International Conference on Computer Aided Verification, pages
+  133–152. Springer, 2024.
+
+Francois Chollet, Mike Knoop, Gregory Kamradt, Bryan Landers, and Henry Pinkard.
+  ARC-AGI-2: A new challenge for frontier AI reasoning systems. arXiv preprint
+  arXiv:2505.11831, 2025.
+
+Richard Freinschlag, Timo Bertram, Erich Kobler, Andreas Mayr, and Günter Klambauer.
+  Symbol-equivariant recurrent reasoning models. arXiv preprint arXiv:2603.02193, 2026.
+
+Panagiotis Giannoulis, Yorgos Pantis, and Christos Tzamos. Teaching transformers to solve
+  combinatorial problems through efficient trial & error. Advances in Neural Information
+  Processing Systems, 38:133548–133580, 2025.
+
+                                              11
+               Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+Ashutosh Hathidara and Lalit Pandey. Neuro-symbolic Sudoku solver. arXiv preprint
+  arXiv:2307.00653, 2023.
+Bram F Haverkort, Federico Sbravati, Stefan Porfir, and Aida Todri-Sanial. Solving Sudoku
+  using oscillatory neural networks. arXiv preprint arXiv:2508.02250, 2025.
+Alexey Ignatiev, Antonio Morgado, and Joao Marques-Silva. PySAT: A Python toolkit for
+  prototyping with SAT oracles. In International Conference on Theory and Applications
+  of Satisfiability Testing, pages 428–437. Springer, 2018.
+Alexey Ignatiev, Zi Li Tan, and Christos Karamanos. Towards universally accessible SAT
+  technology. In 27th International Conference on Theory and Applications of Satisfiability
+  Testing (SAT 2024), pages 16:1–16:11. Schloss Dagstuhl–Leibniz-Zentrum für Informatik,
+  2024.
+Alexia Jolicoeur-Martineau. Less is more: Recursive reasoning with tiny networks. arXiv
+  preprint arXiv:2510.04871, 2025.
+Henry Kautz. The third AI summer: AAAI Robert S. Engelmore memorial lecture. AI
+  magazine, 43(1):105–125, 2022.
+Jieyi Long. Large language model guided tree-of-thought. arXiv preprint arXiv:2305.08291,
+  2023.
+Matthew W Moskewicz, Conor F Madigan, Ying Zhao, Lintao Zhang, and Sharad Malik.
+ Chaff: Engineering an efficient SAT solver. In Proceedings of the 38th annual Design
+ Automation Conference, pages 530–535, 2001.
+Laurent Perron, Frédéric Didier, and Steven Gay. The CP-SAT-LP solver (invited talk).
+  In 29th International Conference on Principles and Practice of Constraint Programming
+  (CP 2023), pages 3:1–3:2. Schloss Dagstuhl–Leibniz-Zentrum für Informatik, 2023.
+Justus Renkhoff, Ke Feng, Marc Meier-Doernberg, Alvaro Velasquez, and Houbing Herbert
+  Song. A survey on verification and validation, testing and evaluations of neurosymbolic
+  artificial intelligence. IEEE Transactions on Artificial Intelligence, 5(8):3765–3779, 2024.
+Jeffrey Seely, Yuki Imajuku, Tianyu Zhao, Edoardo Cetin, and Llion Jones. Sudoku-Bench:
+  Evaluating creative reasoning with Sudoku variants. arXiv preprint arXiv:2505.16135,
+  2025.
+Kodeti Surya Vamsi, Sashank Gangadharabhotla, and Vallabhaneni Sri Harsha Sai. A
+ deep learning approach to solve sudoku puzzle. In 2021 5th International Conference on
+ Intelligent Computing and Control Systems (ICICCS), pages 1175–1179. IEEE, 2021.
+Guan Wang, Jin Li, Yuhao Sun, Xing Chen, Changling Liu, Yue Wu, Meng Lu, Sen
+ Song, and Yasin Abbasi Yadkori. Hierarchical reasoning model. arXiv preprint
+ arXiv:2506.21734, 2025.
+Po-Wei Wang, Priya Donti, Bryan Wilder, and Zico Kolter. SATNet: Bridging deep learning
+  and logical reasoning using a differentiable satisfiability solver. In International Conference
+  on Machine Learning, pages 6545–6554. PMLR, 2019.
+
+                                               12
+       G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+Liu Yang, Kangwook Lee, Robert Nowak, and Dimitris Papailiopoulos. Looped transform-
+  ers are better at learning learning algorithms. In International conference on Learning
+  Representations, volume 2024, pages 42195–42214, 2024.
+
+Takayuki Yato and Takahiro Seta. Complexity and completeness of finding another solu-
+  tion and its application to puzzles. IEICE Transactions on Fundamentals of Electronics,
+  Communications and Computer Sciences, 86(5):1052–1060, 2003.
+
+
+
+
+                                           13
+                              Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+Appendix A. Recurrent Reasoning Models
+
+
+                                                                                                                                         Original                                Permuted
+                                                            1234
+                              CE Loss
+                                                            3412                             CE Loss
+                                                                                                                                         1             4                         4                1
+                                                            2143
+                               Head
+                                                            4321
+                                                            target Y
+                                                                                               Head                                          4                  Permutation π         1
+                                                                                                                                                 4 3                                       1 3
+         RRM H                                                             SE-RRM G
+                                                                                                                                         4         1                             1           4
+                                                                                             + Norm         D
+                                                                                                                                             Input X
+                             + Norm         D                                                                                                                                        Input π(X)
+                                                                                   mD          MLP          D
+
+
+
+
+                   mD          MLP          D
+                                                                                             + Norm         D
+
+
+                                                       ×L                                                              ×L
+        ···
+
+
+
+
+                                                                       ···
+
+
+                                                                             T D,K         Self-Attention       D, K
+
+                             + Norm         D
+
+
+
+                                                                                             + Norm         D                            1   2   3     4                         4    2    3      1
+              T D,I       Self-Attention        D, I
+
+                                                                             T   D,I       Self-Attention       D, I                     3   4   1     2        Permutation π    3    1    4      2
+              Zt
+                                L
+                                                                             Zt
+                                                                                                L                                        2   1   4     3                         2    4    1      3
+                                                                                                                                         4   3   2     1                         1    3    2      4
+                                                                       4                                                symbols K
+                                                       D
+
+
+
+
+         1     4      4             4 3 4       1
+                                                                       3                                                                 Output f (X)                            Output f (π(X))
+                                                       s
+                                                       e
+                                                    ur
+
+
+
+
+                          positions I                                  2
+                                                  at
+                                                fe
+
+
+
+
+                                                                                                                        D
+
+
+                                                                       1
+                                                                                                                       es
+                                                                                                                   ur
+                                                                                                                  at
+
+
+
+
+                                                                                       positions I
+                                                                                                                fe
+
+
+
+
+                                                            input X
+                                  E H (X)                   1        4
+                                                                                                                                                           f (π(X)) = π(f (X))
+                                                                                       G
+                                                                4                  E (X)
+                                                                    43
+                                                            4        1
+
+
+
+
+Figure 2: Principle designs of Recurrent Reasoning Models (Source: Freinschlag et al. 2026).
+          Left: HRM/TRM compared to SE-RRM which introduces an explicit symbol
+          dimension that enables permutation equivariance over symbols and allows for
+          problem size extrapolation. Right: Permutation equivariance explained.
+
+
+
+
+A.1. Recurrent Reasoning Models: Fixed-Point Iteration with Deep
+     Supervision
+Recurrent reasoning models (RRMs) perform iterative refinement via a fixed-point iteration
+on a recurrent state. An overview of our notation is shown in Table 3. Let Z t ∈ RD×I denote
+the recurrent state at iteration t, where D is the feature dimension. An input embedding
+E H maps the symbolic instance into the same shape, E H (X) ∈ RD×I , typically as a sum of
+a symbol embedding and a positional encoding.
+    An RRM block H is a mapping H : RD×I × RD×I → RD×I , which updates the state Z
+as
+                                                                                                                  
+                                                                                            Z t+1 = H E H (X), Z t ,                                                                                  (2)
+
+where Z 0 is a learned initial state.
+   Variants of the RRM block may omit the input embedding at some steps or inject a
+previous recurrent state Z t−rprev (with rprev being a hyperparameter). We capture this by
+                                                                                                         
+                                                           Z t+1 = H 1emb E H (X) + 1prev Z t−rprev , Z t ,                                                                                           (3)
+
+
+                                                                                                                                    14
+        G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+for intermediate layers (with t − rprev ⩾ 0), where 1emb , 1prev ∈ {0, 1} denote whether the
+respective input is used (can be arbitrarily set and therefore define the design of the neural
+fixed-point architecture).
+Transformer-Style RRM Block. Following HRM/TRM-style designs, one RRM block
+consists of L stacked Transformer-style layers. Let
+                            H0 := 1emb E H (X) + 1prev Z t−rprev + Z t .                  (4)
+For l = 0, . . . , L − 1, the update is
+                                                
+                    Hl′ = Norm Hl + T D,I (Hl ) ,                           D×I           (5)
+                                              
+                   Hl+1 = Norm Hl′ + mD (Hl′ ) ,                            D × I,        (6)
+and the block output is Z t+1 = HL . Here T D,I denotes self-attention along the position
+dimension and mD is a position-wise MLP (e.g., SwiGLU), while Norm denotes RMSNorm,
+applied token-wise. In above equations, we tried to indicate the attention axes or axes used
+as features to neural operations with an underscore, while the neural operation operates
+independently on the other axes.
+Output Mapping and Training with Deep Supervision. RRMs predict symbol dis-
+tributions per position by mapping Z t to logits Ŷ t ∈ RI×K using an output head O (typi-
+cally linear in D), followed by a softmax over the K symbols. Training uses deep supervision:
+losses (categorical cross-entropy) are applied to selected intermediate predictions, and gra-
+dients are truncated/detached across iteration segments.
+
+A.2. Limitation: Lack of Symbol Extrapolation in Vanilla RRMs
+Vanilla RRMs encode symbols via a learned embedding table Σ → RD inside E H . As a
+consequence, permuting symbols in the input can lead to differing results in the output. It
+also disallows the application to instances with unseen symbols Σ′ ⊃ Σ (i.e., |Σ′ | > K),
+because new symbols require new embeddings. This is particularly restrictive for extrapo-
+lation across Sudoku sizes, where the alphabet grows with the grid (e.g., from digits 1 : 9 to
+1 : 16 or 1 : 25).
+Data Augmentation. Previous methods combat this issue by augmenting the training
+data with symbol-permuted samples. While this can diminish performance inconsistencies,
+it requires additional computation due to the increased training data. Crucially, it still
+prevents extrapolation to unseen symbols.
+Symbol-Axis Embedding. Conceptually, for each position i and each symbol c ∈ Σ,
+SE-RRM stores whether xi = c along the symbol axis using a shared embedding vector
+for all usual symbols plus dedicated embeddings for special tokens such as mask/unknown,
+and zeros otherwise. This yields a tensor E C (X) ∈ RD×I×K that can be augmented with
+positional and (optionally) task-type information, E G := E C + E P + E T .
+SE-RRM Fixed-Point Update. SE-RRM uses the same fixed-point structure but with
+a block G : RD×I×K × RD×I×K → RD×I×K , and
+
+                                                                           
+                          Z̄ t+1 = G 1emb E G (X) + 1prev Z̄ t−rprev , Z̄ t .             (7)
+
+                                                  15
+              Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+SE-RRM Block Architecture with Axial Attention over Positions and Symbols.
+Let H0 be defined analogously to (4), but in RD×I×K . For l = 0, . . . , L − 1, SE-RRM
+applies two attention layers: first along positions, then along symbols, followed by a token-
+wise MLP:
+                                            
+                Hl′ = Norm Hl + T D,I (Hl ) ,                    D×I×K                    (8)
+                                              
+                Hl′′ = Norm Hl′ + T D,K (Hl′ ) ,                 D×I ×K                   (9)
+                                             
+               Hl+1 = Norm Hl′′ + mD (Hl′′ ) ,                   D × I × K,             (10)
+
+and Z t+1 = HL . Attention along the position and the MLP are uniform across the symbol
+axis and therefore do not break equivariance. Attention along the symbol dimension is itself
+permutation-equivariant. Therefore, equivariance is preserved, unless it is explicitly broken
+via task-type embeddings.
+Output Head. SE-RRM projects each D-dimensional feature vector of Z t (for every
+position–symbol pair (i, k)) to a scalar logit, producing an output tensor in R1×I×K ∼
+                                                                                     = RI×K .
+Categorical probabilities per position are then computed as in vanilla RRMs.
+
+
+Appendix B. SE-RRM Model Training Details
+Data. We use Sudoku puzzles of differing sizes to compare methods across problem spec-
+ifications. For standard 9 × 9 Sudokus, we use the same data as Freinschlag et al. (2026):
+1,000 samples provided by Wang et al. (2025) to train the neural models and 1,000 test
+samples. The 16 × 16 and 25 × 25 data comprises 100 training samples for fine-tuning and
+100 and 90 test samples, respectively, which are created with py-sudoku. The average rate
+of empty cells differs per dataset, 9 × 9, 16 × 16, and 25 × 25 Sudokus have 68.88%, 63.49%,
+and 50.08% empty cells, respectively.
+Training Details. We train an SE-RRM model initially on 9 × 9 Sudokus. We then fine-
+tuned it further for the 16×16 and 25×25 grids with 100 samples using a decreased learning
+rate and increased regularization.
+
+
+Appendix C. CP-SAT Experiments
+To confirm findings from our main experiments, we provide additional experiments using
+the state-of-the-art constraint programming solver CP-SAT (Perron et al., 2023).
+    We compare four configurations designed to evaluate different levels of neural-symbolic
+coupling:
+    All four configurations share the same underlying CP-SAT base model, enforcing N ×
+N Sudoku constraints (AllDifferent constraints across all rows, columns, and subgrids).
+To isolate the impact of search guidance and ensure reproducibility, all configurations are
+restricted to a single worker thread and a fixed random seed.
+    The configurations are defined as follows:
+
+   • C1 (Default CP-SAT) functions as the primary symbolic baseline, utilizing the
+     solver’s default configuration.
+
+                                             16
+      G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+Table 3: Notation used throughout the paper (RRMs/SE-RRMs, SAT solving, and G-
+         RRM).
+
+    Definition                                                       Symbol              Type
+    Scalars and indices
+    grid dimension (Sudoku is N × N )                                    N               N
+    feature dimension                                                    D               N
+    number of positions/cells                                            I               N
+    position / cell index                                                i               {1, . . . , I}
+    number of symbols                                                    K               N
+    symbol (channel) index                                               k               {1, . . . , K}
+    recurrent iteration index (RRM/SE-RRM)                               t               N
+    previous-state offset (recurrence hyperparameter)                   rprev            N
+    number of layers per block                                           L               N
+    layer index within a block                                            l              {0, . . . , L − 1}
+    SAT
+    cell row, column, and value indices                                r, c, v           {1, . . . , N }
+    SAT variable: cell (r, c) holds value v                            xr,c,v            {0, 1}
+    per-variable value ordering (arg sort of scores)                     πi              permutation of {1, . . . , K}
+    value index / most-preferred value for variable i                  d, d∗i            {1, . . . , K}
+    second value index (At-Most-One clauses)                             w               {1, . . . , N }
+    Sets and spaces
+    symbol alphabet (neural sections; may include mask)                  Σ               finite set, |Σ| = K
+    extended symbol alphabet (unseen symbols)                            Σ′              Σ′ ⊃ Σ, |Σ′ | > K
+    input/solution space (neural)                                        ΣI              tuples of symbols
+    Tasks, solutions, and assignments
+    input task (neural encoding)                                X = (x1 , . . . , xI )   ΣI
+    solution task (neural target)                               Y = (y1 , . . . , yI )   ΣI
+    symbol at position i                                            xi , yi              Σ
+    Embeddings and representations (neural)
+    RRM task embedding matrix                                       E H (X)              ΣI 7→ RD×I
+    SE-RRM symbol-axis embedding tensor                             E C (X)              ΣI 7→ RD×I×K
+    SE-RRM task embedding tensor                                    E G (X)              ΣI 7→ RD×I×K
+    positional embedding                                                EP               RD×I×K
+    task-type embedding                                                 ET               RD×I×K
+    recurrent state at step t (RRM)                                     Zt               RD×I
+    recurrent state at step t (SE-RRM)                                  Z̄ t             RD×I×K
+    learned initial state                                               Z0               RD×I
+    intermediate block states                                      Hl , Hl′ , Hl′′       RD×I or RD×I×K
+    Models and blocks (neural)
+    RRM block (HRM/TRM)                                                  H               RD×I × RD×I → RD×I
+    SE-RRM block                                                         G               RD×I×K × RD×I×K → RD×I×K
+    output head                                                          O               RD → RK
+    embedding inclusion indicator                                      1emb              {0, 1}
+    previous-state inclusion indicator                                 1prev             {0, 1}
+    Neural operators
+    self-attention over positions                                      T D,I             RD×I → RD×I
+    self-attention over symbols                                        T D,K             RD×K → RD×K
+    MLP over features (SwiGLU)                                          mD               RD → RD
+    normalization (RMSNorm)                                            Norm              RD → RD
+    Prediction
+    logits produced by the RRM backbone (single forward pass)            Ŷ              RI×K
+    logits at RRM iteration t                                           Ŷ t             RI×K
+    score for assigning value d to variable i                           Ŷi,d            R
+
+
+
+
+                                                          17
+              Bertram Bhavnani Freinschlag Kobler Mayr Klambauer
+
+
+
+
+                         Table 4: Tested CP-SAT solver configurations
+              ID       Name                                    Description
+              C1 Default CP-SAT                       Full CP-SAT heuristics
+              C2   Naive Fixed   Branches on most constrained variable and chooses lowest digits first
+              C3    Soft Hint                       Warm-start with SE-RRM
+              C4 Repaired Hint Propagates SE-RRM assignment as partial solution and resolves conflicts
+
+
+
+
+   • C2 (Naive Fixed) represents a blind symbolic baseline. It enforces a fixed search
+     strategy that branches on the variable with the minimum domain size and selects the
+     minimum value first. This matches the branching heuristics of the naive backtracking
+     analyzed in Section 2.2.1, while retaining CP-SAT’s propagation and conflict-driven
+     clause learning.
+
+   • C3 (Soft Hint) warm-starts CP-SAT with the SE-RRM’s argmax predictions via
+     model.AddHint. If the hints are globally consistent, the solver completes in the hint
+     phase with zero conflicts; when a conflict arises, it continues following the hints for
+     up to the default budget (hint_conflict_limit = 10), using each conflict to learn
+     which hint values are wrong, before discarding the hints and falling back to automatic
+     search.
+
+   • C4 (Repaired Hint) uses the same hints with repair_hint = True: rather than
+     discarding on conflict, the solver runs a propagation-based local search that adjusts
+     only the inconsistent cells while preserving the rest. A successful repair yields zero
+     conflict-driven clause learning backtracking; a larger budget (hint_conflict_limit
+     = 100) funds this process.
+
+   The performance of these configurations across different grid sizes is presented in Table 5.
+
+
+Table 5: CP-SAT performance across different constraint configurations. Lower values are
+         better.
+
+                        Configuration             9×9            16 × 16        25 × 25
+                                          Mean search conflicts
+                        C1                     21.8       32.8                     5.6
+                        C2                     28.1       35.8                     3.9
+                        C3                      4.7       27.6                     6.0
+                        C4                     0.0        16.4                     3.8
+                                        Mean wall-clock time (s)
+                        C1                   0.0064      0.0237                 0.0298
+                        C2                   0.0122       0.0366                0.0491
+                        C3                   0.0066       0.0312                0.0409
+                        C4                   0.0125       0.0971                0.0469
+
+
+                                                        18
+       G-RRM: Guiding Symbolic Solvers with Recurrent Reasoning Models
+
+
+
+
+     The results are best understood through hint feasibility: during presolve, CP-SAT clas-
+sifies the SE-RRM hint set as either feasible—the predictions form a globally consistent
+assignment, allowing the solver to complete in the hint phase with zero branching—or in-
+feasible, requiring repair or general search. On feasible instances, C3 and C4 are equivalent;
+they diverge only on infeasible ones.
+
+  1. Conflict Reduction at Low Density: For 9×9 grids (clue density ≈ 31.3%), conflict
+     counts are right-skewed: propagation resolves most instances, while a hard tail drives
+     the mean. C2’s 28.1 mean conflicts already reflect CP-SAT’s full conflict-driven clause
+     learning—C2 is a blind branching heuristic, not a blind solver. C4 achieves 0.0 mean
+     conflicts: the 91.1% feasible instances complete in the hint phase, and all remaining
+     infeasible instances are fully repaired within the 100-conflict budget. C3 reduces mean
+     conflicts by 83% (4.7 vs. 28.1): on infeasible instances, it follows wrong hints for up
+     to 10 conflicts—building clause knowledge from each failure—before handing off to
+     conflict-driven clause learning.
+
+  2. Propagation-Dominated Regimes at Scale: At 25 × 25 (clue density ≈ 49.9%),
+     propagation resolves 92.2% of instances under C2 with zero conflicts, leaving little
+     room for any branching heuristic to influence outcomes. Mean conflict counts collapse
+     across all configurations. Notably, C3 performs worse than the blind C2 baseline (6.0
+     vs. 3.9): incorrect hints add overhead to otherwise near-trivial solves. C4 beats C2
+     by a negligible margin (3.8 vs. 3.9). This illustrates a fundamental limit of hint-based
+     guidance: when propagation already resolves most of the search space, the branching
+     heuristic has little opportunity to contribute, and incorrect hints are a net cost.
+
+  3. Wall-Clock Time and Overhead: C3 consistently reduces wall-clock time relative
+     to C2: 1.9× on 9 × 9 (0.0066 s vs. 0.0122 s), 1.2× on 16 × 16 (0.0312 s vs. 0.0366 s),
+     and 1.2× on 25 × 25 (0.0409 s vs. 0.0491 s). C1’s automatic portfolio heuristics remain
+     faster than C3 at all scales. C4 minimizes conflicts across all grid sizes but incurs
+     substantial overhead at 16 × 16 (0.0971 s vs. 0.0237 s for C1): with only 22.0% of hint
+     sets feasible, the repair budget is frequently exhausted before a consistent assignment
+     is found, forcing costly fallback to general search.
+
+
+
+
+                                             19
+
