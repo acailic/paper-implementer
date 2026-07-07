@@ -571,8 +571,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.04439",
       "rank": 5,
-      "status": "pending",
-      "folder": "papers/2026-researchstudio-idea-an-evidence-grounded-research"
+      "status": "broken-down",
+      "folder": "papers/2026-researchstudio-idea-an-evidence-grounded-research",
+      "finished_step": "breakdown"
     },
     {
       "title": "PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation",
