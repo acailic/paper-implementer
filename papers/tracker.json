@@ -486,8 +486,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.04438",
       "rank": 4,
-      "status": "pending",
-      "folder": "papers/2026-researchstudio-reel-automate-the-last-mile"
+      "status": "broken-down",
+      "folder": "papers/2026-researchstudio-reel-automate-the-last-mile",
+      "finished_at": "2026-07-07"
     },
     {
       "title": "The Verification Horizon: No Silver Bullet for Coding Agent Rewards",
