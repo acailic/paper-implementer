@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783117516760,
+  "lastScanned": 1783449176324,
   "projectRoot": "/home/nistrator/Documents/github/paper-implementer",
   "techStack": {
     "languages": [],
@@ -35,7 +35,7 @@
       "path": "papers",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783117516756,
+      "lastAccessed": 1783449176320,
       "keyFiles": [
         "tracker.json"
       ]
@@ -44,7 +44,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 3,
-      "lastAccessed": 1783117516757,
+      "lastAccessed": 1783449176321,
       "keyFiles": [
         "daily_tracker_refresh.py",
         "fetch_most_cited.py",
@@ -55,7 +55,7 @@
       "path": "templates",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1783117516758,
+      "lastAccessed": 1783449176322,
       "keyFiles": [
         "breakdown.md",
         "implementation.md",
@@ -63,307 +63,6 @@
       ]
     }
   },
-  "hotPaths": [
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/notes.md",
-      "accessCount": 142,
-      "lastAccessed": 1783166465059,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/breakdown.md",
-      "accessCount": 29,
-      "lastAccessed": 1783126623479,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-qwen-image-agent-bridging-the-context/breakdown.md",
-      "accessCount": 18,
-      "lastAccessed": 1783126930189,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/breakdown.md",
-      "accessCount": 18,
-      "lastAccessed": 1783128367986,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/breakdown.md",
-      "accessCount": 16,
-      "lastAccessed": 1783124602686,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/breakdown.md",
-      "accessCount": 14,
-      "lastAccessed": 1783124298517,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-domainshuttle-freeform-open-domain-subject-driven/breakdown.md",
-      "accessCount": 13,
-      "lastAccessed": 1783126310810,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-are-we-ready-for-an-agent/breakdown.md",
-      "accessCount": 12,
-      "lastAccessed": 1783125061618,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-improved-large-language-diffusion-models/breakdown.md",
-      "accessCount": 11,
-      "lastAccessed": 1783125192701,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper_layout.txt",
-      "accessCount": 9,
-      "lastAccessed": 1783124488381,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-translation-as-a-bridging-action-transferring/breakdown.md",
-      "accessCount": 9,
-      "lastAccessed": 1783124729882,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-domainshuttle-freeform-open-domain-subject-driven/paper_layout.txt",
-      "accessCount": 8,
-      "lastAccessed": 1783126223431,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/breakdown.md",
-      "accessCount": 8,
-      "lastAccessed": 1783127166277,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-in-context-world-modeling-for-robotic/breakdown.md",
-      "accessCount": 8,
-      "lastAccessed": 1783127313980,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
-      "accessCount": 8,
-      "lastAccessed": 1783164514818,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/breakdown.md",
-      "accessCount": 7,
-      "lastAccessed": 1783127419107,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-wan-streamer-v01-end-to-end/breakdown.md",
-      "accessCount": 7,
-      "lastAccessed": 1783127449286,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/paper_layout.txt",
-      "accessCount": 7,
-      "lastAccessed": 1783131702772,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-physisforcing-physics-reinforced-world-simulator-for/paper_layout.txt",
-      "accessCount": 6,
-      "lastAccessed": 1783124190134,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-translation-as-a-bridging-action-transferring/paper_layout.txt",
-      "accessCount": 6,
-      "lastAccessed": 1783124764162,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-viq-text-aligned-visual-quantized-representations/paper_layout.txt",
-      "accessCount": 6,
-      "lastAccessed": 1783126575708,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-in-context-world-modeling-for-robotic/paper_layout.txt",
-      "accessCount": 6,
-      "lastAccessed": 1783127245449,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/paper_layout.txt",
-      "accessCount": 5,
-      "lastAccessed": 1783127419056,
-      "type": "file"
-    },
-    {
-      "path": "papers/tracker.json",
-      "accessCount": 5,
-      "lastAccessed": 1783130269819,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/paper.txt",
-      "accessCount": 4,
-      "lastAccessed": 1783118004985,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-demystifying-rl-long-horizon-tool-using-agents/paper_layout.txt",
-      "accessCount": 4,
-      "lastAccessed": 1783128642636,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-are-we-ready-for-an-agent/paper_layout.txt",
-      "accessCount": 3,
-      "lastAccessed": 1783124934269,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-verifiable-process-reward-models-structured-reasoning/paper_layout.txt",
-      "accessCount": 3,
-      "lastAccessed": 1783131097913,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling/breakdown.md",
-      "accessCount": 3,
-      "lastAccessed": 1783132041718,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/paper_layout.txt",
-      "accessCount": 3,
-      "lastAccessed": 1783133469535,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-improved-large-language-diffusion-models/paper_layout.txt",
-      "accessCount": 2,
-      "lastAccessed": 1783125199505,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-qwen-image-agent-bridging-the-context/paper_layout.txt",
-      "accessCount": 2,
-      "lastAccessed": 1783126725839,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-gui-vs-cli-execution-bottlenecks-in/paper_layout.txt",
-      "accessCount": 2,
-      "lastAccessed": 1783127082385,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-wan-streamer-v01-end-to-end/paper_layout.txt",
-      "accessCount": 2,
-      "lastAccessed": 1783127449339,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-the-verification-horizon-no-silver-bullet/paper_layout.txt",
-      "accessCount": 2,
-      "lastAccessed": 1783127563722,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-demystifying-rl-long-horizon-tool-using-agents/breakdown.md",
-      "accessCount": 2,
-      "lastAccessed": 1783128975913,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-spin-unifying-sparse-attention-hierarchical-memory/breakdown.md",
-      "accessCount": 2,
-      "lastAccessed": 1783130437519,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-reasoning-trees-rt-rag-multi-hop-qa/breakdown.md",
-      "accessCount": 2,
-      "lastAccessed": 1783131143786,
-      "type": "file"
-    },
-    {
-      "path": "AGENTS.md",
-      "accessCount": 2,
-      "lastAccessed": 1783158241760,
-      "type": "file"
-    },
-    {
-      "path": "templates/breakdown.md",
-      "accessCount": 2,
-      "lastAccessed": 1783158268157,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 1,
-      "lastAccessed": 1783117533845,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-jetspec-breaking-the-scaling-ceiling-of/paper.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783118238471,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-shuttermuse-capture-time-photography-guidance-with/paper_full.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783121981765,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-multi-turn-rl-tool-calling-iterative-reward-calibration/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783129226544,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-speculating-experts-accelerates-moe-inference/paper_layout.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783129531381,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-speculating-experts-accelerates-moe-inference/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783129773915,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-verifiable-process-reward-models-structured-reasoning/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783131353264,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-lacuna-localization-precision-llm-unlearning/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783132527561,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-expander-sparse-autoencoders-parameter-efficient-dictionaries/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783133114239,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-conditional-co-ablation-self-repair-backup-circuits/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783133630688,
-      "type": "file"
-    }
-  ],
+  "hotPaths": [],
   "userDirectives": []
 }
