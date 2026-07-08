@@ -149,6 +149,30 @@
       "type": "file"
     },
     {
+      "path": ".gnhf/runs/keep-working-and-mak-569db4/notes.md",
+      "accessCount": 2,
+      "lastAccessed": 1783553229778,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/model.py",
+      "accessCount": 2,
+      "lastAccessed": 1783553921613,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/data.py",
+      "accessCount": 2,
+      "lastAccessed": 1783553970498,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/train.py",
+      "accessCount": 2,
+      "lastAccessed": 1783554025741,
+      "type": "file"
+    },
+    {
       "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
       "accessCount": 1,
       "lastAccessed": 1783529179658,
@@ -281,12 +305,6 @@
       "type": "file"
     },
     {
-      "path": ".gnhf/runs/keep-working-and-mak-569db4/notes.md",
-      "accessCount": 1,
-      "lastAccessed": 1783551930209,
-      "type": "file"
-    },
-    {
       "path": ".gnhf/runs/keep-working-and-mak-569db4/prompt.md",
       "accessCount": 1,
       "lastAccessed": 1783551938208,
@@ -320,6 +338,30 @@
       "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/writeup.md",
       "accessCount": 1,
       "lastAccessed": 1783553115677,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783553300360,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783554037742,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/README.md",
+      "accessCount": 1,
+      "lastAccessed": 1783554068367,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-directionality-structural-generalization-ccg-slog/writeup.md",
+      "accessCount": 1,
+      "lastAccessed": 1783554100844,
       "type": "file"
     }
   ],
