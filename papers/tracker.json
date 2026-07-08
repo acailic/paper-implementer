@@ -791,8 +791,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.05247",
       "rank": 7,
-      "status": "pending",
-      "folder": "papers/2026-vision-pretraining-for-dense-spatial-perception"
+      "status": "done",
+      "folder": "papers/2026-vision-pretraining-for-dense-spatial-perception",
+      "finished_at": "2026-07-08"
     },
     {
       "title": "Translation as a Bridging Action: Transferring Manipulation Skills from Humans to Robots",
