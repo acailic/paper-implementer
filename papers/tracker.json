@@ -862,8 +862,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.03973",
       "rank": 8,
-      "status": "pending",
-      "folder": "papers/2026-mance-manifold-aware-concept-erasure"
+      "status": "done",
+      "folder": "papers/2026-mance-manifold-aware-concept-erasure",
+      "started_at": "2026-07-08",
+      "finished_at": "2026-07-08"
     },
     {
       "title": "JetSpec: Breaking the Scaling Ceiling of Speculative Decoding with Parallel Tree Drafting",
