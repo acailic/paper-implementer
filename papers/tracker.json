@@ -126,8 +126,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.04033",
       "rank": 1,
-      "status": "broken-down",
-      "folder": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers"
+      "status": "done",
+      "folder": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers",
+      "started_at": "2026-07-08",
+      "finished_at": "2026-07-09"
     },
     {
       "title": "Wan-Streamer v0.1: End-to-end Real-time Interactive Foundation Models",
@@ -1082,7 +1084,8 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.04443",
       "rank": 10,
-      "status": "pending",
+      "status": "skipped",
+      "skip_reason": "Multi-GPU distributed systems deployment paper (Ulysses context-parallel audio-visual streaming). No reference code. Core contribution is distributed architecture, not a re-implementable algorithm. Cannot demo on single-GPU toy setup.",
       "folder": "papers/2026-wan-streamer-v02-higher-resolution-same"
     },
     {
