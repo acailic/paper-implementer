@@ -1982,7 +1982,6 @@
       "status": "done",
       "folder": "papers/2026-knnguard-training-free-activation-guardrail",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-09",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown from paper_layout.txt (pdftotext -layout, 1315 lines, 17pp incl appendices, 7 explicit tables T1-T7 + 11 figures). All 7 tables transcribed verbatim with sourcing line-ranges (T1 datasets L439, T2 avg summary L585, T3 topical L639, T4 security L727, T5 deployment cost L931, T6 backbone topical L1245, T7 backbone adversarial L1287). Source-free reconciliation PASSED: Table-2 averages reproduce from T3+T4 per-domain cells (display-rounding +/-0.1 boundary noise, computed from full precision = iter-45 pattern, not transcription errors); T5 speedups all recompute (2.7x=126/46.8, 9.71~=10x, 60.8~=61x, 3156x=25092/7.95); Silhouette relative improvements (89.0% Medical, 52.8~=53.2% Coding) reconcile to FIGURE labels; T6/T7 Llama-3.1-8B-Instruct rows byte-identical to T3/T4 kNNGuard FE rows (cross-table consistency triangle); cost conversions exact (413s=6.89min, 25092s=6.97h). 3 inline flags (paper-internal, transcribed verbatim): (1) section 5.3 Silhouette PROSE values (Coding 0.527, Medical 0.342) disagree with Figure-7 LABELS (0.532, 0.391) -> 89.0/53.2% match figure not prose; (2) section 5.2-5.3 '%' convention mixed ('66% FPR reduction' is relative but '20.1% ASR reduction relative to' and '64.9% FPR higher' are absolute pp); (3) backbone safety-direction ablation confounded (Llama-3 vs 3.1 8B + abliteration). NO numeric prose-vs-table contradiction. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     },
@@ -2994,10 +2993,10 @@
       "popularity": "",
       "citation_count": "",
       "pwc_url": "",
-      "status": "broken-down",
+      "status": "done",
       "folder": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-04"
+      "finished_at": "2026-07-09"
     },
     {
       "rank": 55,
