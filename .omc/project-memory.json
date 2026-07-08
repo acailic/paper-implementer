@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783449176324,
+  "lastScanned": 1783543242224,
   "projectRoot": "/home/nistrator/Documents/github/paper-implementer",
   "techStack": {
     "languages": [],
@@ -35,7 +35,7 @@
       "path": "papers",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783449176320,
+      "lastAccessed": 1783543242218,
       "keyFiles": [
         "tracker.json"
       ]
@@ -44,7 +44,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 3,
-      "lastAccessed": 1783449176321,
+      "lastAccessed": 1783543242221,
       "keyFiles": [
         "daily_tracker_refresh.py",
         "fetch_most_cited.py",
@@ -55,7 +55,7 @@
       "path": "templates",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1783449176322,
+      "lastAccessed": 1783543242222,
       "keyFiles": [
         "breakdown.md",
         "implementation.md",
@@ -63,6 +63,205 @@
       ]
     }
   },
-  "hotPaths": [],
+  "hotPaths": [
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/paper_layout.txt",
+      "accessCount": 18,
+      "lastAccessed": 1783543314013,
+      "type": "file"
+    },
+    {
+      "path": "papers/tracker.json",
+      "accessCount": 15,
+      "lastAccessed": 1783549650568,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-vision-pretraining-dense-spatial-perception/paper_layout.txt",
+      "accessCount": 9,
+      "lastAccessed": 1783530159947,
+      "type": "file"
+    },
+    {
+      "path": "AGENTS.md",
+      "accessCount": 4,
+      "lastAccessed": 1783543254390,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/train.py",
+      "accessCount": 4,
+      "lastAccessed": 1783549569463,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 2,
+      "lastAccessed": 1783529033023,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/breakdown.md",
+      "accessCount": 2,
+      "lastAccessed": 1783543313967,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/model.py",
+      "accessCount": 2,
+      "lastAccessed": 1783549463002,
+      "type": "file"
+    },
+    {
+      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
+      "accessCount": 1,
+      "lastAccessed": 1783529179658,
+      "type": "file"
+    },
+    {
+      "path": ".gnhf/runs/continue-working-on-98e59e/output-schema.json",
+      "accessCount": 1,
+      "lastAccessed": 1783529189697,
+      "type": "file"
+    },
+    {
+      "path": ".gnhf/runs/continue-working-on-98e59e/commit-message",
+      "accessCount": 1,
+      "lastAccessed": 1783529189720,
+      "type": "file"
+    },
+    {
+      "path": ".gnhf/runs/continue-working-on-98e59e/base-commit",
+      "accessCount": 1,
+      "lastAccessed": 1783529189773,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-researchstudio-idea-an-evidence-grounded-research/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783529211678,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-vision-pretraining-dense-spatial-perception/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783530283915,
+      "type": "file"
+    },
+    {
+      "path": "templates/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783543320392,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/data.py",
+      "accessCount": 1,
+      "lastAccessed": 1783543355037,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/model.py",
+      "accessCount": 1,
+      "lastAccessed": 1783543372688,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/train.py",
+      "accessCount": 1,
+      "lastAccessed": 1783543381148,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783543381774,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/README.md",
+      "accessCount": 1,
+      "lastAccessed": 1783543384994,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783547804407,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/data.py",
+      "accessCount": 1,
+      "lastAccessed": 1783547826067,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/model.py",
+      "accessCount": 1,
+      "lastAccessed": 1783547855771,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/train.py",
+      "accessCount": 1,
+      "lastAccessed": 1783547863258,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783547864035,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/README.md",
+      "accessCount": 1,
+      "lastAccessed": 1783547868535,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/writeup.md",
+      "accessCount": 1,
+      "lastAccessed": 1783548071053,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-pixworld-unifying-3d-scene-generation-and/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783549353996,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/breakdown.md",
+      "accessCount": 1,
+      "lastAccessed": 1783549377382,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/data.py",
+      "accessCount": 1,
+      "lastAccessed": 1783549422547,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1783549443893,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/README.md",
+      "accessCount": 1,
+      "lastAccessed": 1783549454964,
+      "type": "file"
+    },
+    {
+      "path": "papers/2026-knnguard-training-free-activation-guardrail/writeup.md",
+      "accessCount": 1,
+      "lastAccessed": 1783549611146,
+      "type": "file"
+    }
+  ],
   "userDirectives": []
 }

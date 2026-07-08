@@ -43,3 +43,7 @@ Thumbs.db
 
 # Secrets
 .env
+
+# OMC session/state artifacts
+.omc/sessions/
+.omc/state/
