@@ -3051,10 +3051,10 @@
       "popularity": "",
       "citation_count": "",
       "pwc_url": "",
-      "status": "broken-down",
+      "status": "done",
       "folder": "papers/2026-orbitquant-data-agnostic-quantization-diffusion-transformers",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-04",
+      "finished_at": "2026-07-09",
       "notes": "Repo's 60th paper, rank 55 unique. First PTQ / low-bit-quantization / rotation-based-quantization / diffusion-transformer-quantization paper. Source-first breakdown: 7 tables (T1 GenEval, T2 VBench video, T3 rotation-class ablation, T4 W3A3/W2A3, T5 Wan14B/HunyuanVideo VBench, T6 seed-robustness, T7 vs-QAT) + Algorithm 1 + Eqs 1-13 + Proposition 1 (Lemmas 1-2). All quantitative prose deltas recompute EXACT (FLUX-dev -0.034 trail, RPBH-BlockRHT +0.070 latency, 25.8x faster than Haar, 7/8-dim Wan-14B best-PTQ, T7 beats QAT on Subject/Scene/Overall-Consistency). Caught 2 genuine prose-vs-table T6 std-bound violations: 'std<=0.005 at W4A4 every model' FALSE for FLUX.1-schnell (0.012); 'within 0.013 at W2A4' FALSE for FLUX.1-dev (0.014). Honest-scope: all latency/memory under fake-quantization (no codebook-GEMM kernel, realized speedup unmeasured); online rotation cost unavoidable; AdaLN forced INT4 RTN partly carries 4x compression; Prop 1 asymptotic; Z-Image W2A3 collapses to 0.105. file-vs-pdfinfo defect recurs (file 11pp vs pdfinfo 15pp)."
     },
     {
