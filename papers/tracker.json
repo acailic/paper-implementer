@@ -1501,6 +1501,7 @@
       "sourcing_note": "Source-first breakdown built from paper.pdf (21pp) via pdftotext -layout (paper_layout.txt, 1215 lines). All 12 explicit tables transcribed verbatim with sourcing line-ranges; figure bar values NOT back-filled (only Table-resident + prose-confirmed numbers). Source-free reconciliation passed: +0.0253 (0.4222-0.3969), +0.0002 (0.3988-0.3986), 5.3x pool contraction (2271/429), 0.77% L123 sparsity (129955/16.77M), all Table-9 delta Avg recompute, purity climbs monotone. No paper-internal numeric prose-vs-table contradiction. Two minor paper-internal notes flagged inline (Table 11 row 179 lists 7 n-grams under 'top 6' header; abstract rounds pool contraction to ~5x true 5.3x and frames conditional-entropy reduction as ~80% true ~81%)."
     },
     {
+      "folder": "2026-bayesian-sparse-low-rank-adaptation-uncertainty-estimation",
       "title": "Bayesian Sparse Low-Rank Adaptation for Large Language Model Uncertainty Estimation",
       "authors": [
         "Jijie Zhang",
