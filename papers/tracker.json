@@ -1481,6 +1481,7 @@
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1587 lines, 26pp). All 16 explicit tables transcribed verbatim with line-range sourcing (Tables 1-16). Source-free reconciliation PASSED: every prose delta recomputes (PAW-FT 15.4pp=0.1538, PAW-FixedLoRA 21.7pp=0.2168, pseudo-vs-raw clean 1.6pp=0.0158, heavy-typo 4.5pp=0.0446, Q4_K_M+Q4_0 loss 1.3pp=0.0127); image-task best-baseline attributions all correct; T6 drop-from-clean row matches recomputation. 30+ distinctive cells grep-confirmed. Flagged inline (not reconciled): (1) ablation-table \"default\" baseline varies across tables (0.6223/0.6443/0.6572) because ablations run on test_clean not the verified set + at different checkpoints; (2) abstract \"~30 tok/s\" vs section 9 \"31.6 tok/s\" (rounding); (3) verified-set (73.78%) vs test_clean (0.62-0.66) are different test sets. NO numeric prose-vs-table contradiction. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
     },
     {
+      "folder": "2026-hermes-multi-granularity-labeling-substrate-for-pre-training-data-mixtures",
       "title": "HERMES: A Multi-Granularity Labeling Substrate for Pre-training Data Mixtures",
       "authors": [
         "Ziyun Qiao",
