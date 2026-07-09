@@ -95,6 +95,12 @@
       "type": "file"
     },
     {
+      "path": ".gnhf/runs/keep-working-and-mak-569db4/notes.md",
+      "accessCount": 5,
+      "lastAccessed": 1783558040332,
+      "type": "file"
+    },
+    {
       "path": "AGENTS.md",
       "accessCount": 4,
       "lastAccessed": 1783543254390,
@@ -104,12 +110,6 @@
       "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/train.py",
       "accessCount": 4,
       "lastAccessed": 1783549569463,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/keep-working-and-mak-569db4/notes.md",
-      "accessCount": 4,
-      "lastAccessed": 1783556357279,
       "type": "file"
     },
     {

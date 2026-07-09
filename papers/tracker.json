@@ -2736,10 +2736,10 @@
       "popularity": 0,
       "citation_count": 0,
       "pwc_url": "",
-      "status": "broken-down",
+      "status": "done",
       "folder": "papers/2026-dsgnar-pinns-second-order-gauss-newton-conditioning",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-04",
+      "finished_at": "2026-07-09",
       "sourcing_note": "Source-first breakdown. PDF fetched from arxiv.org/pdf/2607.02194 (49pp; `file` misreports 10pp, pdfinfo confirms 49 — same file-vs-pdfinfo defect as iter-66 SASP). paper_layout.txt pdftotext -layout, 4078 lines, 2 explicit tables (Table 1 main 7-PDE results grid L140-185; Table 2 Jacobian-build wall-clock L588-612) + Algorithm 1 (DSGNAR, L470-505) + Algorithm 3 (LambdaSolve) + Eqs 1-23 + Figures 1-4. Table 1 verbatim with all 13 precision-rows; Table 2 verbatim with all 7 N x d_theta rows. Source-free reconciliation PASSED (0 contradictions): abstract 'five orders on Burgers' = Burgers-double 5.31 orders (1.62e-8 -> 7.97e-14) EXACT; 'eight orders high-dim Poisson' = 5D-Poisson 8.52 orders (~1e-7 -> 3.03e-16) EXACT; min Ours l2 = 3.03e-16 matches 'as low as 3e-16'; Burgers-single 4.75e-7 in 9.8s matches '<10s'. 9 inline honest-scope flags: (1) two wall-clock REGRESSIONS vs benchmark (NS s=4000 0.22x, Multi-scale 0.22x); (2) 'eight orders high-dim Poisson' matches 5D row not the genuinely-higher 10D row (6.22 orders); (3) Navier-Stokes weakest accuracy (~2 orders, bottleneck shifted to PINN objective); (4) no theory for the COMBINED doubly-sketched construction (authors' own open question); (5) linear convergence empirical not proven; (6) benchmark t_wall cross-paper cross-hardware not device-matched; (7) ~ prefix on 3 benchmark l2 values approximate; (8) under-specified sketch/update internals; (9) single-precision Wave/KdV/Multi-scale rows have no benchmark counterpart. NO numeric prose-vs-table contradiction. Code released."
     },
     {
@@ -4056,5 +4056,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-07-07T18:38:20.720015+00:00"
+  "updated_at": "2026-07-09"
 }
