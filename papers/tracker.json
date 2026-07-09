@@ -3313,10 +3313,10 @@
       "popularity": "",
       "citation_count": "",
       "pwc_url": "",
-      "status": "broken-down",
+      "status": "done",
       "folder": "papers/2026-fno-rayleigh-benard-convection",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-04",
+      "finished_at": "2026-07-09",
       "notes": "8pp (file misreports 1pp, pdfinfo=8, defect recurs). 5 tables + Eqs 1-4. Source-first reconciliation (Python-verified): Table-1 averages EXACT (Inc 5.8e-5, Sol 1.4e-3, IdErr 1.4e-4); increment beats identity, solution 10x WORSE than identity. Cross-table identities byte-exact: T2 Baseline==T1 Solution, T4 (256,64)==T2 Improved (both 2.1e-5). CAUGHT lone-cell avg defect: Table 3 row dt=0.001 Average stated 8.2e-5 recomputes 5.35e-5 (53% overstatement; other 3 rows OK). CAUGHT magnitude-headline overstatement: section 4.1 'two orders of magnitude' = avg 24.4x (1.39 orders); per-var max p 58x (1.76); only conclusion 'up to two orders' via Improved-vs-Baseline-Solution 69x (1.84) borderline. CAUGHT T3<->T2 cross-table run-drift (single-step dt=0.001 differs 2.5-4x). 0.11-vs-0.04 Straat = end-horizon vs reported (FNO better at t=0.5). Sibling to dsgnar iter 67 (physics-ML/PDE; FNO operator-learning vs PINN optimiser) + soap-muon/dsgnar science-ML-efficiency lineage."
     },
     {
