@@ -2787,10 +2787,10 @@
       "popularity": 0,
       "citation_count": 0,
       "pwc_url": "",
-      "status": "broken-down",
+      "status": "done",
       "folder": "papers/2026-soap-muon-mlip-matrix-structured-optimizers-interatomic-potentials",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-04",
+      "finished_at": "2026-07-09",
       "sourcing_note": "Source-first breakdown. PDF fetched from arxiv.org/pdf/2607.02499 (21pp; file and pdfinfo both report 21pp - no page-count defect this iter). paper_layout.txt pdftotext -layout, 1426 lines, 5 explicit tables (Table 1 main E+F/E MAE mean+/-std 5 seeds L220-245; Table 2 parameter-class/group assignments L712-731; Table 3 architecture hyperparams CDP+water L924-960; Table 4 per-task/force-%/optimiser LR+WD L1014-1040; Table 5 full force-% ablation L1058-1098) + Algorithm 1 (Muon L744-756) + Algorithm 2 (SOAP+optional Muon ortho L803-833) + Eqs 1-5 + Figures 1-8. Table 1 + Table 5 verbatim; all 8 prose deltas recompute EXACT via source-free reconciliation (CDP E+F SOAP E -9.4%, SOAP-Muon F -13.7%; water SOAP-Muon E -23.7%, SOAP F -18.7%; CDP E-only SOAP-Muon E -46.7%, F -60.0% EXACT; water E-only SOAP E -25.9%, F -22.9%). Table 5 100% E+F row byte-identical to Table 1 (cross-table check holds). 9 inline honest-scope flags: Muon partial-gains headline is CDP-only (water Muon WORSE than AdamW on energy 1.98x E+F / 1.67x E-only); wall-clock 4.9x/5.8x speedups figure-only; SOAP-Muon water gains needed extra per-system tuning + 10x-lower LR; FCTP 3D weights not preconditioned; label-efficiency headline CDP-carried; only 2 systems+2 architectures no foundation study; rho=0.5 default needs full SVD; energy-only F columns extrapolated gradients. NO prose-vs-table contradiction. Sibling-in-spirit to DSGNAR iter-67 (both optimiser-first science-ML, DSGNAR proposes new second-order method for PINNs, this benchmarks existing first-order matrix-structured optimisers for equivariant MLIPs)."
     },
     {
