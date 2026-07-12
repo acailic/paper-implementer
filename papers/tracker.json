@@ -957,7 +957,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.02646",
       "rank": 9,
-      "status": "pending",
+      "status": "broken-down",
       "folder": "papers/2026-eva-client-a-unified-data-collection"
     },
     {
@@ -1329,8 +1329,8 @@
       "citation_count": 0,
       "pwc_url": "",
       "rank": 16,
-      "status": "analyzed",
-      "folder": "2026-verifiable-process-reward-models-structured-reasoning",
+      "status": "broken-down",
+      "folder": "papers/2026-verifiable-process-reward-models-structured-reasoning",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "note": "Source-first build (iter 34). VPRMs replace neural step-judges with deterministic rule-based verifiers on the Cochrane risk-of-bias decision tree; Theorem 1 reward-separation guarantee. All 7 numeric tables (1-7) verbatim; Table 8 qualitative. GRPO-VPRM wins all 6 result cols (87.9/76.7 CF), +6.4/+6.5 over outcome-only GRPO, +9.7/+20.6 over best neural PRM. Coherence 89.5 vs ~50 baseline. Flagged 1 paper-internal prose-vs-table inconsistency inline: abstract '20% higher F1' magnitude matches Accuracy (+20.8 vs GPT-OSS-120B), not F1 (+26.9)."
@@ -1353,7 +1353,8 @@
       "folder": "papers/2026-scorio-ranking-reasoning-llms-test-time-scaling",
       "rank": 17,
       "subarea": "statistical ranking / LLM evaluation methodology under test-time scaling",
-      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 3067 lines). Tables 1-5, 6-9, 10, 18, 19, 20-24 transcribed verbatim with sourcing line-ranges; Tables 11-17 summarized. No prose-vs-table numeric inconsistencies found. Figure-derived per-method tau_b bars / scatter / violins (Figs 1-7) not back-filled, only prose-confirmed ranges quoted."
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 3067 lines). Tables 1-5, 6-9, 10, 18, 19, 20-24 transcribed verbatim with sourcing line-ranges; Tables 11-17 summarized. No prose-vs-table numeric inconsistencies found. Figure-derived per-method tau_b bars / scatter / violins (Figs 1-7) not back-filled, only prose-confirmed ranges quoted.",
+      "status": "broken-down"
     },
     {
       "title": "LACUNA: A Testbed for Evaluating Localization Precision for LLM Unlearning",
@@ -1374,7 +1375,8 @@
       "folder": "papers/2026-lacuna-localization-precision-llm-unlearning",
       "rank": 18,
       "subarea": "LLM machine unlearning / localization-precision evaluation (privacy, model editing)",
-      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1811 lines). Tables 2 (OLMo2 1B) and 3 (OLMo3 7B) cumulative unlearning results transcribed verbatim across all 4 PII fields x 4 methods x ~18 metric rows; Table 4/5 hyperparameters verbatim. Localization-precision AUC(F) reconciled between Table 2/3 Precision rows and Figure 4b/7/9 legend labels (independent agreement). Figure-derived Success@200 resurfacing bar heights not back-filled (only prose-confirmed ranking + OracleGrad~8% lowest quoted). Paper-internal quirk flagged: tables numbered 2/3/4/5 with no Table 1 caption. No prose-vs-table numeric inconsistencies found."
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1811 lines). Tables 2 (OLMo2 1B) and 3 (OLMo3 7B) cumulative unlearning results transcribed verbatim across all 4 PII fields x 4 methods x ~18 metric rows; Table 4/5 hyperparameters verbatim. Localization-precision AUC(F) reconciled between Table 2/3 Precision rows and Figure 4b/7/9 legend labels (independent agreement). Figure-derived Success@200 resurfacing bar heights not back-filled (only prose-confirmed ranking + OracleGrad~8% lowest quoted). Paper-internal quirk flagged: tables numbered 2/3/4/5 with no Table 1 caption. No prose-vs-table numeric inconsistencies found.",
+      "status": "broken-down"
     },
     {
       "title": "Expander Sparse Autoencoders: Parameter-Efficient Dictionaries for Mechanistic Interpretability",
@@ -1405,7 +1407,8 @@
       "folder": "papers/2026-expander-sparse-autoencoders-parameter-efficient-dictionaries",
       "rank": 19,
       "subarea": "sparse-autoencoder architecture / dictionary learning for mechanistic interpretability (combinatorial compressed sensing, expander-graph dictionaries)",
-      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1990 lines). All 10 explicit tables (1-10) transcribed verbatim with line-range sourcing. Source-free reconciliation passed: storage ratio = m/d for every cell (Pythia 512/{7,50,200} -> 73/10/2.6x; Qwen/Llama 2048/{7,30,102} -> 293/68/20x); 84% = 0.828/0.983 (Qwen L12 d=7 vs Dense CE-rec); 293x = 33,554,432/114,688; Table 5 throughput doubles per L-doubling; Table 10 d=50 == Table 2 == Table 1 Pythia d=50 (cross-table). Theorem 3.1 (beta=1 -> epsilon<1/2 lossless-expander). 22 distinctive cells grep-confirmed in source. Figures 1-13 NOT back-filled (only prose-confirmed ranges + figure-printed coherence means). No prose-vs-table numeric inconsistency found; the one phrasing nuance (abstract 84% = ratio of two CE-rec values, not CE-rec itself) clarified inline."
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1990 lines). All 10 explicit tables (1-10) transcribed verbatim with line-range sourcing. Source-free reconciliation passed: storage ratio = m/d for every cell (Pythia 512/{7,50,200} -> 73/10/2.6x; Qwen/Llama 2048/{7,30,102} -> 293/68/20x); 84% = 0.828/0.983 (Qwen L12 d=7 vs Dense CE-rec); 293x = 33,554,432/114,688; Table 5 throughput doubles per L-doubling; Table 10 d=50 == Table 2 == Table 1 Pythia d=50 (cross-table). Theorem 3.1 (beta=1 -> epsilon<1/2 lossless-expander). 22 distinctive cells grep-confirmed in source. Figures 1-13 NOT back-filled (only prose-confirmed ranges + figure-printed coherence means). No prose-vs-table numeric inconsistency found; the one phrasing nuance (abstract 84% = ratio of two CE-rec values, not CE-rec itself) clarified inline.",
+      "status": "broken-down"
     },
     {
       "title": "Conditional Co-Ablation: Recovering Self-Repair Backups in Transformer Circuits",
@@ -1439,7 +1442,8 @@
       "folder": "papers/2026-conditional-co-ablation-self-repair-backup-circuits",
       "rank": 20,
       "subarea": "mechanistic interpretability / conditional component importance under self-repair (recovering dormant backup circuits). A second-order conditional importance score; sibling-in-spirit to expander-sparse-autoencoders (both mech-interp) but about circuit redundancy/conditional importance, not dictionary architecture.",
-      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 2778 lines, 12pp + appendices). All main results tables verbatim with sourcing line-ranges: Table 1 backup-discovery AUC (6 signals, lines 343-358), Table 2 completion module (3 finders, 344-352), Table 3 attribution recovery (646-650), Table 4 capability knockout (688-693), Table 6 wall-clock/memory (1148-1153), Table 7 per-method FPE cost (1227-1233), Table 8 hyperparams (1266-1278), Table 9 ablation-value robustness (1293-1295), Table 12 controlled-redundancy synthetic (1605-1609), Table 21 induction 3-scale (2317-2325), Table 22 cross-architecture 8-model (2367-2375), Table 26 GPT-2-small pruning sweep (2545-2555), Table 27 3-model pruning sweep (2582-2609). Propositions 1-3 transcribed. Source-free reconciliation PASSED: 30+ distinctive cells grep-confirmed in paper_layout.txt (0.91/0.82/0.63/0.70/0.60/0.33 AUCs, 3.11/3.73/1.71 completion, 1.76/0.22 attribution, 80.6/201.4/112.6 pruning, 12.1x/2.1x induction factors, 23155/119377 PPL outliers). NO paper-internal numeric inconsistency found (all prose deltas recompute from tables: 0.97->0.70 knockout, 0.22->1.76 attribution, 80.6<201.4 pruning)."
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 2778 lines, 12pp + appendices). All main results tables verbatim with sourcing line-ranges: Table 1 backup-discovery AUC (6 signals, lines 343-358), Table 2 completion module (3 finders, 344-352), Table 3 attribution recovery (646-650), Table 4 capability knockout (688-693), Table 6 wall-clock/memory (1148-1153), Table 7 per-method FPE cost (1227-1233), Table 8 hyperparams (1266-1278), Table 9 ablation-value robustness (1293-1295), Table 12 controlled-redundancy synthetic (1605-1609), Table 21 induction 3-scale (2317-2325), Table 22 cross-architecture 8-model (2367-2375), Table 26 GPT-2-small pruning sweep (2545-2555), Table 27 3-model pruning sweep (2582-2609). Propositions 1-3 transcribed. Source-free reconciliation PASSED: 30+ distinctive cells grep-confirmed in paper_layout.txt (0.91/0.82/0.63/0.70/0.60/0.33 AUCs, 3.11/3.73/1.71 completion, 1.76/0.22 attribution, 80.6/201.4/112.6 pruning, 12.1x/2.1x induction factors, 23155/119377 PPL outliers). NO paper-internal numeric inconsistency found (all prose deltas recompute from tables: 0.97->0.70 knockout, 0.22->1.76 attribution, 80.6<201.4 pruning).",
+      "status": "broken-down"
     },
     {
       "title": "Program-as-Weights: A Programming Paradigm for Fuzzy Functions",
@@ -1475,13 +1479,14 @@
         "instruction tuning",
         "compiler-interpreter"
       ],
-      "folder": "2026-program-as-weights-fuzzy-functions",
+      "folder": "papers/2026-program-as-weights-fuzzy-functions",
       "rank": 21,
       "subarea": "neural program compilation / fuzzy-function programming (hypernetwork text-to-LoRA for local small-model deployment)",
-      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1587 lines, 26pp). All 16 explicit tables transcribed verbatim with line-range sourcing (Tables 1-16). Source-free reconciliation PASSED: every prose delta recomputes (PAW-FT 15.4pp=0.1538, PAW-FixedLoRA 21.7pp=0.2168, pseudo-vs-raw clean 1.6pp=0.0158, heavy-typo 4.5pp=0.0446, Q4_K_M+Q4_0 loss 1.3pp=0.0127); image-task best-baseline attributions all correct; T6 drop-from-clean row matches recomputation. 30+ distinctive cells grep-confirmed. Flagged inline (not reconciled): (1) ablation-table \"default\" baseline varies across tables (0.6223/0.6443/0.6572) because ablations run on test_clean not the verified set + at different checkpoints; (2) abstract \"~30 tok/s\" vs section 9 \"31.6 tok/s\" (rounding); (3) verified-set (73.78%) vs test_clean (0.62-0.66) are different test sets. NO numeric prose-vs-table contradiction. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+      "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1587 lines, 26pp). All 16 explicit tables transcribed verbatim with line-range sourcing (Tables 1-16). Source-free reconciliation PASSED: every prose delta recomputes (PAW-FT 15.4pp=0.1538, PAW-FixedLoRA 21.7pp=0.2168, pseudo-vs-raw clean 1.6pp=0.0158, heavy-typo 4.5pp=0.0446, Q4_K_M+Q4_0 loss 1.3pp=0.0127); image-task best-baseline attributions all correct; T6 drop-from-clean row matches recomputation. 30+ distinctive cells grep-confirmed. Flagged inline (not reconciled): (1) ablation-table \"default\" baseline varies across tables (0.6223/0.6443/0.6572) because ablations run on test_clean not the verified set + at different checkpoints; (2) abstract \"~30 tok/s\" vs section 9 \"31.6 tok/s\" (rounding); (3) verified-set (73.78%) vs test_clean (0.62-0.66) are different test sets. NO numeric prose-vs-table contradiction. Built source-first -> expected cell-clean; future 2nd pass LOW yield.",
+      "status": "broken-down"
     },
     {
-      "folder": "2026-hermes-multi-granularity-labeling-substrate-for-pre-training-data-mixtures",
+      "folder": "papers/2026-hermes-data-curation",
       "title": "HERMES: A Multi-Granularity Labeling Substrate for Pre-training Data Mixtures",
       "authors": [
         "Ziyun Qiao",
@@ -1498,10 +1503,11 @@
       "abstract": "Most data-mixing methods assume the corpus has already been partitioned into groups, and the choice of those groups determines what a mixer can express. Existing labels (provenance, topic or format taxonomies, flat embedding clusters) commit to one semantic axis at one granularity; changing the resolution rebuilds the labels. We argue the bottleneck is the label system, not the mixer, and provide a hierarchical one. HERMES is a data-derived labeling substrate: a Learned Semantic Transform followed by 3-stage residual vector quantization annotates each document once into a coarse-to-fine code whose prefix length controls granularity up to ~130k cells. At coarse granularity HERMES sits at a plateau with KMeans-family methods on standard clustering metrics, so the contribution is the substrate, not the clusterer. On 1B-parameter, 25B-token pre-training, the hierarchy exposes an interaction fixed-granularity pipelines cannot test: at one prefix length, a combined Stage-2 rule contrast lifts a 16-task capability macro-average by +0.0253; at the next finer level, the same rule loses its measurable edge as candidate pools contract ~5x. HERMES reframes data mixture design from choosing among fixed label sets to navigating a reusable, data-derived granularity hierarchy.",
       "subarea": "pre-training data curation / data-mixture design via hierarchical RVQ corpus labeling",
       "rank": 22,
-      "sourcing_note": "Source-first breakdown built from paper.pdf (21pp) via pdftotext -layout (paper_layout.txt, 1215 lines). All 12 explicit tables transcribed verbatim with sourcing line-ranges; figure bar values NOT back-filled (only Table-resident + prose-confirmed numbers). Source-free reconciliation passed: +0.0253 (0.4222-0.3969), +0.0002 (0.3988-0.3986), 5.3x pool contraction (2271/429), 0.77% L123 sparsity (129955/16.77M), all Table-9 delta Avg recompute, purity climbs monotone. No paper-internal numeric prose-vs-table contradiction. Two minor paper-internal notes flagged inline (Table 11 row 179 lists 7 n-grams under 'top 6' header; abstract rounds pool contraction to ~5x true 5.3x and frames conditional-entropy reduction as ~80% true ~81%)."
+      "sourcing_note": "Source-first breakdown built from paper.pdf (21pp) via pdftotext -layout (paper_layout.txt, 1215 lines). All 12 explicit tables transcribed verbatim with sourcing line-ranges; figure bar values NOT back-filled (only Table-resident + prose-confirmed numbers). Source-free reconciliation passed: +0.0253 (0.4222-0.3969), +0.0002 (0.3988-0.3986), 5.3x pool contraction (2271/429), 0.77% L123 sparsity (129955/16.77M), all Table-9 delta Avg recompute, purity climbs monotone. No paper-internal numeric prose-vs-table contradiction. Two minor paper-internal notes flagged inline (Table 11 row 179 lists 7 n-grams under 'top 6' header; abstract rounds pool contraction to ~5x true 5.3x and frames conditional-entropy reduction as ~80% true ~81%).",
+      "status": "broken-down"
     },
     {
-      "folder": "2026-bayesian-sparse-low-rank-adaptation-uncertainty-estimation",
+      "folder": "papers/2026-dalorra-bayesian-sparse-lora",
       "title": "Bayesian Sparse Low-Rank Adaptation for Large Language Model Uncertainty Estimation",
       "authors": [
         "Jijie Zhang",
@@ -1532,7 +1538,8 @@
         "ELBO",
         "trustworthy deployment"
       ],
-      "sourcing_note": "Source-first breakdown built from paper.pdf (8pp+app, 16pp total) via pdftotext -layout (paper_layout.txt, 1077 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 main results 9 methods x 10 settings x ACC/ECE/NLL; T2/T6 efficiency; T3 dataset stats; T4 prompts; T5 Llama2-7B). Figure bar values NOT back-filled (only prose-confirmed trends). Source-free reconciliation passed: +520 extra params = 4,467,208-4,466,688 (1.0001x); train-time ratios 0.72/0.60/0.65 (T2) and 0.57/0.71/0.46 (T6); AAO/WB/Combined dataset unions all reconcile; 9-of-10 ECE headline exact (Phy is 3rd not 2nd). One paper-internal anomaly flagged inline (Table 5 Llama2-7B LA ECE ARC-E=45.85 with low NLL, internally contradictory, possible source typo). No other prose-vs-table numeric contradiction."
+      "sourcing_note": "Source-first breakdown built from paper.pdf (8pp+app, 16pp total) via pdftotext -layout (paper_layout.txt, 1077 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 main results 9 methods x 10 settings x ACC/ECE/NLL; T2/T6 efficiency; T3 dataset stats; T4 prompts; T5 Llama2-7B). Figure bar values NOT back-filled (only prose-confirmed trends). Source-free reconciliation passed: +520 extra params = 4,467,208-4,466,688 (1.0001x); train-time ratios 0.72/0.60/0.65 (T2) and 0.57/0.71/0.46 (T6); AAO/WB/Combined dataset unions all reconcile; 9-of-10 ECE headline exact (Phy is 3rd not 2nd). One paper-internal anomaly flagged inline (Table 5 Llama2-7B LA ECE ARC-E=45.85 with low NLL, internally contradictory, possible source typo). No other prose-vs-table numeric contradiction.",
+      "status": "broken-down"
     },
     {
       "title": "A Hippocampus for Linear Attention: An Exact Memory for What the Recurrent State Forgets",
@@ -1540,6 +1547,7 @@
         "Wanyun Cui"
       ],
       "year": 2026,
+      "folder": "papers/2026-hola-hippocampal-linear-attention",
       "arxiv_id": "2607.02303",
       "arxiv_url": "https://arxiv.org/abs/2607.02303",
       "pdf_url": "https://arxiv.org/pdf/2607.02303",
@@ -1563,10 +1571,12 @@
         "associative recall",
         "long-context retrieval"
       ],
-      "sourcing_note": "Source-first breakdown built from paper.pdf (12pp) via pdftotext -layout (paper_layout.txt, 752 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 389-410, T2 471-475, T3 509-531, T4 549-557, T5 573-580, T6 735-739). Source-free reconciliation PASSED: all 9 Table-1 Avg cells reproduce from their 6-task commonsense components; Table-2 per-scale deltas recompute (15-16% rel); Table-5 RMSNorm-gamma PPL 59.5 == Table-2 46M HOLA 59.5 and Table-4 beta*||e|| flat-read 70.10 == Table-5 unit-L2 70.10; headline deltas recompute (-16.1% Wiki, +72% FDA, +24% SWDE). Figure-derived values quoted only where prose-confirmed (16k/32k S-NIAH-1 0.58/0.24/0.14 + +0.64@16k from sec 4.4); per-point bar reads not back-filled. 1 inline note: Table-1 Avg is a 6-task mean while sec 4.2 also cites a 9-task accuracy mean (different denominators); effective-logit arithmetic (0.83cos / 11cos) noted as stated heuristic vs head-dim 256. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+      "sourcing_note": "Source-first breakdown built from paper.pdf (12pp) via pdftotext -layout (paper_layout.txt, 752 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 389-410, T2 471-475, T3 509-531, T4 549-557, T5 573-580, T6 735-739). Source-free reconciliation PASSED: all 9 Table-1 Avg cells reproduce from their 6-task commonsense components; Table-2 per-scale deltas recompute (15-16% rel); Table-5 RMSNorm-gamma PPL 59.5 == Table-2 46M HOLA 59.5 and Table-4 beta*||e|| flat-read 70.10 == Table-5 unit-L2 70.10; headline deltas recompute (-16.1% Wiki, +72% FDA, +24% SWDE). Figure-derived values quoted only where prose-confirmed (16k/32k S-NIAH-1 0.58/0.24/0.14 + +0.64@16k from sec 4.4); per-point bar reads not back-filled. 1 inline note: Table-1 Avg is a 6-task mean while sec 4.2 also cites a 9-task accuracy mean (different denominators); effective-logit arithmetic (0.83cos / 11cos) noted as stated heuristic vs head-dim 256. Built source-first -> expected cell-clean; future 2nd pass LOW yield.",
+      "status": "broken-down"
     },
     {
       "rank": 25,
+      "folder": "papers/2026-subliminal-clocks-latent-time-dlm",
       "arxiv_id": "2607.01774",
       "arxiv_url": "https://arxiv.org/abs/2607.01774",
       "pdf_url": "https://arxiv.org/pdf/2607.01774",
@@ -1608,10 +1618,12 @@
         "EOS collapse"
       ],
       "abstract": "Diffusion Language Models (DLMs) have recently emerged as a promising alternative to autoregressive models. Unlike standard diffusion-based approaches, DLMs are not explicitly conditioned on a timestep, raising a natural question: do these models internally represent denoising progress, and how is such information used downstream? In this work, we show that DLMs do in fact encode a latent representation related to the diffusion timestep within their residual streams. We find that this signal can be reliably extracted using probes across layers, indicating that denoising progress is decodable from internal activations. We further demonstrate that steering the model along a low-dimensional subspace associated with the inferred timestep allows us to systematically modulate its notion of denoising progress, leading to predictable changes in model confidence and entropy. Finally, we analyse the geometry of the identified representation, showing that it exhibits structured and interpretable properties in activation space, and shedding light on how such a signal is processed by these models.",
-      "sourcing_note": "Source-first breakdown built from paper.pdf (16pp, 2.9MB) via pdftotext -layout (paper_layout.txt, 2133 lines; 1 explicit table + 23 figures). Table 1 (downstream mean-steering, 2 models x 3 datasets x {base, t_hat=1,25,50,75,100}) transcribed verbatim (lines 1174-1183); Figure 2/13/15 probe R^2 per-layer data strips (LLaDA MLP, Dream MLP, both linear) transcribed as figure-printed numeric rows (the figures underlying data, higher confidence than bar-reads). Source-free reconciliation PASSED: 3200/2800 mean vectors = 100 bins x 32/28 layers; probe R^2>0.5 all layers (LLaDA ALL min 0.74, Dream ALL min 0.80); Dream L25 PCA PC1 91.19% + PC2 5.03% = 96.22% in 2D; LLaDA Table-1 robust (max |delta| 6.4), Dream GSM8K t_hat=100 collapse 68.8->23.1 (-45.7) matches prose; random-control KL ~ half of tau-KL. 17/17 distinctive cells grep-confirmed verbatim. NO numeric prose-vs-table contradiction. 3 inline notes: (1) no explicit inference-timestep is the premise not a gap; (2) probe R^2 strips are figure-embedded data not a standalone table; (3) Dream GSM8K EOS-collapse mechanism is qualitative (paper leaves quantitative analysis to future work). Figure axis-tick values (entropy/confidence/KL curves, cosine heatmaps, drift maps) NOT back-filled - only prose-confirmed qualitative trends quoted. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+      "sourcing_note": "Source-first breakdown built from paper.pdf (16pp, 2.9MB) via pdftotext -layout (paper_layout.txt, 2133 lines; 1 explicit table + 23 figures). Table 1 (downstream mean-steering, 2 models x 3 datasets x {base, t_hat=1,25,50,75,100}) transcribed verbatim (lines 1174-1183); Figure 2/13/15 probe R^2 per-layer data strips (LLaDA MLP, Dream MLP, both linear) transcribed as figure-printed numeric rows (the figures underlying data, higher confidence than bar-reads). Source-free reconciliation PASSED: 3200/2800 mean vectors = 100 bins x 32/28 layers; probe R^2>0.5 all layers (LLaDA ALL min 0.74, Dream ALL min 0.80); Dream L25 PCA PC1 91.19% + PC2 5.03% = 96.22% in 2D; LLaDA Table-1 robust (max |delta| 6.4), Dream GSM8K t_hat=100 collapse 68.8->23.1 (-45.7) matches prose; random-control KL ~ half of tau-KL. 17/17 distinctive cells grep-confirmed verbatim. NO numeric prose-vs-table contradiction. 3 inline notes: (1) no explicit inference-timestep is the premise not a gap; (2) probe R^2 strips are figure-embedded data not a standalone table; (3) Dream GSM8K EOS-collapse mechanism is qualitative (paper leaves quantitative analysis to future work). Figure axis-tick values (entropy/confidence/KL curves, cosine heatmaps, drift maps) NOT back-filled - only prose-confirmed qualitative trends quoted. Built source-first -> expected cell-clean; future 2nd pass LOW yield.",
+      "status": "broken-down"
     },
     {
       "rank": 26,
+      "folder": "papers/2026-refusal-subspaces-rfm-agop",
       "arxiv_id": "2607.02396",
       "arxiv_url": "https://arxiv.org/abs/2607.02396",
       "pdf_url": "https://arxiv.org/pdf/2607.02396",
@@ -1644,13 +1656,15 @@
         "HarmBench"
       ],
       "abstract": "Steering and monitoring activations in Large Language Models (LLMs) are increasingly used for both safety and interpretability. Early work assumed behaviours are encoded along single linear directions, but recent findings suggest complex behaviours, such as the refusal to answer harmful queries, live in multi-dimensional subspaces. However, existing methods for extracting these subspaces are computationally expensive, which becomes prohibitive on reasoning models who produce long reasoning traces. By adapting the Recursive Feature Machine (RFM) algorithm -- which can be computed efficiently -- with a probe-informed initialization, we are able to identify the multi-dimensional refusal subspace in seconds, on reasoning (Qwen 3) and non-reasoning (Qwen 2.5) models. While RFM allows for faster subspace identification, it also showed better performances on the ablation task than its alternatives. More work is planned to better understand the relations between subspaces found by different methods. If confirmed, RFM could be a cheap and scalable complement to existing subspace-extraction methods in LLMs.",
-      "sourcing_note": "Source-first breakdown built from paper.pdf (13pp, 479KB) via pdftotext -layout (paper_layout.txt, 723 lines; 1 explicit table + 6 figures). Table 1 (full ASR, 5 models x 5 methods x k in {0,1,3,5}) transcribed verbatim (lines 256-283); RCO row absent for Qwen3-14B confirmed by caption (no compute). Source-free reconciliation PASSED: 720=500+120+100; merged 1,271 -> m=720; 6 subset sizes {120,320,520,720,920,1120}; 4 languages x 1/4; Llama-Guard-3 91% EN / ~82% multilingual; judge agreement 84%; RFM FLOPs n^2*d=1000^2*5000=5e9; RCO s*b*l*p=5.12e17 x2 ~ 1.02e18 (paper roughly 10^18); hyperparams T=6 L=30 lambda=1e-3, k=10 cov truncation. All Table-1 cells grep-confirmed. 3 flagged notes (not reconciled): (1) abstract RFM-beats-alternatives overclaim - true at k=5 on Qwen2.5/1.7B/4B/8B but FALSE at k=1 on 1.7B (DIM 0.80>RFM 0.73) and k=3 on 1.7B, and RFM collapses on 14B (0.19 vs 8B 0.73) where RCO was not run; (2) Qwen3-1.7B vanilla ASR 0.20 (Table 1) vs 0.22 (sec 5.1 random-ablation baseline) - different measurement runs; (3) conclusion claims larger models encode higher-dim subspaces yet RFM k=5 underfits 14B (0.19) - open problem not evidence of recovery. Built source-first -> expected cell-clean; future 2nd pass LOW yield."
+      "sourcing_note": "Source-first breakdown built from paper.pdf (13pp, 479KB) via pdftotext -layout (paper_layout.txt, 723 lines; 1 explicit table + 6 figures). Table 1 (full ASR, 5 models x 5 methods x k in {0,1,3,5}) transcribed verbatim (lines 256-283); RCO row absent for Qwen3-14B confirmed by caption (no compute). Source-free reconciliation PASSED: 720=500+120+100; merged 1,271 -> m=720; 6 subset sizes {120,320,520,720,920,1120}; 4 languages x 1/4; Llama-Guard-3 91% EN / ~82% multilingual; judge agreement 84%; RFM FLOPs n^2*d=1000^2*5000=5e9; RCO s*b*l*p=5.12e17 x2 ~ 1.02e18 (paper roughly 10^18); hyperparams T=6 L=30 lambda=1e-3, k=10 cov truncation. All Table-1 cells grep-confirmed. 3 flagged notes (not reconciled): (1) abstract RFM-beats-alternatives overclaim - true at k=5 on Qwen2.5/1.7B/4B/8B but FALSE at k=1 on 1.7B (DIM 0.80>RFM 0.73) and k=3 on 1.7B, and RFM collapses on 14B (0.19 vs 8B 0.73) where RCO was not run; (2) Qwen3-1.7B vanilla ASR 0.20 (Table 1) vs 0.22 (sec 5.1 random-ablation baseline) - different measurement runs; (3) conclusion claims larger models encode higher-dim subspaces yet RFM k=5 underfits 14B (0.19) - open problem not evidence of recovery. Built source-first -> expected cell-clean; future 2nd pass LOW yield.",
+      "status": "broken-down"
     },
     {
       "rank": 27,
       "arxiv_id": "2607.01893",
       "arxiv_url": "https://arxiv.org/abs/2607.01893",
       "pdf_url": "https://arxiv.org/pdf/2607.01893",
+      "folder": "papers/2026-spec-auf-accept-until-fail-masked-block-drafters",
       "title": "Spec-AUF: Accept-Until-Fail Training under Train-Inference Misalignment for Masked Block Drafters",
       "authors": [
         "Tianjian Yang",
@@ -1682,10 +1696,12 @@
       ],
       "abstract": "Speculative decoding accelerates autoregressive generation by drafting a block of tokens that the target model verifies left-to-right, committing only the longest accepted prefix. Block (DLM-style) drafters predict the whole block in parallel, which is fast but trained with a full-block cross-entropy that supervises every position against the gold continuation -- even though inference discards every token after the first rejection. Recent acceptance-aware objectives patch this by reweighting the full-block loss; we instead use teacher-forced learning as a motivation for how supervision should concentrate on the accepted prefix. A mask-only block drafter has no input-side channel for gold-prefix conditioning, so AUF approximates that prefix-sensitive supervision on the loss side by keeping the cross-entropy support only through the drafter's first predicted failure. AUF is a single, detached change to the CE support -- no auxiliary objective, no verifier rollouts, and no change to the inference pipeline or the exactness contract. Within fixed drafter backbones and serving settings on Qwen3-8B, AUF raises the DFlash drafter's average emitted length tau, averaged over six benchmarks, from 2.40 to 2.61, with a gain on every benchmark, and transfers to Domino's two-branch head (2.56 to 2.68). Two findings sharpen the picture: the decay-only baseline reaches higher token accuracy on the shared block mask yet decodes worse, and on DFlash, once AUF truncates the support, the standard exponential position-decay weighting becomes empirically inert.",
       "sourcing_note": "Source-first breakdown built from paper.pdf (10pp, 3.3MB) via pdftotext -layout (paper_layout.txt, 644 lines). All 4 explicit tables transcribed verbatim with sourcing line-ranges (T1 lines 203-216 unified weighted-CE objective comparison 6 methods; T2 402-413 DFlash tau 2 temp x 3 methods x 6 benchmarks; T3 416-435 Domino 7 AUF variants support assignment -- caption-wrap trap, T3 caption mid-line at 416 sharing a layout row with 5.1 prose; T4 484-505 Domino tau 2 temp x 8 methods x 6 benchmarks). Source-free reconciliation: every Avg cell = unweighted mean of 6 per-benchmark tau; all 14 Table-4 Avg cells recompute to displayed 2-dp under both rounding conventions (0 mismatch); Table-2 Decay-row cells (2.405->2.40, 2.305->2.31) are display-rounding noise from full-precision tau (not a defect, flagged inline). Abstract headline deltas recompute (DFlash +0.21, Domino +0.12); 'gain on every benchmark' verified per-cell DFlash T0/T1; 'all AUF variants beat decay' verified T4 T0/T1; bold reconstruction T0=B-AUF+D(2.68), T1=B-AUF(2.53). NO numeric prose-vs-table contradiction. 3 inline notes (caption-wrap trap, bold-lost-in-pdftotext reconstruction, display-rounding boundary subtlety).",
-      "subarea_lineage": "speculative-decoding (drafter training-objective angle) -- distinct from jetspec (parallel tree drafting architecture) and speculating-experts (MoE serving); sibling-in-mechanism to iLLaDA/subliminal-clocks (parallel DLM prediction setting)"
+      "subarea_lineage": "speculative-decoding (drafter training-objective angle) -- distinct from jetspec (parallel tree drafting architecture) and speculating-experts (MoE serving); sibling-in-mechanism to iLLaDA/subliminal-clocks (parallel DLM prediction setting)",
+      "status": "broken-down"
     },
     {
       "rank": 28,
+      "folder": "papers/2026-distribution-wise-rewards-visual-gen-rl",
       "arxiv_id": "2607.02291",
       "arxiv_url": "https://arxiv.org/abs/2607.02291",
       "pdf_url": "https://arxiv.org/pdf/2607.02291",
@@ -1727,10 +1743,12 @@
       ],
       "abstract": "Conventional RL for visual generation uses sample-wise reward models, which drives reward hacking that degrades image diversity and introduces visual anomalies. We instead fine-tune generative models with distribution-wise rewards that account for the data distribution of samples, mitigating the mode collapse that occurs when all samples optimize the same direction independently. To overcome the prohibitive cost of estimating distribution-wise rewards, we introduce a subset-replace strategy that updates only a small subset of a generated reference set to provide dense reward signals. We also apply RL to optimize post-hoc model-merging coefficients, mitigating the train-inference inconsistency caused by introducing SDEs in regular RL. Our approach improves FID-50K across base models, from 8.30 to 5.77 for SiT and from 3.74 to 3.52 for EDM2.",
       "sourcing_note": "Source-first breakdown built from paper.pdf (18pp, 4.7MB) via pdftotext -layout (paper_layout.txt, 1168 lines, 6 explicit tables + 10 figures). All 6 tables transcribed verbatim with sourcing line-ranges (T1 L304 ImageNet 256 FID+FDDINOv2; T2 L481 ImageNet 512 FID merging; T3 L970 adaptation-bias training/denoising-step grid; T4 L955 cross-metric 8 metrics; T5 L983 intra-step FID CV vs replacement size; T6 L1002 per-step cost). Caption-wrap trap reused (iters 38/39/45): ^Table N: regex misses T2/T3/T4 because captions share a layout row with body text -- bare 'Table N.' grep finds them; pdftotext drops bold so 'best in bold' reconstructed from row-max. Source-free reconciliation PASSED: every Table-4 Change % recomputes from its 2 cells (7/8 exact; FDDINOv2 prints 28.5% but recomputes 28.43% -- 0.1pp rounding flag); Table-6 four timed fractions sum 220.0s and recompute to 100.0%; reward-model ratio 304/24=12.7x; headline deltas recompute (SiT -30.5%, EDM2-XS -5.9%, EDM2-S -2.0%); Table-1 RL FID 5.77 == Table-3 row450/(250,50K) 5.77 == Table-4 +Ours(RL) 5.77 (3-table cross-agreement). Figure curves (Fig 3/4/5) NOT back-filled -- only prose-confirmed optima (N=5000, n=50, global-top-25%, batch-level, refresh=10, pure-RL) + Fig-4b SDE/ODE gap recorded; Figs 6-10 qualitative sample grids.",
-      "subarea_lineage": "visual-generation RL reward design (distribution-wise / population-level granularity) -- sibling-in-spirit to danceopd (on-policy generative-field distillation for editing) and the agentic-RL lineage, but the mechanism is reward-signal granularity (sample-wise -> distribution-wise); FID-as-reward + subset-replace estimator is the novel contribution"
+      "subarea_lineage": "visual-generation RL reward design (distribution-wise / population-level granularity) -- sibling-in-spirit to danceopd (on-policy generative-field distillation for editing) and the agentic-RL lineage, but the mechanism is reward-signal granularity (sample-wise -> distribution-wise); FID-as-reward + subset-replace estimator is the novel contribution",
+      "status": "broken-down"
     },
     {
       "rank": 29,
+      "folder": "papers/2026-drowning-in-documents-in-context-retrieval",
       "arxiv_id": "2607.01538",
       "arxiv_url": "https://arxiv.org/abs/2607.01538",
       "pdf_url": "https://arxiv.org/pdf/2607.01538",
@@ -1775,7 +1793,8 @@
       ],
       "abstract": "Language models (LMs) raise an intriguing alternative to vector-based retrieval: conditioning on an in-context corpus and directly generating a relevant answer. However, prior work has largely focused on proprietary systems or the smaller-scale reranking task, leaving corpus-scale in-context retrieval largely unexplored. We present the first systematic study of in-context retrieval on two scales practical retrievers demand: million-token corpora and length-generalization far beyond training-time sizes. We introduce BlockSearch, a 0.6B LM retriever whose architectural and training modifications improve over prior LM baselines and length-generalize up to 10x beyond its training regime. Nevertheless, retrieval still collapses under more extreme extrapolation. We trace this failure to an attention dilution effect: as the corpus grows, irrelevant documents dominate the softmax denominator, reducing the normalized mass on the gold document even when its pre-softmax score stays high. Motivated by this analysis, we introduce length-aware adjustments to the attention softmax and document-level sparse attention. At the million-token scale, our model matches dense retrieval on widely studied benchmarks (MS MARCO, NQ) while outperforming the concurrent model MSA despite being 7x smaller, and significantly outperforms dense retrieval on tasks requiring entirely different notions of similarity (LIMIT), achieving a 3x higher score.",
       "sourcing_note": "Source-first breakdown built from paper.pdf (26pp incl appendices, 0.66MB) via pdftotext -layout (paper_layout.txt, 1418 lines, 15 explicit tables + 7 figures). All 15 tables transcribed verbatim with sourcing line-ranges: T1 attention-output decomp L461, T2 main Recall@1 L524, T3 LIMIT Recall@1 L589, T4 dataset stats L860, T5 RLHN mix L890, T6 variant hyperparams L930, T7 shared hyperparams L950, T8 Qwen3-dense config L993, T9 signal/noise L1071, T10 Recall@5 L1243, T11 HotpotQA Recall@2 L1258, T12 LIMIT Recall@2 L1306, T13 LIMIT Recall@5 L1320, T14 OBLIQ stats L1354, T15 OBLIQ results L1395. Source-free reconciliation PASSED: RLHN total 522,487 exact; token budgets recompute (94.8/116.3/139.6 x Nmax); 7x=6.67; SSMax 82x=16.5/0.2; routing within 1.4 of dense; LIMIT ~3x anchors N=500 (2.93x). 1 inline flag: GoldShare prose 'factor ~130' vs 0.91/0.01=91x (rounding tension; underlying ~0.007). Figure curves (Fig 1/2/3) NOT back-filled; only prose-confirmed numbers + explicit tables.",
-      "subarea_lineage": "Corpus-scale in-context retrieval (retrieval-as-decoding) -- eval-foundations + long-context lineage, distinct from inference-efficiency and agentic-RL lineages. Retrieval-as-decoding counterpart to RT-RAG (retrieval+reasoning-structure); mechanistic sibling to attention-sink/sparse-attention work (Streaming-LLM, gpt-oss, MSA, MoBA, Quest). First repo paper on LM-as-retriever / corpus-scale ICR / attention-dilution diagnosis."
+      "subarea_lineage": "Corpus-scale in-context retrieval (retrieval-as-decoding) -- eval-foundations + long-context lineage, distinct from inference-efficiency and agentic-RL lineages. Retrieval-as-decoding counterpart to RT-RAG (retrieval+reasoning-structure); mechanistic sibling to attention-sink/sparse-attention work (Streaming-LLM, gpt-oss, MSA, MoBA, Quest). First repo paper on LM-as-retriever / corpus-scale ICR / attention-dilution diagnosis.",
+      "status": "broken-down"
     },
     {
       "rank": 30,
@@ -2262,7 +2281,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-neuron-aware-active-few-shot-learning",
+      "folder": "papers/2026-neuron-aware-active-few-shot-learning",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1186 lines, 12 explicit tables + 8 figures). All main tables (1-5) transcribed verbatim with sourcing line-ranges; appendix per-shot grids (Tables 7-12) referenced with line-ranges. Source-free reconciliation PASSED: 12/12 distinctive cells grep-confirmed; all Table-4 Avg cells recompute from per-shot cells; 8/8 main-table-vs-appendix-Avg cross-table triangle cells reproduce (T1<->T7/T10, T2/T3<->T8/T9/T11/T12); 0 numeric prose-vs-table contradictions. 3 inline honest-scope flags: (1) NeuFS NOT uniformly best on classification (edged by Entropy-Diverse/FastVoteK on several Llama cells; wins decisively only on MMLU-Pro); (2) deployed K=500/1000 on Edu-Feedback falls BELOW the 5.2 k-in-[2000,10000] ablation sweep; (3) tau=1 deployed for Llama-3.2 MMLU-Pro + Qwen3 TREC despite the 5.3 (Qwen3-MMLU-Pro-only) 'tau=1 sharp drop' finding. Statistical validation: RQ.1 t=-3.5698 p<0.001 (correctness<->consensus), RQ.2 Pearson r=0.6664 p<0.001 (low-consensus demos improve inference). Built source-first -> expected cell-clean; future 2nd pass LOW yield."
@@ -2391,7 +2410,7 @@
       "citation_count": 0,
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-demopsd-disagreement-modulated-policy-self-distillation",
+      "folder": "papers/2026-demopsd-disagreement-modulated-policy-self-distillation",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1078 lines, 9pp, 5 tables + 4 figures + Algorithm 1 + Theorems 1-2). All 5 tables transcribed verbatim with sourcing line-ranges (T1 L572-582, T2 L584-595, T3 L704-720, T4 L722-731, T5 L759-763). Source-free reconciliation PASSED: all Table-1 Avg cells recompute (mean@16 60.49/63.42/65.10, maj@16 62.14/64.65/66.33, best@16 75.42/79.30/82.12); DemoPSD-vs-SDPO deltas +1.68/+1.68/+2.82 exact; GPQA avg 46.47/54.38 +7.91 exact; all Table-3 Delta-Ent% recompute (35.5/72.4/98.0/32.7); T4 best-beta per domain == T1 DemoPSD column; T5 == T3 last-3-cols (cross-table consistency). 1 inline prose-vs-table flag: the '5.21 vs GRPO on mean@16' claim (L675) is unreconcilable (true DemoPSD-GRPO = 4.61). Minor abstract/conclusion-vs-table entropy-range rounding (33/35/32.7%). Eq 8 glyph-scramble reconstructed from f(0)=0 + lim=alpha_max constraints."
@@ -2437,7 +2456,7 @@
       "citation_count": 0,
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-offline-rl-generalization-structure-over-pessimism",
+      "folder": "papers/2026-offline-rl-generalization-structure-over-pessimism",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1774 lines, 31pp, 10 explicit tables + Theorems 1-2 + Counter-examples 1-2 + Lemmas 1-2). All result tables transcribed verbatim with sourcing line-ranges (T1 sym/asym L337-342, T2 IQL L406-409, T7 CQL L1708-1711, T8 IQL-C L1729-1732, T9 IQL-AC L1740-1743, T10 train-contexts L1759-1774) and hyperparams T3-T6. Source-free reconciliation PASSED: sym test stays 0.99 at eta_max=10 (10x max return) while asym collapses 0.76->0.23 monotonically (T1); DAC-Output strict max on IQL Mixed 0.96/Suboptimal 0.85 and CQL Expert 0.96/Mixed 0.78 (T2/T7); critic-only DA no-op within +-0.06 (T8); -AC ~ -A within +-0.08 (T9); eta=0.01 sym==asym by construction. 5 honest-scope flags: (1) eta=0.01 sym==asym is by construction; (2) asym Train collapses 0.51 at eta=10 (training-failure artifact, deviates from Thm-2 training-optimality assumption); (3) DAC-Output not strict point-max on Expert (Aug-D-Online 0.99 vs 0.98, bolded via overlapping CI); (4) single env + 2 algos; (5) infinite-width theory vs finite MLP. 0 transcription defects."
@@ -2487,7 +2506,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-g-rrm-guiding-symbolic-solvers-recurrent-reasoning",
+      "folder": "papers/2026-g-rrm-guiding-symbolic-solvers-recurrent-reasoning",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from arXiv 2607.02491 (836KB PDF, 19pp). paper_layout.txt = pdftotext -layout (1088 lines, 5 explicit tables: T1 conflict-count percentiles L419-452, T2 wall-clock L470-506, T3 notation L934-987, T4 CP-SAT configs L998-1003, T5 CP-SAT perf L1030-1043). Source-free reconciliation PASSED: 39/42 Table-2 speedups recompute within +/-0.012 (3 backtracking cells = full-precision-vs-3dp-display rounding, the iter-45/51 display-boundary pattern, NOT transcription errors); abstract headlines 33.3x/1.70x/1.17x/1.02x/0.90x each match a stated speedup; Table-5 C3-vs-C2 83.3% conflict reduction + 1.85x/1.17x/1.20x wall-clock ratios reconcile to paper-stated 83%/1.9x/1.2x/1.2x within rounding; C4 0.0 mean conflicts at 9x9 = 91.1% FSR feasible + repaired. NO numeric prose-vs-table contradiction. Key honest-scope flags: wall-clock EXCLUDES SE-RRM inference time; Sudoku-only; backtracking is custom Python (cross-solver magnitudes not comparable); cadical3 mean slowdown is phase-init overhead artifact not search degradation; FSR non-monotonic (91.1/22.0/51.1%) tracks empty-cell density not grid size. Central citable contribution = two-condition theory (search-dominated + solver-overwrites-hints), isolated by cadical3-vs-glucose4 contrast. NO figure back-fill."
@@ -2534,7 +2553,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-categorical-critic-learned-supports-hl-gauss",
+      "folder": "papers/2026-categorical-critic-learned-supports-hl-gauss",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper.pdf (19pp) + paper_layout.txt (pdftotext -layout, 1207 lines). All equations (Eq 1-17) and Table 1 (per-task alpha grid) transcribed verbatim with sourcing line-ranges; setup facts (TD3 base, DM-Control 11 tasks, 10 seeds, 3M steps, k=128, HLG support [-100,100], DySEL init [-10,10], sigma-ratio 0.75, sigma-clip min 0.3, epsilon=0.005, adversary lr 1e-3, Adam lr 3e-4, batch 256, gamma 0.99, tau 0.005) all grep-confirmed. Results are figure-only (Figure 2 IQM curves) -> per-task IQM numbers NOT back-filled, only the prose-confirmed qualitative ranking reported (consistent with the figure-derived-numbers-are-weak rule). Source-free reconciliation: 1/(1-gamma)=100.0 matches the paper's DM-Control return bound; 200/51=3.92 matches the paper's 'nearly 4' bin-width note for k=51; all 11 Table-1 alpha values lie within the stated grid [0.1,0.2,0.3,0.4,0.45,0.5]; Eq-16 Lagrangian structure (alpha*max + (1/alpha)*CE + lambda*((1-Z)-epsilon)) grep-confirmed. 7 inline honest-scope flags: alpha selected on same seeds used to report results (optimistic upper-bound estimate per authors), dual-lr-sensitive saddle stability, near-symmetric learnt support, DM-Control-only evaluation, no IQM table (figure-only), Eq-11/12 leading constants partially garbled in pdftotext, fixed sigma. NO numeric prose-vs-table contradiction."
@@ -2589,7 +2608,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-checkrlm-knowledge-thought-coherence-rag-reasoning",
+      "folder": "papers/2026-checkrlm-knowledge-thought-coherence-rag-reasoning",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper.pdf (10pp) + paper_layout.txt (pdftotext -layout, 1541 lines). 15 explicit tables (T1 main L364-385, T2 DPO-short L415-430, T3 DPO-data-stats L834-836, T4 comprehensive L1212-1237, T5 DPO-full L1244-1257, T6 data-composition L1262-1270, T7 ablation L1278-1291, T8 summary-injection L1299-1304, T9 post-vs-in L1311-1327, T10 retrievers L1333-1355, T11/T12 cost L1361-1382, T13-15 case studies) + Eqs 1-7 + 7 figures. Source-free reconciliation PASSED: 13/14 Table-1 Avg cells recompute exactly as the mean of all 10 (5 f1 + 5 em) cells; the 1 gap (Search-o1 41.40 recompute vs 41.5 shown) is the iter-45/51/62 display-rounding boundary (Avg from full-precision per-prompt values not rounded cells); 17/17 distinctive cells grep-confirmed; MuSiQue +6.3 delta (39.6-33.3) + DPO 5.7 (71.2-65.5) + Table-3 sum 2351+2960=5311 + all Table-9 %improv cells recompute exact; cross-table consistency triangle T1==T4(Llama checker)==T9(In-reasoning QwQ+Llama)==T11 holds (2Wiki f1 73.4/60.2). 9 inline honest-scope flags (Avg=10-cell-mean not f1-only; 5.7 DPO gain in-domain-2WikiMQA-only; headline uses 70B checker excluded from cost figures + checker scaling non-monotone; in-reasoning>post gain halves as checker improves; lower-cost=tokens+f1 not wall-clock; +6.3 MuSiQue is QwQ+Llama-only; bge>BM25 is aggregate not per-cell; text-only single-KB; DPO train data 2WikiMQA-sourced). NO numeric prose-vs-table contradiction."
@@ -2645,7 +2664,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-recontext-recursive-evidence-replay-long-context",
+      "folder": "papers/2026-recontext-recursive-evidence-replay-long-context",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "sourcing_note": "Source-first breakdown built from paper.pdf (10pp, 2.99MB) + paper_layout.txt (pdftotext -layout, 1089 lines). 7 explicit tables (T1 main L212-240, T2 thinking-enabled L429/433-442, T3 64K L429/433-442, T4 token-source L463/467-473, T5 runtime L765/768-775, T6 rounds L825/831-838, T7 top-K L887/891-899) + Eqs 1-22 + Theorem 1 + 6 figures. Source-free reconciliation PASSED: Table-1 24-cell macro Acc Vanilla 0.2421 -> ReContext 0.3017 = 24.61% relative (paper 24.6% EXACT); avg ranks recomputed over 14 metric columns = Qwen3-4B 1.00 (column-max all 14), Qwen3-8B 1.46 EXACT (non-max cells match paper exceptions: HotQA DAC, InfMC Vanilla/DAC 0.64, CLIPPER DySCO 0.34), Llama3-8B 1.25 vs paper 1.29 (tie-handling tolerance; non-max NQ-F1 A-MEM 0.34, NarrQA-F1 DAC 0.30 match caveat); T3 64K macro 34.95% (paper 35.0% EXACT); T4 0.190->0.226 (paper 0.19->0.23); T6 R=1->2 macro 0.168->0.218 (paper 0.17->0.22); T7 K=1->32 macro 0.190->0.232 (paper 0.19->0.23); T6 R=2 row byte-identical to T7 K=8 row (default R=2,K=8 confirmed). 7 inline honest-scope flags: (1) T2 relative-gain 16.4% recomputed vs paper 16.7% (0.3pp over-rounding of headline); (2) ablation InfMC run-drift 0.50 vs T1 main 0.55 / T4-Context 0.54 (NQ/PopQA stable, InfMC noisy 0.50-0.58); (3) closed-API limitation (requires attention access, authors' Limitations); (4) avg-rank win not per-cell dominance (Qwen3-8B non-max on 4/14 cells, Llama3-8B on 3 F1 cells); (5) top-K recall-noise trade-off (K=32 helps PopQA/InfMC, hurts NQ); (6) best recursion depth task-dependent (R=2 main is not per-task optimum for NQ/InfMC); (7) Theorem 1 proved under orthogonal unit-norm token-embedding idealization (interpretive, not a bound on empirical 128K results). NO numeric prose-vs-table contradiction."
@@ -3266,7 +3285,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-speechcombine-instruction-speech-lm-weight-composition",
+      "folder": "papers/2026-speechcombine-instruction-speech-lm-weight-composition",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "ICML 2026 PMLR 306. UCSB + MIT-IBM Watson AI Lab (IBM Research). 18pp (file AND pdfinfo both 18pp, NO page-count defect this iter). Source-first breakdown (7 tables verbatim + Eqs 1-2 + 11 honest-scope notes). Python-verified: Table-1 best/2nd-best-across-all-datasets confirmed for Group B excl GPT-4o (rank1 OpenbookQA/MMSU, rank2 GSM8k/Truthful/MLC/MLCpro); emphasis-detection SOTA F1 60.84 = 2.12x next-best (Fun 28.76); all F1 cells recompute harmonic-mean from own P/R. CAUGHT genuine cross-table run-drift (iter-65 ReContext / iter-70 SUNTA / iter-74 PointDiT class): Table-2 SpeechCombine row vs Table-5 lambda=0.85 row (same default config) -- 4 cells differ while 4 match exactly: UnderEmo 52.70 vs 50.75 (d1.95), EmphGen P 25.91 vs 26.16, R 39.90 vs 40.17, F1 31.42 vs 31.68; EmphDet P/R/F1 + GenEmo Score byte-match. lambda-sweep re-ran the stochastic LLM-as-judge/emphasis-detector tasks. Also: '<1% of training data' borderline (30k/3M=1.00%); SDQA named in 4.2 prose but absent from Table-1(a); format-forcing carries ~half the emph-det F1 (T6 53.14->27.73). Sibling-in-spirit to mi-epo (iter 69, weight/preference vectors) + DSGNAR (iter 67); uniquely speech + model-arithmetic. No numeric prose-vs-table contradiction beyond the T2-vs-T5 run-drift."
@@ -3698,7 +3717,7 @@
       "citation_count": 0,
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-token-compression-breaks-structural-pruning-robust-vit-seg",
+      "folder": "papers/2026-token-compression-breaks-structural-pruning-robust-vit-seg",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Source-first breakdown built: 2 explicit tables (T1 matched-FLOPs grid ADE20K+Cityscapes x mild/moderate/aggressive; T2 wall-clock FPS) + Figs 1-4 + Findings 1-3 + PtM recipe (Sec 4.2) + effective-rank diagnostic (Sec 4.3, Fig 4) + FPS-matched validation (Sec 4.4). Python-verified EVERY prose delta EXACT (1.4-1.9x mild, 3.4-3.8x aggressive, ToMe collapse 47.22/35.58->23.94/16.86, NViT-S 45.30/32.86 at 3.8x, PtM 45.71/34.33 at 3.7x ADE / 77.52/60.71 at 3.6x CS, NViT-S 3.84x FLOPs but 2.43x FPS); cross-table byte-identities 6/6 token-compression rows T1<->T2 EXACT + NViT-S 45.30/32.86 same model in T1-aggressive and T2-moderate (FLOPs!=FPS smoking gun). ZERO numeric cell typos (confirms benchmark/analysis-paper meta-finding). 12 honest-scope flags (all attribution/scope): 'consistently better trade-off' loses Cityscapes-noise to CTS (60.71<60.99); mild-NViT BEATS baseline (47.93>47.22) buried; pruning ALSO breaks at 7.61x rFLOPs (noise 26.85 < ToMe moderate 30.24) -> graceful-degradation claim regime-scoped; PtM reported under two configs (T1 FLOPs-matched 45.71/34.33 vs T2 FPS-matched 45.17/33.92); NViT rows swept per-table not byte-comparable; effective-rank figure-only; no seeds/CIs; single-GPU FPS. SUTD (Nguyen+Cheung). file=1pp vs pdfinfo=16pp (15-page gap defect recurs)."
@@ -3761,7 +3780,7 @@
       "citation_count": 0,
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-rdm-representation-distribution-matching-one-step-visual-generation",
+      "folder": "papers/2026-rdm-representation-distribution-matching-one-step-visual-generation",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Source-first breakdown built: 8 tables verbatim (T1 SWr14 across released ImageNet-256 generators 19-model x 14-encoder + SWr14/SWr14-heldout summary; T2 GenEval+PickScore FLUX.2 post-training 6-cat x 5 methods; T3 gated-proportional-Lagrangian vs uniform weighting; T4 training-distance ablation DINOv2 6 losses x 2 neutral metrics; T5 14-encoder panel 10-train/4-heldout; T6 batch-size sweep N=512..10240; T7 MMDR14 counterpart; T8 DMD2 distillation-step sweep) + Eqs 1-5 + 3 findings + 12 honest-scope flags. Python source-free reconciliation: EVERY prose delta EXACT — SWr14 iRDM 1.3007->1.30, FD-SIM 2.0529->2.05 prior SOTA (36.6% lower), MMDR14 iRDM 2.6843->2.69, all 5 T2 Overall=mean(6 cat) EXACT (0.794/0.474/0.804/0.801/0.826), GenEval iRDM vs 4-step +4.03% rel, joint vs marginal +3.12%, T4 order mmdx>mmd_rff>mmd_exact>fd>sw>drifting IDENTICAL on both SW and RFF-MMD, Nystrom-MMD (1.420) BEATS exact (1.492), T6 best N=5120. ZERO numeric prose-vs-table defects. Cross-table byte-identities EXACT (T8 500-step-reported 0.804/22.36 == T2 DMD2; T1 FD-SIM 2.05 == body). 12 honest-scope flags (no cell typo): (1) 'surpasses 4-step on GenEval 0.826 vs 0.794' overall-only Counting-BLIND (iRDM LOSES Counting 0.756<0.791 -4.42%, TIEs Single-Obj); (2) PickScore margin +0.18 (22.76 vs 22.58, +0.8% rel) near-tie; (3) 'first one-step to pass real-image PickScore' 63.6% is a learned-metric artifact not better-than-real; (4) SWr14 SOTA aggregate-carried cedes 5/14 encoders; (5) 71.2% PickScore headline is iRDM's LOWEST win rate (vs strongest opponent; conservative); (6) T3 constrained-optimization benefit is worst-case-only (max 3.49 vs 4.06), mean 1.88 vs 1.90 within noise; (7) 'no online teacher' FALSE for FLUX arm (reference collected once from 4-step teacher, ~300K teacher generations); (8) SWr14/MMDr14 author-defined panels no external FID; (9) single-encoder gaming Fig-5-qualitative + 1 DINOv2 run; (10) DMD2 baseline is self-reimplementation (Appendix E.2) not released DMD2; (11) iRDM ~90 H200-hr vs DMD2 ~10 H200-hr (~9x compute for +0.022 GenEval); (12) no seeds/CIs decisive margins small. Citable falsifiable = two-axis decomposition + Nystrom-beats-exact + single-encoder-gaming-below-floor + SWr14 metric — NOT the GenEval/PickScore gains nor 'beats real'. Confirms iter-81/83/85/86 meta-finding: analysis/design-space/method papers have ZERO numeric prose-vs-table cell typos; honest-scope weight entirely attributional/framing. file=12pp vs pdfinfo=23pp (11-page gap defect recurs). Repo's FIRST representation-distribution-matching / teacher-free-feature-distribution one-step generation paper; sibling-in-spirit to distillation lineage (orbitquant/danceopd/demopsd/opid) but teacher-free + image-generation; distinct from feed-forward geometry (pointdit/InvSplat)."
@@ -3812,7 +3831,7 @@
       "citation_count": 0,
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-align4d-x-to-4d-generation-alignment",
+      "folder": "papers/2026-align4d-x-to-4d-generation-alignment",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Source-first breakdown built: 6 tables verbatim (T1 X4D human-eval 4-dim + VBench 4-dim, 5 methods; T2 Consistent4D 6-metric PSNR/SSIM/LPIPS/FVD/CLIP/CLIP-F 12 baselines; T3 ablation 5-metric 8 rows on STAG4D base; T4 AO-vs-JO loss-reduction 5-step; T5 runtime Time/VRAM 5 methods + ODA-VAOD/MAOD; T6 user-pref 2x2 3DxVideo grid) + Eqs 1-10 + 16 figs. Python source-free reconciliation: ALL prose deltas + cross-table byte-identities EXACT -- T1 all 4 human-eval columns sum to exactly 100.0 (forced-choice vote invariant), Align4D wins all 6 T2 metrics (bold=best), T2<->T3 Align4D/STAG4D/DG4D rows BYTE-IDENTICAL, T4 AO<JO at every step (2.10x->1.09x), T5 ODA overhead=0.81% of 25min, Align4D 3.20x faster than STAG4D but 1.67x SLOWER than DG4D + VRAM 2nd-heaviest, T6 sums to 100. ZERO numeric cell typos. CAUGHT 12 honest-scope issues (NO numeric typo, all attribution/framing) incl NEW co-dependent-ablation-pair subclass: removing ODA (15.9) or MGJA (15.5) drops BELOW STAG4D base (17.0); ODA-without-MGJA drops -1.7pp (17.2->15.5); 'every component helps' framing omits that each-alone-is-below-baseline; AO adds only +0.2pp PSNR; plus forced-choice unblinded n=30 user study (Table I margins 2.2-4.06x runner-up), selective baseline exclusion (text-to-4D [2] + 3D-to-4D [6] dropped), 'five vs six metrics' wording slip, VRAM 2nd-heaviest understated, X4D synthetic-data circularity, AO loss-vs-quality gap, STAG4D-only migration, no CIs, fixed ODA grid, n=30 unstratified, MAOD timestep rationale empirical-only. file misreports 8pp, pdfinfo 14pp (6-page gap defect recurs)."
@@ -3870,7 +3889,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-worlddirector-controllable-world-simulator-persistent-dynamic-memory",
+      "folder": "papers/2026-worlddirector-controllable-world-simulator-persistent-dynamic-memory",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Source-first breakdown built from paper_layout.txt (1252 lines). 2 explicit tables (T1 6-methodx8-metric L420-429; T2 Appearance-Condition ablation L522-528) + Eqs 1-3 + Alg 1/2 + Figs 1-5/S1-S4. Python-verified ZERO numeric prose-vs-table cell typos: cross-table byte-identity T1-Ours==T2-Ours EXACT (18.127/0.502/0.359/0.891/0.909/0.769/0.917); bold=best all 8 cols consistent; 'all three reconstruction metrics SOTA' TRUE (Ours best PSNR/SSIM/LPIPS); PSNR +22.6% rel vs runner-up HY-World, +28.4% vs LingBot base; 'all metrics drop without A' TRUE all 7. CAUGHT load-bearing DSC 'superior results' OVERCLAIM (iter-72/88 blanket-all-with-one-loss class): DSC_DINO Ours 0.769 LOSES to Infinite-World 0.773 (-0.004); only DSC_CLIP Ours wins (0.917>0.913, +0.004); both decisive DSC deltas sub-0.5pp with NO CIs; DINO is more identity-diagnostic + DSC is the central persistent-memory metric. Plus routing figure-only-vs-table tension (routing helps 6/7 T2 metrics, dismissed qualitatively), App-D ablations figure-only, synthetic-game-data test-set circularity, closed Gemini inference dependency, HyDRA non-independent comparison, 64-GPU/72h compute. file=13pp vs pdfinfo=20pp (7-page gap defect recurs)."
@@ -3913,7 +3932,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "done",
-      "folder": "2026-directionality-structural-generalization-ccg-slog",
+      "folder": "papers/2026-directionality-structural-generalization-ccg-slog",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-09",
       "notes": "Source-first breakdown built from paper_layout.txt (776 lines). 2 explicit tables (Table 1 3-system architectural comparison L185-194; Table 2 SLOG gen-set 17-cat x 5-system LF-exact-match mean+/-std L196-218) + Figs 1-2 + Eqs none (symbolic-formalism paper). Python source-free reconciliation: ZERO numeric prose-vs-table CELL typos -- all 5 Overall cells = macro-mean of 17 cats EXACT (DeBERTa 90.694->90.7, AM 70.818->70.8, T5 40.594->40.6, LLaMA 40.118->40.1; BERT 75.835 -> reported 75.9 within-rounding 0.06 from rounded cells); +29.9pp position-shift (BERT-AM) EXACT (29.88); -31.9pp recursive-depth EXACT (-31.93); +22.5pp encoder recursive gain EXACT (22.500); wh +30.0..+66.9pp EXACT; 9/17 DeBERTa>=97% EXACT; 2 AM-Parser zero-cats EXACT; pipeline fidelity 99.92% = 1-13/17000 EXACT; ~20pp = 90.7-70.8=19.9 EXACT; bold=best per row consistent. 12 honest-scope flags NO numeric typo: H1 NON-SIGNIFICANT headline gap (75.9-6.4=69.5 < 70.8+4.3=75.1 seed-std overlap, gap 5.1 < std 6.4, no significance test) + H2 category-mixed + single-category-outlier inflation (overall position-shift-carried while losing all 6 recursive; +29.9pp itself RC_iobj_extracted-carried, 0->96.9 = 65% of sum, drops to +13.1 without it) + H3 catastrophic recursive-depth regression reframed as elegant redistribution (CP-recur 18.8+/-34.4, 17.7+/-34.7 vs AM 100.0, std>mean bimodal) + H4 encoder confound on 90.7 SOTA (DeBERTa-435M vs AM-BERT-base-110M, AM never run with DeBERTa) + H5 5/5 position-shift BERT-config-only, DeBERTa wins only 4/5 (RC_modif_subj 52.0<55.8) + H6 reformatting asymmetry (competitors reformatted, paper cites T5 47.2%-plain-vs-98.5%-reformatted +51.3pp swing) + H7 pattern-alignment substitute for ablation + H8 +dist-feature rebuttal cuts both ways + H9 weak 40% seq2seq baselines + H10 std-exceeds-mean cells + H11 arbitrary 97% threshold + H12 pre-training-leakage unquantified. Paper unusually candid (dedicated section 7 Limitations). file=pdfinfo=15pp NO page-count defect this iter."
@@ -3961,7 +3980,7 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-furniturevla-bimanual-furniture-assembly-progress-vla",
+      "folder": "papers/2026-furniturevla-bimanual-furniture-assembly-progress-vla",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Repo's 78th paper rank 73. FIRST real-scale bimanual furniture-assembly / long-horizon-VLA-with-continuous-progress paper. 4 tables (I assembly SR, II design factors 15-col sweep, III demo-quantity+progress ablation, IV real-world IVAR S1-S7) + Eqs 3-5. Python source-free reconciliation: 28/31 Average cells = mean(cells) EXACT; cross-table byte-identity T1==T3(100%)==T2(best config)=0.98/0.85/0.56/0.80 EXACT; abstract 48->80 EXACT, 16% sim-to-real drop EXACT (as pp). CAUGHT 1 genuine NUMERIC DEFECT (breaks iter-81..90 zero-cell-typo streak): Table II Viewpoint-sweep Average row depth=0.50 (cells mean 0.54) and w/o-rear=0.47 (cells mean 0.45) are inconsistent with their own per-furniture cells; 13/15 T2 columns fine. Plus 11 honest-scope flags (21%-gain no exact recompute, resolution non-monotone on KALLAX, sim-to-real 16pp bundles 5x demo-scale cut, 'slightly lower' understates -28.6% rel, zero-shot 0.00 degenerate baseline, n=15 no-CI real, per-part non-monotone S6>S1, only-IVAR real, discrete-progress 0.00 brittle, tau_p=0.95 sensitivity, emergent-correction qualitative-only). file=pdfinfo=12pp NO page-count defect this iter."
@@ -4014,12 +4033,13 @@
       "citation_count": "",
       "pwc_url": "",
       "status": "broken-down",
-      "folder": "2026-glen-activity-graph-edit-forecasting-egocentric-scene-evolution",
+      "folder": "papers/2026-glen-activity-graph-edit-forecasting-egocentric-scene-evolution",
       "started_at": "2026-07-04",
       "finished_at": "2026-07-04",
       "notes": "Repo's 79th paper rank 74 unique. FIRST egocentric-scene-graph-evolution / activity-conditioned-graph-edit-forecasting paper. 7 tables (1 EgoSchema+EgoMCQ, 2 EgoCVR, 3 A-GEF, 4 EXPLORE subset, 5 EgoMCQ ablation, 6 A-GEF #queries ablation, 7 EXPLORE full 28-model) + Eqs 1-4. SG-Ego: 3.8M graphs, Nobj=1480 Nrel=387, training-free VidSGG (Qwen3.5-9B + GroundingDINO + SAM2/DINOv2). GLEN: TripletGCN graph encoder + frozen EgoVLP text enc + K=128 learnable node queries + Graph Edit Encoder; GTCA (Eq3) + GTM/GTM-tilde objectives; Eq4 action-conditioned node/edge CA. Python source-free reconciliation: ZERO numeric prose-vs-table cell typos; all 4 cross-table byte-identities EXACT (T4<->T7 6 rows, T3<->T6[128] GLEN+static, T1<->T5 GTCA+GTM-tilde heads); prose 66.0-vs-72.8 EXACT; A-GEF GLEN>static>Qwen every K (+25.32 R@100 over static). CAUGHT split-metric overclaim (EXPLORE-Bench Sobj SOTA 65.59 but Srel 2.69 = 7th, beaten by 7 MLLMs incl Qwen3-VL-8B-Inst 2.82; abstract blanket-SOTA vs body L518 'SOTA on Sobj competitive on Srel') + EgoCVR 'outperform CVR-trained' FALSE on Global R@5 (GLEN 40.3 < Thawakar 41.3) + EgoMCQ Intra rank 4/5 (-4.7pp EgoVLPv2) + A-GEF own-benchmark-vs-strawman (Qwen degenerate flat 9.14, static no-evolution) + annotation-circularity (GLEN tested on SG-Ego-derived A-GEF) + EgoSchema 'sufficient details' understates -6.8pp (SG-Ego 66.0 vs Frames 72.8; Frames+SG-Ego only +0.4) + Srel LLM-judged metric artifact + no CIs/seeds. file /Pages=5 vs pdfinfo 17 (12-page gap defect recurs)."
     },
     {
+      "folder": "papers/2026-one-layer-rl-single-transformer-layer-post-training",
       "arxiv_id": "2607.01232",
       "title": "Is One Layer Enough? Training A Single Transformer Layer Can Match Full-Parameter RL Training",
       "authors": "Zijian Zhang, Rizhen Hu, Athanasios Glentis, Dawei Li, Chung-Yiu Yau, Hongzhou Lin, Mingyi Hong",
@@ -4058,5 +4078,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-07-09"
+  "updated_at": "2026-07-12T00:00:00Z"
 }
