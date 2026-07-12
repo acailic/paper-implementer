@@ -145,6 +145,8 @@ Select ablation layer and `(T, L, λ)` by the kernel's **classification accuracy
 - The k=1 insufficiency is **method-independent**: single-direction ablation fails regardless of extraction method (DIM, probe, RFM all give ≤0.23 ASR at k=1 on Qwen3-8B) — refusal in large reasoning models is genuinely **multi-dimensional**.
 - RFM-AGOP dominates at **k=5** on the 4 small/mid models: 0.96 / 0.94 / 0.92 / 0.73 (Qwen2.5 / 1.7B / 4B / 8B), well above RCO/Clusters which plateau at 0.72–0.79. ⚠ But see Limitations: this advantage is **not** universal (1.7B k=1/k=3 lost to DIM/RCO) and **collapses on 14B** (0.19).
 
+**External cell-by-cell source verification (2026-07-13): ZERO defects.** Full Table 1 re-checked byte-exact vs `paper_layout.txt` lines 256–283 — all 5 models × {Vanilla, DIM, RCO, Clusters, RFM-AGOP} × k∈{0,1,3,5} cells, including every ±SEM and the correctly-noted RCO-missing-on-Qwen3-14B. Takeaways recompute: RFM k=5 0.96/0.94/0.92/0.73 across Qwen2.5/1.7B/4B/8B ✓; Qwen3-14B RFM k=5 = 0.19 collapse ✓; Qwen3-8B crosses 50% ASR only at k=3 (RFM 0.62), k=1 ≤0.23 across all methods ✓. No edits required.
+
 ### 4.2 Retention on MMLU (§4.3, Figure 3)
 
 Ablation must not induce catastrophic forgetting. Cross-entropy is an insufficient proxy for reasoning-model functional integrity (extensive CoT), so edited models are evaluated on **MMLU with full inference**. Impact varies with scale but is **mostly stable on large models**: **Qwen3-8B is robust** — maintains MMLU even after multiple ablations. ⚠ An unexplained **performance drop on Qwen3-14B** the authors "cannot yet explain… might be a limitation of the method." Full MMLU numbers are Figure-3 bar reads (Appendix Table 1 is referenced but only the figure is shown) — **not back-filled**.

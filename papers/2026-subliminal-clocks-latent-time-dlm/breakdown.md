@@ -136,6 +136,8 @@ Inject a steering perturbation at **layer 6** and track the probe-predicted τ a
 
 > Source-free reconciliation: every LLaDA |Δ| ≤ 6.4 and the Dream GSM8K −45.7 collapse match the §C prose claims ("LLaDA within a few points", "Dream more sensitive, GSM8K degrades substantially at t̂=100"). 18/18 cells grep-confirmed verbatim in `paper_layout.txt` lines 1178–1183.
 
+**External cell-by-cell source verification (2026-07-13): ZERO defects.** All 36 cells of Table 1 (2 models × 3 datasets × 6 t̂ columns) re-checked byte-exact vs `paper_layout.txt` lines 1174–1183. All reading deltas recompute: Dream GSM8K 68.8−23.1 = **−45.7** ✓; LLaDA per-dataset max |Δ| = GSM8K 3.3 / HumanEval 2.9 / StrategyQA 6.4 ✓. No edits required.
+
 ---
 
 ## 4. Source-free reconciliation summary
