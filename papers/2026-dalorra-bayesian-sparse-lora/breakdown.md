@@ -156,14 +156,14 @@ Subscripts = ratio vs LoRA. Table 2 covers WG-S/ARC-E/OBQA (lines 391–426); Ta
 
 | Method | WG-S | ARC-C | ARC-E | WG-M | OBQA | BoolQ |
 |---|---|---|---|---|---|---|
-| MAP | 69.37±1.04 | 67.67±1.18 | 85.20±0.63 | 74.57±0.73 | 81.60±0.40 | 87.68±0.02 |
-| MCD | 69.06±1.40 | 66.66±2.30 | 85.49±0.74 | 75.89±0.48 | 81.46±0.92 | 87.67±0.08 |
+| MAP | **69.37±1.04** | 67.67±1.18 | 85.20±0.63 | 74.57±0.73 | 81.60±0.40 | 87.68±0.02 |
+| MCD | _69.06±1.40_ | 66.66±2.30 | 85.49±0.74 | 75.89±0.48 | 81.46±0.92 | 87.67±0.08 |
 | Deep Ensemble | 68.98±0.97 | **68.57±2.11** | **86.24±1.26** | **77.39±1.08** | **82.20±0.91** | **88.07±0.17** |
 | LA | 68.18±1.04 | 64.17±0.97 | 85.30±0.97 | 74.15±0.40 | 77.53±0.80 | 86.45±0.35 |
 | BLoB | 66.55±0.61 | 66.66±2.25 | 84.56±0.20 | 73.38±0.29 | 81.44±0.53 | 86.63±0.50 |
 | TFB | 66.84±1.52 | 67.62±1.12 | 84.52±0.62 | 73.13±2.38 | 81.10±0.61 | 86.36±0.26 |
 | C-LoRA | 66.21±1.24 | 67.79±1.27 | 84.38±0.67 | 70.48±1.71 | 78.26±2.61 | 84.64±0.81 |
-| **DALorRA** | **69.37±1.04** | 67.57±0.96 | 85.04±0.52 | 73.73±0.75 | 81.80±0.43 | 86.44±0.28 |
+| **DALorRA** | 66.61±0.87 | 67.57±0.96 | 85.04±0.52 | 73.73±0.75 | 81.80±0.43 | 86.44±0.28 |
 
 ### ECE (↓)
 
@@ -249,4 +249,17 @@ A clean, minimal, well-motivated PEFT-UQ paper: relocate LLM uncertainty quantif
   - Dataset unions (AAO/WB/Combined train+test+label-space) all reconcile (§8).
   - "9 of 10 ECE" headline (§5.2): DALorRA is best/2nd on every ECE column except Phy, where it is **3rd** (BLoB 12.34 < LA 13.17 < DALorRA 15.46) — so 9/10 is exact, not an undercount.
 - **Figure-derived numbers (Figs 2/3/4/5/6/7) NOT back-filled** — only the qualitative/prose-confirmed trends are reported, consistent with the established "figure-derived sections are weak" rule. Bar values are axis-tick-only in the layout dump with no reliable per-curve point assignment.
-- **⚠ flag count: 1** (Table 5 Llama2-7B LA ECE anomaly — §7). All other prose numbers reconcile with the tables; **no numeric prose-vs-table contradiction** of the iter-30/31/34 kind.
+- **⚠ flag count: 1** (Table 5 Llama2-7B LA ECE anomaly — §7, a genuine source-internal anomaly, correctly transcribed verbatim and flagged not "corrected").
+
+### Full cell-by-cell source verification (2026-07-13)
+
+**VERIFICATION PASS: 1 numeric defect FOUND + FIXED; all other cells exact.** Every numeric cell re-checked against `paper_layout.txt` at the cited line ranges:
+
+- **Table 1 (Llama-3.1-8B, lines 324–362):** 9 methods × 3 metrics (ACC/ECE/NLL) × 10 columns = **270 cells EXACT**, including every ±std. Bold/underline markings consistent (DALorRA wins ECE outright on 7 cols: ARC-C/E, WG-M, OBQA, BoolQ, ARC-C/E-OOD; 2nd on WG-S+Chem; 3rd on Phy → "9 of 10 ECE" exact).
+- **Table 2 (lines 391–426):** all trainable/extra params, train/eval seconds, memory MB, and every ratio subscript EXACT for LoRA/BLoB/C-LoRA/DALorRA across WG-S/ARC-E/OBQA.
+- **Table 6 (lines 1037–1051):** same — all cells + ratio subscripts EXACT across ARC-C/WG-M/BoolQ. Takeaway ratios recompute (train 0.46×–0.72×, eval 4.4×–7.8×, mem 1.19×–1.22×).
+- **Table 5 (Llama2-7B, lines 999–1035):** 8 methods × 3 metrics × 6 tasks — **all EXCEPT ONE cell verified exact**, including the flagged LA-ECE anomaly row (45.85 transcribed verbatim).
+
+**DEFECT FOUND + FIXED (Table 5, DALorRA ACC WG-S cell):** breakdown had `**69.37±1.04**` (bolded as "best") — but source line 1011 reads DALorRA WG-S ACC = **66.61±0.87**. The 69.37±1.04 value is MAP's WG-S ACC (same row-group, one row up). This was a row-copy transcription error that **inflated the paper's own method**: it showed DALorRA tying MAP for best WG-S ACC when DALorRA is actually 5th of 8 (66.61; true ranking MAP 69.37 > MCD 69.06 > Deep Ensemble 68.98 > LA 68.18 > DALorRA 66.61). **Fixed:** DALorRA WG-S → 66.61±0.87 (unbolded); MAP WG-S → bold (true best); MCD WG-S → underline (true 2nd). No prose takeaway depended on the wrong cell (T5 has no cited numeric takeaway), so fix is localized to the table.
+
+**Honest-scope surfaces (NOT numeric typos):** (a) LA ECE anomaly on Llama2-7B (45.85 ECE with 0.45–1.17 NLL — internally contradictory, likely paper-side typo 4.585 or genuine backbone-fragile Laplace collapse; flagged not corrected); (b) DALorRA's headline ECE wins are vs uncertainty baselines on a fixed Llama-3.1-8B + 6 common-sense tasks only — single backbone, narrow task family; (c) "faster than LoRA in training" (0.46×–0.72×) reflects sparsity-driven FLOP pruning but eval is 4.4×–7.8× (M=10 mask samples) — net wall-clock depends on train/eval mix; (d) +520 params / 1.0001× trainable overhead is genuinely near-free, the cleanest efficiency claim.

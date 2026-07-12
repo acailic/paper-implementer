@@ -422,3 +422,21 @@ Values that differ between 1B and 7B marked **bold** (only the differing value i
 - **Forget-vs-Retain symmetry for OracleGrad:** OG Retain ≈ 100 across EM/ES/Paraph (retain fully preserved) while Forget ≈ 0 — consistent with precise in-mask editing that leaves retain weights untouched.
 - **SimNPO utility scaling:** 7B MMLU drop (−25 to −31 pp) is consistently ~15–20× the 1B drop (−1 to −3 pp) across all four fields — internally consistent with stronger optimization disrupting a larger model more.
 - **Chance-level AUC sanity:** AlphaEdit AUC = 0.500 in all 8 (model, field) cells — exactly chance, as expected for a method whose edits are uncorrelated with the true mask.
+
+---
+
+## 13. Full cell-by-cell source verification (2026-07-13)
+
+**VERIFICATION PASS: ZERO numeric defects.** Every numeric cell re-checked against `paper_layout.txt` at the cited line ranges:
+
+- **Table 2 (1B, lines 1479–1518):** all 4 fields × 18 metrics × 4 methods = **288 cells EXACT** (Forget EM/ES/Paraph×2/Prob×2, Retain same 6, Utility ARC-C/E/HSwag/MMLU, Precision AUC(F−R)/AUC(F)).
+- **Table 3 (7B, lines 1520–1612):** all **288 cells EXACT**, same layout.
+- **Table 4 (lines 1735–1752):** 6 training/instruction-tuning params × 2 model sizes EXACT.
+- **Table 5 (lines 1769–1811):** ~30 unlearning hyperparams × 2 model sizes EXACT, **including every bold-differ marking** (MemFlex LR/grad-threshold; SimNPO α; OracleGrad γ/α/LR; AlphaEdit v-loss-layer/v-weight-decay/KL-factor/MOM2-dataset/batch-size all correctly bolded as 1B≠7B).
+- **§7 summary table:** all 8 (model,field) AUC(F) rows recompute EXACT from the Tables 2/3 Precision rows (column re-order AE/MF/SN/OG applied consistently).
+- **Prose ↔ table:** TL;DR ranges (AlphaEdit 0.500; MemFlex 0.500–0.501; SimNPO 0.512–0.516; OracleGrad 0.910–0.915) all match the min/max over the 8 cells; "1B email Forget EM 17.7 vs 1.6", "7B MMLU −28.8", "ARC-E −36 (phone)" all exact.
+- **Figure 13a Success@200 bar labels** (87/74/23/16/13/14/8%) are *printed on the bars*, not height-reads — breakdown's "≈ approximate" caveat is conservative; values are author-printed.
+
+**Honest-scope surfaces (NOT numeric typos — attributional/framing, per the repo meta-finding for eval/benchmark papers):** (a) OracleGrad is an oracle using the GT mask — upper-bounds localization-based methods, not deployable; (b) AlphaEdit restricted to FFN early-mid layers [4–8] while masks span layers 0..N−2 FFN+attn, so its localization is structurally subset-restricted (footnote 10 defends: precision within self-selected components still didn't improve); (c) Birth-city ES uninformative (low-entropy names) — read EM/Prob not ES; (d) resurfacing = single straightforward FT attack; 7B-resistance may be attack weakness not model strength (authors candid); (e) synthetic PII only (PANORAMA). The load-bearing claim — *every SOTA method edits indiscriminately (AUC≈0.5), only the mask-oracle reaches 0.91* — is clean and consistent across 4 fields × 2 sizes.
+
+No edits required to the transcribed tables. Breakdown confirmed accurate.
