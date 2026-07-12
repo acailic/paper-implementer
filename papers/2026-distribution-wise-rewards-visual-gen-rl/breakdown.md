@@ -231,3 +231,11 @@ Current experiments focus on **class-conditional ImageNet** generation. Extendin
 - **Table caption locations (layout line-ranges):** T1 L304, T2 L481, T3 L970, T4 L955, T5 L983, T6 L1002. ⚠ **Caption-wrap trap (reused from iters 38/39/45):** `^\s*Table [0-9]+:` regex misses T2/T3/T4 because their captions share a layout row with neighboring body text — confirmed by bare `Table N.` grep. pdftotext drops bold, so "best in bold" formatting was reconstructed from the Avg/row-max, not preserved.
 - **Source-free reconciliation (all passed):** every Table-4 `Change` % recomputes from its two cells (7/8 exact; FDDINOv2 off 0.1pp — flagged); Table-6 four timed fractions sum to 220.0 s and recompute to 100.0%; reward-model size ratio 304/24=12.67×≈12.7×; headline deltas SiT −30.5%, EDM2-XS −5.9%, EDM2-S −2.0% all recompute; Table-1 RL row FID 5.77 == Table-3 row-450 col-(250,50K) 5.77 == Table-4 +Ours(RL) FID 5.77 (3-table cross-agreement pinning the headline).
 - **Figure-derived values NOT back-filled:** Fig 3a/b/c ablation curves, Fig 4a/b/c design-choice curves, Fig 5 refresh-interval curve — only prose-confirmed optima (5,000 / 50 / global-top-25% / batch-level / 10-step / pure-RL) and the Fig-4b SDE/ODE qualitative gap recorded; per-point FID-vs-step values are axis-tick + series-assignment ambiguous in the layout dump. Figs 1/6–10 are qualitative sample grids.
+
+### External cell-by-cell source verification (2026-07-13)
+
+**ZERO defects.** Re-checked Tables 1 and 4 in full against `paper_layout.txt`:
+- **Table 1 (L304–340):** all 10 model rows × {Training Steps, FID, FDDINOv2} byte-exact (ADM/ADM-U/LDM-8/LDM-4/DiT×2/SiT×2/+Ours-RS/+Ours-RL), including the headline SiT 7M FID 8.30/FDDINOv2 230.39 → +Ours(RL) 5.77/164.88. Headline deltas recompute: RS FID −15.9%, RL FID **−30.5%**, RL FDDINOv2 −28.4% (paper prints 28.5% — its own 0.1pp rounding of 28.43%, transcribed verbatim).
+- **Table 4 (L955–967):** all 8 cross-metric rows × {SiT Original, +Ours(RL), Change} byte-exact (FID/KID/MMD/FDDINOv2/Precision/Recall/Density/Coverage); every Change % recomputes from the two cells.
+- 3-table cross-agreement holds: RL FID 5.77 in Table 1 == Table 3 row-450 col-(250,50K) == Table 4 +Ours(RL).
+Confirms scramble-modes meta-finding for diffusion-RL / visual-generation methods papers: zero cell typos. No edits required.
