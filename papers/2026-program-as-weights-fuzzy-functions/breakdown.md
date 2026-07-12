@@ -191,7 +191,7 @@ Three baseline families, all on the same test sets as PAW: (i) direct prompting 
 | Method | Contained | Interp. Size | FuzzyBench Acc (PS) | YouTube Acc (PS) | SMS F1 (PS) | Yelp Acc (PS) | IMDB Acc (PS) |
 |---|---|---|---|---|---|---|---|
 | gpt-5.2 (API) | ✗ | – | 96.09% (0.73 KB) | 95.20% (0.95 KB) | 97.06% (1.03 KB) | 98.55% (1.69 KB) | 95.60% (2.25 KB) |
-| gpt-5-mini (API) | ✗ | – | 91.87% (0.95 KB) | 93.60% (0.95 KB) | 91.03% (1.03 KB) | 98.13% (1.69 KB) | 94.96% (2.25 KB) |
+| gpt-5-mini (API) | ✗ | – | 91.87% (0.73 KB) | 93.60% (0.95 KB) | 91.03% (1.03 KB) | 98.13% (1.69 KB) | 94.96% (2.25 KB) |
 | Local LM (Qwen3 0.6B) | ✓ | 0.6B | 9.84% (0.73 KB) | 52.80% (0.95 KB) | 0.00%\* (1.03 KB) | 89.55% (1.69 KB) | 66.88% (2.25 KB) |
 | Local LM (Qwen3 4B) | ✓ | 4B | 49.63% (0.73 KB) | 90.80% (0.95 KB) | 92.54% (1.03 KB) | 97.53% (1.69 KB) | 93.76% (2.25 KB) |
 | Local LM (Qwen3 8B) | ✓ | 8B | 52.15% (0.73 KB) | 94.40% (0.95 KB) | 91.55% (1.03 KB) | 97.95% (1.69 KB) | 94.52% (2.25 KB) |
@@ -486,3 +486,14 @@ These are paper-internal tensions a breakdown must surface (not silently reconci
 4. **Table 1 ↔ Table 11 rounding.** Table 1 "Text-to-LoRA r=64 (default) 0.657" vs Table 11 "LoRA r=64, 7 modules (epoch 2) 0.6572" — same value, 4-decimal vs 3-decimal. (Likewise Prefix 0.504↔0.5044, r=18 0.565↔0.5652.) Consistent.
 
 5. **No numeric prose-vs-table contradiction** was found (unlike some prior papers' abstract-claims-wrong-metric). Every checked prose delta reconciles: PAW−FT 15.4pp (0.1538✓), PAW−FixedLoRA 21.7pp (0.2168✓), pseudo-vs-raw clean 1.6pp (0.0158✓), pseudo-vs-raw typo 4.5pp (0.0446✓), Q4_K_M+Q4_0 loss 1.3pp (0.0127✓), all Table-6 drop-from-clean percentages match recomputation, image-task best-baseline attributions (Circuit 0.196=Qwen3-VL-4B, Chemical 0.258=Qwen3-VL-2B, Music 0.470=Qwen3-VL-2B) all correct.
+
+### Full cell-by-cell source verification (2026-07-13)
+
+**1 numeric defect FOUND + FIXED; all other checked cells exact.**
+
+- **Table 2 (main results, lines 344–367):** all 14 method rows × 5 datasets verified — every accuracy cell exact, every per-program-shipping-size (PS) sub-cell exact **except one**: the gpt-5-mini FuzzyBench PS had been transcribed as `0.95 KB`, but source reads `0.73 KB`. PS is a per-dataset constant across prompting baselines (FuzzyBench always 0.73 KB, YouTube 0.95 KB, …); the YouTube value had leaked into the FuzzyBench cell. Accuracy 91.87% was correct; only the PS sub-cell was wrong. **Fixed** → 0.73 KB. No accuracy claim or takeaway depended on it.
+- **Table 4 (LoRA-mapper variants, lines 410–418):** all 5 rows exact (Default 0.6223, Per-position 0.5598, Per-position+per-layer 0.5559, Per-layer 0.6028, LoRA+prefix 0.6033).
+- **Table 5 (no-compiler baselines, lines 410–418):** all 5 rows exact (Fixed-LoRA r=18/64/128 = 0.4236/0.5210/0.5159, Full-FT 0.5840, PAW 0.7378). Takeaway deltas recompute (PAW−FT 0.1538, PAW−FixedLoRA-r64 0.2168).
+- **Tables 4 & 5 share source lines 410–418** because they are printed side-by-side (two-column), not a citation error.
+
+**Honest-scope surfaces (NOT numeric typos):** (a) the "default" PAW accuracy varies 0.6223–0.6572 across ablation tables because ablations run on `test_clean` while Table 2's 0.7378 is the verified (gpt-5-mini∩gpt-5.2 agreement-filtered) test set — ~10pp gap is a denominator difference, flagged in item 1/3; (b) PAW-0.6B (73.78%) trails gpt-oss-20B (85.45%) on FuzzyBench — the headline "beats Qwen3-32B" (68.70%) is the fair same-paradigm comparison, gpt-oss-20B is a stronger open frontier model; (c) image-task Im2LaTeX regression (PAW-LoRA 0.181 < prefix-tuning 0.391) candidly reported.

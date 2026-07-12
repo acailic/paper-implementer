@@ -378,6 +378,8 @@ Every distinctive cell grep-confirmed in `paper_layout.txt`; headline deltas rec
 - **LIMIT ~3×:** anchors at N=500 (0.234/0.080 = **2.93×**); grows to 4.26× at N=5,000 ✓
 - **BlockSearch vs MSA MS MARCO 500/1k/2.5k:** 95.8/75.2/43.8 vs 93.8/70.2/42.2 ✓
 
+**External cell-by-cell source verification (2026-07-13): ZERO defects.** Re-checked Tables 2 and 3 in full against `paper_layout.txt` lines 524–541 and 589–603: Table 2 (8 methods × 15 N-columns across NQ/MS-MARCO/HotpotQA = 120 cells) and Table 3 (7 methods × 5 N-columns = 35 cells) — every cell byte-exact, including the `R19^any` ceiling row, all BlockSearch ablation rows (–sink/–SSMax/–routing/–SSMax+routing), and the Random-chance floor. All §3/§6 takeaways recompute from the cells (16.5/0.2=82×; |18.8−20.2|=1.4; 78.5>75.5; 20.5>20.2; 0.234/0.080=2.93×; 0.149/0.035=4.26×). Confirms the scramble-modes meta-finding (retrieval/long-context methods paper: zero cell typos, honest-scope weight is attributional). No edits required.
+
 ---
 
 ## 12. Strengths, limitations, verdict
