@@ -371,3 +371,11 @@ Every prose headline recomputes from the tables, confirming verbatim transcripti
 - **N_eff monotone** 240.5 → 40,693 → 46,007 ✓ (Table 6)
 
 No paper-internal numeric prose-vs-table contradiction. Two minor paper-internal notes flagged inline (⚠), not reconciled: (1) Table 11 row 179 lists 7 n-grams under a "top 6" header; (2) abstract rounds the pool contraction to "~5×" (true 5.3×) and prose frames the H(WO Topic|HERMES) reduction as "~80% relative to the 4.58-bit prior" (true 0.87/4.58 = 19% remains ⇒ ~81%). Both are harmless approximations / off-by-one list counts, not result contradictions.
+
+### External cell-by-cell source verification (2026-07-13)
+
+**ZERO defects.** Re-checked the two load-bearing result tables in full against `paper_layout.txt`:
+- **Table 3 (lines 405–416):** both rows exact (L12 max-entropy coverage 0.3969/−0.458; L12 quality top-30% corrected 0.4222/+1.628). Headline Δ = 0.4222−0.3969 = **+0.0253** ✓; z Δ = 1.628−(−0.458) = **+2.09** ✓.
+- **Table 4 (lines 773–803):** the full 20-row leaderboard — every Avg. and z byte-exact across all 20 ranks (R1 0.4222/+1.628 … R20 0.3798/−1.885), including the 6 HERMES capacity-ablation rows (cap-32/64/128 under Uniform vs DoReMi) and the WebOrganizer/KMeans comparison rows; config / L1-outer / Stage-2-sampler text fields all match.
+- All §4.5 synthesis prose (rank-1 = HERMES + DoReMi-L1 + L12 quality top-30%, Avg 0.4222; ranks 2–4 L1=256 plateau within ~0.002) reconciles with the cells.
+Confirms the scramble-modes meta-finding for data-curation / pretraining-mixture methods papers: zero cell typos, honest-scope weight is attributional (single-seed limitation flagged; Uniform+L12-quality-top-30% counterpart not run ⇒ DoReMi necessity not adjudicable, flagged ⚠ inline). No edits required.

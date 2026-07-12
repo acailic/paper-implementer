@@ -392,3 +392,11 @@ Reading: under expansion + flatness, the decoder has no nonzero `2k`-sparse null
   - Theorem 3.1 `β=1` → `2ε < 1` → `ε < 1/2` (classical lossless-expander) ✓.
 - **Figures NOT back-filled (per repo "figure-derived numbers are weak" rule):** Figure 1 storage–fidelity curves, Figure 2 controls, Figure 3 decoder-method comparison, Figure 4 certificate-ratio logs (only the qualitative "ratios ≫ threshold — certificates loose" claim quoted), Figure 5 active-support collisions, Figure 6 novelty diagnostics, Figures 8–13 (Clustered/Pruned comparisons, CE-vs-budget bars, synthetic support-recovery curves). Only prose-confirmed ranges and figure-printed legend/annotation values (Table 6/10 + Figure 7 coherence means) are quoted.
 - **No prose-vs-table numeric inconsistency found** (unlike some prior repo papers). The one phrasing nuance — abstract "84% of dense CE-loss recovered" is a *ratio* (0.828/0.983), not the CE-rec value (0.828) — is clarified inline in §4.1; both reconcile. All §4.1/§4.3 prose deltas (+0.073/+0.118 CE; +0.060→+0.007; +0.012→−0.005) recompute from the displayed Table 3 cells.
+
+### External cell-by-cell source verification (2026-07-13)
+
+**ZERO defects.** Re-checked Tables 1 and 2 in full against `paper_layout.txt` lines 336–378 and 483–525:
+- **Table 1:** all 24 rows × {Storage, rel err, CE rec} = 72 cells byte-exact across Pythia-70M L3 / Pythia-160M L8 / Qwen2.5-3B L12+L24 / Llama-3.2-1B L6+L12, including the `⋆` seed-instability markers (Qwen L24 d=30: 0.848⋆/0.821⋆) and `†` (Llama L6 d=7: 0.576†).
+- **Table 2:** all 6 architecture rows byte-exact including ±SEM (Dense 0.342±.000/0.947±.001; Expander d=7/50/200; Clust.-sparse 200‡ 0.518±.012/0.829±.016; Pruned dense) and dead-fractions (0.1%–6.2%).
+- All §4.1/§4.2 takeaways recompute (0.828/0.983=0.842; 0.947−0.902=4.5pp; 6.2/0.7≈9× dead-rate blow-up; storage = m/d at every cell).
+Confirms the scramble-modes meta-finding for interpretability/SAE methods papers: zero cell typos, honest-scope weight is attributional. No edits required.
