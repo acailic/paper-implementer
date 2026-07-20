@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783543242224,
+  "lastScanned": 1784164586502,
   "projectRoot": "/home/nistrator/Documents/github/paper-implementer",
   "techStack": {
     "languages": [],
@@ -35,7 +35,7 @@
       "path": "papers",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783543242218,
+      "lastAccessed": 1784164586497,
       "keyFiles": [
         "tracker.json"
       ]
@@ -44,7 +44,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 3,
-      "lastAccessed": 1783543242221,
+      "lastAccessed": 1784164586498,
       "keyFiles": [
         "daily_tracker_refresh.py",
         "fetch_most_cited.py",
@@ -55,7 +55,7 @@
       "path": "templates",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1783543242222,
+      "lastAccessed": 1784164586501,
       "keyFiles": [
         "breakdown.md",
         "implementation.md",
@@ -63,307 +63,6 @@
       ]
     }
   },
-  "hotPaths": [
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/paper_layout.txt",
-      "accessCount": 18,
-      "lastAccessed": 1783543314013,
-      "type": "file"
-    },
-    {
-      "path": "papers/tracker.json",
-      "accessCount": 15,
-      "lastAccessed": 1783549650568,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/implementation/train.py",
-      "accessCount": 13,
-      "lastAccessed": 1783553012470,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/implementation/model.py",
-      "accessCount": 11,
-      "lastAccessed": 1783552762828,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-vision-pretraining-dense-spatial-perception/paper_layout.txt",
-      "accessCount": 9,
-      "lastAccessed": 1783530159947,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/keep-working-and-mak-569db4/notes.md",
-      "accessCount": 7,
-      "lastAccessed": 1783572293694,
-      "type": "file"
-    },
-    {
-      "path": "AGENTS.md",
-      "accessCount": 4,
-      "lastAccessed": 1783543254390,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/train.py",
-      "accessCount": 4,
-      "lastAccessed": 1783549569463,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 2,
-      "lastAccessed": 1783529033023,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/breakdown.md",
-      "accessCount": 2,
-      "lastAccessed": 1783543313967,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/model.py",
-      "accessCount": 2,
-      "lastAccessed": 1783549463002,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/model.py",
-      "accessCount": 2,
-      "lastAccessed": 1783552012856,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/README.md",
-      "accessCount": 2,
-      "lastAccessed": 1783552012907,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/implementation/data.py",
-      "accessCount": 2,
-      "lastAccessed": 1783552634874,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/README.md",
-      "accessCount": 2,
-      "lastAccessed": 1783553021620,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/model.py",
-      "accessCount": 2,
-      "lastAccessed": 1783553921613,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/data.py",
-      "accessCount": 2,
-      "lastAccessed": 1783553970498,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/train.py",
-      "accessCount": 2,
-      "lastAccessed": 1783554025741,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/README.md",
-      "accessCount": 2,
-      "lastAccessed": 1783554309582,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/writeup.md",
-      "accessCount": 2,
-      "lastAccessed": 1783554309639,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/keep-working-and-mak-569db4/prompt.md",
-      "accessCount": 2,
-      "lastAccessed": 1783570529378,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/prompt.md",
-      "accessCount": 1,
-      "lastAccessed": 1783529179658,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/output-schema.json",
-      "accessCount": 1,
-      "lastAccessed": 1783529189697,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/commit-message",
-      "accessCount": 1,
-      "lastAccessed": 1783529189720,
-      "type": "file"
-    },
-    {
-      "path": ".gnhf/runs/continue-working-on-98e59e/base-commit",
-      "accessCount": 1,
-      "lastAccessed": 1783529189773,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-researchstudio-idea-an-evidence-grounded-research/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783529211678,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-vision-pretraining-dense-spatial-perception/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783530283915,
-      "type": "file"
-    },
-    {
-      "path": "templates/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783543320392,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/data.py",
-      "accessCount": 1,
-      "lastAccessed": 1783543355037,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/train.py",
-      "accessCount": 1,
-      "lastAccessed": 1783543381148,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/implementation/requirements.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783543381774,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783547804407,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/data.py",
-      "accessCount": 1,
-      "lastAccessed": 1783547826067,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/model.py",
-      "accessCount": 1,
-      "lastAccessed": 1783547855771,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/train.py",
-      "accessCount": 1,
-      "lastAccessed": 1783547863258,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-omniopt-taxonomy-geometry-benchmarking-modern-optimizers/implementation/requirements.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783547864035,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-pixworld-unifying-3d-scene-generation-and/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783549353996,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783549377382,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/data.py",
-      "accessCount": 1,
-      "lastAccessed": 1783549422547,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/implementation/requirements.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783549443893,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-knnguard-training-free-activation-guardrail/writeup.md",
-      "accessCount": 1,
-      "lastAccessed": 1783549611146,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783551989529,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/implementation/requirements.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783553021240,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/implementation/README.md",
-      "accessCount": 1,
-      "lastAccessed": 1783553056327,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-mance-manifold-aware-concept-erasure/writeup.md",
-      "accessCount": 1,
-      "lastAccessed": 1783553064167,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-marvel-margin-aware-vmf-expert-long-tailed-ood-detection/writeup.md",
-      "accessCount": 1,
-      "lastAccessed": 1783553115677,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/breakdown.md",
-      "accessCount": 1,
-      "lastAccessed": 1783553300360,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/requirements.txt",
-      "accessCount": 1,
-      "lastAccessed": 1783554037742,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/implementation/README.md",
-      "accessCount": 1,
-      "lastAccessed": 1783554068367,
-      "type": "file"
-    },
-    {
-      "path": "papers/2026-directionality-structural-generalization-ccg-slog/writeup.md",
-      "accessCount": 1,
-      "lastAccessed": 1783554100844,
-      "type": "file"
-    }
-  ],
+  "hotPaths": [],
   "userDirectives": []
 }

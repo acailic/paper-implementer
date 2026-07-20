@@ -1354,7 +1354,8 @@
       "rank": 17,
       "subarea": "statistical ranking / LLM evaluation methodology under test-time scaling",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 3067 lines). Tables 1-5, 6-9, 10, 18, 19, 20-24 transcribed verbatim with sourcing line-ranges; Tables 11-17 summarized. No prose-vs-table numeric inconsistencies found. Figure-derived per-method tau_b bars / scatter / violins (Figs 1-7) not back-filled, only prose-confirmed ranges quoted.",
-      "status": "broken-down"
+      "status": "done",
+      "finished_at": "2026-07-20"
     },
     {
       "title": "LACUNA: A Testbed for Evaluating Localization Precision for LLM Unlearning",
@@ -1408,7 +1409,8 @@
       "rank": 19,
       "subarea": "sparse-autoencoder architecture / dictionary learning for mechanistic interpretability (combinatorial compressed sensing, expander-graph dictionaries)",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1990 lines). All 10 explicit tables (1-10) transcribed verbatim with line-range sourcing. Source-free reconciliation passed: storage ratio = m/d for every cell (Pythia 512/{7,50,200} -> 73/10/2.6x; Qwen/Llama 2048/{7,30,102} -> 293/68/20x); 84% = 0.828/0.983 (Qwen L12 d=7 vs Dense CE-rec); 293x = 33,554,432/114,688; Table 5 throughput doubles per L-doubling; Table 10 d=50 == Table 2 == Table 1 Pythia d=50 (cross-table). Theorem 3.1 (beta=1 -> epsilon<1/2 lossless-expander). 22 distinctive cells grep-confirmed in source. Figures 1-13 NOT back-filled (only prose-confirmed ranges + figure-printed coherence means). No prose-vs-table numeric inconsistency found; the one phrasing nuance (abstract 84% = ratio of two CE-rec values, not CE-rec itself) clarified inline.",
-      "status": "broken-down"
+      "status": "done",
+      "finished_at": "2026-07-20"
     },
     {
       "title": "Conditional Co-Ablation: Recovering Self-Repair Backups in Transformer Circuits",
