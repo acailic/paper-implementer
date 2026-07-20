@@ -1,0 +1,2 @@
+# Requirements for CoAx re-implementation
+numpy>=1.20
