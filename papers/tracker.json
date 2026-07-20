@@ -1542,7 +1542,8 @@
         "trustworthy deployment"
       ],
       "sourcing_note": "Source-first breakdown built from paper.pdf (8pp+app, 16pp total) via pdftotext -layout (paper_layout.txt, 1077 lines). All 6 explicit tables transcribed verbatim with sourcing line-ranges (T1 main results 9 methods x 10 settings x ACC/ECE/NLL; T2/T6 efficiency; T3 dataset stats; T4 prompts; T5 Llama2-7B). Figure bar values NOT back-filled (only prose-confirmed trends). Source-free reconciliation passed: +520 extra params = 4,467,208-4,466,688 (1.0001x); train-time ratios 0.72/0.60/0.65 (T2) and 0.57/0.71/0.46 (T6); AAO/WB/Combined dataset unions all reconcile; 9-of-10 ECE headline exact (Phy is 3rd not 2nd). One paper-internal anomaly flagged inline (Table 5 Llama2-7B LA ECE ARC-E=45.85 with low NLL, internally contradictory, possible source typo). No other prose-vs-table numeric contradiction.",
-      "status": "broken-down"
+      "status": "done",
+      "finished_at": "2026-07-20"
     },
     {
       "title": "A Hippocampus for Linear Attention: An Exact Memory for What the Recurrent State Forgets",
