@@ -2461,10 +2461,10 @@
       "popularity": 0,
       "citation_count": 0,
       "pwc_url": "",
-      "status": "broken-down",
+      "status": "done",
       "folder": "papers/2026-offline-rl-generalization-structure-over-pessimism",
       "started_at": "2026-07-04",
-      "finished_at": "2026-07-04",
+      "finished_at": "2026-07-20",
       "sourcing_note": "Source-first breakdown built from paper_layout.txt (pdftotext -layout, 1774 lines, 31pp, 10 explicit tables + Theorems 1-2 + Counter-examples 1-2 + Lemmas 1-2). All result tables transcribed verbatim with sourcing line-ranges (T1 sym/asym L337-342, T2 IQL L406-409, T7 CQL L1708-1711, T8 IQL-C L1729-1732, T9 IQL-AC L1740-1743, T10 train-contexts L1759-1774) and hyperparams T3-T6. Source-free reconciliation PASSED: sym test stays 0.99 at eta_max=10 (10x max return) while asym collapses 0.76->0.23 monotonically (T1); DAC-Output strict max on IQL Mixed 0.96/Suboptimal 0.85 and CQL Expert 0.96/Mixed 0.78 (T2/T7); critic-only DA no-op within +-0.06 (T8); -AC ~ -A within +-0.08 (T9); eta=0.01 sym==asym by construction. 5 honest-scope flags: (1) eta=0.01 sym==asym is by construction; (2) asym Train collapses 0.51 at eta=10 (training-failure artifact, deviates from Thm-2 training-optimality assumption); (3) DAC-Output not strict point-max on Expert (Aug-D-Online 0.99 vs 0.98, bolded via overlapping CI); (4) single env + 2 algos; (5) infinite-width theory vs finite MLP. 0 transcription defects."
     },
     {
