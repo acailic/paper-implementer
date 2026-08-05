@@ -1,0 +1,4 @@
+# AskChem toy re-implementation is stdlib-only (Python 3.10+).
+# No third-party packages required to run `python train.py`.
+# Production AskChem uses SQLite FTS5 + Sentence-Transformers; this toy
+# realises the same algorithms (BM25-style FTS, TF-IDF cosine) in pure Python.
