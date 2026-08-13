@@ -178,9 +178,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.02023",
       "rank": 1,
-      "status": "writing",
+      "status": "done",
       "folder": "papers/2026-swantale-unified-multi-speaker-speech-and",
-      "started_at": "2026-08-08"
+      "started_at": "2026-08-08",
+      "finished_at": "2026-08-13"
     },
     {
       "title": "MerchantBench: Benchmarking LLM Agents for Long-Term Coherence in E-Commerce Operations",
