@@ -212,8 +212,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.28956",
       "rank": 1,
-      "status": "pending",
-      "folder": "papers/2026-merchantbench-benchmarking-llm-agents-for-long"
+      "status": "reading",
+      "folder": "papers/2026-merchantbench-benchmarking-llm-agents-for-long",
+      "started_at": "2026-08-14"
     },
     {
       "title": "AgentOPSD: Recursive Self-Distillation for Agentic Reinforcement Learning",
@@ -351,6 +352,55 @@
       "rank": 1,
       "status": "pending",
       "folder": "papers/2026-macaron-v1-towards-open-continual-learning"
+    },
+    {
+      "title": "ComBodied Agents: a New Paradigm of Human-Centric Agentic AI",
+      "authors": [
+        "Qianggang Ding",
+        "Xingyao Wang",
+        "Rui Feng",
+        "Zhibin Wang",
+        "Feixiang Wang",
+        "Kelong Mao",
+        "Hao Sun",
+        "Zhiyao Luo",
+        "Jiankai Tang",
+        "Lei Li",
+        "Jiadong Guo",
+        "Minheng Ni",
+        "Weicong Lin",
+        "Chenxi Yang",
+        "Hongxiang Gao",
+        "Zhenghua Chen",
+        "Yang Bai",
+        "Min Wu",
+        "Jun Cheng",
+        "Huazhu Fu",
+        "Dacheng Tao",
+        "Bang Liu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.10915",
+      "arxiv_url": "https://arxiv.org/abs/2608.10915",
+      "pdf_url": "https://arxiv.org/pdf/2608.10915.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "After an older adult misses a medication dose, a software agent can send another reminder and an embodied agent can bring the medication. Yet neither explains whether the person forgot, is confused, has side effects, or deliberately refused, nor what support is appropriate. This reveals a structural gap in Agentic AI: Digital Agents primarily transform software states, while Embodied Agents transform physical states; neither makes a person's evolving state and agency the primary object of modeling, intervention, and evaluation. We introduce Combodied Agents, a human-centered paradigm that perceives, models, predicts, and supports individual human-state trajectories over time, using software tools, sensors, wearables, robots, and human services as action channels rather than end goals. We unify fragmented capabilities across personal assistants, health agents, AI companions, and adaptive human--AI systems into a closed loop: event-based multimodal perception reconstructs meaningful personal events; longitudinal, correctable memory provides temporal context; Personal World Models estimate future personal states and outcomes under alternative decisions and interventions; and an admissible intervention policy selects proportionate support under consent, uncertainty, safety, reversibility, and user control. Feedback from the person and environment updates the loop. Rather than requiring an exhaustive Human Digital Twin, the framework uses purpose-bounded, uncertainty-aware, user-correctable representations. We organize the design space by human-state targets, relational contexts, and agent roles, and propose scenario-centered evaluation, agency-preservation metrics, benchmark requirements, edge-native personal models, and governance directions. Combodied Agents shift Agentic AI from external task completion toward sustained human benefit.",
+      "ai_keywords": [
+        "Combodied Agents",
+        "Personal World Models",
+        "event-based multimodal perception",
+        "longitudinal correctable memory",
+        "admissible intervention policy",
+        "human-state trajectories",
+        "Agentic AI"
+      ],
+      "popularity": 180,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.10915",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-combodied-agents-a-new-paradigm-of"
     },
     {
       "title": "LongHorizon-Harness: Advancing Long-Horizon Agents for Real-World Tasks",
@@ -695,6 +745,43 @@
       "folder": "papers/2026-bdh-cq-in-context-learning-with"
     },
     {
+      "title": "Spark-to-Paper: End-to-End Research Paper Generation as a Composable Skill",
+      "authors": [
+        "Zhuoyang Qian",
+        "Biao Wu",
+        "Yiran Wang",
+        "Chris D Yan",
+        "Desan Dai",
+        "Liangwei Zheng",
+        "Jin Jiang",
+        "Junsheng Zhang",
+        "Wenhao Wang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.11924",
+      "arxiv_url": "https://arxiv.org/abs/2608.11924",
+      "pdf_url": "https://arxiv.org/pdf/2608.11924.pdf",
+      "code_url": "https://github.com/Spark-To-Paper-Skills/spark-to-paper-skills",
+      "project_page": "",
+      "abstract": "Turning a research idea into a complete paper requires more than text generation: the system must retrieve literature, design and execute experiments, revise claims according to evidence, produce publication-ready figures, and maintain consistency across a long generation process. We present Spark-to-Paper, an end-to-end research paper generation system implemented as thirteen composable skills inside an existing coding assistant, without requiring a separate agent platform or orchestration service. Spark-to-Paper separates model-based judgment from deterministic operations that can be directly executed and checked. It further separates experiment planning from reporting, so that required evidence is specified before results are observed and manuscript claims are revised according to measured outcomes. To improve reliability over long research trajectories, the system combines deterministic integrity checks with self-critique and bounds a failure mode we call the Self-Refutation Loop, in which repeated experiments continue to reject the original research objective. Spark-to-Paper also produces editable vector figures through programmatic plotting for experimental results and code-based reconstruction for generated method diagrams. Across eight controlled research topics, Spark-to-Paper achieves 99.5% citation validity and 96.4% figure editability. A controlled ablation increases fabrication detection from 14% for a single-pass draft to 92% with the full integrity and review stack, while adversarial review achieves 74% precision. The full system uses 11.9M tokens, costs $8.1 per manuscript, and requires 3.2 hours on average. These results show that end-to-end research paper generation can be implemented as a lightweight, composable workflow inside existing coding assistants while keeping experimental evidence central to how claims are accepted, revised, or abandoned.",
+      "ai_keywords": [
+        "self-refutation loop",
+        "citation validity",
+        "figure editability",
+        "fabrication detection",
+        "adversarial review",
+        "composable skills",
+        "integrity checks",
+        "self-critique"
+      ],
+      "popularity": 176,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.11924",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-spark-to-paper-end-to-end"
+    },
+    {
       "title": "SWE-Bench ProMax: Benchmarking Agents on Large-Scale Multilingual Code Refactoring",
       "authors": [
         "Yuling Shi",
@@ -956,6 +1043,37 @@
       "rank": 3,
       "status": "pending",
       "folder": "papers/2026-beyond-simply-environment-scaling-designing-effective"
+    },
+    {
+      "title": "Beyond Pixels: From Video Priors to 4D Worlds",
+      "authors": [
+        "Zihao Liu",
+        "Xiaolong Shen",
+        "Zhenglin Zhou",
+        "Ruijie Quan",
+        "Yi Yang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.10744",
+      "arxiv_url": "https://arxiv.org/abs/2608.10744",
+      "pdf_url": "https://arxiv.org/pdf/2608.10744.pdf",
+      "code_url": "https://github.com/hayd-zju/Beyond-Pixels",
+      "project_page": "https://hayd-zju.github.io/Beyond-Pixels/",
+      "abstract": "4D generation synthesizes dynamic 3D scenes from conditions such as text or images. Existing methods either reconstruct generated RGB videos with a separate 4D model or adapt a particular video generator to predict geometry directly. The former suffers from distribution mismatch and error propagation, whereas the latter ties 4D prediction to a specific generator and may require retraining when the generator or conditioning regime changes. We ask whether the final denoised latents of video models that share a variational autoencoder (VAE) can instead provide a reusable interface to explicit 4D prediction. Building on this insight, we introduce direct latent-to-4D generation and instantiate it as Latent-to-4D, which bypasses RGB by aligning a video latent with the token grid of a pretrained 4D decoder and refining it through frame-wise and global spatiotemporal attention. Trained on roughly 1K existing reconstruction clips, a single checkpoint transfers unchanged across multiple video diffusion transformers within the same VAE family. On Text4D-200 and I4D-200, Latent-to-4D surpasses matched same-latent Wan+4RC cascades in projection-based DINO-F1 by 2.88--3.45 and 5.81 points, respectively, while also being preferred by human raters for geometry, temporal stability, and overall quality.",
+      "ai_keywords": [
+        "4D generation",
+        "variational autoencoder",
+        "video diffusion transformers",
+        "latent-to-4D",
+        "spatiotemporal attention",
+        "4D decoder"
+      ],
+      "popularity": 171,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.10744",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-beyond-pixels-from-video-priors-to"
     },
     {
       "title": "DomainShuttle: Freeform Open Domain Subject-driven Text-to-video Generation",
@@ -1243,6 +1361,45 @@
       "folder": "papers/2026-on-policy-self-distillation-without-any"
     },
     {
+      "title": "OpenART: Scaling Agent Red Teaming via Open-Ended Environment Evolution",
+      "authors": [
+        "Yunhao Chen",
+        "Xin Wang",
+        "Yixu Wang",
+        "Yi Liu",
+        "Jie Li",
+        "Yan Teng",
+        "Xingjun Ma",
+        "Xia Hu",
+        "Yu-Gang Jiang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.00677",
+      "arxiv_url": "https://arxiv.org/abs/2608.00677",
+      "pdf_url": "https://arxiv.org/pdf/2608.00677.pdf",
+      "code_url": "https://github.com/AI45Lab/OpenART",
+      "project_page": "",
+      "abstract": "AI agents operate in persistent environments where early state changes can influence decisions far into the future. Unlike conventional language-model interactions, agent behavior is mediated through a shared state that is repeatedly modified and reused across long-horizon workflows. Current safety benchmarks often fail to capture these cumulative risks because they focus on short, static tasks. To address these limitations, we introduce OpenART, an open-ended arena for scalable agent red teaming through environment evolution. OpenART provides over 10,000 validated stateful scenarios across 50 domains, drawing from a pool of more than 500,000 tools and skills. These tasks require a median of 97 tool calls and enable unified evaluation across 75 different agent-model configurations. To systematically explore these evolving attack surfaces, we propose the Evolutionary Markov Hypergraph Attack (EMHA). EMHA is a black-box policy that performs feedback-driven environment evolution by coordinating authorized state transitions without requiring parameter updates. Throughout the evaluation, task objectives remain fixed while only the environment state changes. Across all configurations, EMHA achieves a pooled Attack Success Rate (ASR) of 85.0%. Its advantage over instruction-only evolution increases from approximately 2% on simple environments to over 17% on the most complex ones, demonstrating that environment evolution increasingly exposes safety failures as task complexity grows. Furthermore, our analysis shows that the specific runtime implementation of an agent explains a significant portion of safety variation beyond the underlying model's capabilities. These results establish OpenART as a scalable foundation for studying agent safety in complex, evolving environments.",
+      "ai_keywords": [
+        "OpenART",
+        "stateful scenarios",
+        "Evolutionary Markov Hypergraph Attack",
+        "EMHA",
+        "black-box policy",
+        "environment evolution",
+        "authorized state transitions",
+        "Attack Success Rate",
+        "ASR",
+        "runtime implementation"
+      ],
+      "popularity": 159,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.00677",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-openart-scaling-agent-red-teaming-via"
+    },
+    {
       "title": "Progressive Agent Skill Generation via Reinforcement Learning",
       "authors": [
         "Junhao Shen",
@@ -1494,6 +1651,47 @@
       "rank": 5,
       "status": "pending",
       "folder": "papers/2026-ouroboros-a-self-developing-frontier-coding"
+    },
+    {
+      "title": "Co-Evolution in Agentic Systems: Toward Self-Directed Evolution Beyond Human Design",
+      "authors": [
+        "Qing Zong",
+        "Jiayu Liu",
+        "Junhao Shen",
+        "Zecong Tang",
+        "Linsi Wu",
+        "Yuxuan Liu",
+        "Rui Wang",
+        "Zhaowei Wang",
+        "Weiqi Wang",
+        "Cheng Qian",
+        "Xiusi Chen",
+        "Yangqiu Song"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.10299",
+      "arxiv_url": "https://arxiv.org/abs/2608.10299",
+      "pdf_url": "https://arxiv.org/pdf/2608.10299.pdf",
+      "code_url": "https://github.com/zongqing0068/awesome-co-evolution",
+      "project_page": "",
+      "abstract": "Agentic systems are increasingly expected to improve after deployment, yet single-entity self-evolution is often bounded by a static learning context, such as fixed tasks and feedback. This survey focuses on co-evolution in agentic systems, a multi-component form of self-evolution in which multiple agents and their environment impose adaptive pressure on one another. To organize existing papers, we propose a progressive three-stage taxonomy that traces how the system gradually sheds human-engineered constraints. Agent--Agent Co-Evolution studies how agents adapt through dynamic peers, including adversarial, collaborative, and organizational adaptation. Agent--Environment Co-Evolution extends this loop to adaptive tasks, feedback, and interaction spaces that change with the agents. Meta Co-Evolution further explores the possibility of making the evolution mechanism itself evolvable. We also discuss open challenges in evaluating such systems, scaling them across multiple components, and keeping increasingly autonomous evolutionary processes safe and controllable. This survey provides a unified foundation for building robust and open-ended agentic systems that can improve beyond fixed human-designed paths.",
+      "ai_keywords": [
+        "agentic systems",
+        "co-evolution",
+        "self-evolution",
+        "adversarial adaptation",
+        "collaborative adaptation",
+        "organizational adaptation",
+        "agent-environment co-evolution",
+        "meta co-evolution",
+        "evolvable mechanisms"
+      ],
+      "popularity": 123,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.10299",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-co-evolution-in-agentic-systems-toward"
     },
     {
       "title": "PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation",
@@ -1881,6 +2079,44 @@
       "folder": "papers/2026-stealing-reasoning-traces-from-proprietary-llm"
     },
     {
+      "title": "AI4AI at Test-Time: Strong-to-Weak Capability Transfer via Harnesses",
+      "authors": [
+        "Cheng Qian",
+        "Wenting Zhao",
+        "Liangwei Yang",
+        "Heng Wang",
+        "Jielin Qiu",
+        "Heng Ji",
+        "Silvio Savarese",
+        "Huan Wang",
+        "Shelby Heinecke"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.12307",
+      "arxiv_url": "https://arxiv.org/abs/2608.12307",
+      "pdf_url": "https://arxiv.org/pdf/2608.12307.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Recent work on distillation transfers the capabilities of large models to smaller ones often by updating the latter's parameters, through teacher forcing, on-policy distillation, and related training-time methods. In this paper, we ask whether such transfer can instead occur at test time. We study strong-to-weak scaffolding: whether a stronger builder model can construct inference-time harnesses that help a weaker target model solve tasks more reliably without any parameter updates. Using four representative Theory-of-Mind benchmarks, each builder model uses 5% of the data as a validation set to iteratively refine its harness over multiple rounds, after which the finalized harness is evaluated on the full test set. Empirically, this form of test-time capability transfer is highly effective, nearly doubling average target-model performance from 0.49 to 0.91. Our analysis shows that the gains come primarily from offloading unstable model reasoning into deterministic code, benchmark-specific routing, and strict answer-format enforcement, rather than from encouraging the target model to reason more extensively or sample more broadly. We further find that builder-model reasoning effort improves harness quality monotonically, platform effects are modest relative to the builder model's own capability, and weaker target models receive the largest gains. These results suggest that inference-time harness design is an important complement to conventional training-time distillation, enabling strong models to transfer cognitive structure to weaker models without retraining.",
+      "ai_keywords": [
+        "strong-to-weak scaffolding",
+        "inference-time harnesses",
+        "Theory-of-Mind benchmarks",
+        "test-time capability transfer",
+        "deterministic code",
+        "benchmark-specific routing",
+        "answer-format enforcement",
+        "inference-time harness design",
+        "training-time distillation"
+      ],
+      "popularity": 92,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.12307",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-ai4ai-at-test-time-strong-to"
+    },
+    {
       "title": "EnvACE: Internalizing Environment Dynamics via World Rehearsal for Agentic Reinforcement Learning",
       "authors": [
         "Zishan Xu",
@@ -2175,6 +2411,52 @@
       "folder": "papers/2026-agent-memory-distillation-empowering-small-llm"
     },
     {
+      "title": "Mechanist: AI as a Scientific Instrument for Discovering the Mechanisms of Intelligence",
+      "authors": [
+        "Mengru Wang",
+        "Junfeng Fang",
+        "Shuofei Qiao",
+        "Zhenqian Xu",
+        "Haoming Xu",
+        "Haoxiong Wang",
+        "Shumin Deng",
+        "Linyi Yang",
+        "Zhixiang Cui",
+        "Xin Xu",
+        "Yunzhi Yao",
+        "Buqiang Xu",
+        "Fei Shen",
+        "Haozhe Luo",
+        "Yunxiang Wei",
+        "Ningyu Zhang",
+        "Julian McAuley",
+        "Tat Seng Chua",
+        "Huajun Chen"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.12036",
+      "arxiv_url": "https://arxiv.org/abs/2608.12036",
+      "pdf_url": "https://arxiv.org/pdf/2608.12036.pdf",
+      "code_url": "https://github.com/zjunlp/Mechanist",
+      "project_page": "http://mechanist.openkg.cn/",
+      "abstract": "AI models have achieved remarkable success across diverse domains, yet the mechanisms underlying their capabilities and the risks they may pose remain poorly understood. As AI development becomes faster and increasingly automated, mechanistic exploration remains largely manual, widening the gap between what models can do and our ability to understand and control them. To bridge this gap, we introduce Mechanist, an agentic system that uses AI as a scientific instrument for the autonomous discovery of mechanisms underlying AI intelligence. To support autonomous mechanistic discovery, we construct an interpretability-focused knowledge graph of approximately 13,000 papers and integrate it with a multidisciplinary database of 43 million papers spanning 26 fields. We further curate a library of 32 foundational methods for mechanism analysis, causal intervention, and validation. Compared with Claude Code and existing AI-scientist systems, Mechanist generates more valuable mechanism hypotheses and executes experiments more reliably. Mechanist also demonstrates a progression from discovering model behaviors to explaining and controlling AI models. Specifically, Mechanist first uncovers a counterintuitive safety risk in scientific laboratories, showing that unsafe traits can transfer across modalities through apparently safe training data. Mechanist then develops a mechanism theory of belief, revealing how models represent world knowledge, form beliefs, infer the beliefs of others, and how these mechanisms emerge during pretraining. Finally, Mechanist translates these mechanistic insights into practical interventions that improve model performance across diverse scenarios and steer scientific foundation models toward generating DNA sequences with specified properties.",
+      "ai_keywords": [
+        "mechanistic interpretability",
+        "causal intervention",
+        "knowledge graph",
+        "mechanism analysis",
+        "belief representation",
+        "cross-modal transfer",
+        "scientific foundation models"
+      ],
+      "popularity": 73,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.12036",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-mechanist-ai-as-a-scientific-instrument"
+    },
+    {
       "title": "ChronoVision: Temporal Reasoning via Latent State Reconstruction",
       "authors": [
         "Yifan Shen",
@@ -2395,53 +2677,41 @@
       "folder": "papers/2026-toolartist-tool-using-unified-multimodal-models"
     },
     {
-      "title": "ComBodied Agents: a New Paradigm of Human-Centric Agentic AI",
+      "title": "SkillZip: Contract-Preserving Graph Compression for Scalable Agent Skill Libraries",
       "authors": [
-        "Qianggang Ding",
-        "Xingyao Wang",
-        "Rui Feng",
-        "Zhibin Wang",
-        "Feixiang Wang",
-        "Kelong Mao",
-        "Hao Sun",
-        "Zhiyao Luo",
-        "Jiankai Tang",
-        "Lei Li",
-        "Jiadong Guo",
-        "Minheng Ni",
-        "Weicong Lin",
-        "Chenxi Yang",
-        "Hongxiang Gao",
-        "Zhenghua Chen",
-        "Yang Bai",
-        "Min Wu",
-        "Jun Cheng",
-        "Huazhu Fu",
-        "Dacheng Tao",
-        "Bang Liu"
+        "Xingyu Tan",
+        "Xiaoyang Wang",
+        "Qing Liu",
+        "Xiwei Xu",
+        "Xin Yuan",
+        "Liming Zhu",
+        "Wenjie Zhang"
       ],
       "year": "2026",
-      "arxiv_id": "2608.10915",
-      "arxiv_url": "https://arxiv.org/abs/2608.10915",
-      "pdf_url": "https://arxiv.org/pdf/2608.10915.pdf",
+      "arxiv_id": "2608.05604",
+      "arxiv_url": "https://arxiv.org/abs/2608.05604",
+      "pdf_url": "https://arxiv.org/pdf/2608.05604.pdf",
       "code_url": "",
       "project_page": "",
-      "abstract": "After an older adult misses a medication dose, a software agent can send another reminder and an embodied agent can bring the medication. Yet neither explains whether the person forgot, is confused, has side effects, or deliberately refused, nor what support is appropriate. This reveals a structural gap in Agentic AI: Digital Agents primarily transform software states, while Embodied Agents transform physical states; neither makes a person's evolving state and agency the primary object of modeling, intervention, and evaluation. We introduce Combodied Agents, a human-centered paradigm that perceives, models, predicts, and supports individual human-state trajectories over time, using software tools, sensors, wearables, robots, and human services as action channels rather than end goals. We unify fragmented capabilities across personal assistants, health agents, AI companions, and adaptive human--AI systems into a closed loop: event-based multimodal perception reconstructs meaningful personal events; longitudinal, correctable memory provides temporal context; Personal World Models estimate future personal states and outcomes under alternative decisions and interventions; and an admissible intervention policy selects proportionate support under consent, uncertainty, safety, reversibility, and user control. Feedback from the person and environment updates the loop. Rather than requiring an exhaustive Human Digital Twin, the framework uses purpose-bounded, uncertainty-aware, user-correctable representations. We organize the design space by human-state targets, relational contexts, and agent roles, and propose scenario-centered evaluation, agency-preservation metrics, benchmark requirements, edge-native personal models, and governance directions. Combodied Agents shift Agentic AI from external task completion toward sustained human benefit.",
+      "abstract": "Large Language Models (LLMs) increasingly act as agents whose procedural knowledge is stored in reusable skill packages and loaded at inference time. As skill libraries grow, a central challenge is to expose the smallest sufficient executable context under a limited context budget. Existing systems struggle to reuse routines below the whole-skill level, preserve procedural contracts during compression, keep compressed routines executable and expandable, and update the compressed library as skills evolve. These challenges reveal a unit mismatch: skills are retrieved as packages, compressed as text, and converted into execution graphs only after retrieval, whereas reliable reuse requires a contract-bearing procedural unit. We propose SkillZip, an execution-aware procedural abstraction framework that performs contract-preserving compression over section-level graphs. SkillZip rewrites recurring contract-valid motifs into reversible ported macros while preserving boundary signatures, dependency closure, verifier reachability, and source-level expansion. At inference time, it hydrates a compact, dependency-closed context and expands macros only when required. ReZip further integrates new skills and revises risky macros using execution evidence. Comprehensive experiments1 on technical and embodied agent benchmarks show SkillZip consistently outperforms the strongest baseline by up to 12.2 points, while achieving a 3.46x compression ratio with 99.2% dependency preservation and 98.7% verifier reachability. Scaling analyses further confirm robust retrieval across skill libraries ranging from 200 to 100K skills.",
       "ai_keywords": [
-        "Combodied Agents",
-        "Personal World Models",
-        "event-based multimodal perception",
-        "longitudinal correctable memory",
-        "admissible intervention policy",
-        "human-state trajectories",
-        "Agentic AI"
+        "Large Language Models",
+        "skill packages",
+        "procedural abstraction",
+        "contract-preserving compression",
+        "section-level graphs",
+        "ported macros",
+        "dependency closure",
+        "verifier reachability",
+        "SkillZip",
+        "ReZip"
       ],
-      "popularity": 37,
+      "popularity": 72,
       "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2608.10915",
+      "pwc_url": "https://huggingface.co/papers/2608.05604",
       "rank": 8,
       "status": "pending",
-      "folder": "papers/2026-combodied-agents-a-new-paradigm-of"
+      "folder": "papers/2026-skillzip-contract-preserving-graph-compression-for"
     },
     {
       "title": "Motif 3: Technical Report",
@@ -2736,6 +3006,41 @@
       "rank": 9,
       "status": "pending",
       "folder": "papers/2026-yolo-peft-parameter-efficient-fine-tuning"
+    },
+    {
+      "title": "Articulated Object Reconstruction from Rest-State Observation",
+      "authors": [
+        "Daeun Lee",
+        "Jaeah Lee",
+        "Woosung Kim",
+        "Haebeom Jung",
+        "Jaesik Park"
+      ],
+      "year": "2026",
+      "arxiv_id": "2607.27749",
+      "arxiv_url": "https://arxiv.org/abs/2607.27749",
+      "pdf_url": "https://arxiv.org/pdf/2607.27749.pdf",
+      "code_url": "",
+      "project_page": "https://da-eun07.github.io/rest2art/",
+      "abstract": "Building interactive digital twins requires recovering both 3D geometry and the kinematic structures that govern how objects articulate. Yet existing methods for articulated object reconstruction require explicitly observable motion from multiple articulation states. We introduce a rest-state formulation that reconstructs articulated objects from a single closed configuration, an inherently ill-posed setting where geometry, semantics, and motion priors compensate for the absence of motion cues. Our framework adopts an explicit mesh as an intermediate representation for cross-model verification and fusion, reconciling noisy outputs from vision-language and segmentation models into spatially consistent part structures. To estimate joint parameters without observed motion, we use a video diffusion model to synthesize articulation hypotheses and validate them through geometric consistency. Our approach achieves accurate part decomposition and physically plausible articulation, performing competitively with motion-observing reconstruction-based, generation-based, and modular pretrained-model baselines.",
+      "ai_keywords": [
+        "digital twins",
+        "articulated object reconstruction",
+        "rest-state formulation",
+        "explicit mesh",
+        "vision-language models",
+        "segmentation models",
+        "video diffusion model",
+        "articulation hypotheses",
+        "geometric consistency",
+        "joint parameters"
+      ],
+      "popularity": 42,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2607.27749",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-articulated-object-reconstruction-from-rest-state"
     },
     {
       "title": "Sci-VBench: Evaluating Knowledge- and Reasoning-Intensive Video Generation in Science Domains",
@@ -3069,6 +3374,45 @@
       "rank": 10,
       "status": "pending",
       "folder": "papers/2026-streamarena-toward-continuous-interactive-and-long"
+    },
+    {
+      "title": "Can LLM Agents Stick to the Script? A Benchmark for Long-Horizon Consistency in Interactive Narratives",
+      "authors": [
+        "Yingpeng Ma",
+        "Jianhao Yan",
+        "Bei Shi",
+        "Ka Hou Kam",
+        "Runnan Wang",
+        "Xuebo Liu",
+        "Yulong Chen",
+        "Yue Zhang",
+        "Derek F. Wong"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.08160",
+      "arxiv_url": "https://arxiv.org/abs/2608.08160",
+      "pdf_url": "https://arxiv.org/pdf/2608.08160.pdf",
+      "code_url": "https://github.com/yingpengma/NCP-Bench",
+      "project_page": "",
+      "abstract": "The rapid advancement of Large Language Models (LLMs) is revolutionizing AI for Games by enabling open-ended and fluid interactive storytelling. However, existing research has largely overlooked the critical challenge of maintaining long-horizon logical consistency and narrative integrity against unconstrained user interventions. To address this, we formulate this challenge as Narrative Commitment Preservation (NCP), and take interactive narrative as our testbed. We introduce NCP-Bench, a benchmark of 100 narrative environments derived from movie synopses. Each environment includes a structured narrative specification (trajectory, commitments, and initial facts) that we can automatically check throughout the interaction between the player agent and the narrator agent. Experiments across state-of-the-art LLMs reveal a substantial long-horizon consistency gap: high linguistic quality does not guarantee commitment preservation; even strong models frequently generate logically conflicting content under adversarial interventions, with the best-performing model (GPT-5.2) achieving only 42% survival rate after 20 turns and fact conflict rates ranging from 40% to 68% across models, and only isolated runs satisfying all achievement commitments within the 100-turn limit.",
+      "ai_keywords": [
+        "Narrative Commitment Preservation",
+        "NCP-Bench",
+        "interactive narrative",
+        "trajectory",
+        "commitments",
+        "initial facts",
+        "adversarial interventions",
+        "survival rate",
+        "fact conflict rates",
+        "achievement commitments"
+      ],
+      "popularity": 25,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.08160",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-can-llm-agents-stick-to-the"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -6066,5 +6410,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-08-12T05:00:03.050080+00:00"
+  "updated_at": "2026-08-13T20:07:04.291942+00:00"
 }
