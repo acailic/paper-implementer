@@ -212,7 +212,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2607.28956",
       "rank": 1,
-      "status": "breaking_down",
+      "status": "coding",
       "folder": "papers/2026-merchantbench-benchmarking-llm-agents-for-long",
       "started_at": "2026-08-14"
     },
@@ -403,6 +403,42 @@
       "folder": "papers/2026-combodied-agents-a-new-paradigm-of"
     },
     {
+      "title": "Alaya-EVOKE: From Linear-Scaling Supervision to Endless World",
+      "authors": [
+        "Yuanyang Yin",
+        "Gongxuan Wang",
+        "Yifan Zhan",
+        "Chuanhao Li",
+        "Kaipeng Zhang",
+        "Feng Zhao"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.13546",
+      "arxiv_url": "https://arxiv.org/abs/2608.13546",
+      "pdf_url": "https://arxiv.org/pdf/2608.13546.pdf",
+      "code_url": "",
+      "project_page": "https://evoke-world.github.io/Evoke/",
+      "abstract": "Interactive world models must support persistent memory, responsive interaction, and long-horizon generation, yet these requirements place conflicting demands on the model. Maintaining history in the denoiser context or key-value cache incurs growing cost, forcing a trade-off between session length and retained memory, while low-latency interaction relies on few-step generation whose capabilities are bounded by its teacher. Evoke addresses both limitations by externalizing persistent world state and redesigning the teacher for long-horizon interactive generation. Scene geometry is maintained in an external, camera-indexed world state bank, from which only view-relevant information is retrieved, keeping the denoiser context bounded as the session grows. Rather than treating the teacher as a fixed generator, we design it for long-horizon supervision: its sparse attention combines chunk-wise grouping, retrieval of selected distant frames, and a linear-attention global state, yielding linear growth in memory and compute while enabling supervision over long horizons. Such supervision exposes content drift that stays locally plausible within short windows, while per-chunk conditioning enables prompt changes and event control throughout the sequence. A 30-second distribution-matching objective, applied under self-forced rollouts, transfers both capabilities to a three-step student that uses no classifier-free guidance, improving resistance to long-term drift while preserving responsive conditioning. With bounded context and recurrent external memory, Evoke supports open-ended, continuously evolving generation; on a single H200 at 384times 640, each 1.5,s chunk is generated in 2.11,s. As a three-step world model, Evoke achieves state-of-the-art performance on WBench while remaining competitive on VBench-Long and VBench-2.0.",
+      "ai_keywords": [
+        "world models",
+        "denoiser context",
+        "key-value cache",
+        "external world state bank",
+        "sparse attention",
+        "chunk-wise grouping",
+        "linear attention",
+        "self-forced rollouts",
+        "classifier-free guidance",
+        "distribution-matching objective"
+      ],
+      "popularity": 111,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.13546",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-alaya-evoke-from-linear-scaling-supervision"
+    },
+    {
       "title": "LLMRouter: Unified Infrastructure for Developing, Evaluating, and Deploying LLM Routers",
       "authors": [
         "Tao Feng",
@@ -439,10 +475,10 @@
         "learned routers",
         "user-conditioned routing"
       ],
-      "popularity": 87,
+      "popularity": 97,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.06867",
-      "rank": 1,
+      "rank": 2,
       "status": "pending",
       "folder": "papers/2026-llmrouter-unified-infrastructure-for-developing-evaluating"
     },
@@ -826,42 +862,6 @@
       "folder": "papers/2026-spark-to-paper-end-to-end"
     },
     {
-      "title": "Alaya-EVOKE: From Linear-Scaling Supervision to Endless World",
-      "authors": [
-        "Yuanyang Yin",
-        "Gongxuan Wang",
-        "Yifan Zhan",
-        "Chuanhao Li",
-        "Kaipeng Zhang",
-        "Feng Zhao"
-      ],
-      "year": "2026",
-      "arxiv_id": "2608.13546",
-      "arxiv_url": "https://arxiv.org/abs/2608.13546",
-      "pdf_url": "https://arxiv.org/pdf/2608.13546.pdf",
-      "code_url": "",
-      "project_page": "https://evoke-world.github.io/Evoke/",
-      "abstract": "Interactive world models must support persistent memory, responsive interaction, and long-horizon generation, yet these requirements place conflicting demands on the model. Maintaining history in the denoiser context or key-value cache incurs growing cost, forcing a trade-off between session length and retained memory, while low-latency interaction relies on few-step generation whose capabilities are bounded by its teacher. Evoke addresses both limitations by externalizing persistent world state and redesigning the teacher for long-horizon interactive generation. Scene geometry is maintained in an external, camera-indexed world state bank, from which only view-relevant information is retrieved, keeping the denoiser context bounded as the session grows. Rather than treating the teacher as a fixed generator, we design it for long-horizon supervision: its sparse attention combines chunk-wise grouping, retrieval of selected distant frames, and a linear-attention global state, yielding linear growth in memory and compute while enabling supervision over long horizons. Such supervision exposes content drift that stays locally plausible within short windows, while per-chunk conditioning enables prompt changes and event control throughout the sequence. A 30-second distribution-matching objective, applied under self-forced rollouts, transfers both capabilities to a three-step student that uses no classifier-free guidance, improving resistance to long-term drift while preserving responsive conditioning. With bounded context and recurrent external memory, Evoke supports open-ended, continuously evolving generation; on a single H200 at 384times 640, each 1.5,s chunk is generated in 2.11,s. As a three-step world model, Evoke achieves state-of-the-art performance on WBench while remaining competitive on VBench-Long and VBench-2.0.",
-      "ai_keywords": [
-        "world models",
-        "denoiser context",
-        "key-value cache",
-        "external world state bank",
-        "sparse attention",
-        "chunk-wise grouping",
-        "linear attention",
-        "self-forced rollouts",
-        "classifier-free guidance",
-        "distribution-matching objective"
-      ],
-      "popularity": 81,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2608.13546",
-      "rank": 2,
-      "status": "pending",
-      "folder": "papers/2026-alaya-evoke-from-linear-scaling-supervision"
-    },
-    {
       "title": "SWE-Bench ProMax: Benchmarking Agents on Large-Scale Multilingual Code Refactoring",
       "authors": [
         "Yuling Shi",
@@ -1185,7 +1185,7 @@
         "V-JEPA teacher",
         "distribution-matching distillation"
       ],
-      "popularity": 79,
+      "popularity": 86,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.13489",
       "rank": 3,
@@ -1550,7 +1550,7 @@
         "verifier",
         "DarwinX"
       ],
-      "popularity": 54,
+      "popularity": 70,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.07545",
       "rank": 4,
@@ -2003,7 +2003,7 @@
         "Memory Decoder",
         "memory-augmented"
       ],
-      "popularity": 42,
+      "popularity": 47,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.13505",
       "rank": 5,
@@ -2449,7 +2449,7 @@
       "arxiv_id": "2608.08975",
       "arxiv_url": "https://arxiv.org/abs/2608.08975",
       "pdf_url": "https://arxiv.org/pdf/2608.08975.pdf",
-      "code_url": "https://github.com/MingLiiii/Dissecting_AI_Reviews",
+      "code_url": "",
       "project_page": "",
       "abstract": "As large language models increasingly participate in scientific evaluation, we investigate a potential form of reward hacking: how rhetorical choices shape AI-review judgments when reported scientific content is preserved and how these effects vary across evaluation conditions. We construct a controlled corpus of 4,200 full-paper manuscripts derived from 120 anonymized ICLR 2026 submissions. Two LLM rewriters transform six rhetorical dimensions in opposing directions, and five LLM reviewers evaluate the resulting manuscripts under standard and strict protocols. We also test joint, recursive, and reviewer-guided rewriting. Our results show that rhetorical sensitivity is structured rather than uniform. Evidence framing and novelty stance produce the largest positive-negative contrasts in overall assessment, with scope framing forming a weaker second tier; the remaining dimensions have smaller or less stable effects. This hierarchy persists across human-assessed quality levels, but score movement depends strongly on the AI reviewer's original score: lower scores tend to rise, higher scores tend to fall, and directional contrasts are clearest in the middle ranges. More elaborate workflows do not reliably yield larger gains. Joint rewriting is strongly rewriter-dependent, reviewer guidance does not consistently outperform an unguided second pass, and repeated rewriting yields diminishing, configuration-dependent returns. Across conditions, the rewriter primarily determines the separation between opposing variants, whereas the reviewer determines the magnitude and sign of their score effects. Strict review lowers mean OA by 1.36 points without consistently changing rhetorical sensitivity. These findings identify when rhetorical presentation influences AI scientific review and motivate evaluation systems robust to content-preserving variation in scientific writing.",
       "ai_keywords": [
@@ -2464,7 +2464,7 @@
         "reviewer-guided rewriting",
         "strict review protocol"
       ],
-      "popularity": 38,
+      "popularity": 42,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.08975",
       "rank": 6,
@@ -2812,6 +2812,45 @@
       "folder": "papers/2026-mechanist-ai-as-a-scientific-instrument"
     },
     {
+      "title": "AutoDesign: Meta-Harness Optimization for Long-Horizon Agentic Design",
+      "authors": [
+        "Yaxin Luo",
+        "Haobin Jiang",
+        "Jialv Zou",
+        "Xu Huang",
+        "Wenhao Yan",
+        "Haodong Li",
+        "Zhengrong Yue",
+        "Jing Li",
+        "Xiaofu Chen",
+        "Xiaohan Zhao",
+        "Jiacheng Liu",
+        "Jiacheng Cui",
+        "Zhiqiang Shen",
+        "Xiaotong Li"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.13560",
+      "arxiv_url": "https://arxiv.org/abs/2608.13560",
+      "pdf_url": "https://arxiv.org/pdf/2608.13560.pdf",
+      "code_url": "https://github.com/Yaxin9Luo/AutoDesign",
+      "project_page": "https://autodesign.designanything.ai/",
+      "abstract": "Transforming multimodal sources into condensed and structured media outputs can be fundamentally conceptualized as a long-horizon agentic process centered on a model-harness system. While an ideal harness system should align with human design priors and accumulate reusable experience through empirical exploration to drive recursive self-improvement, existing paradigms remain static and fall short of this capability. In this paper, we present AutoDesign, a framework that aligns with human design priors, where a meta-harness optimizer guides a code agent to recursively improve harness based on rollout feedback. To instantiate and evaluate this framework, we focus on the academic paper-to-poster generation task and introduce PosterBench, comprising a 100-paper Main Track spanning five disciplines and PosterBench-mini, a shared 10-paper subset for controlled evaluation. On the PosterBench Main Track, AutoDesign achieves the highest score of 78.32, surpassing the closed-source commercial system Claude Design by 7.45 points. Across seven controlled code-agent-model configurations, integrating the learned DesignHarness consistently improves performance, increasing the average PosterBench Score from 54.99 to 67.39 (+12.4%). In a fully autonomous long-horizon loop, it executes 253 tool calls and 11 editing turns within 40 minutes for under $3, reaching average conference-poster quality in human evaluation. A system-blind human study further demonstrates that AutoDesign achieves the highest human preference among evaluated systems.",
+      "ai_keywords": [
+        "meta-harness optimizer",
+        "code agent",
+        "DesignHarness",
+        "rollout feedback",
+        "long-horizon agentic process"
+      ],
+      "popularity": 38,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.13560",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-autodesign-meta-harness-optimization-for-long"
+    },
+    {
       "title": "PlayWorld: Benchmarking World Models with Agent Players over Long-Horizon Objectives",
       "authors": [
         "Kaixin Ding",
@@ -2843,10 +2882,10 @@
         "out-of-sight evolution",
         "insight evolution"
       ],
-      "popularity": 33,
+      "popularity": 38,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.13552",
-      "rank": 7,
+      "rank": 8,
       "status": "pending",
       "folder": "papers/2026-playworld-benchmarking-world-models-with-agent"
     },
@@ -3106,45 +3145,6 @@
       "rank": 8,
       "status": "pending",
       "folder": "papers/2026-skillzip-contract-preserving-graph-compression-for"
-    },
-    {
-      "title": "AutoDesign: Meta-Harness Optimization for Long-Horizon Agentic Design",
-      "authors": [
-        "Yaxin Luo",
-        "Haobin Jiang",
-        "Jialv Zou",
-        "Xu Huang",
-        "Wenhao Yan",
-        "Haodong Li",
-        "Zhengrong Yue",
-        "Jing Li",
-        "Xiaofu Chen",
-        "Xiaohan Zhao",
-        "Jiacheng Liu",
-        "Jiacheng Cui",
-        "Zhiqiang Shen",
-        "Xiaotong Li"
-      ],
-      "year": "2026",
-      "arxiv_id": "2608.13560",
-      "arxiv_url": "https://arxiv.org/abs/2608.13560",
-      "pdf_url": "https://arxiv.org/pdf/2608.13560.pdf",
-      "code_url": "https://github.com/Yaxin9Luo/AutoDesign",
-      "project_page": "https://autodesign.designanything.ai/",
-      "abstract": "Transforming multimodal sources into condensed and structured media outputs can be fundamentally conceptualized as a long-horizon agentic process centered on a model-harness system. While an ideal harness system should align with human design priors and accumulate reusable experience through empirical exploration to drive recursive self-improvement, existing paradigms remain static and fall short of this capability. In this paper, we present AutoDesign, a framework that aligns with human design priors, where a meta-harness optimizer guides a code agent to recursively improve harness based on rollout feedback. To instantiate and evaluate this framework, we focus on the academic paper-to-poster generation task and introduce PosterBench, comprising a 100-paper Main Track spanning five disciplines and PosterBench-mini, a shared 10-paper subset for controlled evaluation. On the PosterBench Main Track, AutoDesign achieves the highest score of 78.32, surpassing the closed-source commercial system Claude Design by 7.45 points. Across seven controlled code-agent-model configurations, integrating the learned DesignHarness consistently improves performance, increasing the average PosterBench Score from 54.99 to 67.39 (+12.4%). In a fully autonomous long-horizon loop, it executes 253 tool calls and 11 editing turns within 40 minutes for under $3, reaching average conference-poster quality in human evaluation. A system-blind human study further demonstrates that AutoDesign achieves the highest human preference among evaluated systems.",
-      "ai_keywords": [
-        "meta-harness optimizer",
-        "code agent",
-        "DesignHarness",
-        "rollout feedback",
-        "long-horizon agentic process"
-      ],
-      "popularity": 31,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2608.13560",
-      "rank": 8,
-      "status": "pending",
-      "folder": "papers/2026-autodesign-meta-harness-optimization-for-long"
     },
     {
       "title": "Motif 3: Technical Report",
@@ -3502,7 +3502,7 @@
         "spatial memory agent",
         "read-only deployment"
       ],
-      "popularity": 27,
+      "popularity": 34,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.12743",
       "rank": 9,
@@ -3914,7 +3914,7 @@
         "output gating",
         "systematic-outlier analysis"
       ],
-      "popularity": 16,
+      "popularity": 23,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.12149",
       "rank": 10,
@@ -6917,5 +6917,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-08-14T19:31:19.603288+00:00"
+  "updated_at": "2026-08-16T05:00:33.731412+00:00"
 }
