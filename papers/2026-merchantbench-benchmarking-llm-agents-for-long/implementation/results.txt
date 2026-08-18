@@ -1,0 +1,22 @@
+MerchantBench re-implementation — 365-day run
+catalog: 200 synthetic products; env seed 42; 3 episode(s)/agent
+
+[passive] ep0 net_assets=     8,508 RMB  orders=  446 rating=3.80 SWR=0.0 fines=289 (0.2s)
+[passive] ep1 net_assets=     6,274 RMB  orders=  245 rating=3.70 SWR=0.0 fines=178 (0.2s)
+[passive] ep2 net_assets=     9,783 RMB  orders=  539 rating=3.56 SWR=0.0 fines=294 (0.2s)
+[ random] ep0 net_assets=    62,597 RMB  orders= 5198 rating=3.70 SWR=0.8167 fines=3332 (0.5s)
+[ random] ep1 net_assets=    66,639 RMB  orders= 4945 rating=3.81 SWR=0.8333 fines=2977 (0.5s)
+[ random] ep2 net_assets=    66,844 RMB  orders= 5785 rating=3.75 SWR=0.8167 fines=3820 (0.5s)
+[   rule] ep0 net_assets=   204,623 RMB  orders= 9787 rating=3.85 SWR=1.0 fines=5309 (0.6s)
+[   rule] ep1 net_assets=   204,289 RMB  orders= 9850 rating=3.86 SWR=1.0 fines=5022 (0.7s)
+[   rule] ep2 net_assets=   206,751 RMB  orders= 9915 rating=3.86 SWR=1.0 fines=5034 (0.6s)
+
+=== Summary (mean over episodes) ===
+   agent | net_assets |  orders | rating |    SWR |        GMV
+------------------------------------------------------------------
+ passive |      8,188 |     410 |   3.69 |   0.0% |     14,805
+  random |     65,360 |   5,309 |   3.75 |  82.2% |    188,967
+    rule |    205,221 |   9,851 |   3.86 | 100.0% |    439,834
+
+   human |    217,610 |   9,442 |   ~4.7 | 100.0% |          —   (paper: 3 humans)
+ rule (paper) |     24,480 |       — |      — |      — |          —   (paper's own baseline)

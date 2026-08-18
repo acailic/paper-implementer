@@ -1,0 +1,2 @@
+# No external dependencies — pure Python 3 standard library.
+# (numpy/torch intentionally not required; see README.md)
