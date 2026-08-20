@@ -246,7 +246,8 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.05987",
       "rank": 1,
-      "status": "pending",
+      "status": "reading",
+      "started_at": "2026-08-21",
       "folder": "papers/2026-agentopsd-recursive-self-distillation-for-agentic"
     },
     {
