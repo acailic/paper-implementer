@@ -246,7 +246,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.05987",
       "rank": 1,
-      "status": "reading",
+      "status": "breaking_down",
       "started_at": "2026-08-21",
       "folder": "papers/2026-agentopsd-recursive-self-distillation-for-agentic"
     },
@@ -538,6 +538,43 @@
       "rank": 1,
       "status": "pending",
       "folder": "papers/2026-statem-reaching-953-raw-accuracy-or"
+    },
+    {
+      "title": "Demystifying Agent Skills: Why They Work-Until They Don't",
+      "authors": [
+        "Zhiyuan Jiang",
+        "Fangrui Huang",
+        "Hanwen Xing",
+        "Xander Wu",
+        "Yipeng Gao",
+        "Rui Cao",
+        "Mengdi Wang",
+        "Shilong Liu",
+        "Yijiang Li"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.14036",
+      "arxiv_url": "https://arxiv.org/abs/2608.14036",
+      "pdf_url": "https://arxiv.org/pdf/2608.14036.pdf",
+      "code_url": "https://github.com/zhiyuanjiang04/demystify-agent-skills",
+      "project_page": "https://zhiyuanjiang04.github.io/demystify-agent-skills",
+      "abstract": "Skills have emerged as a practical and effective approach for enhancing LLM agents at inference time through structured packages of knowledge. However, existing evaluations largely measure whether skills improve aggregated task success, leaving a more fundamental question underexplored: \\textbf{When do skills help, why do they work, and where do they fail?} Through controlled experiments across various benchmarks, agent harnesses and LLMs, we isolate the effects of representation, outcome annotation, retrieval difficulty, and cross-framework robustness of skills. To further answer this question, we design a contrastive study that combines controlled quantitative experiments with paired trajectory analysis. We normalize 8,135 trial records from controlled experiments and retain 238 valid unique labels from 240 open-coded records. We consolidate these observations into a taxonomy of three high-level categories and twelve skill-use modes: skills work when noisy trajectories become procedural anchors that stabilize execution. Skills improve over Workflow Memory by 6.06 points in matched comparisons. Procedural anchoring accounts for 65.7\\% of skill cases, versus 4.5\\% for explicit knowledge injection, showing that skills stabilize action rather than inject missing facts. Retrieval is a separate bottleneck: as pools grow from 5 to 100, actual-use precision falls from 29.6\\% to 3.3\\%. Confusable distractors impair offline identification, yet downstream success remains stable; exact ground-truth invocation is neither sufficient nor necessary. Skills fail under brittle assumptions, incompatible contexts, or insufficient adaptation. These findings move evaluation beyond aggregate success rates and guide reliable self-evolving agents.",
+      "ai_keywords": [
+        "LLM agents",
+        "skills",
+        "procedural anchoring",
+        "retrieval difficulty",
+        "cross-framework robustness",
+        "workflow memory",
+        "contrastive study",
+        "trajectory analysis"
+      ],
+      "popularity": 153,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.14036",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-demystifying-agent-skills-why-they-work"
     },
     {
       "title": "LLMRouter: Unified Infrastructure for Developing, Evaluating, and Deploying LLM Routers",
@@ -1070,6 +1107,38 @@
       "folder": "papers/2026-harnesseval-w-agentifying-the-evaluation-of"
     },
     {
+      "title": "SemComp-Bench: Benchmarking Semantic Task Completion in Video Generation",
+      "authors": [
+        "Keyu Tu",
+        "Zhuowei Chen",
+        "Mengqi Huang",
+        "Yuxin Wang",
+        "Jiahao Zhu",
+        "Zhendong Mao",
+        "Yongdong Zhang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.17426",
+      "arxiv_url": "https://arxiv.org/abs/2608.17426",
+      "pdf_url": "https://arxiv.org/pdf/2608.17426.pdf",
+      "code_url": "https://github.com/Kelly372/SemComp-Bench",
+      "project_page": "https://semcomp-bench.github.io/",
+      "abstract": "We introduce Semantic Task Completion Video Generation, an outcome-oriented video generation task. Under this formulation, success requires both achievement of the intended outcome and semantic grounding. Semantic grounding characterizes the correspondence between the reference image and the generated outcome in terms of high-level semantics relevant to the task. Evaluation focuses on the generated outcome and requires neither the presentation of a complete sequence of intermediate task steps nor conventional appearance consistency with the reference image. To support systematic evaluation, we construct SemComp-Data, an evaluation dataset covering six domains. Each instance comprises a reference image, a detailed instruction, a brief instruction, and an outcome-centric video clip. A scalable four-stage curation pipeline converts raw videos into standardized SemComp-Data instances. We further introduce SemComp-Bench, an evaluation protocol that uses a vision-language model (VLM) to answer structured binary questions. SemComp-Bench reports the OA Score and the GR Score for Outcome Achievement and Generation Reliability, respectively. Experiments on representative video generation models show that achieving intended outcomes while maintaining task-relevant semantic grounding in reference images remains challenging.",
+      "ai_keywords": [
+        "video generation",
+        "vision-language model",
+        "semantic grounding",
+        "outcome achievement",
+        "generation reliability"
+      ],
+      "popularity": 151,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.17426",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-semcomp-bench-benchmarking-semantic-task-completion"
+    },
+    {
       "title": "SWE-Bench ProMax: Benchmarking Agents on Large-Scale Multilingual Code Refactoring",
       "authors": [
         "Yuling Shi",
@@ -1479,6 +1548,52 @@
       "folder": "papers/2026-learn-whats-left-not-whats-mastered"
     },
     {
+      "title": "Zetta ζ: An Efficient Closed-Loop Embodied Harness for Self-Evolving Physical Intelligence",
+      "authors": [
+        "Xin Ding",
+        "Liang Mi",
+        "Mingzhe Huang",
+        "Zixuan Wang",
+        "Chao Zhang",
+        "Zixu Hao",
+        "Fu Chen",
+        "Xiangyu Li",
+        "Yikai Zheng",
+        "Yaoyu Guo",
+        "Weijun Wang",
+        "Kun Li",
+        "Hao Wu",
+        "Yunxin Liu",
+        "Ting Cao"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.16590",
+      "arxiv_url": "https://arxiv.org/abs/2608.16590",
+      "pdf_url": "https://arxiv.org/pdf/2608.16590.pdf",
+      "code_url": "https://github.com/air-embodied-brain/Zetta-Embodiment",
+      "project_page": "https://air-embodied-brain.github.io/zetta/",
+      "abstract": "Embodied agents are increasingly used to close the gap left by end-to-end policy models. Yet the agentic path has not realized closed-loop learning in physical execution: existing harnesses remain largely open-loop, following fixed skills during rollout and reflecting only after an episode completes. Such post-hoc reflection cannot govern execution as it unfolds, because physical interaction requires decisions to track rapidly changing robot-environment states at a frequency beyond today's large agentic models. We present Zetta, a closed-loop embodied harness that evolves code-based runtime critics and recovery skills online while keeping the base policy frozen. Through three timescale-separated loops, Zetta provides action-frequency governance, rollout-level critic-recovery proposal, and validation-gated skill updates. Together with Z-Infra, a rollout infrastructure decoupling agent logic from heterogeneous execution resources, Zetta achieves state-of-the-art success on LIBERO-Pro and RoboCasa under our current rollout budget, reaching 90.8% and 93.6%, with an 11.1x inference speedup; success continues to scale with self-exploration experience; learned skills transfer zero-shot, and clear robotic \"Aha Moments\" emerge. These results show that closed-loop harness self-evolution opens a scaling path for reliable physical intelligence.",
+      "ai_keywords": [
+        "closed-loop embodied harness",
+        "code-based runtime critics",
+        "recovery skills",
+        "action-frequency governance",
+        "rollout-level critic-recovery",
+        "validation-gated skill updates",
+        "Z-Infra",
+        "LIBERO-Pro",
+        "RoboCasa",
+        "self-exploration",
+        "zero-shot skill transfer"
+      ],
+      "popularity": 129,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.16590",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-zetta-an-efficient-closed-loop-embodied"
+    },
+    {
       "title": "DomainShuttle: Freeform Open Domain Subject-driven Text-to-video Generation",
       "authors": [
         "Nan Chen",
@@ -1882,6 +1997,48 @@
       "rank": 4,
       "status": "pending",
       "folder": "papers/2026-large-discovery-models-empirically-grounded-model"
+    },
+    {
+      "title": "SemaPLC: A Project-Grounded, Verification-Gated Agent Harness for PLC Code Generation",
+      "authors": [
+        "Yanlun Tu",
+        "Huacan Wang",
+        "Ziyue Zhou",
+        "Jie Zhou",
+        "Ningyan Zhu",
+        "Ge Chen",
+        "Wangyi Chen",
+        "Tengfei Zhou",
+        "Yifan Zhou",
+        "Dasheng Yang",
+        "Xiaofeng Mou",
+        "Hui Zhang",
+        "Yi Xu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.18565",
+      "arxiv_url": "https://arxiv.org/abs/2608.18565",
+      "pdf_url": "https://arxiv.org/pdf/2608.18565.pdf",
+      "code_url": "https://github.com/midea-ai/SemaPLC",
+      "project_page": "",
+      "abstract": "Programmable logic controllers (PLCs) run industrial plants, and large language models can already generate independent program organization units (POUs) for them. Whether such logic integrates into an existing PLC project and then runs correctly has been checked only in limited tests. We present SemaPLC, a project-grounded and verification-gated agent harness assembled from conventional tools but governed by a strict completion rule. Rather than stopping when the model judges its own output adequate, SemaPLC declares a task complete only when logged external checks confirm it. Those checks cover the specification, the compilation, and the behavior on a live runtime. On 117 independent-POU tasks matching existing benchmarks, it attains the highest strict verified pass rate on all seven models (72.6\\% mean). On a project-context track of 65 tasks whose generated logic must compile and run inside a real project, it attains the highest mean on integrated compilation, static behavior, and dynamic behavior. Of the three layers, dynamic behavior is the most revealing. We measure it by deploying the generated and the reference logic to a live PLC runtime and comparing their executed traces. All methods fall within 10 static points of one another, whereas dynamic scores separate them sharply, from 22.4 to 31.4 for the baselines against 52.2 for SemaPLC. Overall, our verification-gated harness raises the mean at every layer and most sharply at runtime. Execution, not static scoring, is the faithful test of whether generated control logic actually works. SemaPLC is open-sourced at https://github.com/midea-ai/SemaPLC.",
+      "ai_keywords": [
+        "programmable logic controllers (PLCs)",
+        "program organization units (POUs)",
+        "SemaPLC",
+        "verification-gated agent harness",
+        "live runtime",
+        "integrated compilation",
+        "static behavior",
+        "dynamic behavior",
+        "executed traces"
+      ],
+      "popularity": 110,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.18565",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-semaplc-a-project-grounded-verification-gated"
     },
     {
       "title": "VibeWorlding: Can Multimodal Agents Construct 3D Open Worlds End-to-End?",
@@ -2447,6 +2604,42 @@
       "folder": "papers/2026-intern-s2-mobius-foundation-model-with"
     },
     {
+      "title": "Agentic ESOpt: Fine-Tuning Long-Horizon LLM Agents with Minimal GPU Requirements",
+      "authors": [
+        "Zhi Zheng",
+        "Rongsheng Chen",
+        "Yunpeng Ba",
+        "Zhenkun Wang",
+        "Yee Whye Teh",
+        "Wee Sun Lee"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.17310",
+      "arxiv_url": "https://arxiv.org/abs/2608.17310",
+      "pdf_url": "https://arxiv.org/pdf/2608.17310.pdf",
+      "code_url": "https://github.com/zz1358m/Agentic-ESOpt",
+      "project_page": "https://zz1358m.github.io/Project-Agentic-ESOpt",
+      "abstract": "Reinforcement Learning (RL) has been promising in single-turn LLM fine-tuning. However, long-horizon agentic reasoning introduces increasingly branching interactions and sparse rewards, exposing several limitations of RL: its heavyweight backpropagation-based training stack makes it impractical to fine-tune larger LLMs, and longer-horizon trajectories make credit assignment in RL substantially harder. This paper argues that evolution strategies (ES) can be a better choice for fine-tuning long-horizon LLM agents. Compared with agentic RL, ES offers three key advantages: 1) Model Scalability: ES enables full-parameter optimization with only minimal, inference-level GPU memory, making it possible to fine-tune large LLMs. 2) Flexibility: its lightweight, black-box feedback interface makes ES fine-tuning easy to compose with prompt-space evolution (e.g., skill optimization & test-time compute); and 3) Long-Horizon Scalability: ES performs trajectory-level parameter attribution without decomposing rewards across horizons, yielding better scalability than Agentic RL as the horizon length grows. Based on this insight, we propose Agentic ESOpt, a full-parameter agentic fine-tuning framework tailored to flexible parameter--context co-evolution. At each step, Agentic ESOpt samples perturbations around the current LLM parameters, evaluates the resulting agents with rewards, and applies an online reward-weighted update. To improve the exploration--adaptation trade-off, Agentic ESOpt further introduces a cosine decay schedule of the perturbation scale σ. On WebArena-Lite, full-parameter optimization of Qwen-3.5-27B improves the No Skill baseline by 6.69%. In test-time automatic heuristic design, Agentic ESOpt performs online prompt--parameter co-evolution, improving its matched baseline in 28 of 36 settings.",
+      "ai_keywords": [
+        "evolution strategies",
+        "reinforcement learning",
+        "long-horizon agentic reasoning",
+        "credit assignment",
+        "full-parameter optimization",
+        "Agentic ESOpt",
+        "parameter-context co-evolution",
+        "reward-weighted update",
+        "cosine decay schedule",
+        "WebArena-Lite"
+      ],
+      "popularity": 96,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.17310",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-agentic-esopt-fine-tuning-long-horizon"
+    },
+    {
       "title": "PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation",
       "authors": [
         "Peiwen Zhang",
@@ -2968,6 +3161,41 @@
       "folder": "papers/2026-moss-vl-technical-report"
     },
     {
+      "title": "OmniScientist: An Omni-Modal Omni-Discipline AI Scientist",
+      "authors": [
+        "Bobo Li",
+        "Hao Fei",
+        "Tianjie Ju",
+        "Mong-Li Lee",
+        "Wynne Hsu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.13558",
+      "arxiv_url": "https://arxiv.org/abs/2608.13558",
+      "pdf_url": "https://arxiv.org/pdf/2608.13558.pdf",
+      "code_url": "https://github.com/Omni-Scientist/OmniScientist",
+      "project_page": "https://omni-scientist.github.io/",
+      "abstract": "Recent advances in foundation models have enabled AI scientists to automate increasingly complete research workflows, from hypothesis generation and code execution to manuscript preparation. Yet workflow coverage alone does not provide access to the full evidence on which scientific discovery depends. Existing systems typically reason over text, code, labels, or precomputed summaries, leaving scientifically decisive spatial, temporal, cross-channel, and procedural relations unavailable to the agent. We introduce OmniScientist, an end-to-end, omni-modal AI scientist that conducts multidisciplinary research directly from heterogeneous raw evidence. A perception layer and 3 autonomous agents for ideation, experiment, and writeup operate within a deterministic pipeline, allowing observations to shape research questions, experimental decisions, and final claims throughout the research lifecycle. By running idea, rigour, and claim checks in code, the system enforces novelty screening, statistical validity, execution provenance, and numerical traceability. We evaluate OmniScientist on 36 real-data cases spanning 5 discipline families, 4 families of scientific evidence, and modalities including images, signals, audio, video, 3-D structures, trajectories, tables, formulae, and graphs. The system completes the full path from raw data to a compiled manuscript in all 36 cases and achieves a mean overall paper score of 6.3 with the reference reasoning backbone. In paired comparisons against a blind variant that receives only precomputed scalar features, direct perception improves all 7 evaluation dimensions and wins 85% of head-to-head judgments. These results show that lifecycle-wide perception is essential for evidence-grounded scientific discovery and provides a practical path toward broadly capable AI scientists.",
+      "ai_keywords": [
+        "omni-modal AI scientist",
+        "perception layer",
+        "autonomous agents",
+        "deterministic pipeline",
+        "idea checks",
+        "rigour checks",
+        "claim checks",
+        "raw evidence",
+        "lifecycle-wide perception",
+        "multidisciplinary research"
+      ],
+      "popularity": 83,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.13558",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-omniscientist-an-omni-modal-omni-discipline"
+    },
+    {
       "title": "EnvACE: Internalizing Environment Dynamics via World Rehearsal for Agentic Reinforcement Learning",
       "authors": [
         "Zishan Xu",
@@ -3471,6 +3699,45 @@
       "folder": "papers/2026-ui-mate-advancing-open-weight-foundation"
     },
     {
+      "title": "Co-RL: Unsupervised Reasoning Emerges from Diverse Cohort in Multi-agent RL",
+      "authors": [
+        "Yunhao Yang",
+        "Yuexin Bian",
+        "Yunjie Tian",
+        "Di Fu",
+        "Tianjin Huang",
+        "Yuanyuan Shi",
+        "Ziang Xiao",
+        "Nuno Vasconcelos",
+        "Yijiang Li"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.17253",
+      "arxiv_url": "https://arxiv.org/abs/2608.17253",
+      "pdf_url": "https://arxiv.org/pdf/2608.17253.pdf",
+      "code_url": "https://github.com/DrStranded/Co-RL",
+      "project_page": "https://drstranded.github.io/Co-RL",
+      "abstract": "Reinforcement learning (RL) has emerged as a powerful approach for improving reasoning in language and vision-language models, yet its strongest successes still depend heavily on ground-truth supervision (e.g., verifiable reward). Such annotations are costly to obtain and become increasingly scarce as reasoning capabilities advance beyond what humans can reliably evaluate. Self-rewarding RL reduces this dependence by enabling models to derive reward signals from their own completions. However, training solely on self-generated feedback can reinforce existing biases and suboptimal behaviors, reduce response diversity, and ultimately lead to homogenized responses and training collapse. In this work, we show that unsupervised reasoning can emerge through cooperative multi-agent training. We introduce Co-RL, a framework in which multiple decoupled models, sharing no parameters, are simultaneously optimized through RL using rewards derived from their peers. We further show that increasing cohort diversity, through heterogeneous model families, sizes, and rephrased training samples, reduces the correlated errors that drive self-reinforcing feedback loops. This diversity consistently improves reasoning performance, maintains behavioral diversity, and mitigates training collapse. Across text-only and multimodal domains, Co-RL consistently outperforms the base models and prior label-free approaches, while matching or surpassing supervised methods, without access to any ground-truth labels. Concretely, Co-RL yields average gains of 3.0-8.6% across seven text-only benchmarks for LLMs and 2.3-7.2% across four multimodal benchmarks for VLMs. Code is available at https://github.com/DrStranded/Co-RL.",
+      "ai_keywords": [
+        "reinforcement learning",
+        "self-rewarding RL",
+        "cooperative multi-agent training",
+        "Co-RL",
+        "peer-derived rewards",
+        "cohort diversity",
+        "correlated errors",
+        "training collapse",
+        "reasoning performance",
+        "multimodal benchmarks"
+      ],
+      "popularity": 82,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.17253",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-co-rl-unsupervised-reasoning-emerges-from"
+    },
+    {
       "title": "PlayWorld: Benchmarking World Models with Agent Players over Long-Horizon Objectives",
       "authors": [
         "Kaixin Ding",
@@ -3860,6 +4127,44 @@
       "folder": "papers/2026-clawgym-ii-exploring-black-box-rl"
     },
     {
+      "title": "FreeToken: Efficient Edge-Native MoE Serving with Bandwidth-Adaptive Execution",
+      "authors": [
+        "Shuo Yang",
+        "Xiaoze Fan",
+        "Melissa Pan",
+        "Haocheng Xi",
+        "Zhe Wang",
+        "Shanlin Sun",
+        "Kurt Keutzer",
+        "Song Han",
+        "Matei Zaharia",
+        "Chenfeng Xu",
+        "Ion Stoica"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.16157",
+      "arxiv_url": "https://arxiv.org/abs/2608.16157",
+      "pdf_url": "https://arxiv.org/pdf/2608.16157.pdf",
+      "code_url": "https://github.com/FlashML-org/FreeToken",
+      "project_page": "https://www.flashml.ai/",
+      "abstract": "Frontier open-weight models are increasingly available, but serving them still largely assumes datacenter infrastructure. We present FreeToken, an edge-native MoE serving system that treats a personal machine not as a small GPU, but as a unified, elastic inference platform. FreeToken co-designs the full serving stack, including model layout and loading, expert residency, CPU--GPU execution, agentic state reuse, and runtime memory management, around two realities of local AI: agent workloads continuously change their execution pattern, and edge hardware exposes heterogeneous resources whose balance differs from machine to machine. Rather than committing to a fixed offloading strategy, FreeToken continuously maps computation and model state onto the resources actually available. FreeToken supports more than 20 MoE models and real coding and tool-using agents across hardware ranging from an 8GB laptop GPU to a single workstation GPU. More importantly, it changes what these machines can practically serve, from a 35B model on a laptop to a 284B model on a gaming desktop and the 753B GLM-5.2 on a single workstation GPU. FreeToken turns open weights into deployable local software, making the machines users already own a practical platform for frontier-scale intelligence. We release the system at flashml.ai.",
+      "ai_keywords": [
+        "MoE serving",
+        "expert residency",
+        "CPU-GPU execution",
+        "agentic state reuse",
+        "runtime memory management",
+        "offloading strategy",
+        "open-weight models"
+      ],
+      "popularity": 68,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.16157",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-freetoken-efficient-edge-native-moe-serving"
+    },
+    {
       "title": "Motif 3: Technical Report",
       "authors": [
         "Junghwan Lim",
@@ -4223,42 +4528,65 @@
       "folder": "papers/2026-spatial-memory-agent-experience-grounded-procedure"
     },
     {
-      "title": "FreeToken: Efficient Edge-Native MoE Serving with Bandwidth-Adaptive Execution",
+      "title": "ASI-Bench: At the Dawn of Artificial Superintelligence",
       "authors": [
-        "Shuo Yang",
-        "Xiaoze Fan",
-        "Melissa Pan",
-        "Haocheng Xi",
-        "Zhe Wang",
-        "Shanlin Sun",
-        "Kurt Keutzer",
-        "Song Han",
-        "Matei Zaharia",
-        "Chenfeng Xu",
-        "Ion Stoica"
+        "Junwei Zhou",
+        "Zhen Sun",
+        "Binyu Li",
+        "Jiangyu Zhou",
+        "Yuexi Pan",
+        "Hengyu Wang",
+        "Honghe Ren",
+        "Xiaohan Jia",
+        "Xueyang Zhou",
+        "Xiaoyu Cao",
+        "Yongchao Chen",
+        "Yuanning Feng",
+        "Junhao Wu",
+        "Cheng Zhang",
+        "Sijia Chen",
+        "Haoyu Xue",
+        "Chengsong You",
+        "Huan Wang",
+        "Koutian Wu",
+        "Peigan Gao",
+        "Jiakun Wu",
+        "Wenzhe Li",
+        "Ergan Shang",
+        "Qingyuan Zheng",
+        "Jingjing Zhou",
+        "Ruixuan Jia",
+        "Yan Xu",
+        "Hongrui Zhang",
+        "Xiao-Han Ma",
+        "Zhengxiang Cheng",
+        "Yuexing Hao",
+        "Liting Mai",
+        "Xianglin Ji",
+        "Wenjun Zhang",
+        "Zhuofan Chen",
+        "Yixiao Huang",
+        "Chi Wang",
+        "Wenyue Hua",
+        "Yilun Hao",
+        "Yuantao Zhai",
+        "Ziyan Zhao",
+        "Jingyan Xie"
       ],
       "year": "2026",
-      "arxiv_id": "2608.16157",
-      "arxiv_url": "https://arxiv.org/abs/2608.16157",
-      "pdf_url": "https://arxiv.org/pdf/2608.16157.pdf",
-      "code_url": "https://github.com/FlashML-org/FreeToken",
-      "project_page": "https://www.flashml.ai/",
-      "abstract": "Frontier open-weight models are increasingly available, but serving them still largely assumes datacenter infrastructure. We present FreeToken, an edge-native MoE serving system that treats a personal machine not as a small GPU, but as a unified, elastic inference platform. FreeToken co-designs the full serving stack, including model layout and loading, expert residency, CPU--GPU execution, agentic state reuse, and runtime memory management, around two realities of local AI: agent workloads continuously change their execution pattern, and edge hardware exposes heterogeneous resources whose balance differs from machine to machine. Rather than committing to a fixed offloading strategy, FreeToken continuously maps computation and model state onto the resources actually available. FreeToken supports more than 20 MoE models and real coding and tool-using agents across hardware ranging from an 8GB laptop GPU to a single workstation GPU. More importantly, it changes what these machines can practically serve, from a 35B model on a laptop to a 284B model on a gaming desktop and the 753B GLM-5.2 on a single workstation GPU. FreeToken turns open weights into deployable local software, making the machines users already own a practical platform for frontier-scale intelligence. We release the system at flashml.ai.",
-      "ai_keywords": [
-        "MoE serving",
-        "expert residency",
-        "CPU-GPU execution",
-        "agentic state reuse",
-        "runtime memory management",
-        "offloading strategy",
-        "open-weight models"
-      ],
-      "popularity": 31,
+      "arxiv_id": "2608.17271",
+      "arxiv_url": "https://arxiv.org/abs/2608.17271",
+      "pdf_url": "https://arxiv.org/pdf/2608.17271.pdf",
+      "code_url": "https://github.com/apexin-ai/ASI-Bench",
+      "project_page": "https://asibench.apexin.ai/",
+      "abstract": "Artificial superintelligence (ASI) requires AI to move beyond mastering existing knowledge toward exploring the unknown, creating new knowledge, and turning new ideas into verifiable results. However, the capabilities of today's AI systems are still largely built on learning, compressing, and applying existing human knowledge. Accordingly, existing benchmarks primarily test whether AI can produce correct answers based on learned knowledge, or whether it can complete tasks under extensive human guidance. We therefore introduce ASI-Bench, the first benchmark to jointly evaluate AI systems' capabilities of innovative exploration and autonomous scientific execution across general research domains, and the first to progressively withdraw human methodological guidance within the same research project to test how far AI can proceed on its own. Built by over 40 experts with the cost of 31,000+ human hours, ASI-Bench contains 60 project-level research tasks across 11 scientific domains and progressively reduces methodological guidance to test whether AI can independently select methods, conduct research, and produce verifiable results. All tasks undergo expert review, AI-assisted auditing, sandbox execution, and scorer validation. Across 18 state-of-the-art agent--model configurations, the average score drops from 50.91 with full methodological guidance to 29.10 with only the method specified and 26.62 when agents must determine the method themselves. This sharp decline shows that current systems remain heavily dependent on human guidance and are still far from autonomously conducting end-to-end, project-level scientific research. ASI-Bench is open to the world. We invite researchers and builders everywhere to contribute new tasks, challenge the limits of today's AI, and help accelerate humanity's collective path toward artificial superintelligence at https://asibench.apexin.ai/submit.",
+      "ai_keywords": [],
+      "popularity": 55,
       "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2608.16157",
+      "pwc_url": "https://huggingface.co/papers/2608.17271",
       "rank": 9,
       "status": "pending",
-      "folder": "papers/2026-freetoken-efficient-edge-native-moe-serving"
+      "folder": "papers/2026-asi-bench-at-the-dawn-of"
     },
     {
       "title": "Sci-VBench: Evaluating Knowledge- and Reasoning-Intensive Video Generation in Science Domains",
@@ -4743,6 +5071,48 @@
       "rank": 10,
       "status": "pending",
       "folder": "papers/2026-an-empirical-study-of-training-pixel"
+    },
+    {
+      "title": "Embodied-Navigator: Point, Think, Memorize, and Align for Efficient Navigation",
+      "authors": [
+        "Hongyan Feng",
+        "Sunlai Chen",
+        "Xuanyu Liu",
+        "Miao Pan",
+        "Yangfan Xie",
+        "Yuxiang Cui",
+        "Zhongxiang Zhou",
+        "Rong Xiong",
+        "Wenqi Zhang",
+        "Jianwei Yin",
+        "Yueting Zhuang",
+        "Xuhong Zhang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.17512",
+      "arxiv_url": "https://arxiv.org/abs/2608.17512",
+      "pdf_url": "https://arxiv.org/pdf/2608.17512.pdf",
+      "code_url": "https://github.com/ZJU-OmniAI/Embodied-Omni",
+      "project_page": "https://zju-omniai.github.io/Embodied-Navigator/",
+      "abstract": "Although Large Vision-Language Models (VLMs) have significantly advanced embodied navigation, their direct deployment remains challenging, as existing methods often force VLMs into unnatural action spaces that misalign with their 2D pre-training priors, compounded by rigid reasoning schedules and inefficient memory management. To overcome these limitations, we propose TAMP-Nav, a unified framework for efficient embodied navigation. First, we introduce a Pixel-to-3D Action Formulation (Point) that reformulates navigation into 2D visual prompting. Specifically, the VLM merely selects 2D pixels, which are then projected into 3D coordinates for a low-level SLAM controller. This design naturally aligns embodied execution with the VLM's inherent 2D visual capabilities. Second, we propose an integrated Selective Reasoning and Anchor-Trajectory Memory mechanism (Think and Memorize), which dynamically triggers Chain-of-Thought and retains high-fidelity memory only at critical nodes, compressing redundant trajectories into lightweight Space-Time Indicators, thereby preserving critical historical information and enhancing spatio-temporal perception. Finally, we design an efficient Two-Level Alignment Paradigm (Align) via Group Relative Policy Optimization (GRPO). By superimposing global outcome rewards with fine-grained process rewards, this dense supervision tightly aligns the agent's cognitive planning with physical environmental feedback, endowing the model with adaptive reasoning capabilities. Experiments demonstrate that TAMP-Nav achieves state-of-the-art performance (e.g., 66.2% SR on R2R-CE) with high runtime and sample efficiency (requiring only 90k training trajectories).",
+      "ai_keywords": [
+        "Large Vision-Language Models",
+        "Pixel-to-3D Action Formulation",
+        "2D visual prompting",
+        "SLAM controller",
+        "Chain-of-Thought",
+        "Anchor-Trajectory Memory",
+        "Space-Time Indicators",
+        "Group Relative Policy Optimization",
+        "global outcome rewards",
+        "process rewards"
+      ],
+      "popularity": 46,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.17512",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-embodied-navigator-point-think-memorize-and"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -7740,5 +8110,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-08-19T05:00:09.174826+00:00"
+  "updated_at": "2026-08-20T22:34:16.384664+00:00"
 }
