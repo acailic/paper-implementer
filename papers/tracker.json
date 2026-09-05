@@ -353,7 +353,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.09819",
       "rank": 1,
-      "status": "breaking_down",
+      "status": "coding",
       "folder": "papers/2026-macaron-v1-towards-open-continual-learning",
       "started_at": "2026-09-03"
     },
@@ -873,6 +873,35 @@
       "rank": 1,
       "status": "pending",
       "folder": "papers/2026-repo-to-skill-distilling-github-repositories"
+    },
+    {
+      "title": "Compile by Training: Turning Natural-Language Specifications into Local Neural Functions",
+      "authors": [
+        "Yuntian Deng",
+        "Pengyu Nie",
+        "Stuart Shieber"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.04199",
+      "arxiv_url": "https://arxiv.org/abs/2609.04199",
+      "pdf_url": "https://arxiv.org/pdf/2609.04199.pdf",
+      "code_url": "https://github.com/programasweights/compile-by-training",
+      "project_page": "https://programasweights.com/playground?compiler=paw-ft-bs48",
+      "abstract": "Many recurring text functions are easy to describe but difficult to implement with rules, while calling a large remote model for every input introduces repeated cost, latency, and dependency on a provider. We present compile by training, which turns a natural-language specification into a reusable neural function. At compile time, teacher models generate task-specific examples that are used to train a small adapter for a compact interpreter. The resulting function runs without the teachers and can be stored, versioned, and composed like ordinary software. On FuzzyBench-Hard, a subset on which the Program-as-Weights fast compiler produced no exact matches, compile by training reaches 83.6% semantic accuracy. This higher accuracy comes with a higher compile-time cost: roughly a minute rather than seconds for the fast compiler. We deploy the compiler in a public interactive service and demonstrate compiled functions in a multi-site website helper, a language-controlled 3D avatar, and a bidirectional English-Claudish translator.",
+      "ai_keywords": [
+        "compile by training",
+        "neural function",
+        "adapter",
+        "compact interpreter",
+        "Program-as-Weights",
+        "semantic accuracy"
+      ],
+      "popularity": 268,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.04199",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-compile-by-training-turning-natural-language"
     },
     {
       "title": "LLMRouter: Unified Infrastructure for Developing, Evaluating, and Deploying LLM Routers",
@@ -1740,6 +1769,45 @@
       "folder": "papers/2026-harnessdev-can-llms-create-and-evolve"
     },
     {
+      "title": "Terminal-Universe: Turning Agent Trajectories into Scalable Terminal Environments",
+      "authors": [
+        "Jie Wu",
+        "Zhenru Zhang",
+        "Beichen Zhang",
+        "Xuwu Wang",
+        "Yuhui Su",
+        "Mouxiang Chen",
+        "Peng Wang",
+        "Zhihai Wang",
+        "Que Shen",
+        "Hao Zhou",
+        "An Yang",
+        "Fei Huang",
+        "Yujiu Yang",
+        "Dayiheng Liu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.04148",
+      "arxiv_url": "https://arxiv.org/abs/2609.04148",
+      "pdf_url": "https://arxiv.org/pdf/2609.04148.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "As terminal-based code agents become prevalent, agent trajectories have accumulated at scale, while realistic, executable environments remain scarce. However, environments are what agent post-training actually requires: each can be re-queried into many verifiable tasks and provides execution feedback, whereas a trajectory is a single frozen demonstration. Rather than generating environments from scratch, we observe that the tool-execution history in existing trajectories exposes the structure and contents of the environments in which they ran, making it possible to reconstruct those environments from the trajectories themselves. Thus, we introduce Terminal-Universe, a framework which turns each trajectory into a reusable environment and explores it for synthesizing new tasks and continued interactions. Specifically, Terminal-Universe replays the file operations recorded in a trajectory to restore each file before the agent modified it, yielding a partial workspace; a completion agent then supplies the missing files and dependencies. On this recovered workspace, we both reconstruct the original intent task and synthesize entirely new ones. Besides, we also scale the tasks along two complementary axes: breadth and depth. For breadth, we mine directional dependency relations between related environments and synthesize cross-workspace queries spanning multiple codebases, as developers routinely do in real-world development. For depth, we extend the initial single-turn query into a multi-round session that captures iterative user feedback and requirement refinement via a user agent. Applied to public terminal agent trajectories, Terminal-Universe produces 37.3k task-sufficient environments. Supervised fine-tuning of Qwen3.5-27B on this corpus improves single-round performance on Terminal-Bench 2.1 by 11.9 points and multi-round performance on EvoCode-Bench v2 MT@4 by 13.8 points.",
+      "ai_keywords": [
+        "supervised fine-tuning",
+        "workspace reconstruction",
+        "cross-workspace queries",
+        "multi-round session",
+        "terminal agent trajectories"
+      ],
+      "popularity": 223,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.04148",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-terminal-universe-turning-agent-trajectories-into"
+    },
+    {
       "title": "DreamX-Creator: Democratizing Native Audio-Video Generation at 2K Resolution",
       "authors": [
         "Jiashu Zhu",
@@ -2394,6 +2462,67 @@
       "rank": 3,
       "status": "pending",
       "folder": "papers/2026-aspire-can-models-self-evolve-from"
+    },
+    {
+      "title": "LLaDA-Image: Building Strong Image Generators with Fully Open Training Recipes",
+      "authors": [
+        "Chuyan Chen",
+        "Haoxing Chen",
+        "Kun Chen",
+        "Zhenglin Cheng",
+        "Long Cui",
+        "Ruishan Fang",
+        "Zhangxuan Gu",
+        "Zhicheng Huang",
+        "Zhenzhong Lan",
+        "Yuanting Lei",
+        "Haoquan Li",
+        "Jianguo Li",
+        "Rongchuan Li",
+        "Sidu Li",
+        "Tao Lin",
+        "Deyuan Liu",
+        "Jiacheng Liu",
+        "Lin Liu",
+        "Yuxuan Lou",
+        "Zhisheng Lu",
+        "Yuxin Ma",
+        "Shuheng Shen",
+        "Peng Sun",
+        "Chaoyang Wang",
+        "Hongjun Wang",
+        "Xiaomei Wang",
+        "Yongxin Wang",
+        "Chengzhang Wu",
+        "Hongru Wu",
+        "Jun Xie"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.03796",
+      "arxiv_url": "https://arxiv.org/abs/2609.03796",
+      "pdf_url": "https://arxiv.org/pdf/2609.03796.pdf",
+      "code_url": "",
+      "project_page": "https://github.com/inclusionAI/LLaDA-Image",
+      "abstract": "We introduce LLaDA-Image, a unified framework that pairs a 6B Diffusion Transformer (DiT) trained from scratch with a frozen vision-language understanding module built on the LLaDA2.0-Mini diffusion language model backbone. Instead of relying heavily on paired image-text data from the beginning, we first build a strong visual generative prior through image-only pre-training and mid-training. The generation pipeline comprises 220M samples, 98 of which are real images. For efficient and scalable optimization, we use parameter-free RMSNorm throughout the DiT together with the Muon optimizer. The resulting unified model produces highly photorealistic images while accurately following fine-grained editing instructions. We further distill LLaDA-Image into LLaDA-Image-Turbo, enabling fast inference in 2-4 sampling steps. On Qwen-Image-Bench, LLaDA-Image achieves overall scores of 53.53 and 53.38 on the English and Chinese tracks, respectively, setting a new state-of-the-art among open-source models on both tracks. To support further research on capable and efficient generative models, we release our model weights, training code, and detailed recipes.",
+      "ai_keywords": [
+        "Diffusion Transformer",
+        "DiT",
+        "vision-language understanding",
+        "LLaDA2.0-Mini",
+        "diffusion language model",
+        "image-only pre-training",
+        "RMSNorm",
+        "Muon optimizer",
+        "parameter-free",
+        "LLaDA-Image-Turbo",
+        "distillation"
+      ],
+      "popularity": 203,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.03796",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-llada-image-building-strong-image-generators"
     },
     {
       "title": "EchoWM: Open and Enterable Omnimodal World Models",
@@ -3088,6 +3217,42 @@
       "rank": 4,
       "status": "pending",
       "folder": "papers/2026-solarwm-open-data-and-scalable-training"
+    },
+    {
+      "title": "Random Attention: Rethinking KV Cache Eviction for Efficient Reasoning",
+      "authors": [
+        "Heng Wang",
+        "Jielin Qiu",
+        "Wenting Zhao",
+        "Cheng Qian",
+        "Liangwei Yang",
+        "Jiawei Han",
+        "Heng Ji",
+        "Silvio Savarese",
+        "Shelby Heinecke",
+        "Huan Wang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.03430",
+      "arxiv_url": "https://arxiv.org/abs/2609.03430",
+      "pdf_url": "https://arxiv.org/pdf/2609.03430.pdf",
+      "code_url": "https://github.com/SalesforceAIResearch/Random-Attention",
+      "project_page": "https://arthur-heng.github.io/Random-Attention-page/",
+      "abstract": "Large language models achieve superior performance on tasks that require extended reasoning, but long chains of thought make the KV cache a severe memory bottleneck. Existing KV cache compression methods share one paradigm: score each cached token by some estimate of how much it will matter later, and keep the top-scoring ones. We show that the selection signal contributes almost nothing. Random Attention keeps the prompt and evicts uniformly at random within each attention head, computing no score at all; across four models and six reasoning tasks it matches the strongest prior evictor while serving 32-43% higher throughput than it in vLLM deployment. Controlled experiments explain this by showing that 1) the prompt is the fragile part of the cache, and most of the gap between selectors is just whether their selection signal happened to keep it; 2) the reasoning trace protects itself against eviction with redundancy at two levels, in the text (the model restates what it still needs as it works) and across attention heads (each keeps its own copy of the trace), so once the prompt is safe, a random draw retains enough copies of what the model still needs, and no score is required to pick them. Our code is publicly available at https://github.com/SalesforceAIResearch/Random-Attention.",
+      "ai_keywords": [
+        "KV cache compression",
+        "attention heads",
+        "reasoning trace",
+        "redundancy",
+        "prompt preservation",
+        "vLLM throughput"
+      ],
+      "popularity": 152,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.03430",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-random-attention-rethinking-kv-cache-eviction"
     },
     {
       "title": "GenFirst: Generation Before Reconstruction for Stable End-to-End Latent Generative Modeling",
@@ -3922,6 +4087,38 @@
       "folder": "papers/2026-earlyeval-cheaper-agent-evaluation-via-early"
     },
     {
+      "title": "Knowing When Not to Reuse: Conditional Experience Transfer in Autonomous LLM Post-Training",
+      "authors": [
+        "Tingyun Li",
+        "Wenfeng Feng",
+        "Weiqing Li",
+        "Abudukelimu Wuerkaixi",
+        "Guohua Liu",
+        "Yuewei Zhang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2608.26730",
+      "arxiv_url": "https://arxiv.org/abs/2608.26730",
+      "pdf_url": "https://arxiv.org/pdf/2608.26730.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Large language models offer broad capabilities, but adapting them to evolving domains, tools, and requirements often entails repeated post-training. Autonomous systems automate parts of this process by proposing updates, training candidates, and using evaluation feedback to select subsequent proposals. As evidence accumulates, a central problem emerges: which past update evidence remains actionable after subsequent training has changed the parent model? An update's effect depends on its parent, data, and training stage. Treating past success as context-free permission can waste compute. If the resulting child is promoted, it can also degrade the subsequent training trajectory. We formulate this problem as conditional experience transfer and introduce Boundary-Calibrated Intervention Transfer (BCIT), a method that authorizes experience reuse before weight-changing training. BCIT binds an observed effect to its source context, checks applicability conditions, vetoes candidates with named hard conflicts, and obtains current-state evidence through a bounded training trial when needed. Fully trained candidates still face a shared adoption rule, and only observed events extend memory. On one 4B model adapted across finance reasoning, text-to-SQL, and function calling, candidate updates exhibit heterogeneous target and retention effects across the evaluated contexts. Under matched candidates, evidence, and compute, BCIT authorizes fewer harmful updates and attains higher equal-budget final-model quality than the evaluated alternatives. These results support treating experience authorization as a distinct problem in autonomous post-training.",
+      "ai_keywords": [
+        "conditional experience transfer",
+        "Boundary-Calibrated Intervention Transfer",
+        "autonomous post-training",
+        "experience authorization",
+        "weight-changing training",
+        "bounded training trial"
+      ],
+      "popularity": 149,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2608.26730",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-knowing-when-not-to-reuse-conditional"
+    },
+    {
       "title": "Normalized Low-Rank Adaptation",
       "authors": [
         "Jiale Kang",
@@ -4718,6 +4915,36 @@
       "folder": "papers/2026-it-takes-two-to-match-co"
     },
     {
+      "title": "LatentPress: Context Compression Beyond Text and Vision",
+      "authors": [
+        "Zhengze Zhou",
+        "Hejian Sang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.01507",
+      "arxiv_url": "https://arxiv.org/abs/2609.01507",
+      "pdf_url": "https://arxiv.org/pdf/2609.01507.pdf",
+      "code_url": "",
+      "project_page": "https://github.com/HJSang/LatentPress",
+      "abstract": "Compressed context is usually carried as human-readable text or as rendered images that must be decoded, even when its consumer is a language model. We introduce LatentPress, which writes conversational histories and long documents into a third representation: continuous memory tokens that a frozen decoder reads directly through its input-embedding interface, with no text reconstruction at inference. A small reader-matched writer compresses 4-16times while training only an adapter (4.2M-26.2M parameters, sim!0.1% of the decoder). On LongMemEval, LatentPress reaches 0.504 accuracy at 7.70times compression versus 0.490 for uncompressed evidence, outperforming text summaries (0.184) and OCR-based compression (0.426 to 0.312). On LongBench-QA, in-domain writers match or exceed raw-context reading at 4-8times compression, while 16times trails raw. Writing takes 43ms per conversation, roughly an order of magnitude faster than text summarization or OCR reconstruction, and reading is 5-9times faster than raw context or cached OCR. We validate the interface under two transfer settings, zero-shot from UltraChat to LongMemEval memory QA and from LongMemEval-derived QA to unseen LongBench document domains, establishing direct soft tokens as a practical machine-facing context interface beyond text and vision. The implementation of the experiments could be found at: https://github.com/xuyd16ai/context_softtoken_compress .",
+      "ai_keywords": [
+        "continuous memory tokens",
+        "frozen decoder",
+        "input-embedding interface",
+        "adapter",
+        "LongMemEval",
+        "LongBench-QA",
+        "soft tokens",
+        "context compression"
+      ],
+      "popularity": 107,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.01507",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-latentpress-context-compression-beyond-text-and"
+    },
+    {
       "title": "OmniScientist: An Omni-Modal Omni-Discipline AI Scientist",
       "authors": [
         "Bobo Li",
@@ -5437,65 +5664,43 @@
       "folder": "papers/2026-h3-world-turning-language-understanding-into"
     },
     {
-      "title": "LLaDA-Image: Building Strong Image Generators with Fully Open Training Recipes",
+      "title": "Rethinking On-Policy Distillation of Large Language Models II: One Training Example",
       "authors": [
-        "Chuyan Chen",
-        "Haoxing Chen",
-        "Kun Chen",
-        "Zhenglin Cheng",
-        "Long Cui",
-        "Ruishan Fang",
-        "Zhangxuan Gu",
-        "Zhicheng Huang",
-        "Zhenzhong Lan",
-        "Yuanting Lei",
-        "Haoquan Li",
-        "Jianguo Li",
-        "Rongchuan Li",
-        "Sidu Li",
-        "Tao Lin",
-        "Deyuan Liu",
-        "Jiacheng Liu",
-        "Lin Liu",
-        "Yuxuan Lou",
-        "Zhisheng Lu",
-        "Yuxin Ma",
-        "Shuheng Shen",
-        "Peng Sun",
-        "Chaoyang Wang",
-        "Hongjun Wang",
-        "Xiaomei Wang",
-        "Yongxin Wang",
-        "Chengzhang Wu",
-        "Hongru Wu",
-        "Jun Xie"
+        "Zixuan Fu",
+        "Bingxiang He",
+        "Yuxin Zuo",
+        "Haohuan Huang",
+        "Jinqian Zhang",
+        "Ruhang Xiao",
+        "Cheng Qian",
+        "Qinyu Luo",
+        "Huan-ang Gao",
+        "Yudong Wang",
+        "Zhiyuan Liu",
+        "Ning Ding",
+        "Chaojun Xiao"
       ],
       "year": "2026",
-      "arxiv_id": "2609.03796",
-      "arxiv_url": "https://arxiv.org/abs/2609.03796",
-      "pdf_url": "https://arxiv.org/pdf/2609.03796.pdf",
-      "code_url": "",
-      "project_page": "https://github.com/inclusionAI/LLaDA-Image",
-      "abstract": "We introduce LLaDA-Image, a unified framework that pairs a 6B Diffusion Transformer (DiT) trained from scratch with a frozen vision-language understanding module built on the LLaDA2.0-Mini diffusion language model backbone. Instead of relying heavily on paired image-text data from the beginning, we first build a strong visual generative prior through image-only pre-training and mid-training. The generation pipeline comprises 220M samples, 98 of which are real images. For efficient and scalable optimization, we use parameter-free RMSNorm throughout the DiT together with the Muon optimizer. The resulting unified model produces highly photorealistic images while accurately following fine-grained editing instructions. We further distill LLaDA-Image into LLaDA-Image-Turbo, enabling fast inference in 2-4 sampling steps. On Qwen-Image-Bench, LLaDA-Image achieves overall scores of 53.53 and 53.38 on the English and Chinese tracks, respectively, setting a new state-of-the-art among open-source models on both tracks. To support further research on capable and efficient generative models, we release our model weights, training code, and detailed recipes.",
+      "arxiv_id": "2609.04172",
+      "arxiv_url": "https://arxiv.org/abs/2609.04172",
+      "pdf_url": "https://arxiv.org/pdf/2609.04172.pdf",
+      "code_url": "https://github.com/Thinking-Space/One-Shot-OPD",
+      "project_page": "",
+      "abstract": "On-policy distillation (OPD) combines student-generated rollouts with dense token-level supervision from a teacher. Existing work has mainly studied its algorithmic behavior, leaving the role of training data unclear. We examine this role at the data-minimal limit by training on a single query. One-shot OPD keeps improving for hundreds of steps and recovers most of full-data OPD's gain across task domains and model families. We explain this result through the states visited during training and the rate at which the student aligns with the teacher. We measure state coverage, the fraction of the states full-data OPD visits that a query set's rollouts reach. A single query already reaches \\(71.5\\%\\), most of it within the first 100 steps. Adding semantically distinct queries raises coverage and validation accuracy together, until 16 queries reach \\(98.9\\%\\) and match full-data training. Yet alignment slows at a similar pace whether OPD trains on one query or the whole dataset, and even a fixed set of states takes hundreds of steps to absorb. OPD is therefore data-overfed but algorithm-starved. Its rollouts quickly expose broad supervision, while the student absorbs that supervision increasingly slowly. The state-coverage result extends to multi-teacher OPD, where 16 semantically diverse queries per domain match full-data MOPD. As a further stress test, content-light templates and off-domain WildChat queries also approach the real-query baseline. Task content and induced state coverage can therefore come apart. We hope these findings direct future work toward the step efficiency of OPD, and prompt a re-examination of the data and the mechanisms behind its recent successes in frontier post-training.",
       "ai_keywords": [
-        "Diffusion Transformer",
-        "DiT",
-        "vision-language understanding",
-        "LLaDA2.0-Mini",
-        "diffusion language model",
-        "image-only pre-training",
-        "RMSNorm",
-        "Muon optimizer",
-        "parameter-free",
-        "LLaDA-Image-Turbo",
-        "distillation"
+        "on-policy distillation",
+        "token-level supervision",
+        "state coverage",
+        "multi-teacher OPD",
+        "alignment rate",
+        "step efficiency"
       ],
-      "popularity": 63,
+      "popularity": 72,
       "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2609.03796",
+      "pwc_url": "https://huggingface.co/papers/2609.04172",
       "rank": 7,
       "status": "pending",
-      "folder": "papers/2026-llada-image-building-strong-image-generators"
+      "folder": "papers/2026-rethinking-on-policy-distillation-of-large"
     },
     {
       "title": "On the Design of Qwen3.8-Next Architecture: Evaluation, Efficiency, and Training Stability",
@@ -6235,6 +6440,38 @@
       "folder": "papers/2026-language-models-can-control-their-own"
     },
     {
+      "title": "Why Gated DeltaNet Survives 4-Bit Quantization: NVFP4 W4A4 for the Recurrent Half of a Hybrid 27B LLM",
+      "authors": [
+        "Sergii Kozyrev",
+        "Davyd Maiboroda"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.04098",
+      "arxiv_url": "https://arxiv.org/abs/2609.04098",
+      "pdf_url": "https://arxiv.org/pdf/2609.04098.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Hybrid LLMs pair softmax attention with linear-attention layers such as Gated DeltaNet (GDN), whose recurrent state summarizes the context in fixed size. Early community 4-bit quantizations of Qwen3.8-27B (48 GDN layers, 16 attention layers) left the GDN block in 8- or 16-bit precision -- especially its decay and write-strength gates -- on the intuition that errors in a recurrence accumulate over long contexts. We test that intuition by building Minima: NVFP4 W4A4 on all 496 linear layers, GDN included. Across perplexity at 4K/32K, MMLU-Pro, GSM8K, AIME'25, GPQA-Diamond, LiveCodeBench, and RULER retrieval to 64K, Minima matches BF16 within seed noise (5-task average -0.52) while being the smallest (17.5 GiB) and fastest-prefill (+14-19%) recipe we compare, and its 32K perplexity gap shrinks with position. A four-part mechanism study explains why: (i) NVFP4's 16-element block scaling localizes the residual stream's extreme outliers, equalizing activation error across layer roles; (ii) the supposedly fragile gate projections are the least sensitive -- softplus/exponential and sigmoid parameterizations compress ~11% GEMM error to ~2% output error; (iii) the delta-rule recurrence holds injected noise at a flat plateau over 32K tokens and forgets a state impulse within hundreds of steps, because each write overwrites the state along the current key direction; (iv) the per-token quantization cost washes out with context instead of compounding. We also repair a global-scale mismatch that arises when per-module-calibrated NVFP4 checkpoints are served by kernels that fuse those modules into one GEMM, and show calibrated FP8 KV-cache scales are performance-free. The result: a practical recipe -- quantize everything, ship KV scales -- and a mechanistic account of why the recurrent half of a hybrid LLM is the easy half to quantize. Checkpoint: https://huggingface.co/minima-ai/mnma_qwen3.8_27b_nvfp4",
+      "ai_keywords": [
+        "Gated DeltaNet",
+        "linear-attention",
+        "softmax attention",
+        "4-bit quantization",
+        "NVFP4",
+        "W4A4",
+        "delta-rule recurrence",
+        "GEMM",
+        "KV-cache",
+        "FP8"
+      ],
+      "popularity": 72,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.04098",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-why-gated-deltanet-survives-4-bit"
+    },
+    {
       "title": "PaperGym: Rubric-Centered Evolution for Research-Plan Generation",
       "authors": [
         "Yuhan Wang",
@@ -6895,34 +7132,45 @@
       "folder": "papers/2026-lightnav-0-eliciting-vlm-spatial-intelligence"
     },
     {
-      "title": "LatentPress: Context Compression Beyond Text and Vision",
+      "title": "Puffin-World: Scaling a Unified Multimodal Model with Native 3D World States",
       "authors": [
-        "Zhengze Zhou",
-        "Hejian Sang"
+        "Kang Liao",
+        "Yihang Luo",
+        "Xiao-Ming Wu",
+        "Linyi Jin",
+        "Size Wu",
+        "Chunyu Lin",
+        "Yao Zhao",
+        "Fei Wang",
+        "Wei Li",
+        "Chen Change Loy"
       ],
       "year": "2026",
-      "arxiv_id": "2609.01507",
-      "arxiv_url": "https://arxiv.org/abs/2609.01507",
-      "pdf_url": "https://arxiv.org/pdf/2609.01507.pdf",
+      "arxiv_id": "2609.04196",
+      "arxiv_url": "https://arxiv.org/abs/2609.04196",
+      "pdf_url": "https://arxiv.org/pdf/2609.04196.pdf",
       "code_url": "",
-      "project_page": "https://github.com/HJSang/LatentPress",
-      "abstract": "Compressed context is usually carried as human-readable text or as rendered images that must be decoded, even when its consumer is a language model. We introduce LatentPress, which writes conversational histories and long documents into a third representation: continuous memory tokens that a frozen decoder reads directly through its input-embedding interface, with no text reconstruction at inference. A small reader-matched writer compresses 4-16times while training only an adapter (4.2M-26.2M parameters, sim!0.1% of the decoder). On LongMemEval, LatentPress reaches 0.504 accuracy at 7.70times compression versus 0.490 for uncompressed evidence, outperforming text summaries (0.184) and OCR-based compression (0.426 to 0.312). On LongBench-QA, in-domain writers match or exceed raw-context reading at 4-8times compression, while 16times trails raw. Writing takes 43ms per conversation, roughly an order of magnitude faster than text summarization or OCR reconstruction, and reading is 5-9times faster than raw context or cached OCR. We validate the interface under two transfer settings, zero-shot from UltraChat to LongMemEval memory QA and from LongMemEval-derived QA to unseen LongBench document domains, establishing direct soft tokens as a practical machine-facing context interface beyond text and vision. The implementation of the experiments could be found at: https://github.com/xuyd16ai/context_softtoken_compress .",
+      "project_page": "https://kangliao929.github.io/projects/puffin-world/",
+      "abstract": "We propose Puffin-World, a unified multimodal architecture that integrates physical understanding, spatial simulation, and 3D world generation and reconstruction without relying on external offline modules. To reliably construct and interact with 3D worlds, our framework jointly models three native world states: physics (gravity field and latitude), geometry (depth), and appearance (image), together with a unified Omni-Camera representation that supports diverse tasks and flexible motions. Beyond modeling these states, we introduce a strategy for propagating physical dynamics across future frames. By grounding absolute camera properties in the real world, Puffin-World enables physically consistent and visually stable world generation. We further couple appearance and geometry within a single generative process, jointly synthesizing each future view and reconstructing its underlying geometry. This unified paradigm enables interleaved closed-loop applications requiring synergy across multiple tasks, including mimic and self-calibrated world exploration. To scale Puffin-World to complex scenarios, we construct Puffin-16M, comprising 15 million vision-language-camera triplets and 1 million trajectories featuring various and challenging motions. To foster further research in this area, we released the code, models, and datasets.",
       "ai_keywords": [
-        "continuous memory tokens",
-        "frozen decoder",
-        "input-embedding interface",
-        "adapter",
-        "LongMemEval",
-        "LongBench-QA",
-        "soft tokens",
-        "context compression"
+        "multimodal architecture",
+        "physical understanding",
+        "spatial simulation",
+        "3D world generation",
+        "3D reconstruction",
+        "gravity field",
+        "depth",
+        "Omni-Camera representation",
+        "physical dynamics propagation",
+        "generative process",
+        "vision-language-camera triplets"
       ],
-      "popularity": 49,
+      "popularity": 65,
       "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2609.01507",
+      "pwc_url": "https://huggingface.co/papers/2609.04196",
       "rank": 9,
       "status": "pending",
-      "folder": "papers/2026-latentpress-context-compression-beyond-text-and"
+      "folder": "papers/2026-puffin-world-scaling-a-unified-multimodal"
     },
     {
       "title": "CogEvol: Towards Efficient and Reliable Learning Environment Generation",
@@ -7782,36 +8030,40 @@
       "folder": "papers/2026-from-production-traffic-to-post-training"
     },
     {
-      "title": "Why Gated DeltaNet Survives 4-Bit Quantization: NVFP4 W4A4 for the Recurrent Half of a Hybrid 27B LLM",
+      "title": "Scal3R: Learning Efficient Multi-Relative Pose Query for Scalable Online 3D Reconstruction",
       "authors": [
-        "Sergii Kozyrev",
-        "Davyd Maiboroda"
+        "Chin-Yang Lin",
+        "Yang-Che Sun",
+        "Cheng Sun",
+        "Fu-En Yang",
+        "Min-Hung Chen",
+        "Yen-Yu Lin",
+        "Wei-Chen Chiu",
+        "Yu-Lun Liu"
       ],
       "year": "2026",
-      "arxiv_id": "2609.04098",
-      "arxiv_url": "https://arxiv.org/abs/2609.04098",
-      "pdf_url": "https://arxiv.org/pdf/2609.04098.pdf",
+      "arxiv_id": "2609.04201",
+      "arxiv_url": "https://arxiv.org/abs/2609.04201",
+      "pdf_url": "https://arxiv.org/pdf/2609.04201.pdf",
       "code_url": "",
-      "project_page": "",
-      "abstract": "Hybrid LLMs pair softmax attention with linear-attention layers such as Gated DeltaNet (GDN), whose recurrent state summarizes the context in fixed size. Early community 4-bit quantizations of Qwen3.8-27B (48 GDN layers, 16 attention layers) left the GDN block in 8- or 16-bit precision -- especially its decay and write-strength gates -- on the intuition that errors in a recurrence accumulate over long contexts. We test that intuition by building Minima: NVFP4 W4A4 on all 496 linear layers, GDN included. Across perplexity at 4K/32K, MMLU-Pro, GSM8K, AIME'25, GPQA-Diamond, LiveCodeBench, and RULER retrieval to 64K, Minima matches BF16 within seed noise (5-task average -0.52) while being the smallest (17.5 GiB) and fastest-prefill (+14-19%) recipe we compare, and its 32K perplexity gap shrinks with position. A four-part mechanism study explains why: (i) NVFP4's 16-element block scaling localizes the residual stream's extreme outliers, equalizing activation error across layer roles; (ii) the supposedly fragile gate projections are the least sensitive -- softplus/exponential and sigmoid parameterizations compress ~11% GEMM error to ~2% output error; (iii) the delta-rule recurrence holds injected noise at a flat plateau over 32K tokens and forgets a state impulse within hundreds of steps, because each write overwrites the state along the current key direction; (iv) the per-token quantization cost washes out with context instead of compounding. We also repair a global-scale mismatch that arises when per-module-calibrated NVFP4 checkpoints are served by kernels that fuse those modules into one GEMM, and show calibrated FP8 KV-cache scales are performance-free. The result: a practical recipe -- quantize everything, ship KV scales -- and a mechanistic account of why the recurrent half of a hybrid LLM is the easy half to quantize. Checkpoint: https://huggingface.co/minima-ai/mnma_qwen3.8_27b_nvfp4",
+      "project_page": "https://linjohnss.github.io/scal3r/",
+      "abstract": "Online 3D reconstruction models perform poorly on long videos. This happens because regressing poses relative to a fixed first-frame anchor forces extrapolation far beyond the training distribution. Small drifts accumulate and amplify into significant geometric collapse. However, we observe that per-frame depth remains stable throughout this failure. The backbone's local geometry remains intact; only the global pose head breaks down. Motivated by this decoupling, we introduce Scal3R. This approach reformulates online reconstruction as multi-reference relative pose querying. We use lightweight learnable tokens, which make up about ~1% of the parameters, and inject them into a completely frozen backbone via asymmetric attention. This setup queries poses relative to multiple past keyframes. An online pose-graph optimization system with loop closure suppresses long-range drift. Scal3R reaches convergence in 8 hours on a single GPU. It reduces the average ATE by over 60% on KITTI compared to the online baseline. It also achieves state-of-the-art performance across Virtual KITTI, Sintel, TUM-Dynamic, ScanNet, and 7-Scenes. Project page: https://linjohnss.github.io/scal3r/",
       "ai_keywords": [
-        "Gated DeltaNet",
-        "linear-attention",
-        "softmax attention",
-        "4-bit quantization",
-        "NVFP4",
-        "W4A4",
-        "delta-rule recurrence",
-        "GEMM",
-        "KV-cache",
-        "FP8"
+        "online 3D reconstruction",
+        "relative pose querying",
+        "learnable tokens",
+        "asymmetric attention",
+        "frozen backbone",
+        "pose-graph optimization",
+        "loop closure",
+        "ATE"
       ],
-      "popularity": 47,
+      "popularity": 42,
       "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2609.04098",
+      "pwc_url": "https://huggingface.co/papers/2609.04201",
       "rank": 10,
       "status": "pending",
-      "folder": "papers/2026-why-gated-deltanet-survives-4-bit"
+      "folder": "papers/2026-scal3r-learning-efficient-multi-relative-pose"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -10809,5 +11061,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-09-04T05:00:43.221209+00:00"
+  "updated_at": "2026-09-05T05:00:34.101050+00:00"
 }
