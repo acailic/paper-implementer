@@ -1,0 +1,43 @@
+/home/nistrator/Documents/github/paper-implementer/.venv/lib/python3.11/site-packages/torch/_subclasses/functional_tensor.py:368: UserWarning: Failed to initialize NumPy: No module named 'numpy' (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+== Macaron-V1 toy re-implementation ==
+torch 2.14.0+cpu, device cpu
+
+[1] pretrain + freeze base
+  pretrain epoch 0: loss 1.7200
+  pretrain epoch 1: loss 0.2013
+  pretrain epoch 2: loss 0.1113
+  pretrain epoch 3: loss 0.0810
+  base frozen; 73,728 LoRA params/slot x 4 slots
+
+[2] SFT specialist LoRAs (base frozen)
+  L0 (chat) sft loss 0.0039
+  L1 (agent) sft loss 0.1267
+  L2 (coding) sft loss 0.0042
+  L3 (gui) sft loss 0.0083
+
+[3] multi-turn own-view SFT (summary handoff)
+  multiturn L1: loss 0.0807
+  multiturn L0 (joint w/ chat): loss 0.0184
+
+[4] GRPO-style router boost (routing was jointly SFT'd into L0)
+  grpo step 0: trained on 1 unsolved prompts, group-mean sample-acc 0.875
+  grpo step 1: trained on 0 unsolved prompts, group-mean sample-acc 0.000
+
+[5] evaluations (held-out)
+  routing accuracy       : 1.000   (paper Venti: 0.9912)
+  proxy answer acc [L0]  : 1.000
+  proxy answer acc [L1]  : 0.000
+  proxy answer acc [L2]  : 1.000
+  proxy answer acc [L3]  : 1.000
+  own-view prefix stability: 1.000, avg reuse fraction 0.578
+  summary handoff vs full : 0.333 vs 0.333
+
+[6] MoL vs budget-matched fat LoRA (paper's missing ablation)
+  base frozen; 294,912 LoRA params/slot x 4 slots
+  fat joint sft loss 0.0215
+  MoL : L0=1.00  L1=0.00  L2=1.00  L3=1.00
+  fat : L0=0.93  L1=0.05  L2=1.00  L3=0.00
+  mean: MoL 0.750 vs fat 0.494
+
+Done in 385.6s
