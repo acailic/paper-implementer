@@ -353,9 +353,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.09819",
       "rank": 1,
-      "status": "writing",
+      "status": "done",
       "folder": "papers/2026-macaron-v1-towards-open-continual-learning",
-      "started_at": "2026-09-03"
+      "started_at": "2026-09-03",
+      "finished_at": "2026-09-15"
     },
     {
       "title": "ComBodied Agents: a New Paradigm of Human-Centric Agentic AI",
