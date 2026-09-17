@@ -404,7 +404,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.10915",
       "rank": 1,
-      "status": "reading",
+      "status": "breaking_down",
       "folder": "papers/2026-combodied-agents-a-new-paradigm-of",
       "started_at": "2026-09-16"
     },
@@ -1148,6 +1148,69 @@
       "folder": "papers/2026-ncp-archpreview-technical-report-moving-towards"
     },
     {
+      "title": "Vidu S2: Real-Time Interactive, Editable, and Spatial Video Generation",
+      "authors": [
+        "Jintao Zhang",
+        "Kai Jiang",
+        "Jintao Chen",
+        "Xu Wang",
+        "Deyuan Liu",
+        "Jungang Li",
+        "Dechuang Chen",
+        "Ming Lin",
+        "Jingjiang Zhou",
+        "Haopeng Jin",
+        "Qi Jia",
+        "Xiaohang Wang",
+        "Yaole Wang",
+        "Zhanqiang Zhang",
+        "Ran Li",
+        "Zhengkun Huang",
+        "Shuyue Xiong",
+        "Yuji Wang",
+        "Zikun Dai",
+        "Hui He",
+        "Yang Luo",
+        "Mang Ning",
+        "Weiqi Feng",
+        "Chengyang Ye",
+        "Xinyue Lin",
+        "Min Zhao",
+        "Hongzhou Zhu",
+        "Hengkai Tan",
+        "Zeyuan Wang",
+        "Chendong Xiang",
+        "Kaiwen Zheng",
+        "Zhijie Deng",
+        "Fan Bao",
+        "Jianfei Chen",
+        "Jun Zhu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.11638",
+      "arxiv_url": "https://arxiv.org/abs/2609.11638",
+      "pdf_url": "https://arxiv.org/pdf/2609.11638.pdf",
+      "code_url": "https://github.com/shengshu-ai/Vidu-S",
+      "project_page": "https://www.vidu.com/vidu-stream",
+      "abstract": "We present Vidu S2, which comprises Vidu S2-Avatar, a real-time interactive digital-character model, and Vidu S2-Editing, a real-time video editing model. Moreover, we explore the feasibility of real-time spatial video generation for both Vidu S2-Avatar and Vidu S2-Editing. Compared with Vidu S1, Vidu S2-Avatar supports real-time 720p video generation, generation with dynamic references that can be updated at any moment, and stronger instruction following, such as dancing. Vidu S2-Editing supports editing a video stream in real time, including style rendering, clothing replacement, character replacement, and background replacement. Experiments show that Vidu S2 outperforms all baselines. A playable online demo is available at https://vidu.com/vidu-stream.",
+      "ai_keywords": [
+        "real-time video generation",
+        "spatial video generation",
+        "dynamic references",
+        "instruction following",
+        "video editing",
+        "style rendering",
+        "character replacement",
+        "background replacement"
+      ],
+      "popularity": 637,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.11638",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-vidu-s2-real-time-interactive-editable"
+    },
+    {
       "title": "Atria Dawn: The Dawn of Agentic Superintelligence",
       "authors": [
         "Honglin Guo",
@@ -1309,10 +1372,10 @@
         "human-AI collaboration",
         "agent logs"
       ],
-      "popularity": 364,
+      "popularity": 418,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.15818",
-      "rank": 1,
+      "rank": 2,
       "status": "pending",
       "folder": "papers/2026-atria-dawn-the-dawn-of-agentic"
     },
@@ -2454,69 +2517,6 @@
       "folder": "papers/2026-sensenova-u15-towards-native-unified-visual"
     },
     {
-      "title": "Vidu S2: Real-Time Interactive, Editable, and Spatial Video Generation",
-      "authors": [
-        "Jintao Zhang",
-        "Kai Jiang",
-        "Jintao Chen",
-        "Xu Wang",
-        "Deyuan Liu",
-        "Jungang Li",
-        "Dechuang Chen",
-        "Ming Lin",
-        "Jingjiang Zhou",
-        "Haopeng Jin",
-        "Qi Jia",
-        "Xiaohang Wang",
-        "Yaole Wang",
-        "Zhanqiang Zhang",
-        "Ran Li",
-        "Zhengkun Huang",
-        "Shuyue Xiong",
-        "Yuji Wang",
-        "Zikun Dai",
-        "Hui He",
-        "Yang Luo",
-        "Mang Ning",
-        "Weiqi Feng",
-        "Chengyang Ye",
-        "Xinyue Lin",
-        "Min Zhao",
-        "Hongzhou Zhu",
-        "Hengkai Tan",
-        "Zeyuan Wang",
-        "Chendong Xiang",
-        "Kaiwen Zheng",
-        "Zhijie Deng",
-        "Fan Bao",
-        "Jianfei Chen",
-        "Jun Zhu"
-      ],
-      "year": "2026",
-      "arxiv_id": "2609.11638",
-      "arxiv_url": "https://arxiv.org/abs/2609.11638",
-      "pdf_url": "https://arxiv.org/pdf/2609.11638.pdf",
-      "code_url": "https://github.com/shengshu-ai/Vidu-S",
-      "project_page": "https://www.vidu.com/vidu-stream",
-      "abstract": "We present Vidu S2, which comprises Vidu S2-Avatar, a real-time interactive digital-character model, and Vidu S2-Editing, a real-time video editing model. Moreover, we explore the feasibility of real-time spatial video generation for both Vidu S2-Avatar and Vidu S2-Editing. Compared with Vidu S1, Vidu S2-Avatar supports real-time 720p video generation, generation with dynamic references that can be updated at any moment, and stronger instruction following, such as dancing. Vidu S2-Editing supports editing a video stream in real time, including style rendering, clothing replacement, character replacement, and background replacement. Experiments show that Vidu S2 outperforms all baselines. A playable online demo is available at https://vidu.com/vidu-stream.",
-      "ai_keywords": [
-        "real-time video generation",
-        "spatial video generation",
-        "dynamic references",
-        "instruction following",
-        "video editing",
-        "style rendering",
-        "character replacement",
-        "background replacement"
-      ],
-      "popularity": 311,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2609.11638",
-      "rank": 2,
-      "status": "pending",
-      "folder": "papers/2026-vidu-s2-real-time-interactive-editable"
-    },
-    {
       "title": "DreamX-Creator: Democratizing Native Audio-Video Generation at 2K Resolution",
       "authors": [
         "Jiashu Zhu",
@@ -3392,7 +3392,7 @@
         "post-training",
         "agentic co-training"
       ],
-      "popularity": 288,
+      "popularity": 298,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.13356",
       "rank": 3,
@@ -4309,6 +4309,41 @@
       "folder": "papers/2026-evosafeharness-evolving-model-and-domain-specific"
     },
     {
+      "title": "Continual Learning Mechanisms Compose for Long-Horizon Memorization",
+      "authors": [
+        "Zheyuan Zhang",
+        "Alvin Zhang",
+        "Daniel Khashabi",
+        "Tianmin Shu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.06986",
+      "arxiv_url": "https://arxiv.org/abs/2609.06986",
+      "pdf_url": "https://arxiv.org/pdf/2609.06986.pdf",
+      "code_url": "https://github.com/cozheyuanzhangde/compose-cl",
+      "project_page": "https://compose-cl.github.io/",
+      "abstract": "Language models may need to internalize information that arrives over time and retain it through many subsequent updates. To study this challenge, we introduce long-horizon memorization, a setting in which a model learns 100 query-answer tasks through continual supervised fine-tuning without retaining earlier training examples or receiving task identifiers at inference. Sequential updates cause catastrophic forgetting, and no single continual learning mechanism we evaluate maintains strong retention at this horizon. We hypothesize that mechanisms addressing complementary sources of forgetting will be more effective when composed. We organize these compositions along two design dimensions. Data, function, and weight anchors specify what prior information each update should preserve, while low-rank allocation rules determine where successive updates are retained. To test this hypothesis systematically, we construct three distinct 100-task memorization datasets. We introduce task-level successive halving to search the combinatorial design space and use a factorial experiment to measure individual and interaction effects. Our best method combines all three anchors with merged LoRA, ranks among the top 3 methods in all datasets, and raises average final retention from 1.2% under naive sequential fine-tuning to 34.9%, a 28-fold improvement. The data anchor and merged LoRA provide the largest average gains and interact super-additively on all three datasets. Together, these results show that composing complementary mechanisms substantially improves long-horizon memorization beyond what any individual mechanism achieves.",
+      "ai_keywords": [
+        "catastrophic forgetting",
+        "continual supervised fine-tuning",
+        "long-horizon memorization",
+        "data anchor",
+        "function anchor",
+        "weight anchor",
+        "low-rank allocation",
+        "LoRA",
+        "merged LoRA",
+        "successive halving",
+        "factorial experiment"
+      ],
+      "popularity": 272,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.06986",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-continual-learning-mechanisms-compose-for-long"
+    },
+    {
       "title": "Dream-RSI: Recursive Self-Improvement through Evolving Worlds",
       "authors": [
         "Tong Zheng",
@@ -4344,10 +4379,10 @@
         "discovery trees",
         "Dream-RSI"
       ],
-      "popularity": 252,
+      "popularity": 266,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.14858",
-      "rank": 4,
+      "rank": 5,
       "status": "pending",
       "folder": "papers/2026-dream-rsi-recursive-self-improvement-through"
     },
@@ -5405,10 +5440,10 @@
         "embodied supervision",
         "multimodal capabilities"
       ],
-      "popularity": 168,
+      "popularity": 170,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.14973",
-      "rank": 5,
+      "rank": 6,
       "status": "pending",
       "folder": "papers/2026-physbrain-15-from-vision-language-models"
     },
@@ -6416,38 +6451,6 @@
       "folder": "papers/2026-x-aut-progressive-audio-encoder-compression"
     },
     {
-      "title": "Grouped Value Attention: Efficient KV Caching via On-Demand Key Reconstruction",
-      "authors": [
-        "Vishesh Tripathi",
-        "Abhay Kumar",
-        "Ramsha Khan"
-      ],
-      "year": "2026",
-      "arxiv_id": "2609.13285",
-      "arxiv_url": "https://arxiv.org/abs/2609.13285",
-      "pdf_url": "https://arxiv.org/pdf/2609.13285.pdf",
-      "code_url": "",
-      "project_page": "",
-      "abstract": "The KV cache is a primary bottleneck for Transformer decoding: its memory footprint and cache-read traffic grow with sequence length. Grouped-query attention (GQA) reduces this cost by sharing key-value heads, but still stores both a key and a value at every step. We introduce Grouped Value Attention (GVA), which stores grouped values and reconstructs content keys with a learned linear map. At inference, the map can be absorbed into the query, eliminating the need to materialize content keys in the intended decode path. A small shared decoupled RoPE channel retains positional information through a separately cached positional key. For the configurations studied, this representation reduces persistent cache scalars by approximately 45-47% relative to matched GQA. At the 350M-parameter scale with 30B FineWeb-Edu tokens, the 16-dimensional positional variant reaches 44.18 average accuracy across five tasks, compared with 44.36 for GQA and 43.88 for MLA. These results demonstrate near-GQA benchmark accuracy with a more compact cache representation. To translate this compact representation into faster autoregressive inference, we have developed custom decoding kernels and are currently evaluating their end-to-end inference performance with an open-source release planned soon.",
-      "ai_keywords": [
-        "grouped-query attention",
-        "grouped value attention",
-        "KV cache",
-        "content keys",
-        "positional key",
-        "RoPE",
-        "decoupled RoPE",
-        "autoregressive inference",
-        "decoding kernels"
-      ],
-      "popularity": 56,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2609.13285",
-      "rank": 6,
-      "status": "pending",
-      "folder": "papers/2026-grouped-value-attention-efficient-kv-caching"
-    },
-    {
       "title": "AgentGrad: Intervention-guided Prompt Optimization for Multi Agent Systems",
       "authors": [
         "Jaewon Chu",
@@ -7408,6 +7411,70 @@
       "folder": "papers/2026-lynnreal-omni-native-multi-modal-video"
     },
     {
+      "title": "The Last AI Built by Humans: Toward Genuine Recursive Self-Improvement",
+      "authors": [
+        "Yi Duan",
+        "Ying Liu",
+        "Zirui Tang",
+        "Haodong Chen",
+        "Jun Zhou",
+        "Yumou Liu",
+        "Bangrui Xu",
+        "Yukai Wu",
+        "Sidi Chen",
+        "Yuhan Zhou",
+        "Haoyu Wang",
+        "Xiaoyou Yu",
+        "Shaokun Han",
+        "Xuzhou Zhu",
+        "Le Zhou",
+        "Bolin Lu",
+        "Wei Zhou",
+        "Jiachen Liu",
+        "Nuozhou Fang",
+        "Jiaxin Tian",
+        "Ruoyu Chen",
+        "Yuxuan Li",
+        "Kai Zuo",
+        "Kaiyan Zhang",
+        "Jiantao Qiu",
+        "Conghui He",
+        "Guoliang Li",
+        "Bowen Zhou",
+        "Zhiyuan Liu",
+        "Zhoufutu Wen",
+        "Jihua Kang",
+        "Xuanhe Zhou",
+        "Fan Wu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.11873",
+      "arxiv_url": "https://arxiv.org/abs/2609.11873",
+      "pdf_url": "https://arxiv.org/pdf/2609.11873.pdf",
+      "code_url": "https://github.com/theseus-labs-rsi/awesome-rsi",
+      "project_page": "https://theseus-labs-rsi.github.io/",
+      "abstract": "Recursive self-improvement (RSI) enables AI systems to turn experience and feedback into persistent changes that improve both their capabilities and the process of future improvement. We first use the Headroom-Closed Index (HCI) to reveal the problems of existing LLMs, then introduce the RSI concept and its development roadmap: from improvement-execution autonomy, improvement-strategy autonomy, experience-acquisition autonomy, and environment-adaptation autonomy, to recursive meta-improvement. Next we examine RSI across scenarios (e.g., scientific discovery, embodied intelligence, software engineering), highlighting their distinct requirements and development speeds. Drawing on diverse industry practices and preliminary empirical evidence, we connect RSI research with practical systems and identify key challenges to achieving genuine RSI.",
+      "ai_keywords": [
+        "recursive self-improvement",
+        "Headroom-Closed Index",
+        "LLMs",
+        "improvement-execution autonomy",
+        "improvement-strategy autonomy",
+        "experience-acquisition autonomy",
+        "environment-adaptation autonomy",
+        "recursive meta-improvement",
+        "scientific discovery",
+        "embodied intelligence",
+        "software engineering"
+      ],
+      "popularity": 83,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.11873",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-the-last-ai-built-by-humans"
+    },
+    {
       "title": "Miles v0.1: Production-Level Post-Training",
       "authors": [
         "RadixArk",
@@ -8292,6 +8359,35 @@
       "folder": "papers/2026-memory-as-plans-world-action-modeling"
     },
     {
+      "title": "AI for Games in the Foundation Model Era",
+      "authors": [
+        "Meng Luo",
+        "Yanlin Li",
+        "Hao Li",
+        "Hongzhan Lin",
+        "Pengfei Zhou",
+        "Tianjie Ju",
+        "Ran Zhang",
+        "Yeying Jin",
+        "Mong-Li Lee",
+        "Wynne Hsu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.16679",
+      "arxiv_url": "https://arxiv.org/abs/2609.16679",
+      "pdf_url": "https://arxiv.org/pdf/2609.16679.pdf",
+      "code_url": "https://github.com/Eurekaleo/awesome-ai-for-games",
+      "project_page": "https://eurekaleo.github.io/awesome-ai-for-games/",
+      "abstract": "Foundation models, alongside advances in learned game-world models, are reshaping AI across the game lifecycle. Beyond playing games, recent systems model players and game dynamics, support design and development, adapt player-facing experiences at runtime, and evaluate resulting artifacts. Yet these directions have evolved largely separately, obscuring which capabilities transfer across settings and which remain tied to particular games, engines, interfaces, or player populations. We organize the literature into six roles according to the immediate use of AI output: playing and acting; modeling players and games; designing games; building and maintaining games; generating and adapting at runtime; and testing and evaluating games. For each role, we examine what structure is supplied by the game or workflow, what AI learns or produces, which capabilities and artifacts transfer across settings and roles, and what evidence supports the claims. We identify cross-role connections: trajectories train world models, learned environments provide experience for agents, design specifications drive executable implementations, and play or testing feedback guides revision. However, control schemes, rules, engine interfaces, state representations, and player contexts often remain setting-specific, so downstream claims require validation in the target setting. Evaluation is most standardized for bounded game playing and selected learned environments, while persistent state in learned worlds, repeated software revision, validated player modeling, sustained runtime adaptation, and representative automated testing remain less established. The central challenge is to reuse or transfer outputs and capabilities across roles while re-establishing evidence for effectiveness in the game-specific contexts where they are used.",
+      "ai_keywords": [],
+      "popularity": 71,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.16679",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-ai-for-games-in-the-foundation"
+    },
+    {
       "title": "RSIAgent: Autonomous Exploration for Recursive Self-improvement in New Environments",
       "authors": [
         "Sibo Zhu",
@@ -8317,10 +8413,10 @@
         "broad-then-deep exploration",
         "recursive self-exploration"
       ],
-      "popularity": 23,
+      "popularity": 67,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.15364",
-      "rank": 8,
+      "rank": 9,
       "status": "pending",
       "folder": "papers/2026-rsiagent-autonomous-exploration-for-recursive-self"
     },
@@ -9246,6 +9342,38 @@
       "rank": 9,
       "status": "pending",
       "folder": "papers/2026-discovery-foundation-models-toward-open-ended"
+    },
+    {
+      "title": "Grouped Value Attention: Efficient KV Caching via On-Demand Key Reconstruction",
+      "authors": [
+        "Vishesh Tripathi",
+        "Abhay Kumar",
+        "Ramsha Khan"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.13285",
+      "arxiv_url": "https://arxiv.org/abs/2609.13285",
+      "pdf_url": "https://arxiv.org/pdf/2609.13285.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "The KV cache is a primary bottleneck for Transformer decoding: its memory footprint and cache-read traffic grow with sequence length. Grouped-query attention (GQA) reduces this cost by sharing key-value heads, but still stores both a key and a value at every step. We introduce Grouped Value Attention (GVA), which stores grouped values and reconstructs content keys with a learned linear map. At inference, the map can be absorbed into the query, eliminating the need to materialize content keys in the intended decode path. A small shared decoupled RoPE channel retains positional information through a separately cached positional key. For the configurations studied, this representation reduces persistent cache scalars by approximately 45-47% relative to matched GQA. At the 350M-parameter scale with 30B FineWeb-Edu tokens, the 16-dimensional positional variant reaches 44.18 average accuracy across five tasks, compared with 44.36 for GQA and 43.88 for MLA. These results demonstrate near-GQA benchmark accuracy with a more compact cache representation. To translate this compact representation into faster autoregressive inference, we have developed custom decoding kernels and are currently evaluating their end-to-end inference performance with an open-source release planned soon.",
+      "ai_keywords": [
+        "grouped-query attention",
+        "grouped value attention",
+        "KV cache",
+        "content keys",
+        "positional key",
+        "RoPE",
+        "decoupled RoPE",
+        "autoregressive inference",
+        "decoding kernels"
+      ],
+      "popularity": 61,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.13285",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-grouped-value-attention-efficient-kv-caching"
     },
     {
       "title": "WearableQA: A Benchmark for Health Reasoning over Real-World Wearable Data",
@@ -13374,5 +13502,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-09-15T15:29:07.137717+00:00"
+  "updated_at": "2026-09-16T08:31:25.453459+00:00"
 }
