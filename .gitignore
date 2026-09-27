@@ -47,3 +47,6 @@ Thumbs.db
 # OMC session/state artifacts
 .omc/sessions/
 .omc/state/
+
+# local venvs
+.venv-*/

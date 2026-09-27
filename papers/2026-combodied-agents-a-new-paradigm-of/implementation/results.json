@@ -1,0 +1,153 @@
+{
+  "belief_acc": 0.999,
+  "belief_loss": 0.0011,
+  "pwm_loss": 1.3285,
+  "state_dependence": [
+    {
+      "cause": "forgot",
+      "none": 0.09,
+      "remind": 0.67,
+      "clarify": 0.52,
+      "coach": 0.39,
+      "escalate": 0.92
+    },
+    {
+      "cause": "confused",
+      "none": 0.04,
+      "remind": 0.23,
+      "clarify": 0.7,
+      "coach": 0.39,
+      "escalate": 0.92
+    },
+    {
+      "cause": "refused",
+      "none": 0.06,
+      "remind": 0.11,
+      "clarify": 0.2,
+      "coach": 0.51,
+      "escalate": 0.9
+    }
+  ],
+  "policies": {
+    "no_agent": {
+      "adherence": 0.051,
+      "final_rel": 1.0,
+      "final_self_cap": 1.0,
+      "interventions_per_decision": 0.0,
+      "belief_top1_acc": 1.0,
+      "action_mix": {
+        "none": 59.0,
+        "remind": 0.0,
+        "clarify": 0.0,
+        "coach": 0.0,
+        "escalate": 0.0
+      }
+    },
+    "naive": {
+      "adherence": 0.907,
+      "final_rel": 0.033,
+      "final_self_cap": 0.066,
+      "interventions_per_decision": 1.0,
+      "belief_top1_acc": 1.0,
+      "action_mix": {
+        "none": 0.0,
+        "remind": 0.0,
+        "clarify": 0.0,
+        "coach": 0.0,
+        "escalate": 59.0
+      }
+    },
+    "combodied": {
+      "adherence": 0.491,
+      "final_rel": 0.939,
+      "final_self_cap": 0.941,
+      "interventions_per_decision": 0.767,
+      "belief_top1_acc": 1.0,
+      "action_mix": {
+        "none": 13.4,
+        "remind": 12.1,
+        "clarify": 8.6,
+        "coach": 18.8,
+        "escalate": 2.9
+      }
+    }
+  },
+  "memory_adaptation": [
+    {
+      "day": 14,
+      "action": "clarify",
+      "pwm_p_take": 0.6821,
+      "took": true,
+      "rel": 0.94,
+      "self_cap": 0.955,
+      "habit": 0.96
+    },
+    {
+      "day": 26,
+      "action": "none",
+      "pwm_p_take": 0.031,
+      "took": false,
+      "rel": 0.89,
+      "self_cap": 0.92,
+      "habit": 0.892
+    },
+    {
+      "day": 42,
+      "action": "none",
+      "pwm_p_take": 0.0648,
+      "took": false,
+      "rel": 0.89,
+      "self_cap": 0.92,
+      "habit": 0.992
+    },
+    {
+      "day": 59,
+      "action": "remind",
+      "pwm_p_take": 0.535,
+      "took": true,
+      "rel": 0.95,
+      "self_cap": 0.946,
+      "habit": 0.862
+    },
+    {
+      "day": 85,
+      "action": "coach",
+      "pwm_p_take": 0.474,
+      "took": true,
+      "rel": 1.0,
+      "self_cap": 0.977,
+      "habit": 0.807
+    },
+    {
+      "day": 101,
+      "action": "clarify",
+      "pwm_p_take": 0.8364,
+      "took": true,
+      "rel": 0.87,
+      "self_cap": 0.901,
+      "habit": 0.629
+    }
+  ],
+  "calibration": {
+    "none": {
+      "pred": 0.06,
+      "real": 0.105
+    },
+    "remind": {
+      "pred": 0.623,
+      "real": 0.619
+    },
+    "clarify": {
+      "pred": 0.704,
+      "real": 0.889
+    },
+    "coach": {
+      "pred": 0.422,
+      "real": 0.5
+    },
+    "escalate": {
+      "pred": 0.914,
+      "real": 1.0
+    }
+  }
+}
