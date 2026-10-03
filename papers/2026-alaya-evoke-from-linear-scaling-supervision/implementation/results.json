@@ -1,0 +1,141 @@
+{
+  "E1_flat_cost": {
+    "n_chunks": 100,
+    "mean_step_time_first10_s": 0.00373,
+    "mean_step_time_post_sat_65_75_s": 0.02029,
+    "mean_step_time_post_sat_90_100_s": 0.01981,
+    "ratio_post_saturation_late_vs_early": 0.977,
+    "max_active_sources": 61,
+    "retention_saturation_sources": 60,
+    "bank_budget_sources": 720
+  },
+  "E2_recall": {
+    "15.0": {
+      "psnr_visible_db": 0.0,
+      "visibility_coverage": 0.0,
+      "time_away_s": 60.0
+    },
+    "45.0": {
+      "psnr_visible_db": 12.19,
+      "visibility_coverage": 0.24,
+      "time_away_s": 60.0
+    },
+    "90.0": {
+      "psnr_visible_db": 14.6,
+      "visibility_coverage": 0.986,
+      "time_away_s": 60.0
+    },
+    "inf": {
+      "psnr_visible_db": 14.6,
+      "visibility_coverage": 0.986,
+      "time_away_s": 60.0
+    }
+  },
+  "E3_sparse_scaling": {
+    "sparse_ms": {
+      "8": 0.995,
+      "16": 1.886,
+      "32": 3.696,
+      "64": 7.354,
+      "128": 15.098
+    },
+    "context_per_query": {
+      "8": 16,
+      "16": 22,
+      "32": 22,
+      "64": 22,
+      "128": 22
+    },
+    "analytic_flops": {
+      "8": {
+        "dense": 2048,
+        "sparse": 4096
+      },
+      "16": {
+        "dense": 8192,
+        "sparse": 11264
+      },
+      "32": {
+        "dense": 32768,
+        "sparse": 22528
+      },
+      "64": {
+        "dense": 131072,
+        "sparse": 45056
+      },
+      "128": {
+        "dense": 524288,
+        "sparse": 90112
+      },
+      "256": {
+        "dense": 2097152,
+        "sparse": 180224
+      }
+    },
+    "growth_ratio_sparse_8_to_128_measured": 15.17,
+    "growth_ratio_dense_8_to_128_analytic": 256.0,
+    "growth_ratio_sparse_8_to_128_analytic": 22.0
+  },
+  "E4_distillation_ablation": {
+    "short_horizon_W2": {
+      "brightness_retention_end": 0.509,
+      "curve": [
+        0.992,
+        0.987,
+        1.079,
+        1.0,
+        0.972,
+        1.016,
+        0.944,
+        0.89,
+        0.899,
+        0.826,
+        0.767,
+        0.769,
+        0.762,
+        0.776,
+        0.706,
+        0.699,
+        0.697,
+        0.685,
+        0.649,
+        0.628,
+        0.603,
+        0.546,
+        0.551,
+        0.509
+      ]
+    },
+    "long_horizon_W20": {
+      "brightness_retention_end": 0.907,
+      "curve": [
+        0.995,
+        1.003,
+        1.0,
+        1.002,
+        1.003,
+        1.006,
+        1.003,
+        0.999,
+        1.001,
+        0.994,
+        1.004,
+        1.008,
+        1.011,
+        0.998,
+        1.001,
+        1.011,
+        1.001,
+        1.005,
+        1.01,
+        1.002,
+        0.553,
+        0.505,
+        0.885,
+        0.907
+      ]
+    },
+    "note": "long-horizon supervision transfers photometric stability"
+  },
+  "runtime_s": 13.6
+}
