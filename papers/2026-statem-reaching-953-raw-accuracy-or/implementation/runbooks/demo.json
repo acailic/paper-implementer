@@ -1,0 +1,115 @@
+{
+ "name": "demo-coding-runbook",
+ "version": "1",
+ "initial": "Plan",
+ "terminals": [
+  "Handoff"
+ ],
+ "states": {
+  "Plan": {
+   "prompt": "Restate the task contract; list phases and their exit obligations.",
+   "in_hook": {
+    "load_receipts": {
+     "task_understood": true
+    }
+   },
+   "out_hook": {
+    "receipts": {
+     "plan_done": true
+    }
+   },
+   "before_transfer": [
+    {
+     "kind": "predicate",
+     "name": "plan-recorded",
+     "receipt": "plan_done",
+     "equals": true
+    }
+   ]
+  },
+  "Execute": {
+   "prompt": "Implement the phase-local work. Broad discretion inside the state.",
+   "out_hook": {
+    "receipts": {
+     "implementation_done": true
+    }
+   },
+   "before_transfer": [
+    {
+     "kind": "predicate",
+     "name": "impl-done",
+     "receipt": "implementation_done",
+     "equals": true
+    },
+    {
+     "kind": "command",
+     "name": "artifact-exists",
+     "cmd": "test -f work/answer.txt",
+     "evidence-note": "host-reproducible"
+    }
+   ]
+  },
+  "Verify": {
+   "prompt": "Run the verification suite; record evidence, not vibes.",
+   "out_hook": {},
+   "before_transfer": [
+    {
+     "kind": "checklist",
+     "name": "verify-checklist",
+     "items": [
+      "consumer command run",
+      "evidence recorded"
+     ]
+    }
+   ]
+  },
+  "Repair": {
+   "prompt": "Fix the failing requirement; re-run verification after.",
+   "out_hook": {
+    "receipts": {
+     "implementation_done": true
+    }
+   },
+   "before_transfer": []
+  },
+  "Handoff": {
+   "prompt": "Terminal: deliverable verifiably complete. Success recorded here, not before.",
+   "in_hook": {
+    "load_receipts": {
+     "handoff": true
+    }
+   }
+  }
+ },
+ "edges": [
+  {
+   "from": "Plan",
+   "to": "Execute"
+  },
+  {
+   "from": "Execute",
+   "to": "Verify"
+  },
+  {
+   "from": "Verify",
+   "to": "Handoff",
+   "guard": {
+    "all": [
+     {
+      "receipt": "tests_pass",
+      "equals": true
+     }
+    ]
+   },
+   "on_guard_fail": "Repair"
+  },
+  {
+   "from": "Verify",
+   "to": "Repair"
+  },
+  {
+   "from": "Repair",
+   "to": "Verify"
+  }
+ ]
+}

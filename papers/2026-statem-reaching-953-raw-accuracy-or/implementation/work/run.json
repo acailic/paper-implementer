@@ -1,0 +1,101 @@
+{
+ "runbook": "demo-coding-runbook",
+ "state": "Handoff",
+ "history": [
+  {
+   "t": 1791676996.375,
+   "event": "state_entry",
+   "state": "Plan"
+  },
+  {
+   "t": 1791676996.375,
+   "event": "transition",
+   "frm": "Plan",
+   "to": "Execute"
+  },
+  {
+   "t": 1791676996.375,
+   "event": "state_entry",
+   "state": "Execute"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "goto_blocked",
+   "target": "Verify",
+   "stage": "before_transfer",
+   "failed": [
+    {
+     "check": "artifact-exists",
+     "evidence": "host-reproducible",
+     "detail": ""
+    }
+   ]
+  },
+  {
+   "t": 1791676996.376,
+   "event": "transition",
+   "frm": "Execute",
+   "to": "Verify"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "state_entry",
+   "state": "Verify"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "goto_guard_failed",
+   "target": "Handoff",
+   "route": "Repair"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "transition",
+   "frm": "Verify",
+   "to": "Repair"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "state_entry",
+   "state": "Repair"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "transition",
+   "frm": "Repair",
+   "to": "Verify"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "state_entry",
+   "state": "Verify"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "transition",
+   "frm": "Verify",
+   "to": "Handoff"
+  },
+  {
+   "t": 1791676996.376,
+   "event": "state_entry",
+   "state": "Handoff"
+  }
+ ],
+ "receipts": {
+  "task_understood": true,
+  "plan_done": true,
+  "implementation_done": true,
+  "tests_pass": true,
+  "handoff": true
+ },
+ "acknowledged": {
+  "verify-checklist": [
+   "consumer command run",
+   "evidence recorded"
+  ]
+ },
+ "messages": {},
+ "reviews": {},
+ "failure_count": 2
+}
