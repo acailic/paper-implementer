@@ -37,7 +37,7 @@ def main() -> None:
         answer.unlink()
 
     book = Runbook.load(HERE / "runbooks/demo.json")
-    run = Run(runbook=book.name, state=book.initial)
+    run = Run(runbook=book.name, state=book.initial, workspace=str(WORK))
     rt = StateM(book, run)
     metrics = {"transitions": [], "blocked": [], "guard_routes": [], "evidence_used": set()}
 

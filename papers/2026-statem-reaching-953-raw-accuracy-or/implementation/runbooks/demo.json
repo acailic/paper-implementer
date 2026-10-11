@@ -44,7 +44,7 @@
     {
      "kind": "command",
      "name": "artifact-exists",
-     "cmd": "test -f work/answer.txt",
+     "cmd": "test -f answer.txt",
      "evidence-note": "host-reproducible"
     }
    ]

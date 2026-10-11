@@ -3,23 +3,23 @@
  "state": "Handoff",
  "history": [
   {
-   "t": 1791676996.375,
+   "t": 1791677112.024,
    "event": "state_entry",
    "state": "Plan"
   },
   {
-   "t": 1791676996.375,
+   "t": 1791677112.024,
    "event": "transition",
    "frm": "Plan",
    "to": "Execute"
   },
   {
-   "t": 1791676996.375,
+   "t": 1791677112.024,
    "event": "state_entry",
    "state": "Execute"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.024,
    "event": "goto_blocked",
    "target": "Verify",
    "stage": "before_transfer",
@@ -32,52 +32,52 @@
    ]
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "transition",
    "frm": "Execute",
    "to": "Verify"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "state_entry",
    "state": "Verify"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "goto_guard_failed",
    "target": "Handoff",
    "route": "Repair"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "transition",
    "frm": "Verify",
    "to": "Repair"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "state_entry",
    "state": "Repair"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "transition",
    "frm": "Repair",
    "to": "Verify"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "state_entry",
    "state": "Verify"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "transition",
    "frm": "Verify",
    "to": "Handoff"
   },
   {
-   "t": 1791676996.376,
+   "t": 1791677112.025,
    "event": "state_entry",
    "state": "Handoff"
   }
@@ -97,5 +97,6 @@
  },
  "messages": {},
  "reviews": {},
- "failure_count": 2
+ "failure_count": 2,
+ "workspace": "/home/nistrator/Documents/github/paper-implementer/papers/2026-statem-reaching-953-raw-accuracy-or/implementation/work"
 }

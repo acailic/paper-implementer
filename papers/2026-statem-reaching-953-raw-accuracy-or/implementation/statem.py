@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import subprocess
 import time
+from pathlib import Path as _Path
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
@@ -60,7 +61,8 @@ def run_check(spec: dict, run: "Run") -> CheckResult:
     try:
         if kind == "command":
             # Host-evaluated: independently reproducible evidence.
-            proc = subprocess.run(spec["cmd"], shell=True, capture_output=True, text=True, timeout=60)
+            proc = subprocess.run(spec["cmd"], shell=True, capture_output=True, text=True, timeout=60,
+                                  cwd=run.workspace or None)
             return CheckResult(name, kind, proc.returncode == 0,
                                (proc.stdout + proc.stderr).strip()[:200])
         if kind == "predicate":
@@ -148,6 +150,7 @@ class Run:
     messages: dict = field(default_factory=dict)
     reviews: dict = field(default_factory=dict)
     failure_count: int = 0
+    workspace: str = ""  # cwd for command checks (CWD-independent evidence)
 
     # -- persistence ------------------------------------------------------
     def save(self, path: str | Path) -> None:
