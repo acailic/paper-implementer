@@ -581,7 +581,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.14036",
       "rank": 1,
-      "status": "breaking_down",
+      "status": "coding",
       "folder": "papers/2026-demystifying-agent-skills-why-they-work",
       "started_at": "2026-10-11"
     },
@@ -2278,6 +2278,36 @@
       "folder": "papers/2026-agentgarten-code-worlds-for-evolving-agents"
     },
     {
+      "title": "S-Space: Exploring Spatial Workspace in Multimodal Language Models",
+      "authors": [
+        "Zhiyuan Shi",
+        "Xiang Li",
+        "Xingzhuo Guo",
+        "Shangchen Miao",
+        "Weiliang Chen",
+        "Qiyu Dai",
+        "Jinshan Ren",
+        "Jiangran Lyu",
+        "Fangfu Liu",
+        "Mingsheng Long",
+        "Jialong Wu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.13527",
+      "arxiv_url": "https://arxiv.org/abs/2610.13527",
+      "pdf_url": "https://arxiv.org/pdf/2610.13527.pdf",
+      "code_url": "https://github.com/mirros-lab/s-space",
+      "project_page": "https://mirros.ai/blog/s-space",
+      "abstract": "Multimodal language models (MLLMs) exhibit promising spatial reasoning capabilities, yet the internal mechanisms supporting them remain poorly understood. We uncover S-Space, a linear representation subspace in which object-token representations encode continuous coordinates along horizontal, vertical, and distance axes. Although we identify these axes by differentiating spatial-answer scores with respect to object-token activations, S-Space is intrinsic rather than induced by specific data or prompts, remaining readable under non-spatial questions. We show that S-Space functions as an internal spatial workspace of MLLMs. Perception encodes object locations into it, forming spatial representations that can be directly read out to support accurate spatial judgments. Internal reasoning transforms it for changing viewpoints. Verbal responses selectively access it, evidenced by causal interventions that alter spatial judgments while largely preserving non-spatial responses. Case studies further show that S-Space assigns locations to unseen entities and the observer, and connects physical directions with abstract linguistic meanings, suggesting both the capabilities and limitations of large-scale language training. Finally, we use S-Space as a diagnostic tool for spatial reasoning failures. Direction-word readouts reveal systematic coupling between cardinal and image-relative reference frames. More importantly, a perception-computation decomposition exposes a key bottleneck: MLLMs can form capable spatial representations, yet fall short in the spatial transformations required to reason reliably across viewpoint changes.",
+      "ai_keywords": [],
+      "popularity": 263,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.13527",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-s-space-exploring-spatial-workspace-in"
+    },
+    {
       "title": "Atria Dawn: The Dawn of Agentic Superintelligence",
       "authors": [
         "Honglin Guo",
@@ -3972,6 +4002,34 @@
       "folder": "papers/2026-learn2play-bench-how-well-do-llm"
     },
     {
+      "title": "DiffusionART: Efficient, Stable and Scalable Reinforcement of Diffusion Models",
+      "authors": [
+        "Zhenglin Wan",
+        "Jiayu Chen",
+        "Zhengfeiyang Zhang",
+        "Pengfei Zhou",
+        "Wangbo Zhao",
+        "Fangyuan Kong",
+        "Pengfei Wan",
+        "Kun Gai",
+        "Yang You"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.12572",
+      "arxiv_url": "https://arxiv.org/abs/2610.12572",
+      "pdf_url": "https://arxiv.org/pdf/2610.12572.pdf",
+      "code_url": "https://github.com/vanzll/DiffusionART",
+      "project_page": "https://vanzll.github.io/diffusionart-project/",
+      "abstract": "Online reinforcement learning (RL) fine-tunes diffusion models with black-box rewards, but reverse-process methods such as Flow-GRPO are limited in efficiency by poor credit assignment, while forward-process methods such as DiffusionNFT are efficient yet unstable without carefully tuned exponential-moving-average (EMA) off-policy training. We show that NFT-style objectives contain a hidden forward--reverse consistency force that joint positive--negative training cancels only partially, and that EMA stabilizes training through restoration rather than off-policy rollouts. We introduce DiffusionART (Diffusion Reinforcement with Aggregation-First Reward Tilting), which aggregates each prompt's rewards into a shared reward-improving direction for reverse-process states, removing the consistency force by construction, and adds a trust-region-masked second update for drift-adaptive restoration without EMA tuning. It requires no differentiable reward model, remains effective with fewer samples per prompt, and supports pairwise reward models (DiffusionART-Pairwise). Across image and video generation, DiffusionART trains efficiently and stably without per-task tuning. In particular, on HunyuanVideo-13B with equally weighted visual and motion quality rewards, DiffusionART reaches the late-stage mean reward levels of DiffusionNFT and Flow-GRPO-Fast with 12.02 and 11.72 times fewer GPU hours, respectively, while achieving 28.8% and 53.0% higher mean training rewards.",
+      "ai_keywords": [],
+      "popularity": 233,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.12572",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-diffusionart-efficient-stable-and-scalable-reinforcement"
+    },
+    {
       "title": "TokenRouter: Efficient Serving System for Token-Level LLM Routing",
       "authors": [
         "Tianyu Fu",
@@ -5230,6 +5288,34 @@
       "folder": "papers/2026-in-distribution-forcing-for-long-video"
     },
     {
+      "title": "Reflex: Visually Grounded Reactive Humanoid Control",
+      "authors": [
+        "Taoyang Jia",
+        "Weikai Huang",
+        "Linxin Song",
+        "Jared Darlington",
+        "Jieyu Zhao",
+        "Yue Wang",
+        "Jiafei Duan",
+        "Zhongzheng Ren",
+        "Ranjay Krishna"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.12772",
+      "arxiv_url": "https://arxiv.org/abs/2610.12772",
+      "pdf_url": "https://arxiv.org/pdf/2610.12772.pdf",
+      "code_url": "https://github.com/ToberJ/reflex",
+      "project_page": "https://toberj.github.io/reflex/",
+      "abstract": "Humans effortlessly react to the world; they adeptly return a tennis shot, catch a falling cup, step aside from a passing cart, or pass a box tossed during truck unloading. These everyday actions require anticipating a moving target and reflexively responding with the whole body within about a second. Such visual reactive whole-body control remains challenging for humanoids, which must (1) coordinate whole-body control, (2) react to object dynamics in real time, and (3) ground perception in egocentric vision. We study catching thrown boxes as a representative task that demands all three capabilities; existing systems cover only part of it, relying on end-effectors, motion capture, or marked objects. We present Reflex, a three-stage framework that learns these capabilities stage by stage while connecting them through a compact representation of object dynamics. First, a state-based policy learns whole-body catching with reinforcement learning. Second, the policy learns to infer the dynamics of a moving box from delayed and incomplete observations. Third, an egocentric RGB-D encoder learns to recover this dynamics representation directly from visual observations while keeping the whole-body controller fixed. This decomposition provides each capability with a direct training signal and makes visual learning substantially more scalable. In simulation, Reflex achieves 85.7% catch success from egocentric RGB-D, compared with 87.9% when given privileged box observations. Temporal visual history is critical: removing it reduces success by 35.6 and 39.8 points on centered and laterally offset throws. On a real Unitree G1, Reflex catches human-thrown boxes with 65% and 40% success at 2.5 and 5 m, reaching 76% and 59% of human catchers' success at the same distances.",
+      "ai_keywords": [],
+      "popularity": 132,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.12772",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-reflex-visually-grounded-reactive-humanoid-control"
+    },
+    {
       "title": "From Traces to Agentic Worlds: Agentic Language World Models for Interactive Environment Simulation",
       "authors": [
         "Quanyu Long",
@@ -6450,6 +6536,32 @@
       "rank": 4,
       "status": "pending",
       "folder": "papers/2026-arex-2-advancing-self-improving-agents"
+    },
+    {
+      "title": "SoftwareGym: Scaling Computer-Use Agent Training with Diverse Synthesized Software Environments",
+      "authors": [
+        "Tian Jin",
+        "Wenhao Wang",
+        "Jing Kang",
+        "Haoting Shi",
+        "Rui Ye",
+        "Yijun Lu",
+        "Siheng Chen"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.12611",
+      "arxiv_url": "https://arxiv.org/abs/2610.12611",
+      "pdf_url": "https://arxiv.org/pdf/2610.12611.pdf",
+      "code_url": "https://github.com/MrKiing-Jin/SoftwareGym",
+      "project_page": "",
+      "abstract": "Computer-use agents (CUAs) are rapidly improving, yet synthesizing diverse and reliable software environments at scale remains challenging. Native application environments require substantial construction and integration effort, which limits application coverage and increases the risk of application-specific overfitting. Browser-hosted environments provide limited interaction depth and workflow complexity. These limitations motivate SoftwareGym, an automated pipeline for synthesizing GUI software environments with diverse interfaces, executable functionality, and runtime-verified behavior. It generates structurally diverse designs, realizes them as runnable applications, and uses GUI evaluation with iterative repair to ensure functional reliability. Using SoftwareGym, we synthesize 182 applications across twelve categories and achieve a mean GUI task pass rate of 91.5%. We construct SoftwareGym-Bench, a 120-task evaluation suite spanning the same twelve categories, and use trajectories collected from these environments for CUA training. The resulting model improves Pass@3 from 41.39% to 56.97% on the strictly out-of-domain OSWorld benchmark and achieves 40.0% on SoftwareGym-Bench. These results demonstrate the potential of synthesized software environments as scalable and transferable supervision for CUA training.",
+      "ai_keywords": [],
+      "popularity": 85,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.12611",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-softwaregym-scaling-computer-use-agent-training"
     },
     {
       "title": "Dream-RSI: Recursive Self-Improvement through Evolving Worlds",
@@ -7979,6 +8091,34 @@
       "folder": "papers/2026-mimo-v26-scaling-reinforcement-learning-towards"
     },
     {
+      "title": "EmbodiedCLBench: Evaluating Continual Learning for Self-Evolving Embodied Agents",
+      "authors": [
+        "Jie Huang",
+        "Yanan Chen",
+        "Ruixun Liu",
+        "Kaichen He",
+        "Xinyi He",
+        "Rui Huang",
+        "Zilong Zheng",
+        "Zhenliang Zhang",
+        "Yiwu Zhong"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.13021",
+      "arxiv_url": "https://arxiv.org/abs/2610.13021",
+      "pdf_url": "https://arxiv.org/pdf/2610.13021.pdf",
+      "code_url": "https://github.com/PKU-VaLuE-Lab/EmbodiedCLBench",
+      "project_page": "https://pku-value-lab.github.io/EmbodiedCLBench-homepage/",
+      "abstract": "Continual learning requires models to accumulate past experience and transfer it to new tasks. Despite substantial research on continual learning, existing work remains largely confined to non-embodied settings, without extending to embodied environments. To address this gap, we introduce EmbodiedCLBench, the first benchmark in embodied simulation for evaluating the continual learning capability of self-evolving agents. With compositional generalization as the core evaluation principle, our benchmark evaluates whether agents can first learn from basic tasks and then recombine the acquired skills to solve complex, unseen advanced tasks. Based on EmbodiedCLBench, we conduct extensive experiments across multiple agent harnesses and learning methods, revealing consistent limitations and distinctive behaviors. Our results show that while advanced tasks can be hardly solved under zero-shot setting, the experience from basic tasks enables consistent improvement. Such benefit from the experience remains stable even if the task complexity increases. However, this improvement does not scale accordingly with the number of learning samples, and current agents cannot extract meaningful information from additional experience. Collectively, our findings highlight continual learning as a fundamental yet underexplored capability, and our benchmark offers valuable resources for designing effective self-evolving agents in embodied environments. Our code and dataset are available at https://pku-value-lab.github.io/EmbodiedCLBench-homepage.",
+      "ai_keywords": [],
+      "popularity": 63,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.13021",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-embodiedclbench-evaluating-continual-learning-for-self"
+    },
+    {
       "title": "SuperNav: An Agentic Navigation System for Any Task in Any Scene",
       "authors": [
         "Jinkai Zhang",
@@ -9418,6 +9558,37 @@
       "folder": "papers/2026-foundations-of-proactive-agents-principles-technical"
     },
     {
+      "title": "VisionWeave: Weaving Elastic Visual Representations as a Native Capability of MLLMs",
+      "authors": [
+        "Yuan Feng",
+        "Qize Yang",
+        "Ruizhe Chen",
+        "Sibo Song",
+        "Haolin He",
+        "Muzhi Zhu",
+        "Zihan Liu",
+        "Yunfei Chu",
+        "Xize Cheng",
+        "Yuxuan Wang",
+        "Jin Xu",
+        "Xike Xie"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.07987",
+      "arxiv_url": "https://arxiv.org/abs/2610.07987",
+      "pdf_url": "https://arxiv.org/pdf/2610.07987.pdf",
+      "code_url": "https://github.com/FFY0/VisionWeave",
+      "project_page": "",
+      "abstract": "Multimodal large language models have become the dominant paradigm for visual understanding, but incur substantial costs by encoding inputs into dense, fixed-size patch tokens. However, visual information is unevenly distributed: some regions require fine-grained detail, while others admit compact representations. Downsampling sacrifices this detail, while existing token pruning and adaptive approaches remain limited in content-adaptive granularity, task generalization, and integration with modern MLLMs and serving infrastructure. Overcoming these limitations calls for foundation models that learn, end to end, where-and at what granularity-to allocate visual representations, a native capability we term elastic visual representation weaving. We introduce VisionWeave, establishing this capability in frontier-level MLLMs through large-scale training. It combines two components: a gated spatial pooler constructs coarse-grained representations alongside native fine-grained representations within a shared MRoPE coordinate, while a granularity router learns their content-adaptive allocation. Through self-distillation alone, we validate this capability on Qwen3.5-4B and scale to Qwen3.8-27B with over 30K A100 GPU-hours. Based on Qwen3.8-27B, VisionWeave adaptively adjusts token savings to visual content, saving 43.0% tokens on average while retaining 98.9% native performance across eight benchmarks, versus only 88% performance preserved for token pruning baselines with a fixed 50% savings target. Extensive evaluations confirm robust efficiency-quality trade-offs across diverse tasks, resolutions and video frames. When deployed on SGLang serving engine, our method achieves a 2.3x throughput gain while reducing mean TTFT by 54.4% and mean TPOT by 60.6%. Together, we believe these results position elastic visual weaving as a promising capability for next-generation multimodal models.",
+      "ai_keywords": [],
+      "popularity": 56,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.07987",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-visionweave-weaving-elastic-visual-representations-as"
+    },
+    {
       "title": "Beyond Memory: Harnessing Long-Horizon Agents with Explicit Belief States",
       "authors": [
         "Yu Luo",
@@ -10717,6 +10888,35 @@
       "rank": 7,
       "status": "pending",
       "folder": "papers/2026-multi-agent-egocentric-world-model-with"
+    },
+    {
+      "title": "Hear the World in Stereo: Learning Dynamic Spatial Correspondence for Immersive Joint Video-Audio Generation",
+      "authors": [
+        "Hanmo Chen",
+        "Chengcheng Liu",
+        "Tianxiao Chen",
+        "Zheyu Zhang",
+        "Siming Zheng",
+        "Jinwei Chen",
+        "Xu Yang",
+        "Cheng Deng",
+        "Bo Li",
+        "Peng-tao Jiang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.38748",
+      "arxiv_url": "https://arxiv.org/abs/2609.38748",
+      "pdf_url": "https://arxiv.org/pdf/2609.38748.pdf",
+      "code_url": "https://github.com/vivoCameraResearch/StereoBind",
+      "project_page": "https://vivocameraresearch.github.io/Stereo-Bind-Project/",
+      "abstract": "Recent joint video-audio generation models have achieved strong semantic correspondence and temporal synchronization. However, applications such as AR/VR and interactive gaming further require stereo audio to provide an immersive sense, which remains largely overlooked. Effective stereo audio requires the perceived sound location to evolve consistently with the motion of its corresponding visual source. We refer to this property as Dynamic Spatial Correspondence and propose StereoBind, a framework that binds visual source motion to stereo sound generation. StereoBind uses motion tracks to coordinate visual motion and stereo audio through three complementary mechanisms. Visual Motion Binding establishes source-aware audiovisual correspondence, the Spatial Track Encoder captures absolute source positions, and Residual Track RoPE models relative motion. For supervision and evaluation, we construct StereoWorld-29K, a large-scale stereo audio-video dataset with paired motion tracks, and StereoWorldBench for measuring audiovisual spatial consistency. Experiments show that StereoBind substantially improves spatial alignment in stereo audio generation over existing models while preserving overall audiovisual quality.",
+      "ai_keywords": [],
+      "popularity": 51,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.38748",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-hear-the-world-in-stereo-learning"
     },
     {
       "title": "Self-Generated Feedback Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation",
@@ -12056,6 +12256,38 @@
       "rank": 8,
       "status": "pending",
       "folder": "papers/2026-in-context-robot-learning-made-simple"
+    },
+    {
+      "title": "ProgramGym: Scaling Training Environments for Long-Horizon Program Reproduction Agents",
+      "authors": [
+        "Chengyi Yang",
+        "Renxu Bao",
+        "Jue Hou",
+        "Zongpei Teng",
+        "Ziheng Wang",
+        "Yujie Lin",
+        "Chengsong Huang",
+        "Junnan Zhu",
+        "Delai Qiu",
+        "Yining Wang",
+        "Shengping Liu",
+        "Fei Long",
+        "Jinsong Su"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.13395",
+      "arxiv_url": "https://arxiv.org/abs/2610.13395",
+      "pdf_url": "https://arxiv.org/pdf/2610.13395.pdf",
+      "code_url": "https://github.com/Acm1011/ProgramGym",
+      "project_page": "https://programgym.github.io/",
+      "abstract": "Coding agents are increasingly used to build programs from scratch as software engineers do rather than to resolve issues within a repository or to generate a repository from a given requirements document. However, scalable verifiable training environments that force agents to discover what is required and to decide how the system should be designed remain scarce. Moreover, existing agent workflows also cannot sustain long-horizon development in which the agent explores the reference program before implementation. To address these challenges, we introduce ProgramGym, a framework consisting of Program-Env and Program-Agent for scalable training environments of long-horizon program reproduction agents. Specifically, Program-Env constructs verifiable training environments from repositories through a feedback-driven loop that repairs runtime sandbox builds and the quality of black-box tests. Using this novel pipeline, we obtain 1,648 training environments spanning C, C++, Go, and Rust. Program-Agent combines a role-isolated workflow of analysis, implementation, and review with revision management for compilation checks and failure recovery. Experiments on ProgramBench show that both Program-Env and Program-Agent improve performance on program reproduction. Fine-tuning on trajectories with these constructed environments raises the performance of Qwen3.8-27B from 34.87% to 42.84%. Program-Agent further raises the base and SFT models to 55.71% and 56.25%, both exceeding some flagship models. We will release the ProgramGym to support further research on coding agents that build programs from scratch.",
+      "ai_keywords": [],
+      "popularity": 49,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.13395",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-programgym-scaling-training-environments-for-long"
     },
     {
       "title": "World Observer: Joint Actor-Observer Generation for Persistent World Modeling",
@@ -13437,6 +13669,32 @@
       "rank": 9,
       "status": "pending",
       "folder": "papers/2026-u-space-uncovering-when-and-why"
+    },
+    {
+      "title": "Continually Post-training Small Models via Synthetic Self-distillation",
+      "authors": [
+        "Woosung Koh",
+        "Hyunsoo Lee",
+        "Kyungjae Lee",
+        "Haeju Park",
+        "Dahyun Lee",
+        "Dasol Hwang",
+        "Moontae Lee"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.13113",
+      "arxiv_url": "https://arxiv.org/abs/2610.13113",
+      "pdf_url": "https://arxiv.org/pdf/2610.13113.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Continual post-training faces a dual challenge of acquisition and retention: models must learn new capabilities while preserving prior knowledge. While Self-Distillation Fine-Tuning (SDFT) mitigates this using self-supervision with in-context demonstrations, it relies on strong in-context learning and instruction-following abilities. Consequently, SDFT fails on smaller models critical for low-latency, on-device use. To enable continual learning at smaller scales, we first identify the root cause of failure. We show that poor acquisition and forgetting correlate linearly with the post-trained model's distribution shift, revealing the necessity of in-distribution learning. We thus introduce Synthetic Self-Distillation (SynthSelf), imitating SDFT's in-distribution rewrite by outsourcing the task to a minimally larger, same-family aligner. Coupled with off-policy supervision and rejection sampling, this provides the high-quality supervision small models require without breaking their original distribution. Evaluations spanning 4 acquisition datasets (including a mixture) and 14 retention benchmarks show SynthSelf consistently outperforms 6 methods (including off- and on-policy distillation) across 3 small model scales. Extensive further analyses confirm SynthSelf paves the way toward effective small-model continual learning.",
+      "ai_keywords": [],
+      "popularity": 41,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.13113",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-continually-post-training-small-models-via"
     },
     {
       "title": "OuroWorld: Bringing Any 3D World Alive as Diverse, Endlessly Looping 3D Cinemagraphs",
@@ -14982,6 +15240,37 @@
       "rank": 10,
       "status": "pending",
       "folder": "papers/2026-beyond-spatio-temporal-priors-a-generalizable"
+    },
+    {
+      "title": "Work2Skill: Capturing Human GUI Experience for Reusable Agent Skill Induction",
+      "authors": [
+        "Yuqi Huang",
+        "Hui Li",
+        "Yifei Cao",
+        "Zikun Cai",
+        "Tianci Xie",
+        "Yangfan Gao",
+        "Pinxue Guo",
+        "Chaoyun Zhang",
+        "Bingxuan Li",
+        "Rui Zheng",
+        "Hang Yan",
+        "Ning Liao"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.12984",
+      "arxiv_url": "https://arxiv.org/abs/2610.12984",
+      "pdf_url": "https://arxiv.org/pdf/2610.12984.pdf",
+      "code_url": "https://github.com/china-qijizhifeng/Work2Skill",
+      "project_page": "https://china-qijizhifeng.github.io/Work2Skill/",
+      "abstract": "Computer-use agents can perform increasingly complex GUI tasks, yet unfamiliar software and workflows requiring human domain knowledge remain challenging. Human demonstrations convey procedural knowledge through the same GUI interaction space, but reuse requires interpreting actions in context and separating workflow rules from task-specific details. We thus introduce Work2Skill, a framework that captures human GUI experience for reusable agent skill induction. WorkRecorder provides the framework's infrastructure for collecting this experience, aligning screen recordings, mouse and keyboard events, and available accessibility-tree information. Using WorkRecorder, we construct WorkDemo-350, the first synchronized multimodal dataset of human desktop GUI demonstrations for reusable agent skill induction and downstream evaluation. Its 350 demonstrations are screened for completeness and task success. We then propose an agentic skill-induction method that inspects evidence on demand to produce reusable skills capturing workflow rules, step dependencies, and completion checks. When the same four execution models are equipped with skills induced by each method under shared execution settings, Work2Skill achieves the highest scores and success rates. Mean score improvements over the corresponding No Skill baseline are 4.67--10.54 points on MyPCBench Bounded Action and 3.11--7.50 points on a 286-task subset of OSWorld-Verified. Our code and data are available at https://github.com/china-qijizhifeng/Work2Skill.",
+      "ai_keywords": [],
+      "popularity": 40,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.12984",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-work2skill-capturing-human-gui-experience-for"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -17979,5 +18268,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-10-12T05:00:57.624919+00:00"
+  "updated_at": "2026-10-13T05:00:58.021257+00:00"
 }
