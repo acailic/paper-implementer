@@ -1,0 +1,347 @@
+{
+  "rq1": {
+    "label": "RQ1",
+    "per_mixture": {
+      "0s5f": {
+        "raw": 0.2833333333333333,
+        "workflow": 0.31,
+        "skill": 0.5
+      },
+      "1s4f": {
+        "raw": 0.31,
+        "workflow": 0.4066666666666667,
+        "skill": 0.49
+      },
+      "2s3f": {
+        "raw": 0.33,
+        "workflow": 0.5166666666666667,
+        "skill": 0.5633333333333334
+      },
+      "3s2f": {
+        "raw": 0.2866666666666667,
+        "workflow": 0.5766666666666667,
+        "skill": 0.57
+      },
+      "4s1f": {
+        "raw": 0.2633333333333333,
+        "workflow": 0.6133333333333333,
+        "skill": 0.67
+      },
+      "5s0f": {
+        "raw": 0.3,
+        "workflow": 0.6233333333333333,
+        "skill": 0.7633333333333333
+      }
+    },
+    "mechanism": {
+      "procedural_anchor": 0.5044,
+      "none": 0.3567,
+      "failure_warning": 0.0872,
+      "counterproductive": 0.0506,
+      "knowledge_injection": 0.0011
+    },
+    "success": {
+      "raw": 0.29555555555555557,
+      "workflow": 0.5077777777777778,
+      "skill": 0.5927777777777777
+    },
+    "deltas": {
+      "skill_vs_raw": "+29.72 pts [+26.72, +32.61]",
+      "workflow_vs_raw": "+21.22 pts [+18.22, +24.22]",
+      "skill_vs_workflow": "+8.50 pts [+5.56, +11.67]"
+    }
+  },
+  "rq2": {
+    "rows": [
+      {
+        "mixture": "0s5f",
+        "hinted": 0.4933,
+        "nohint": 0.44,
+        "delta": -0.0533
+      },
+      {
+        "mixture": "1s4f",
+        "hinted": 0.51,
+        "nohint": 0.4933,
+        "delta": -0.0167
+      },
+      {
+        "mixture": "2s3f",
+        "hinted": 0.57,
+        "nohint": 0.53,
+        "delta": -0.04
+      },
+      {
+        "mixture": "3s2f",
+        "hinted": 0.6167,
+        "nohint": 0.56,
+        "delta": -0.0567
+      },
+      {
+        "mixture": "4s1f",
+        "hinted": 0.6933,
+        "nohint": 0.6333,
+        "delta": -0.06
+      },
+      {
+        "mixture": "5s0f",
+        "hinted": 0.7067,
+        "nohint": 0.6833,
+        "delta": -0.0233
+      }
+    ]
+  },
+  "rq3": {
+    "same": {
+      "label": "RQ3 same-framework (Codex -> Codex)",
+      "per_mixture": {
+        "0s5f": {
+          "raw": 0.2633333333333333,
+          "workflow": 0.3566666666666667,
+          "skill": 0.49
+        },
+        "1s4f": {
+          "raw": 0.29,
+          "workflow": 0.42,
+          "skill": 0.5133333333333333
+        },
+        "2s3f": {
+          "raw": 0.2866666666666667,
+          "workflow": 0.43666666666666665,
+          "skill": 0.55
+        },
+        "3s2f": {
+          "raw": 0.2866666666666667,
+          "workflow": 0.5366666666666666,
+          "skill": 0.6466666666666666
+        },
+        "4s1f": {
+          "raw": 0.26666666666666666,
+          "workflow": 0.58,
+          "skill": 0.6866666666666666
+        },
+        "5s0f": {
+          "raw": 0.29,
+          "workflow": 0.67,
+          "skill": 0.6733333333333333
+        }
+      },
+      "mechanism": {
+        "procedural_anchor": 0.5067,
+        "none": 0.3478,
+        "failure_warning": 0.085,
+        "counterproductive": 0.0589,
+        "knowledge_injection": 0.0017
+      },
+      "success": {
+        "raw": 0.28055555555555556,
+        "workflow": 0.5,
+        "skill": 0.5933333333333334
+      },
+      "deltas": {
+        "skill_vs_raw": "+31.28 pts [+28.33, +33.94]",
+        "workflow_vs_raw": "+21.94 pts [+18.94, +25.00]",
+        "skill_vs_workflow": "+9.33 pts [+6.22, +12.44]"
+      }
+    },
+    "transfer": {
+      "per_mixture": {
+        "0s5f": {
+          "raw": 0.2966666666666667,
+          "workflow": 0.41333333333333333,
+          "skill": 0.4666666666666667
+        },
+        "1s4f": {
+          "raw": 0.26666666666666666,
+          "workflow": 0.37666666666666665,
+          "skill": 0.54
+        },
+        "2s3f": {
+          "raw": 0.28,
+          "workflow": 0.4,
+          "skill": 0.56
+        },
+        "3s2f": {
+          "raw": 0.30333333333333334,
+          "workflow": 0.49,
+          "skill": 0.6266666666666667
+        },
+        "4s1f": {
+          "raw": 0.26666666666666666,
+          "workflow": 0.5066666666666667,
+          "skill": 0.62
+        },
+        "5s0f": {
+          "raw": 0.35333333333333333,
+          "workflow": 0.6,
+          "skill": 0.7266666666666667
+        }
+      },
+      "success": {
+        "raw": 0.29444444444444445,
+        "workflow": 0.46444444444444444,
+        "skill": 0.59
+      },
+      "deltas": {
+        "skill_vs_workflow": "+12.56 pts [+9.22, +15.72]"
+      }
+    }
+  },
+  "rq4": [
+    {
+      "regime": "random",
+      "k": 5,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.5592,
+      "arm2_recall": 0.87,
+      "arm3_actual_use_precision": 0.545,
+      "arm3_recall": 0.78,
+      "arm3_success": 0.745
+    },
+    {
+      "regime": "random",
+      "k": 10,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.5042,
+      "arm2_recall": 0.81,
+      "arm3_actual_use_precision": 0.3433,
+      "arm3_recall": 0.85,
+      "arm3_success": 0.64
+    },
+    {
+      "regime": "random",
+      "k": 20,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.505,
+      "arm2_recall": 0.835,
+      "arm3_actual_use_precision": 0.2347,
+      "arm3_recall": 0.84,
+      "arm3_success": 0.675
+    },
+    {
+      "regime": "random",
+      "k": 50,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.4475,
+      "arm2_recall": 0.745,
+      "arm3_actual_use_precision": 0.1653,
+      "arm3_recall": 0.8,
+      "arm3_success": 0.655
+    },
+    {
+      "regime": "random",
+      "k": 100,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.4483,
+      "arm2_recall": 0.805,
+      "arm3_actual_use_precision": 0.1435,
+      "arm3_recall": 0.735,
+      "arm3_success": 0.6
+    },
+    {
+      "regime": "similar",
+      "k": 5,
+      "arm1_top1_precision": 0.955,
+      "arm2_precision": 0.5767,
+      "arm2_recall": 0.875,
+      "arm3_actual_use_precision": 0.415,
+      "arm3_recall": 0.635,
+      "arm3_success": 0.6
+    },
+    {
+      "regime": "similar",
+      "k": 10,
+      "arm1_top1_precision": 0.86,
+      "arm2_precision": 0.5408,
+      "arm2_recall": 0.83,
+      "arm3_actual_use_precision": 0.2325,
+      "arm3_recall": 0.71,
+      "arm3_success": 0.66
+    },
+    {
+      "regime": "similar",
+      "k": 20,
+      "arm1_top1_precision": 0.745,
+      "arm2_precision": 0.5175,
+      "arm2_recall": 0.815,
+      "arm3_actual_use_precision": 0.1792,
+      "arm3_recall": 0.74,
+      "arm3_success": 0.645
+    },
+    {
+      "regime": "similar",
+      "k": 50,
+      "arm1_top1_precision": 0.6,
+      "arm2_precision": 0.5125,
+      "arm2_recall": 0.835,
+      "arm3_actual_use_precision": 0.1064,
+      "arm3_recall": 0.545,
+      "arm3_success": 0.57
+    },
+    {
+      "regime": "similar",
+      "k": 100,
+      "arm1_top1_precision": 0.475,
+      "arm2_precision": 0.5,
+      "arm2_recall": 0.8,
+      "arm3_actual_use_precision": 0.0743,
+      "arm3_recall": 0.41,
+      "arm3_success": 0.57
+    },
+    {
+      "regime": "dissimilar",
+      "k": 5,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.5183,
+      "arm2_recall": 0.835,
+      "arm3_actual_use_precision": 0.815,
+      "arm3_recall": 0.96,
+      "arm3_success": 0.675
+    },
+    {
+      "regime": "dissimilar",
+      "k": 10,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.5183,
+      "arm2_recall": 0.8,
+      "arm3_actual_use_precision": 0.5729,
+      "arm3_recall": 0.985,
+      "arm3_success": 0.71
+    },
+    {
+      "regime": "dissimilar",
+      "k": 20,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.5058,
+      "arm2_recall": 0.815,
+      "arm3_actual_use_precision": 0.4656,
+      "arm3_recall": 1.0,
+      "arm3_success": 0.67
+    },
+    {
+      "regime": "dissimilar",
+      "k": 50,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.5142,
+      "arm2_recall": 0.845,
+      "arm3_actual_use_precision": 0.3329,
+      "arm3_recall": 0.99,
+      "arm3_success": 0.685
+    },
+    {
+      "regime": "dissimilar",
+      "k": 100,
+      "arm1_top1_precision": 1.0,
+      "arm2_precision": 0.4583,
+      "arm2_recall": 0.815,
+      "arm3_actual_use_precision": 0.2919,
+      "arm3_recall": 0.995,
+      "arm3_success": 0.63
+    }
+  ],
+  "config": {
+    "tasks": 60,
+    "trials": 5,
+    "seed": 260814036
+  }
+}

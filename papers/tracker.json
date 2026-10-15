@@ -581,7 +581,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.14036",
       "rank": 1,
-      "status": "coding",
+      "status": "writing",
       "folder": "papers/2026-demystifying-agent-skills-why-they-work",
       "started_at": "2026-10-11"
     },
@@ -2308,6 +2308,45 @@
       "folder": "papers/2026-s-space-exploring-spatial-workspace-in"
     },
     {
+      "title": "Vela: User Behavior as Supervision Sparks LLM Intelligence",
+      "authors": [
+        "Yang Xiao",
+        "Yusong Sun",
+        "Haoyi Wu",
+        "Wenyang Hui",
+        "Weiqiang Hang",
+        "Luqing Wang",
+        "Zejian Wang",
+        "Zirui Tu",
+        "Jingsheng Mao",
+        "Shaobo Hu",
+        "Yang Luo",
+        "Jiale Guo",
+        "Jin Zhang",
+        "Yudan Liu",
+        "Zhaokai Luo",
+        "Ren Huan",
+        "Yao Hu",
+        "Chengyue Jiang",
+        "Wenjie Li",
+        "Chuan Mu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.14709",
+      "arxiv_url": "https://arxiv.org/abs/2610.14709",
+      "pdf_url": "https://arxiv.org/pdf/2610.14709.pdf",
+      "code_url": "https://github.com/AllSpark-Research/Vela",
+      "project_page": "https://allspark-research.github.io/Vela/",
+      "abstract": "Large language models are increasingly deployed in applications that act on users' long-term behavior histories, from personal assistants to recommendation and advertising systems. These applications demand the user dimension of LLM intelligence: inferring a person's preferences, intent, and likely future actions from weeks to years of behavior data. Yet current models are trained on static text or synthetic data, neither of which captures how user behavior evolves over time. Real-world behavior records, already available at scale on content platforms and in personal-assistant agents, offer a natural supervisory signal. We propose user behavior as supervision and introduce Vela, a framework that converts real user behavior data into trainable tasks and trajectories. From the anonymized behavior records of 100,000 users, Vela generates 100,000 tasks across 91 real-world task templates; difficulty-based filtering and trajectory acceptance criteria retain approximately 75,000 tasks with selected training trajectories. Fine-tuning Qwen3.6-35B-A3B on these trajectories improves performance over the base model by up to 11.5 points on user-related tasks and by an average of 4 points on general benchmarks. Training on more user behavior data further improves user-related performance, and reinforcement learning after fine-tuning outperforms reinforcement learning from the base model by up to 7.7 points. These gains suggest that real-world user behavior is a scalable source of supervision for both user-centered capabilities and the broader intelligence of LLMs.",
+      "ai_keywords": [],
+      "popularity": 37,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.14709",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-vela-user-behavior-as-supervision-sparks"
+    },
+    {
       "title": "Atria Dawn: The Dawn of Agentic Superintelligence",
       "authors": [
         "Honglin Guo",
@@ -4030,6 +4069,27 @@
       "folder": "papers/2026-diffusionart-efficient-stable-and-scalable-reinforcement"
     },
     {
+      "title": "DoSA: Dots Sparse Attention",
+      "authors": [
+        "Fanxu Meng",
+        "Taosong Fang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.13990",
+      "arxiv_url": "https://arxiv.org/abs/2610.13990",
+      "pdf_url": "https://arxiv.org/pdf/2610.13990.pdf",
+      "code_url": "https://github.com/llm-sys/flash-indexer",
+      "project_page": "",
+      "abstract": "Sparse attention visits few keys, yet finding them can still require scoring every key with every indexer head. We introduce DoSA (Dots Sparse Attention), a lossless method for making this computation conditional while preserving exact token selection. Its central observation is that Top-K selection requires sufficient evidence to reject a candidate, not necessarily its full score. A seed set supplies a lower bound on the winning threshold. Nonnegative head projections and joint residual bounds upper-bound positive contributions, while activation-informed aggregation bounds the magnitude subtracted by negative heads. The certificate directs full scoring toward candidates that remain eligible; exact-score filtering further reduces writeback and selection work. We establish the certificate and its exact-selection conditions, and analyze how geometry and selection margins govern its effectiveness. Our GPU implementation accelerates the complete Indexer by up to 2.74 times over SGLang and 1.69 times over LiteTopK across English, Chinese, and code workloads. End-to-end evaluation on GLM-5.2 and DeepSeek-V3.2 achieves up to 1.94 times and 1.50 times time-to-first-token speedups over the two baselines, respectively.",
+      "ai_keywords": [],
+      "popularity": 31,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.13990",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-dosa-dots-sparse-attention"
+    },
+    {
       "title": "TokenRouter: Efficient Serving System for Token-Level LLM Routing",
       "authors": [
         "Tianyu Fu",
@@ -5316,6 +5376,28 @@
       "folder": "papers/2026-reflex-visually-grounded-reactive-humanoid-control"
     },
     {
+      "title": "UltraBERT: Beyond the Limit of BERT Pre-Training",
+      "authors": [
+        "Jungwoo Park",
+        "Taewhoo Lee",
+        "Jaewoo Kang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.15028",
+      "arxiv_url": "https://arxiv.org/abs/2610.15028",
+      "pdf_url": "https://arxiv.org/pdf/2610.15028.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Recent bidirectional encoders have been modernized with innovations from causal large language models (LLMs). However, the pretraining recipe itself remains inherited from small-scale conventions, leaving encoders underoptimized, with no single model performing competitively across both classification and retrieval tasks. In this work, we investigate how far encoder performance can be pushed by revisiting core design choices in training, revealing three key findings: (1) Encoders saturate on downstream tasks beyond a few trillion tokens, indicating that additional compute past this point does not help. (2) Across model sizes, lower masking ratios benefit classification while higher ones benefit retrieval, contradicting prior work suggesting larger ratios for larger models. (3) Distillation with pruning improves classification at low masking ratios but degrades retrieval at high ones. Guided by these findings, we present UltraBERT, a single encoder that assigns separate LM heads to low and high masking ratios within a batch and restricts the distillation objective to the low ratio. To our knowledge, UltraBERT is the first encoder to achieve state of the art on both classification and retrieval tasks, reaching 91.0 on GLUE and 47.7 on BEIR. Together, these results show how far encoder performance can be pushed and provide a principled basis for compute allocation, masking ratio design, and knowledge transfer in bidirectional models.",
+      "ai_keywords": [],
+      "popularity": 26,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.15028",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-ultrabert-beyond-the-limit-of-bert"
+    },
+    {
       "title": "From Traces to Agentic Worlds: Agentic Language World Models for Interactive Environment Simulation",
       "authors": [
         "Quanyu Long",
@@ -6562,6 +6644,29 @@
       "rank": 4,
       "status": "pending",
       "folder": "papers/2026-softwaregym-scaling-computer-use-agent-training"
+    },
+    {
+      "title": "LeWAM: End-to-End World and Action Modeling with JEPAs",
+      "authors": [
+        "Minghao Fu",
+        "Tavis Siebert",
+        "Eryk Halicki",
+        "Randall Balestriero"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.12818",
+      "arxiv_url": "https://arxiv.org/abs/2610.12818",
+      "pdf_url": "https://arxiv.org/pdf/2610.12818.pdf",
+      "code_url": "https://github.com/MinghaoFu/lewam",
+      "project_page": "https://le-wam.github.io/",
+      "abstract": "Joint-embedding predictive architectures (JEPAs) learn compact latent world models without pixel reconstruction. Existing JEPA pipelines typically train visual representations and action-conditioned dynamics before adding a control policy or solver. We introduce LeWAM, an end-to-end JEPA for control with: (1) a joint training objective over next latent state prediction and action flow matching, and (2) an isotropic Gaussian constraint on the latent state, enabling a single model to support direct policy execution and efficient planning by evaluating sampled actions with its learned latent dynamics. Compared with prior JEPAs in visual planning, LeWAM improves success rate from 28.6% to 89.7% on contact-rich tasks and from 10.9% to 46.2% on long-horizon tasks, and plans 32.3 times faster. On behavior cloning tasks in simulation and physical robots, LeWAM is also competitive with established methods. Interpretability analyses show that LeWAM learns control-relevant representations and action distributions effectively guiding test-time planning and control.",
+      "ai_keywords": [],
+      "popularity": 23,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.12818",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-lewam-end-to-end-world-and"
     },
     {
       "title": "Dream-RSI: Recursive Self-Improvement through Evolving Worlds",
@@ -8119,6 +8224,33 @@
       "folder": "papers/2026-embodiedclbench-evaluating-continual-learning-for-self"
     },
     {
+      "title": "Scoring Higher, Answering Worse: Mitigating Reward Hacking in Rubric-Based RL via Protocol-Level Rubrics",
+      "authors": [
+        "Maoqi Liu",
+        "Junwei He",
+        "Bowen Zhang",
+        "Feiran Li",
+        "Wentao Ma",
+        "Rongyi Lin",
+        "Shuhan Zhong",
+        "Quan Fang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.38847",
+      "arxiv_url": "https://arxiv.org/abs/2609.38847",
+      "pdf_url": "https://arxiv.org/pdf/2609.38847.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Rubric-based reinforcement learning (Rubric-RL) trains language models where no verifier exists. A judge checks each criterion of a rubric, and the verdicts are aggregated into a reward, most often by a weighted sum. We show that this additive aggregation is the weak point. Under a sum, criteria compensate for one another: a policy that misses the one decision that matters can buy the points back with advice nobody asked for. On clinical consultation, such a policy scores higher and answers worse. Rubric coverage rises while appropriateness on held-out physician criteria falls below the untrained model. The medical criteria are not to blame. Grouped so that they must hold together, the same criteria, unchanged to the word, recover a third of the loss; shorter answers recover almost none. We therefore propose Protocol-level Rubrics (ProRubric), which keeps what the criteria ask for and changes how they are aggregated. It groups a checklist into a few protocol-level dimensions. A dimension counts only when all of its criteria hold and its failure clause does not fire. The grouping is done once, offline, and leaves the optimizer unchanged. ProRubric raises appropriateness by 10.8 points without losing coverage and has the best seven-benchmark average at both scales. Reward validity is set not only by what a rubric verifies, but by how it aggregates. Code is available at https://github.com/Estrellajer/ProRubric",
+      "ai_keywords": [],
+      "popularity": 16,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.38847",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-scoring-higher-answering-worse-mitigating-reward"
+    },
+    {
       "title": "SuperNav: An Agentic Navigation System for Any Task in Any Scene",
       "authors": [
         "Jinkai Zhang",
@@ -9589,6 +9721,34 @@
       "folder": "papers/2026-visionweave-weaving-elastic-visual-representations-as"
     },
     {
+      "title": "Harness^2: Recursive Agent Harnessing for an Open World",
+      "authors": [
+        "Ruiyao Xu",
+        "Yanfei Chen",
+        "Zhongying CuiZhu",
+        "Bhavana Dalvi Mishra",
+        "Yifei Ming",
+        "Han Yu",
+        "Rujun Han",
+        "Chen-Yu Lee",
+        "Tomas Pfister"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.14224",
+      "arxiv_url": "https://arxiv.org/abs/2610.14224",
+      "pdf_url": "https://arxiv.org/pdf/2610.14224.pdf",
+      "code_url": "https://github.com/google-research/harness2",
+      "project_page": "https://harness2.github.io/",
+      "abstract": "LLM agents' capabilities depend not only on their underlying models but also on their execution harnesses. Recursive self-improvement (RSI) offers a promising approach to automatically evolve these harnesses. However, deploying RSI in open-world settings still faces two critical challenges. First, open-world tasks are typically unseen during the harness design phase and novel at test time, leaving no ground-truth verifiers to reliably guide online harness edits. Second, the RSI process remains highly task-specific and fails to generalize to novel scenarios. We introduce Harness^2, a plug-and-play, recursive agent harnessing framework that addresses these challenges through two connected levels of recursion. Task-level recursion refines the current task's harness using a contrastive Propose-Probe-Compose step that reliably guides edits without ground-truth verifiers, and can be scaled further via parallel or sequential recursion. Harnessing-level recursion then extracts experience from these edits to update a continual improvement harness, enabling the agent to better adapt to future tasks. Across three professional benchmarks and four model-harness configurations, a single step consistently improves GLM-5 and Gemini 3.5 Flash over their base harnesses, yielding gains of up to 11.5 points on WorkBuddy-Bench, 4.5 points on JobBench, and 11.8 percentage points on LAB, with further gains as the task-level recursion budget increases.",
+      "ai_keywords": [],
+      "popularity": 16,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.14224",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-harness2-recursive-agent-harnessing-for-an"
+    },
+    {
       "title": "Beyond Memory: Harnessing Long-Horizon Agents with Explicit Belief States",
       "authors": [
         "Yu Luo",
@@ -10917,6 +11077,34 @@
       "rank": 7,
       "status": "pending",
       "folder": "papers/2026-hear-the-world-in-stereo-learning"
+    },
+    {
+      "title": "CineRecon: Benchmarking Frontier Models for Agentic Cinematic Reconstruction",
+      "authors": [
+        "Jialei Wang",
+        "Zehan Wang",
+        "XiaoYang Wu",
+        "Ziang Zhang",
+        "Siyu Chen",
+        "Jiaer Huang",
+        "Yujia Zhang",
+        "Tianyu Pang",
+        "Hengshuang Zhao"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.16577",
+      "arxiv_url": "https://arxiv.org/abs/2610.16577",
+      "pdf_url": "https://arxiv.org/pdf/2610.16577.pdf",
+      "code_url": "https://github.com/Unc1eW4ng/CineRecon",
+      "project_page": "https://cinerecon.github.io/",
+      "abstract": "Reconstructing reference videos as editable dynamic 3D scenes is an important path toward controllable video generation for filmmaking: these scenes provide modifiable, renderable visual proxies that enable explicit control over scene layout, subject actions, and camera behavior. To evaluate agents' ability to reconstruct editable dynamic 3D scenes from dynamic reference videos, we introduce CineRecon, a benchmark comprising 50 reference videos and 360 annotated evaluation clips. The reference videos span film, real-world footage, and games. Given a complete video, an agent uses tools to construct, animate, render, and refine its reconstruction. We evaluate this task under three representation settings: Proxy, Simplified, and Detailed. These settings increase geometric and appearance requirements while retaining the same requirements for spatial relations, camera behavior, and subject dynamics. This design tests whether agents can reproduce the events in a video when detailed appearance is unnecessary, and how performance changes as representation requirements increase. For evaluation, we construct checklists that associate observable properties and events with specific entities and times. A vision-language judge compares timestamp-aligned reference and rendered frames across 11 categories, grouped into camera, static, and dynamic consistency dimensions. We evaluate 12 models using their corresponding agent harnesses and find failures across all three dimensions. Subject motions and interactions remain difficult to reproduce even under the Proxy setting.",
+      "ai_keywords": [],
+      "popularity": 9,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.16577",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-cinerecon-benchmarking-frontier-models-for-agentic"
     },
     {
       "title": "Self-Generated Feedback Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation",
@@ -12288,6 +12476,31 @@
       "rank": 8,
       "status": "pending",
       "folder": "papers/2026-programgym-scaling-training-environments-for-long"
+    },
+    {
+      "title": "DeltaTTG: Training Multi-Turn Agents with a Token-to-Go Progress Meter",
+      "authors": [
+        "Xuyan Ye",
+        "Xiyan Fu",
+        "Shengda Fan",
+        "Jiawei Cui",
+        "Yankai Lin",
+        "Wei Lu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.17666",
+      "arxiv_url": "https://arxiv.org/abs/2610.17666",
+      "pdf_url": "https://arxiv.org/pdf/2610.17666.pdf",
+      "code_url": "https://github.com/Xuyan923r/DeltaTTG",
+      "project_page": "",
+      "abstract": "Reinforcement learning with verifiable rewards (RLVR) for multi-turn agents relies on sparse terminal rewards that say little about individual steps. Within-group step comparisons depend on reliable state matching and sufficiently diverse sampled outcomes, while direct step scoring may require costly external evaluators, human annotations, or task-specific heuristics. We introduce DeltaTTG to learn a reusable progress signal through a shared progress meter, using low-cost supervision from diverse policies' recorded trajectories without task-specific progress rules. Its supervision target, Token-to-Go (TTG), the number of tokens remaining to be generated until task completion, serves as an observable proxy for remaining completion effort. During actor training, changes in the frozen meter's estimates redistribute outcome-derived advantages across steps without altering the reward, preserving each trajectory's advantage sign and token-average scale. On ALFWorld, PaperSearchQA, and BFCLv3, DeltaTTG improves the average score over GRPO by 5.7 and 7.2 points with Qwen3-4B and Llama-3.1-8B-Instruct, respectively, outperforms all compared RL baselines on average, and keeps actor-training GPU-hours close to GRPO. Further experiments show improved sample efficiency and out-of-domain performance, and support the meter's ability to distinguish step quality and guide test-time action selection across actor sizes. The code is available at https://github.com/Xuyan923r/DeltaTTG.",
+      "ai_keywords": [],
+      "popularity": 9,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.17666",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-deltattg-training-multi-turn-agents-with"
     },
     {
       "title": "World Observer: Joint Actor-Observer Generation for Persistent World Modeling",
@@ -13695,6 +13908,32 @@
       "rank": 9,
       "status": "pending",
       "folder": "papers/2026-continually-post-training-small-models-via"
+    },
+    {
+      "title": "ClawLoop: Self-Improving Agents via Harness-Native Training Loop",
+      "authors": [
+        "Hansi Yang",
+        "Linji Hao",
+        "Hongyan Hao",
+        "An Wang",
+        "Han Wu",
+        "Qi Gu",
+        "Xunliang Cai"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.14118",
+      "arxiv_url": "https://arxiv.org/abs/2610.14118",
+      "pdf_url": "https://arxiv.org/pdf/2610.14118.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "The rapid advancement of Large Language Models (LLMs) has driven their deployment toward general-purpose harness environments, where LLM-based agents operate in sandbox workspaces and interact directly with file systems and shells. While numerous post-training pipelines exist for tool-use agents, their counterparts for harness-based agents remain scarce and are predominantly one-shot and teacher-dependent: a stronger external model synthesizes tasks and collects trajectories, the target agent is trained once, and evaluation results are consumed by human researchers rather than fed back into the loop. Such pipelines are inherently bounded by the capability of the external model and the scope of human prior, leaving no room for self-improvement. To address these limitations, we propose ClawLoop, a framework that enables self-improving without any external teacher model and with minimal prior dependencies. ClawLoop composes three phases into a self-sustaining cycle: Task Synthesis, which generates a diverse pool of training tasks via two complementary construction routines, applies diagnosis-conditioned difficulty growth followed by both agent-free and agent-based task validation; Training, which updates the agent via SFT and/or RL; and Diagnosis and Feedback, which analyzes the agent's rollout behaviors to produce a capability analysis report that will be used as feedback for task synthesis in the next iteration. Using Qwen3.6-27B as the loop model, ClawLoop yields consistent improvements on SkillsBench, Claw-Eval-Live, and ClawGym-Bench. The iteratively refined tasks are further transferred to smaller-scale Qwen3.5-4B and 9B models with gains across all benchmarks, validating data quality independently of the loop model.",
+      "ai_keywords": [],
+      "popularity": 8,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.14118",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-clawloop-self-improving-agents-via-harness"
     },
     {
       "title": "OuroWorld: Bringing Any 3D World Alive as Diverse, Endlessly Looping 3D Cinemagraphs",
@@ -15271,6 +15510,33 @@
       "rank": 10,
       "status": "pending",
       "folder": "papers/2026-work2skill-capturing-human-gui-experience-for"
+    },
+    {
+      "title": "PhyProbe: Rethinking Physical Consistency Evaluation in Generated Videos",
+      "authors": [
+        "Max Ku",
+        "Jiaojiao Fan",
+        "Zekun Hao",
+        "Francesco Ferroni",
+        "Heng Wang",
+        "Wenhu Chen",
+        "Ming-Yu Liu",
+        "Prithvijit Chattopadhyay"
+      ],
+      "year": "2026",
+      "arxiv_id": "2609.38377",
+      "arxiv_url": "https://arxiv.org/abs/2609.38377",
+      "pdf_url": "https://arxiv.org/pdf/2609.38377.pdf",
+      "code_url": "https://github.com/vinesmsuic/PhyProbe",
+      "project_page": "https://research.nvidia.com/labs/cosmos-lab/phyprobe/",
+      "abstract": "Evaluating the physical consistency of generated videos remains a fundamental challenge. Existing approaches rely on off-the-shelf vision-language models, which can often be myopic to physical dynamics, or fine-tuned evaluators trained on human annotations, which overfit to dataset-specific cues and fail to generalize. A key challenge is that existing supervision sources provide either relative ordering or absolute scores, but not both reliably and consistently across varied settings. To this end, we introduce PhyProbe, an evaluator that extracts features from a frozen pretrained spatio-temporal encoder and maps them to a scalar physical consistency violation score via a lightweight scoring head. PhyProbe is trained through a unified objective combining pairwise ranking, regression on noisy scalar annotations, and anchor-based calibration over a curated set of heterogeneous supervision sources. Experiments show that PhyProbe outperforms prior methods on most pairwise benchmarks spanning real-generated and generated-generated pairs under varying correspondence, with the largest gains in no-correspondence and generated-generated settings where existing fine-tuned evaluators degrade sharply. PhyProbe achieves strong correlation with human judgments, with close agreement between rank-based and linear metrics, indicating that scores are both well ordered and anchored to a stable [0, 1] scale. Further, despite being trained on supervision indicative of physical consistency, without explicit general-preference labels, PhyProbe also performs competitively on human preference benchmarks: consistent with the observation that physics violations are entangled with broader quality degradations.",
+      "ai_keywords": [],
+      "popularity": 8,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2609.38377",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-phyprobe-rethinking-physical-consistency-evaluation-in"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -18268,5 +18534,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-10-13T05:00:58.021257+00:00"
+  "updated_at": "2026-10-14T05:00:50.359955+00:00"
 }
