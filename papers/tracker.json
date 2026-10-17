@@ -628,8 +628,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.19880",
       "rank": 1,
-      "status": "pending",
-      "folder": "papers/2026-envharness-awakening-static-worlds-for-agent"
+      "status": "reading",
+      "folder": "papers/2026-envharness-awakening-static-worlds-for-agent",
+      "started_at": "2026-10-17"
     },
     {
       "title": "Apodex 1.1: Scaling Agentic Intelligence for Complex Work",
@@ -2387,6 +2388,39 @@
       "folder": "papers/2026-any-time-any-space-a-world"
     },
     {
+      "title": "Waypoint-OPD: Transferring RL-Induced Policy Shifts via Gated On-Policy Distillation",
+      "authors": [
+        "Bingxi Hou",
+        "Guochao Jiang",
+        "Guofeng Quan",
+        "Weiqing Li",
+        "Wenfeng Feng",
+        "Guohua Liu",
+        "Yuewei Zhang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.21601",
+      "arxiv_url": "https://arxiv.org/abs/2610.21601",
+      "pdf_url": "https://arxiv.org/pdf/2610.21601.pdf",
+      "code_url": "https://github.com/hhhbxloveai/WaypointOPD",
+      "project_page": "",
+      "abstract": "Policy-shift distillation reuses the difference between a teacher's log probabilities before and after reinforcement learning (RL) as supervision on student-generated trajectories. However, this endpoint policy shift cannot reveal whether local action preferences evolved consistently during teacher training. The same endpoint shift can result from early and late shifts that reinforce or partially cancel each other. We investigate whether agreement between early and late teacher policy shifts can guide selective transfer. We introduce Waypoint-guided On-Policy Distillation (Waypoint-OPD), which uses an intermediate teacher checkpoint from the same RL run to compare early and late shifts in relative action preferences at student-visited prefixes. We gate the endpoint shift according to the directional agreement between the early and late shifts, suppressing it when they point in opposing directions. Compared with endpoint-only transfer, our method requires only one additional frozen-teacher scoring pass. Using RL-trained Qwen3-4B teachers, we evaluate our method with Qwen3-8B, Qwen3-14B, and Qwen3-30B-A3B as student models in mathematical and code reasoning. In all six domain--student settings, Waypoint-OPD achieves the highest domain-average score among the compared distillation methods. Ablations with the Qwen3-8B student show that removing or shuffling gates reduces mathematical reasoning performance. These results support the use of directional agreement between early and late teacher policy shifts to weight the endpoint shift during student training.",
+      "ai_keywords": [
+        "policy-shift distillation",
+        "reinforcement learning",
+        "log probabilities",
+        "Waypoint-guided On-Policy Distillation",
+        "cross-attention",
+        "Qwen3"
+      ],
+      "popularity": 656,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.21601",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-waypoint-opd-transferring-rl-induced-policy"
+    },
+    {
       "title": "OmniCompass: A Holistic Benchmark for Omni-Modal Video Grounding and Understanding",
       "authors": [
         "Xuyang Liu",
@@ -2414,10 +2448,10 @@
         "audio-visual reasoning",
         "vision-language models"
       ],
-      "popularity": 72,
+      "popularity": 569,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.18829",
-      "rank": 1,
+      "rank": 2,
       "status": "pending",
       "folder": "papers/2026-omnicompass-a-holistic-benchmark-for-omni"
     },
@@ -5637,6 +5671,48 @@
       "folder": "papers/2026-orbia-do-generated-videos-form-a"
     },
     {
+      "title": "OpenGCUA: Toward a Fully Open Stack for Generalist Computer Use",
+      "authors": [
+        "Hanzhang Zhou",
+        "Long Li",
+        "Quyu Kong",
+        "Lei Wang",
+        "Panrong Tong",
+        "Long Chen",
+        "Tianyu Xia",
+        "Gongjie Zhang",
+        "Xu Zhang",
+        "Chen Liu",
+        "Jianan Zhang",
+        "Chenglin Cai",
+        "Zhengwen Zeng",
+        "Steven Hoi",
+        "Yue Wang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.22200",
+      "arxiv_url": "https://arxiv.org/abs/2610.22200",
+      "pdf_url": "https://arxiv.org/pdf/2610.22200.pdf",
+      "code_url": "https://github.com/Tongyi-MAI/OpenGCUA",
+      "project_page": "https://tongyi-mai.github.io/OpenGCUA/",
+      "abstract": "Computer use has reached a turning point: the focus is expanding from GUI-only interaction to systems that complete tasks on users' computers through visual and programmatic interfaces. We define a generalist computer-use agent (GCUA) as a system in which the model chooses how to observe, act, and organize its work across visual and programmatic interfaces. Yet frontier implementations, such as GPT-6 Astra's computer-use system, remain largely closed, limiting systematic study of their design. We introduce Open Generalist CUA (OpenGCUA), an ongoing project to develop and open the full stack for GCUAs with the community. This report presents the first release of OpenGCUA. Code execution is a key feature of our agent design: it lets intermediate results determine subsequent operations and enables models to apply their existing programming capabilities directly to computer interaction. We also propose harness-to-model decision transfer, moving selected observations and task-state decisions from fixed harness rules to the model. On OSWorld-v2, our full configuration improves task scores across all eight evaluated models, including GPT-6 Astra and Claude Opus 5, raising mean partial score by +19.6 points and reducing reported steps per task by an average of 53.0% relative to batched GUI-only execution. We release our implementation and prompts, evaluation trajectories from all eight models, and preliminary versions of a real-device harness and a cross-device SDK. The harness addresses real-device challenges not fully captured by benchmarks, while the SDK provides a common programming interface across computers, mobiles and browsers. Across four real macOS tasks under our real-device harness, selected Qwen3.8-Max runs use 19.4 times as many reported reasoning tokens as GPT-6 Astra, highlighting substantial differences between models in real-device execution efficiency.",
+      "ai_keywords": [
+        "generalist computer-use agent",
+        "visual and programmatic interfaces",
+        "harness-to-model decision transfer",
+        "code execution",
+        "OSWorld-v2",
+        "real-device harness",
+        "cross-device SDK"
+      ],
+      "popularity": 287,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.22200",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-opengcua-toward-a-fully-open-stack"
+    },
+    {
       "title": "From Traces to Agentic Worlds: Agentic Language World Models for Interactive Environment Simulation",
       "authors": [
         "Quanyu Long",
@@ -6946,53 +7022,57 @@
       "folder": "papers/2026-doc2harness-benchmarking-llms-on-long-horizon"
     },
     {
-      "title": "3DCodeVerse: Exploring 3D Worlds as Code",
+      "title": "FDE-Gym: The Last Mile of AI Delivery",
       "authors": [
-        "Yipeng Gao",
-        "Ziyao Zeng",
-        "Jinfa Huang",
-        "Yijiang Li",
-        "Haolin Xiong",
-        "Wang Qin",
-        "Xinlei Yu",
-        "Youheng Yao",
-        "Jie Zhang",
-        "Kun-Yu Lin",
-        "Rong Liu",
-        "Yinyuan Zhao",
-        "Yajie Zhao",
-        "Meiqi Guo",
-        "Jiebo Luo",
-        "Lei Shu",
-        "Yunhao Ge",
-        "Xinyu Hu",
-        "Laurent Itti"
+        "Dongxu Yang",
+        "Hongda Yan",
+        "Renxin Wang",
+        "Baoli Zhang",
+        "Haojia Zuo",
+        "Ying Zhao",
+        "Youmin Chen",
+        "Xiaojian Liao",
+        "Congming Gao",
+        "Tianyang Jiang",
+        "Yixiao Chen",
+        "Qing Wang",
+        "Zhiguo Yu",
+        "Xiaqing Li",
+        "Yuhao Zhang",
+        "Jiawen Sun",
+        "Renzhe Xu",
+        "De Mi",
+        "Tiancheng Wu",
+        "Xianya Fu",
+        "Xuanlu Zhao",
+        "Bo Feng",
+        "Meixuan Ren",
+        "Guanming Lin",
+        "Ziheng Zhou",
+        "Xinhua Wang"
       ],
       "year": "2026",
-      "arxiv_id": "2610.22341",
-      "arxiv_url": "https://arxiv.org/abs/2610.22341",
-      "pdf_url": "https://arxiv.org/pdf/2610.22341.pdf",
-      "code_url": "https://github.com/gaoypeng/3dcodeverse",
-      "project_page": "https://3dcodeverse.com/",
-      "abstract": "We introduce 3DCodeVerse, a research ecosystem that enables coding agents to create editable and verifiable 3D content at scale. 3DCodeVerse comprises large-scale, high-quality datasets of executable 3D code, a coding harness for spatial reasoning and automated verification, and practical guidance for 3D coding. First, we construct 3DCodeVerse-2M, a large-scale curated dataset of standalone 3D executable code. We build this corpus by collecting open-source data, converting specialized representations, and generating new programs with coding agents. Each program is packaged with the source files and associated assets required for execution in its declared environment, along with available descriptions and verification records. Second, we develop the 3DCodeVerse Harness, a multi-agent directed acyclic graph framework for generating and refining 3D content. It uses execution checks, spatial measurements, and visual feedback to automatically evaluate and revise generated programs without human feedback during generation. Third, we conduct systematic empirical studies of 3D coding, establishing baselines with fine-tuned open models and deriving practical guidance through component-level analyses of our harness. Extensive experiments demonstrate that fine-tuning on our dataset significantly improves the 3D coding capabilities of open-source models. Notably, our 3DCodeVerse harness achieves a 90% win rate against Claude Design (3D Object) in pairwise human evaluations, when both are utilized by Claude Opus 5.5.",
+      "arxiv_id": "2610.22350",
+      "arxiv_url": "https://arxiv.org/abs/2610.22350",
+      "pdf_url": "https://arxiv.org/pdf/2610.22350.pdf",
+      "code_url": "https://github.com/deeplethe/fde-gym",
+      "project_page": "https://fde-gym.com/paper",
+      "abstract": "Existing agent benchmarks typically evaluate agents on well-specified tasks defined by issue reports, specifications, or task tickets. Real-world customer delivery is different: forward-deployed engineers (FDEs) must clarify ambiguous requirements, work in live systems, and uncover unstated constraints. We introduce FDE-Gym, a benchmark of 95 end-to-end delivery tasks from 20 customer scenarios across 18 sectors, each adapted by industry experts from real-world delivery projects. In simulated customer environments with scripted stakeholders and modifiable customer systems, agents interact with stakeholders and operate on production-like systems to deliver working solutions. FDE-Gym scores a delivery by how much it improves the customer's own success metric, normalized between 0 (unchanged system) and 1 (reference solution), with penalties for stakeholder interactions (messages, trial runs, and waiting time). An online platform lets humans practice FDE skills under the same grading criteria. We evaluate 13 model configurations from seven providers. In the realistic setting, where unstated constraints must be discovered, the best configuration achieves a mean FDE-Gym score of 0.56 and resolves only 14 of the 95 tasks (a score of at least 0.8 with no incident). Discovering unstated constraints is the primary bottleneck: performance drops sharply when models must uncover them without explicit guidance. Yet information discovery alone does not account for the gap: even on the 23 tasks where the best configuration obtains every key fact from stakeholders, it reaches a normalized business uplift of 0.8 or above on only 10. These results reveal a substantial gap between solving well-specified tasks and delivering effective AI systems for real customers.",
       "ai_keywords": [
-        "3DCodeVerse",
-        "executable 3D code",
-        "coding harness",
-        "spatial reasoning",
-        "automated verification",
-        "multi-agent directed acyclic graph",
-        "execution checks",
-        "spatial measurements",
-        "visual feedback",
-        "fine-tuned open models"
+        "FDE-Gym",
+        "end-to-end delivery tasks",
+        "simulated customer environments",
+        "stakeholder interactions",
+        "success metric normalization",
+        "unstated constraints",
+        "information discovery"
       ],
-      "popularity": 21,
+      "popularity": 275,
       "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2610.22341",
+      "pwc_url": "https://huggingface.co/papers/2610.22350",
       "rank": 4,
       "status": "pending",
-      "folder": "papers/2026-3dcodeverse-exploring-3d-worlds-as-code"
+      "folder": "papers/2026-fde-gym-the-last-mile-of"
     },
     {
       "title": "Dream-RSI: Recursive Self-Improvement through Evolving Worlds",
@@ -8690,6 +8770,41 @@
       "folder": "papers/2026-intern-lumina-u2-a-multi-codebook"
     },
     {
+      "title": "RoTA-Bench: Evaluating 3D Spatial Reasoning through Interactive Projection Alignment",
+      "authors": [
+        "Qingchuan Ma",
+        "Yuexiao Ma",
+        "Xiang Meng",
+        "Yixuan Zou",
+        "Tianyu Xie",
+        "Wang Chen",
+        "Yuhui Zeng",
+        "Yuhang Wu",
+        "Xiawu Zheng",
+        "Rongrong Ji"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.17665",
+      "arxiv_url": "https://arxiv.org/abs/2610.17665",
+      "pdf_url": "https://arxiv.org/pdf/2610.17665.pdf",
+      "code_url": "https://github.com/MAC-AutoML/RoTA-Bench",
+      "project_page": "https://www.modelscope.cn/studios/san2333333/rotabench-anon?mode=full&app_path=%2Fportal",
+      "abstract": "Can vision-language models turn 2D observations into 3D understanding that supports precise action? This requires inferring object geometry, anticipating the effects of rotation, and refining actions through visual feedback. We introduce RoTA-Bench to evaluate these abilities through interactive 3D-to-2D projection alignment. Given a target silhouette, a model observes a rotated object and chooses successive rotations to recover the target projection within a limited action budget. Our automated pipeline constructs silhouette-preserving 3D objects from 2D icons and uses reversible initialization to guarantee solvability, yielding 674 tasks and a stratified 100-task test set. Empirically, we find that (i) a substantial human-model gap persists: GPT-5.6-Sol succeeds on only 17% of tasks, whereas 20 undergraduate participants collectively complete the test set four times with a 100% success rate; (ii) image-space and pose-space progress can diverge: at matched states, the model more often improves silhouette overlap while worsening pose alignment than humans (19.4% vs. 10.9%); and (iii) fine-grained control is sensitive to interaction history: removing it leaves 96.8% of the model's actions at a coarse 30-degree step size and sharply reduces observed task success. These findings highlight the challenge of converting visual evidence into precise 3D control, beyond recognizing or matching individual images.",
+      "ai_keywords": [
+        "vision-language models",
+        "3D-to-2D projection alignment",
+        "silhouette-preserving 3D objects",
+        "reversible initialization",
+        "fine-grained control"
+      ],
+      "popularity": 198,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.17665",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-rota-bench-evaluating-3d-spatial-reasoning"
+    },
+    {
       "title": "SuperNav: An Agentic Navigation System for Any Task in Any Scene",
       "authors": [
         "Jinkai Zhang",
@@ -10270,6 +10385,40 @@
       "folder": "papers/2026-routing-policy-optimization-for-online-diffusion"
     },
     {
+      "title": "Self-Evolving Agent Harness",
+      "authors": [
+        "Chuyang Wei",
+        "Haoxiang Guan",
+        "Minghang Zhu",
+        "Kexin Zhou",
+        "Jiyan He",
+        "Xiren Zhou",
+        "Huanhuan Chen",
+        "Yifei Shen"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.18813",
+      "arxiv_url": "https://arxiv.org/abs/2610.18813",
+      "pdf_url": "https://arxiv.org/pdf/2610.18813.pdf",
+      "code_url": "https://github.com/zgcagi/Harness-RSI",
+      "project_page": "https://zgcagi.github.io/Harness-RSI/",
+      "abstract": "Harness self-evolution revises an agent's software scaffolding, including prompts, memory, workflows, and executable components, while keeping model weights fixed. We formalize a feedback-driven process in which accepted revisions persist across runs. The framework separates update targets from proposal and admission mechanisms. It distinguishes changes to interpreted state from revisions to tools and code, repository-level control logic, and plugin composition. We characterize search through evolutionary optimization and examine its reliability through continual PAC-learning. Under explicit assumptions, the analysis yields an expected generalization bound, a retention bound conditional on historical regression budgets, and a high-probability admission rule using fresh, independent validation data. We examine how persistent harness revisions affect knowledge sharing and organizational workflows, with implications for scientific reliability, physical safety, and institutional accountability. Cases from prior work illustrate model--harness co-design, distributed execution, and plugin reuse. Reliable deployment requires continual validation as task distributions and evaluators change, with independent safeguards for learning, runtime privileges, and consequential actions. We provide a comprehensive 66-page discussion of related work, theory, algorithms, evaluation, applications, and the broader impact of Harness RSI, together with continuously updated code and supplementary materials, at https://github.com/zgcagi/Harness-RSI.",
+      "ai_keywords": [
+        "PAC-learning",
+        "evolutionary optimization",
+        "generalization bound",
+        "model-harness co-design",
+        "plugin composition",
+        "continual validation"
+      ],
+      "popularity": 190,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.18813",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-self-evolving-agent-harness"
+    },
+    {
       "title": "Beyond Memory: Harnessing Long-Horizon Agents with Explicit Belief States",
       "authors": [
         "Yu Luo",
@@ -11702,6 +11851,46 @@
       "rank": 7,
       "status": "pending",
       "folder": "papers/2026-edgewise-bringing-long-horizon-agents-to"
+    },
+    {
+      "title": "MJev-Spatial: System One Spatial Intelligence via Native Attention Matching",
+      "authors": [
+        "Luozheng Qin",
+        "Yuhan Zhu",
+        "Changhai Zhou",
+        "Qian Qiao",
+        "Jun Gao",
+        "Yuhua Zhou",
+        "Harry Zhang",
+        "Xiangyu Zeng",
+        "Yuxuan Liu",
+        "Kaijie Chen",
+        "Andrew Chen",
+        "Pony Ma"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.22276",
+      "arxiv_url": "https://arxiv.org/abs/2610.22276",
+      "pdf_url": "https://arxiv.org/pdf/2610.22276.pdf",
+      "code_url": "https://github.com/Fr0zenCrane/MJev-Spatial",
+      "project_page": "https://fr0zencrane.github.io/mjev-spatial-project/",
+      "abstract": "Spatial intelligence lets an agent perceive and act in the physical world, and many of its judgments must be made at interaction rates: which spatial relation holds, how far an object is, or where to place it. Vision-language models (VLMs) produce these answers by free-form text generation, paying for autoregressive decoding and answer parsing even though the output space is compact: one of a few options, a scalar, or a 2D point. In light of this, we introduce MJev-Spatial, a System 1 multimodal decision model that tackles all three types of spatial understanding tasks within a unified classification framework. Specifically, MJev-Spatial treats each candidate as a class and scores it using the backbone's pretrained query and key projections, without adding parameters. The candidates are the given options for choice tasks, or value bins and image regions refined through coarse-to-fine classification for numerical and point prediction, respectively. At inference, each classification decision takes a single forward pass and generates no answer tokens. To train on heterogeneous spatial data efficiently, we supervise all coarse-to-fine stages jointly with teacher forcing in one forward pass, and combine this with length-aware global batching and cross-GPU load balancing, raising training throughput by 30.8% over the original batching strategy. Built on Qwen3.5-4B and trained on 12.3M question-answer pairs converted from existing spatial datasets, MJev-Spatial achieves the highest overall score (65.64%) among eight tested models, ranks first on seven of twelve benchmarks, and outperforms its unmodified autoregressive base model on all twelve, while running 2.5 times faster than the fastest autoregressive baseline and 5.6 times faster than the base model.",
+      "ai_keywords": [
+        "vision-language models",
+        "multimodal decision model",
+        "classification framework",
+        "query and key projections",
+        "coarse-to-fine classification",
+        "teacher forcing",
+        "length-aware global batching",
+        "cross-GPU load balancing"
+      ],
+      "popularity": 147,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.22276",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-mjev-spatial-system-one-spatial-intelligence"
     },
     {
       "title": "Self-Generated Feedback Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation",
@@ -13171,6 +13360,38 @@
       "rank": 8,
       "status": "pending",
       "folder": "papers/2026-scope-semantic-bounded-credit-optimization-for"
+    },
+    {
+      "title": "Learning Where to Split: Dynamic Band Splitting for Audio Source Separation",
+      "authors": [
+        "Bingzhe Zhang",
+        "Kai Li",
+        "Xiaolin Hu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.14993",
+      "arxiv_url": "https://arxiv.org/abs/2610.14993",
+      "pdf_url": "https://arxiv.org/pdf/2610.14993.pdf",
+      "code_url": "https://github.com/JusperLee/Dynamic-Band-Splitting",
+      "project_page": "https://cslikai.cn/Dynamic-Band-Splitting/",
+      "abstract": "Audio source separation models must preserve fine spectral structure while keeping the cost of the separator tractable. Band-split architectures reduce this cost by manually partitioning the spectrum into predefined frequency bands and encoding each band as a token, but the same boundaries are used for every mixture. Because informative spectral structure varies with source content, fixed boundaries can merge discriminative components or spend tokens where little resolution is needed. We introduce Dynamic Band Splitting (DBS), an end-to-end framework that adapts boundary locations and band widths to each mixture under a fixed band-token budget. DBS predicts content-conditioned boundary scores within frequency blocks, selects a prescribed number of boundaries using hard Top-K, and applies content-dependent pooling to obtain compact band tokens. After separation, it smooths and expands these tokens to the original STFT grid, refines them along frequency, and decodes complex masks with a frequency-shared head. DBS improved separation over the corresponding static models on DnR v2, MUSDB18-HQ, and EchoSet, with DBS-BSRNN achieving relative gain of 29.0% in average SI-SDR on DnR v2. These results and boundary analyses on DnR v2 show that content-adaptive frequency partitioning benefits multiple separator backbones under a fixed band-token budget. Code and audio demos are available at https://cslikai.cn/Dynamic-Band-Splitting",
+      "ai_keywords": [
+        "audio source separation",
+        "band-split architectures",
+        "Dynamic Band Splitting",
+        "Top-K",
+        "content-conditioned boundary scores",
+        "STFT",
+        "complex masks",
+        "BSRNN",
+        "SI-SDR"
+      ],
+      "popularity": 132,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.14993",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-learning-where-to-split-dynamic-band"
     },
     {
       "title": "World Observer: Joint Actor-Observer Generation for Persistent World Modeling",
@@ -14680,6 +14901,97 @@
       "rank": 9,
       "status": "pending",
       "folder": "papers/2026-commercegen-studio-an-end-to-end"
+    },
+    {
+      "title": "InfiniSplat v2: Analyzing and Improving Feed-Forward 3DGS from Any Views",
+      "authors": [
+        "Yongzhen Hu",
+        "Hao Yu",
+        "Jiawei Wang",
+        "Xianming Zeng",
+        "Jianyun Xu",
+        "Xingliang Liu",
+        "Ruizhen Hu",
+        "Xiaowei Zhou",
+        "Hujun Bao",
+        "Sida Peng"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.20341",
+      "arxiv_url": "https://arxiv.org/abs/2610.20341",
+      "pdf_url": "https://arxiv.org/pdf/2610.20341.pdf",
+      "code_url": "https://github.com/zju3dv/InfiniSplat",
+      "project_page": "https://zju3dv.github.io/InfiniSplat2/",
+      "abstract": "Feed-forward Gaussian reconstruction builds 3D scenes directly from input images for novel view rendering, but learning Gaussian attributes from predicted geometry for high-quality rendering under large viewpoint changes remains challenging. We analyze limitations in Gaussian attribute learning and introduce InfiniSplat v2, which improves rendering quality through architectural and training changes. Our method decouples geometry and attribute prediction with a frozen geometry branch, aligns predicted Gaussians using ground-truth camera poses during training, and adopts large-angle target view supervision. Across six datasets, the feed-forward outputs of the same trained model achieve state-of-the-art mean LPIPS and DISTS among the evaluated methods in both pose-conditioned and pose-free settings. In the pose-conditioned setting, mean LPIPS and DISTS decrease by 25.8% and 32.9%, respectively, compared with the strongest evaluated baselines. We further find that opacity learned with only image reconstruction supervision suppresses geometrically inconsistent points. Project page: https://zju3dv.github.io/InfiniSplat2/",
+      "ai_keywords": [
+        "Gaussian reconstruction",
+        "3D scenes",
+        "novel view rendering",
+        "Gaussian attributes",
+        "InfiniSplat v2",
+        "frozen geometry branch",
+        "ground-truth camera poses",
+        "large-angle target view supervision",
+        "LPIPS",
+        "DISTS",
+        "opacity",
+        "image reconstruction supervision"
+      ],
+      "popularity": 115,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.20341",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-infinisplat-v2-analyzing-and-improving-feed"
+    },
+    {
+      "title": "3DCodeVerse: Exploring 3D Worlds as Code",
+      "authors": [
+        "Yipeng Gao",
+        "Ziyao Zeng",
+        "Jinfa Huang",
+        "Yijiang Li",
+        "Haolin Xiong",
+        "Wang Qin",
+        "Xinlei Yu",
+        "Youheng Yao",
+        "Jie Zhang",
+        "Kun-Yu Lin",
+        "Rong Liu",
+        "Yinyuan Zhao",
+        "Yajie Zhao",
+        "Meiqi Guo",
+        "Jiebo Luo",
+        "Lei Shu",
+        "Yunhao Ge",
+        "Xinyu Hu",
+        "Laurent Itti"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.22341",
+      "arxiv_url": "https://arxiv.org/abs/2610.22341",
+      "pdf_url": "https://arxiv.org/pdf/2610.22341.pdf",
+      "code_url": "https://github.com/gaoypeng/3dcodeverse",
+      "project_page": "https://3dcodeverse.com/",
+      "abstract": "We introduce 3DCodeVerse, a research ecosystem that enables coding agents to create editable and verifiable 3D content at scale. 3DCodeVerse comprises large-scale, high-quality datasets of executable 3D code, a coding harness for spatial reasoning and automated verification, and practical guidance for 3D coding. First, we construct 3DCodeVerse-2M, a large-scale curated dataset of standalone 3D executable code. We build this corpus by collecting open-source data, converting specialized representations, and generating new programs with coding agents. Each program is packaged with the source files and associated assets required for execution in its declared environment, along with available descriptions and verification records. Second, we develop the 3DCodeVerse Harness, a multi-agent directed acyclic graph framework for generating and refining 3D content. It uses execution checks, spatial measurements, and visual feedback to automatically evaluate and revise generated programs without human feedback during generation. Third, we conduct systematic empirical studies of 3D coding, establishing baselines with fine-tuned open models and deriving practical guidance through component-level analyses of our harness. Extensive experiments demonstrate that fine-tuning on our dataset significantly improves the 3D coding capabilities of open-source models. Notably, our 3DCodeVerse harness achieves a 90% win rate against Claude Design (3D Object) in pairwise human evaluations, when both are utilized by Claude Opus 5.5.",
+      "ai_keywords": [
+        "3DCodeVerse",
+        "executable 3D code",
+        "coding harness",
+        "spatial reasoning",
+        "automated verification",
+        "multi-agent directed acyclic graph",
+        "execution checks",
+        "spatial measurements",
+        "visual feedback",
+        "fine-tuned open models"
+      ],
+      "popularity": 100,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.22341",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-3dcodeverse-exploring-3d-worlds-as-code"
     },
     {
       "title": "OuroWorld: Bringing Any 3D World Alive as Diverse, Endlessly Looping 3D Cinemagraphs",
@@ -16395,38 +16707,6 @@
       "rank": 10,
       "status": "pending",
       "folder": "papers/2026-seeing-maintaining-and-learning-the-evolution"
-    },
-    {
-      "title": "Learning Where to Split: Dynamic Band Splitting for Audio Source Separation",
-      "authors": [
-        "Bingzhe Zhang",
-        "Kai Li",
-        "Xiaolin Hu"
-      ],
-      "year": "2026",
-      "arxiv_id": "2610.14993",
-      "arxiv_url": "https://arxiv.org/abs/2610.14993",
-      "pdf_url": "https://arxiv.org/pdf/2610.14993.pdf",
-      "code_url": "https://github.com/JusperLee/Dynamic-Band-Splitting",
-      "project_page": "https://cslikai.cn/Dynamic-Band-Splitting/",
-      "abstract": "Audio source separation models must preserve fine spectral structure while keeping the cost of the separator tractable. Band-split architectures reduce this cost by manually partitioning the spectrum into predefined frequency bands and encoding each band as a token, but the same boundaries are used for every mixture. Because informative spectral structure varies with source content, fixed boundaries can merge discriminative components or spend tokens where little resolution is needed. We introduce Dynamic Band Splitting (DBS), an end-to-end framework that adapts boundary locations and band widths to each mixture under a fixed band-token budget. DBS predicts content-conditioned boundary scores within frequency blocks, selects a prescribed number of boundaries using hard Top-K, and applies content-dependent pooling to obtain compact band tokens. After separation, it smooths and expands these tokens to the original STFT grid, refines them along frequency, and decodes complex masks with a frequency-shared head. DBS improved separation over the corresponding static models on DnR v2, MUSDB18-HQ, and EchoSet, with DBS-BSRNN achieving relative gain of 29.0% in average SI-SDR on DnR v2. These results and boundary analyses on DnR v2 show that content-adaptive frequency partitioning benefits multiple separator backbones under a fixed band-token budget. Code and audio demos are available at https://cslikai.cn/Dynamic-Band-Splitting",
-      "ai_keywords": [
-        "audio source separation",
-        "band-split architectures",
-        "Dynamic Band Splitting",
-        "Top-K",
-        "content-conditioned boundary scores",
-        "STFT",
-        "complex masks",
-        "BSRNN",
-        "SI-SDR"
-      ],
-      "popularity": 13,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2610.14993",
-      "rank": 10,
-      "status": "pending",
-      "folder": "papers/2026-learning-where-to-split-dynamic-band"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -19424,5 +19704,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-10-16T05:00:53.225549+00:00"
+  "updated_at": "2026-10-17T05:00:04.873241+00:00"
 }
