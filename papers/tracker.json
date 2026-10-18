@@ -628,7 +628,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.19880",
       "rank": 1,
-      "status": "reading",
+      "status": "breaking_down",
       "folder": "papers/2026-envharness-awakening-static-worlds-for-agent",
       "started_at": "2026-10-17"
     },
@@ -2413,7 +2413,7 @@
         "cross-attention",
         "Qwen3"
       ],
-      "popularity": 656,
+      "popularity": 665,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.21601",
       "rank": 1,
@@ -2448,7 +2448,7 @@
         "audio-visual reasoning",
         "vision-language models"
       ],
-      "popularity": 569,
+      "popularity": 577,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.18829",
       "rank": 2,
@@ -5671,6 +5671,46 @@
       "folder": "papers/2026-orbia-do-generated-videos-form-a"
     },
     {
+      "title": "MJev-Spatial: System One Spatial Intelligence via Native Attention Matching",
+      "authors": [
+        "Luozheng Qin",
+        "Yuhan Zhu",
+        "Changhai Zhou",
+        "Qian Qiao",
+        "Jun Gao",
+        "Yuhua Zhou",
+        "Harry Zhang",
+        "Xiangyu Zeng",
+        "Yuxuan Liu",
+        "Kaijie Chen",
+        "Andrew Chen",
+        "Pony Ma"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.22276",
+      "arxiv_url": "https://arxiv.org/abs/2610.22276",
+      "pdf_url": "https://arxiv.org/pdf/2610.22276.pdf",
+      "code_url": "https://github.com/Fr0zenCrane/MJev-Spatial",
+      "project_page": "https://fr0zencrane.github.io/mjev-spatial-project/",
+      "abstract": "Spatial intelligence lets an agent perceive and act in the physical world, and many of its judgments must be made at interaction rates: which spatial relation holds, how far an object is, or where to place it. Vision-language models (VLMs) produce these answers by free-form text generation, paying for autoregressive decoding and answer parsing even though the output space is compact: one of a few options, a scalar, or a 2D point. In light of this, we introduce MJev-Spatial, a System 1 multimodal decision model that tackles all three types of spatial understanding tasks within a unified classification framework. Specifically, MJev-Spatial treats each candidate as a class and scores it using the backbone's pretrained query and key projections, without adding parameters. The candidates are the given options for choice tasks, or value bins and image regions refined through coarse-to-fine classification for numerical and point prediction, respectively. At inference, each classification decision takes a single forward pass and generates no answer tokens. To train on heterogeneous spatial data efficiently, we supervise all coarse-to-fine stages jointly with teacher forcing in one forward pass, and combine this with length-aware global batching and cross-GPU load balancing, raising training throughput by 30.8% over the original batching strategy. Built on Qwen3.5-4B and trained on 12.3M question-answer pairs converted from existing spatial datasets, MJev-Spatial achieves the highest overall score (65.64%) among eight tested models, ranks first on seven of twelve benchmarks, and outperforms its unmodified autoregressive base model on all twelve, while running 2.5 times faster than the fastest autoregressive baseline and 5.6 times faster than the base model.",
+      "ai_keywords": [
+        "vision-language models",
+        "multimodal decision model",
+        "classification framework",
+        "query and key projections",
+        "coarse-to-fine classification",
+        "teacher forcing",
+        "length-aware global batching",
+        "cross-GPU load balancing"
+      ],
+      "popularity": 351,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.22276",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-mjev-spatial-system-one-spatial-intelligence"
+    },
+    {
       "title": "OpenGCUA: Toward a Fully Open Stack for Generalist Computer Use",
       "authors": [
         "Hanzhang Zhou",
@@ -5705,10 +5745,10 @@
         "real-device harness",
         "cross-device SDK"
       ],
-      "popularity": 287,
+      "popularity": 315,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.22200",
-      "rank": 3,
+      "rank": 4,
       "status": "pending",
       "folder": "papers/2026-opengcua-toward-a-fully-open-stack"
     },
@@ -7067,10 +7107,10 @@
         "unstated constraints",
         "information discovery"
       ],
-      "popularity": 275,
+      "popularity": 283,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.22350",
-      "rank": 4,
+      "rank": 5,
       "status": "pending",
       "folder": "papers/2026-fde-gym-the-last-mile-of"
     },
@@ -8797,10 +8837,10 @@
         "reversible initialization",
         "fine-grained control"
       ],
-      "popularity": 198,
+      "popularity": 201,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.17665",
-      "rank": 5,
+      "rank": 6,
       "status": "pending",
       "folder": "papers/2026-rota-bench-evaluating-3d-spatial-reasoning"
     },
@@ -10411,10 +10451,10 @@
         "plugin composition",
         "continual validation"
       ],
-      "popularity": 190,
+      "popularity": 197,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.18813",
-      "rank": 6,
+      "rank": 7,
       "status": "pending",
       "folder": "papers/2026-self-evolving-agent-harness"
     },
@@ -11851,46 +11891,6 @@
       "rank": 7,
       "status": "pending",
       "folder": "papers/2026-edgewise-bringing-long-horizon-agents-to"
-    },
-    {
-      "title": "MJev-Spatial: System One Spatial Intelligence via Native Attention Matching",
-      "authors": [
-        "Luozheng Qin",
-        "Yuhan Zhu",
-        "Changhai Zhou",
-        "Qian Qiao",
-        "Jun Gao",
-        "Yuhua Zhou",
-        "Harry Zhang",
-        "Xiangyu Zeng",
-        "Yuxuan Liu",
-        "Kaijie Chen",
-        "Andrew Chen",
-        "Pony Ma"
-      ],
-      "year": "2026",
-      "arxiv_id": "2610.22276",
-      "arxiv_url": "https://arxiv.org/abs/2610.22276",
-      "pdf_url": "https://arxiv.org/pdf/2610.22276.pdf",
-      "code_url": "https://github.com/Fr0zenCrane/MJev-Spatial",
-      "project_page": "https://fr0zencrane.github.io/mjev-spatial-project/",
-      "abstract": "Spatial intelligence lets an agent perceive and act in the physical world, and many of its judgments must be made at interaction rates: which spatial relation holds, how far an object is, or where to place it. Vision-language models (VLMs) produce these answers by free-form text generation, paying for autoregressive decoding and answer parsing even though the output space is compact: one of a few options, a scalar, or a 2D point. In light of this, we introduce MJev-Spatial, a System 1 multimodal decision model that tackles all three types of spatial understanding tasks within a unified classification framework. Specifically, MJev-Spatial treats each candidate as a class and scores it using the backbone's pretrained query and key projections, without adding parameters. The candidates are the given options for choice tasks, or value bins and image regions refined through coarse-to-fine classification for numerical and point prediction, respectively. At inference, each classification decision takes a single forward pass and generates no answer tokens. To train on heterogeneous spatial data efficiently, we supervise all coarse-to-fine stages jointly with teacher forcing in one forward pass, and combine this with length-aware global batching and cross-GPU load balancing, raising training throughput by 30.8% over the original batching strategy. Built on Qwen3.5-4B and trained on 12.3M question-answer pairs converted from existing spatial datasets, MJev-Spatial achieves the highest overall score (65.64%) among eight tested models, ranks first on seven of twelve benchmarks, and outperforms its unmodified autoregressive base model on all twelve, while running 2.5 times faster than the fastest autoregressive baseline and 5.6 times faster than the base model.",
-      "ai_keywords": [
-        "vision-language models",
-        "multimodal decision model",
-        "classification framework",
-        "query and key projections",
-        "coarse-to-fine classification",
-        "teacher forcing",
-        "length-aware global batching",
-        "cross-GPU load balancing"
-      ],
-      "popularity": 147,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2610.22276",
-      "rank": 7,
-      "status": "pending",
-      "folder": "papers/2026-mjev-spatial-system-one-spatial-intelligence"
     },
     {
       "title": "Self-Generated Feedback Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation",
@@ -13362,6 +13362,50 @@
       "folder": "papers/2026-scope-semantic-bounded-credit-optimization-for"
     },
     {
+      "title": "MAI-Gym: An Open All-in-One Platform for GUI Agent Evaluation and RL Training across Mobile and Computer Environments",
+      "authors": [
+        "Panrong Tong",
+        "Quyu Kong",
+        "Pengxiang Li",
+        "Tianyu Xia",
+        "Hanzhang Zhou",
+        "Lei Wang",
+        "Chenglin Cai",
+        "Long Li",
+        "Long Chen",
+        "Jianan Zhang",
+        "Zhengwen Zeng",
+        "Xu Zhang",
+        "Gongjie Zhang",
+        "Yue Wang",
+        "Steven Hoi"
+      ],
+      "year": "2026",
+      "arxiv_id": "2610.20939",
+      "arxiv_url": "https://arxiv.org/abs/2610.20939",
+      "pdf_url": "https://arxiv.org/pdf/2610.20939.pdf",
+      "code_url": "https://github.com/Tongyi-MAI/MAI-Gym",
+      "project_page": "https://tongyi-mai.github.io/MAI-Gym/",
+      "abstract": "Online reinforcement learning (RL) with verifiable rewards has driven rapid progress in mathematics, coding, and tool use, but scaling this success to GUI agents remains challenging due to the high cost of interactive environments and the scarcity of realistic training tasks. We introduce MAI-Gym, an open all-in-one platform that unifies GUI agent evaluation, data collection, and online RL training across mobile, computer, and web environments. Through a shared rollout pipeline, MAI-Gym ensures consistent agent behavior across evaluation and training, supports ten established benchmarks, and scales to 20,000 parallel environment instances. Beyond scalable infrastructure, MAI-Gym enables automated synthesis of diverse GUI applications and challenging tasks, including resettable mocked apps and coherent cross-app worlds with execution-validated task verifiers. Using MAI-Gym, we train MAI-Gym-9B, a unified 9B agent for mobile and computer use, achieving state-of-the-art performance among open GUI agents under 10B parameters: 78.4% on MobileWorld and 76.2% on OSWorld-Verified. Importantly, RL in a mocked train-ticketing app transfers to its real-world counterpart, improving task success on a phys- ical phone from 28.8% to 48.1%. We release the framework, synthesis skills, mocked apps, 2,000 verified tasks, and the model checkpoint to support repro- ducible research and further advances in scalable GUI agent training.",
+      "ai_keywords": [
+        "online reinforcement learning",
+        "verifiable rewards",
+        "GUI agents",
+        "MAI-Gym",
+        "rollout pipeline",
+        "cross-app worlds",
+        "execution-validated task verifiers",
+        "MAI-Gym-9B",
+        "mocked apps"
+      ],
+      "popularity": 153,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2610.20939",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-mai-gym-an-open-all-in"
+    },
+    {
       "title": "Learning Where to Split: Dynamic Band Splitting for Audio Source Separation",
       "authors": [
         "Bingzhe Zhang",
@@ -13386,10 +13430,10 @@
         "BSRNN",
         "SI-SDR"
       ],
-      "popularity": 132,
+      "popularity": 134,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.14993",
-      "rank": 8,
+      "rank": 9,
       "status": "pending",
       "folder": "papers/2026-learning-where-to-split-dynamic-band"
     },
@@ -14937,10 +14981,10 @@
         "opacity",
         "image reconstruction supervision"
       ],
-      "popularity": 115,
+      "popularity": 118,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.20341",
-      "rank": 9,
+      "rank": 10,
       "status": "pending",
       "folder": "papers/2026-infinisplat-v2-analyzing-and-improving-feed"
     },
@@ -19704,5 +19748,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-10-17T05:00:04.873241+00:00"
+  "updated_at": "2026-10-18T05:00:13.018417+00:00"
 }
