@@ -1217,8 +1217,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.11638",
       "rank": 1,
-      "status": "coding",
-      "folder": "papers/2026-vidu-s2-real-time-interactive-editable"
+      "status": "done",
+      "folder": "papers/2026-vidu-s2-real-time-interactive-editable",
+      "finished_at": "2026-11-09"
     },
     {
       "title": "Continual Learning Mechanisms Compose for Long-Horizon Memorization",
