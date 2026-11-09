@@ -1,0 +1,4 @@
+# Mechanism miniature for Vidu S2 (arXiv:2609.11638)
+# CPU-only; the model is deliberately tiny (a few thousand parameters).
+torch>=2.0
+numpy>=1.24
