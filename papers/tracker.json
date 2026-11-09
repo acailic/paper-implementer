@@ -841,7 +841,8 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.01591",
       "rank": 1,
-      "status": "coding",
+      "status": "done",
+      "finished_at": "2026-11-09",
       "folder": "papers/2026-studentsim-training-llm-based-student-simulators"
     },
     {
@@ -2922,8 +2923,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.18829",
       "rank": 2,
-      "status": "writing",
-      "folder": "papers/2026-omnicompass-a-holistic-benchmark-for-omni"
+      "status": "done",
+      "folder": "papers/2026-omnicompass-a-holistic-benchmark-for-omni",
+      "finished_at": "2026-11-09"
     },
     {
       "title": "Atria Dawn: The Dawn of Agentic Superintelligence",
