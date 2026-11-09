@@ -880,7 +880,8 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.02749",
       "rank": 1,
-      "status": "coding",
+      "status": "done",
+      "finished_at": "2026-11-09",
       "started_at": "2026-11-09",
       "folder": "papers/2026-repo-to-skill-distilling-github-repositories"
     },
@@ -2921,7 +2922,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2610.18829",
       "rank": 2,
-      "status": "breaking_down",
+      "status": "coding",
       "folder": "papers/2026-omnicompass-a-holistic-benchmark-for-omni"
     },
     {
