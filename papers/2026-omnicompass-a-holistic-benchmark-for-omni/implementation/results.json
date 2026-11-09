@@ -1,0 +1,857 @@
+{
+  "VL": {
+    "MockProprietary-Flash": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.4358974358974359,
+          "mtIoU": 0.35588284537726483
+        },
+        "text_image": {
+          "R@0.5": 0.38461538461538464,
+          "mtIoU": 0.3172161204353638
+        },
+        "cs": {
+          "CS": 0.2836142607640488,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.41025641025641024,
+          "msIoU": 0.37403084002125403
+        },
+        "text_image": {
+          "AP@0.5": 0.5128205128205128,
+          "msIoU": 0.3991111532692108
+        },
+        "cs": {
+          "CS": 0.24871677945771703,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 1
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.7692307692307693
+        },
+        "text_image": {
+          "Accuracy": 0.717948717948718
+        },
+        "cs": {
+          "CS": 0.717948717948718,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 28,
+          "exactly_one_correct": 2,
+          "neither_correct": 9
+        }
+      },
+      "Average": {
+        "text": 0.49971481820976277,
+        "text_image": 0.4780919972177642
+      },
+      "CSAvg": 0.4167599193901612
+    },
+    "MockOpen-MoE": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.3076923076923077,
+          "mtIoU": 0.24724461892085606
+        },
+        "text_image": {
+          "R@0.5": 0.28205128205128205,
+          "mtIoU": 0.238225196228865
+        },
+        "cs": {
+          "CS": 0.1800873796487222,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 2
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.41025641025641024,
+          "msIoU": 0.31343786250397365
+        },
+        "text_image": {
+          "AP@0.5": 0.41025641025641024,
+          "msIoU": 0.3360593071791642
+        },
+        "cs": {
+          "CS": 0.19010294663385194,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 5
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.5897435897435898
+        },
+        "text_image": {
+          "Accuracy": 0.6666666666666666
+        },
+        "cs": {
+          "CS": 0.5641025641025641,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 2,
+          "both_correct": 22,
+          "exactly_one_correct": 5,
+          "neither_correct": 12
+        }
+      },
+      "Average": {
+        "text": 0.38347535705613983,
+        "text_image": 0.4136503900248986
+      },
+      "CSAvg": 0.31143096346171273
+    },
+    "MockOpen-7B": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.07692307692307693,
+          "mtIoU": 0.09158419754268671
+        },
+        "text_image": {
+          "R@0.5": 0.10256410256410256,
+          "mtIoU": 0.0832437262117016
+        },
+        "cs": {
+          "CS": 0.03521697409961927,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 3
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.0,
+          "msIoU": 0.13416590040771764
+        },
+        "text_image": {
+          "AP@0.5": 0.02564102564102564,
+          "msIoU": 0.1405313197256131
+        },
+        "cs": {
+          "CS": 0.037360579171180894,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 5
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.5384615384615384
+        },
+        "text_image": {
+          "Accuracy": 0.5641025641025641
+        },
+        "cs": {
+          "CS": 0.38461538461538464,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 6,
+          "both_correct": 15,
+          "exactly_one_correct": 13,
+          "neither_correct": 11
+        }
+      },
+      "Average": {
+        "text": 0.25473721213731426,
+        "text_image": 0.2626258700132929
+      },
+      "CSAvg": 0.1523976459620616
+    },
+    "MockAudioBlind-8B": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.1794871794871795,
+          "mtIoU": 0.14684229015798056
+        },
+        "text_image": {
+          "R@0.5": 0.1282051282051282,
+          "mtIoU": 0.11442271806922272
+        },
+        "cs": {
+          "CS": 0.03533634630617163,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 1
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.23076923076923078,
+          "msIoU": 0.27435786329291334
+        },
+        "text_image": {
+          "AP@0.5": 0.2564102564102564,
+          "msIoU": 0.23926325901567091
+        },
+        "cs": {
+          "CS": 0.11272956210229129,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 4
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.6410256410256411
+        },
+        "text_image": {
+          "Accuracy": 0.5384615384615384
+        },
+        "cs": {
+          "CS": 0.5128205128205128,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 2,
+          "both_correct": 20,
+          "exactly_one_correct": 6,
+          "neither_correct": 13
+        }
+      },
+      "Average": {
+        "text": 0.35407526482551166,
+        "text_image": 0.297382505182144
+      },
+      "CSAvg": 0.22029547374299188
+    },
+    "MockFragile-8B": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.15384615384615385,
+          "mtIoU": 0.12745449724632474
+        },
+        "text_image": {
+          "R@0.5": 0.15384615384615385,
+          "mtIoU": 0.12087669516117608
+        },
+        "cs": {
+          "CS": 0.025784489761019148,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 11
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.358974358974359,
+          "msIoU": 0.32813229638752023
+        },
+        "text_image": {
+          "AP@0.5": 0.4358974358974359,
+          "msIoU": 0.37494931006516624
+        },
+        "cs": {
+          "CS": 0.18749603666148645,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 13
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.3076923076923077
+        },
+        "text_image": {
+          "Accuracy": 0.46153846153846156
+        },
+        "cs": {
+          "CS": 0.2564102564102564,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 14,
+          "both_correct": 10,
+          "exactly_one_correct": 10,
+          "neither_correct": 19
+        }
+      },
+      "Average": {
+        "text": 0.2544263671087175,
+        "text_image": 0.3191214889216013
+      },
+      "CSAvg": 0.15656359427758734
+    },
+    "oracle-perfect": {
+      "TG": {
+        "text": {
+          "R@0.5": 1.0,
+          "mtIoU": 1.0
+        },
+        "text_image": {
+          "R@0.5": 1.0,
+          "mtIoU": 1.0
+        },
+        "cs": {
+          "CS": 1.0,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 1.0,
+          "msIoU": 1.0
+        },
+        "text_image": {
+          "AP@0.5": 1.0,
+          "msIoU": 1.0
+        },
+        "cs": {
+          "CS": 1.0,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 1.0
+        },
+        "text_image": {
+          "Accuracy": 1.0
+        },
+        "cs": {
+          "CS": 1.0,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 39,
+          "exactly_one_correct": 0,
+          "neither_correct": 0
+        }
+      },
+      "Average": {
+        "text": 1.0,
+        "text_image": 1.0
+      },
+      "CSAvg": 1.0
+    },
+    "oracle-confidently-wrong": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.010700777515729261
+        },
+        "text_image": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.010700777515729261
+        },
+        "cs": {
+          "CS": 0.010700777515729261,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.0,
+          "msIoU": 0.00035568810878324923
+        },
+        "text_image": {
+          "AP@0.5": 0.0,
+          "msIoU": 0.00035568810878324923
+        },
+        "cs": {
+          "CS": 0.00035568810878324923,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.0
+        },
+        "text_image": {
+          "Accuracy": 0.0
+        },
+        "cs": {
+          "CS": 0.0,
+          "scored_pairs": 39,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 0,
+          "exactly_one_correct": 0,
+          "neither_correct": 39
+        }
+      },
+      "Average": {
+        "text": 0.0036854885415041703,
+        "text_image": 0.0036854885415041703
+      },
+      "CSAvg": 0.0036854885415041703
+    }
+  },
+  "AV": {
+    "MockProprietary-Flash": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.7,
+          "mtIoU": 0.5694616451076858
+        },
+        "text_image": {
+          "R@0.5": 0.7,
+          "mtIoU": 0.545698066061552
+        },
+        "cs": {
+          "CS": 0.4766980273430508,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.5,
+          "msIoU": 0.45727863230799953
+        },
+        "text_image": {
+          "AP@0.5": 0.7,
+          "msIoU": 0.5671161830890404
+        },
+        "cs": {
+          "CS": 0.3632340409169657,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.8
+        },
+        "text_image": {
+          "Accuracy": 0.8
+        },
+        "cs": {
+          "CS": 0.7,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 1,
+          "both_correct": 7,
+          "exactly_one_correct": 2,
+          "neither_correct": 1
+        }
+      },
+      "Average": {
+        "text": 0.6089134258052284,
+        "text_image": 0.6376047497168642
+      },
+      "CSAvg": 0.5133106894200055
+    },
+    "MockOpen-MoE": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.0
+        },
+        "text_image": {
+          "R@0.5": 0.1,
+          "mtIoU": 0.09874477344920767
+        },
+        "cs": {
+          "CS": 0.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.7,
+          "msIoU": 0.582702495491515
+        },
+        "text_image": {
+          "AP@0.5": 0.5,
+          "msIoU": 0.44243459761176274
+        },
+        "cs": {
+          "CS": 0.3501416434515249,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 1
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.5
+        },
+        "text_image": {
+          "Accuracy": 0.5
+        },
+        "cs": {
+          "CS": 0.4,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 4,
+          "exactly_one_correct": 2,
+          "neither_correct": 4
+        }
+      },
+      "Average": {
+        "text": 0.360900831830505,
+        "text_image": 0.3470597903536568
+      },
+      "CSAvg": 0.25004721448384165
+    },
+    "MockOpen-7B": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.1,
+          "mtIoU": 0.09867861143260917
+        },
+        "text_image": {
+          "R@0.5": 0.1,
+          "mtIoU": 0.07052023121387294
+        },
+        "cs": {
+          "CS": 0.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.3,
+          "msIoU": 0.2746503052808792
+        },
+        "text_image": {
+          "AP@0.5": 0.0,
+          "msIoU": 0.1324453576171915
+        },
+        "cs": {
+          "CS": 0.05156236718601187,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.6
+        },
+        "text_image": {
+          "Accuracy": 0.5
+        },
+        "cs": {
+          "CS": 0.3,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 3,
+          "exactly_one_correct": 5,
+          "neither_correct": 2
+        }
+      },
+      "Average": {
+        "text": 0.3244429722378294,
+        "text_image": 0.23432186294368815
+      },
+      "CSAvg": 0.11718745572867062
+    },
+    "MockAudioBlind-8B": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.0
+        },
+        "text_image": {
+          "R@0.5": 0.1,
+          "mtIoU": 0.0551630434782608
+        },
+        "cs": {
+          "CS": 0.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.1,
+          "msIoU": 0.2706058734659453
+        },
+        "text_image": {
+          "AP@0.5": 0.4,
+          "msIoU": 0.3902346560956415
+        },
+        "cs": {
+          "CS": 0.18540860228861245,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.4
+        },
+        "text_image": {
+          "Accuracy": 0.5
+        },
+        "cs": {
+          "CS": 0.3,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 2,
+          "both_correct": 3,
+          "exactly_one_correct": 3,
+          "neither_correct": 4
+        }
+      },
+      "Average": {
+        "text": 0.2235352911553151,
+        "text_image": 0.3151325665246341
+      },
+      "CSAvg": 0.16180286742953748
+    },
+    "MockFragile-8B": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.1,
+          "mtIoU": 0.070396872629675
+        },
+        "text_image": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.0
+        },
+        "cs": {
+          "CS": 0.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 4
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.3,
+          "msIoU": 0.2235515727790896
+        },
+        "text_image": {
+          "AP@0.5": 0.2,
+          "msIoU": 0.1323417250659476
+        },
+        "cs": {
+          "CS": 0.05656114535243386,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 7
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.5
+        },
+        "text_image": {
+          "Accuracy": 0.5
+        },
+        "cs": {
+          "CS": 0.4,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 3,
+          "both_correct": 4,
+          "exactly_one_correct": 2,
+          "neither_correct": 4
+        }
+      },
+      "Average": {
+        "text": 0.2646494818029215,
+        "text_image": 0.21078057502198252
+      },
+      "CSAvg": 0.1521870484508113
+    },
+    "oracle-perfect": {
+      "TG": {
+        "text": {
+          "R@0.5": 1.0,
+          "mtIoU": 1.0
+        },
+        "text_image": {
+          "R@0.5": 1.0,
+          "mtIoU": 1.0
+        },
+        "cs": {
+          "CS": 1.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 1.0,
+          "msIoU": 1.0
+        },
+        "text_image": {
+          "AP@0.5": 1.0,
+          "msIoU": 1.0
+        },
+        "cs": {
+          "CS": 1.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 1.0
+        },
+        "text_image": {
+          "Accuracy": 1.0
+        },
+        "cs": {
+          "CS": 1.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 10,
+          "exactly_one_correct": 0,
+          "neither_correct": 0
+        }
+      },
+      "Average": {
+        "text": 1.0,
+        "text_image": 1.0
+      },
+      "CSAvg": 1.0
+    },
+    "oracle-confidently-wrong": {
+      "TG": {
+        "text": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.025171238089439406
+        },
+        "text_image": {
+          "R@0.5": 0.0,
+          "mtIoU": 0.025171238089439406
+        },
+        "cs": {
+          "CS": 0.025171238089439406,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "SG": {
+        "text": {
+          "AP@0.5": 0.0,
+          "msIoU": 0.0002402333980779968
+        },
+        "text_image": {
+          "AP@0.5": 0.0,
+          "msIoU": 0.0002402333980779968
+        },
+        "cs": {
+          "CS": 0.0002402333980779968,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0
+        }
+      },
+      "QA": {
+        "text": {
+          "Accuracy": 0.0
+        },
+        "text_image": {
+          "Accuracy": 0.0
+        },
+        "cs": {
+          "CS": 0.0,
+          "scored_pairs": 10,
+          "parse_failure_pairs_scored_zero": 0,
+          "both_correct": 0,
+          "exactly_one_correct": 0,
+          "neither_correct": 10
+        }
+      },
+      "Average": {
+        "text": 0.008470490495839134,
+        "text_image": 0.008470490495839134
+      },
+      "CSAvg": 0.008470490495839134
+    }
+  },
+  "timestamps_ablation": {
+    "MockProprietary-Flash|VL": {
+      "with": 0.4167599193901612,
+      "without": 0.3946458333972407,
+      "delta": -0.02211408599292053
+    },
+    "MockProprietary-Flash|AV": {
+      "with": 0.5133106894200055,
+      "without": 0.4595130417967164,
+      "delta": -0.053797647623289035
+    },
+    "MockOpen-MoE|VL": {
+      "with": 0.31143096346171273,
+      "without": 0.29196181631318957,
+      "delta": -0.019469147148523158
+    },
+    "MockOpen-MoE|AV": {
+      "with": 0.25004721448384165,
+      "without": 0.25004721448384165,
+      "delta": 0.0
+    },
+    "MockOpen-7B|VL": {
+      "with": 0.1523976459620616,
+      "without": 0.14431054174164534,
+      "delta": -0.008087104220416252
+    },
+    "MockAudioBlind-8B|VL": {
+      "with": 0.22029547374299188,
+      "without": 0.21608888778394444,
+      "delta": -0.0042065859590474375
+    },
+    "MockAudioBlind-8B|AV": {
+      "with": 0.16180286742953748,
+      "without": 0.16180286742953748,
+      "delta": 0.0
+    },
+    "MockFragile-8B|VL": {
+      "with": 0.15656359427758734,
+      "without": 0.14980011944982854,
+      "delta": -0.0067634748277587975
+    },
+    "MockFragile-8B|AV": {
+      "with": 0.1521870484508113,
+      "without": 0.1521870484508113,
+      "delta": 0.0
+    }
+  },
+  "modality_ablation_av": {
+    "MockProprietary-Flash|none": {
+      "TG": 0.0,
+      "SG": 0.0,
+      "QA": 0.1
+    },
+    "MockProprietary-Flash|vision": {
+      "TG": 0.33658839626180737,
+      "SG": 0.3632340409169657,
+      "QA": 0.5
+    },
+    "MockProprietary-Flash|full": {
+      "TG": 0.4766980273430508,
+      "SG": 0.3632340409169657,
+      "QA": 0.7
+    },
+    "MockOpen-MoE|none": {
+      "TG": 0.0,
+      "SG": 0.0,
+      "QA": 0.1
+    },
+    "MockOpen-MoE|vision": {
+      "TG": 0.0,
+      "SG": 0.3501416434515249,
+      "QA": 0.3
+    },
+    "MockOpen-MoE|full": {
+      "TG": 0.0,
+      "SG": 0.3501416434515249,
+      "QA": 0.4
+    },
+    "MockAudioBlind-8B|none": {
+      "TG": 0.0,
+      "SG": 0.0,
+      "QA": 0.1
+    },
+    "MockAudioBlind-8B|vision": {
+      "TG": 0.0,
+      "SG": 0.18540860228861245,
+      "QA": 0.3
+    },
+    "MockAudioBlind-8B|full": {
+      "TG": 0.0,
+      "SG": 0.18540860228861245,
+      "QA": 0.3
+    },
+    "MockFragile-8B|none": {
+      "TG": 0.0,
+      "SG": 0.0,
+      "QA": 0.0
+    },
+    "MockFragile-8B|vision": {
+      "TG": 0.0,
+      "SG": 0.05656114535243386,
+      "QA": 0.4
+    },
+    "MockFragile-8B|full": {
+      "TG": 0.0,
+      "SG": 0.05656114535243386,
+      "QA": 0.4
+    }
+  }
+}

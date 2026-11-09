@@ -1,0 +1,2 @@
+# Pure Python 3 standard library — no dependencies (CPU-only).
+# Paper: OmniCompass, Liu et al., arXiv:2610.18829 (2026).

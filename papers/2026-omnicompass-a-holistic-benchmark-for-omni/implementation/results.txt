@@ -1,0 +1,102 @@
+OmniCompass miniature — from-scratch evaluation harness
+(paper: Liu et al., arXiv:2610.18829; mocks only, CPU, deterministic)
+
+Sample serialized input (52 s basketball clip, 64 frames, VL, Text+Image):
+  Timestamp: 0.0 seconds. <frame 0> → Timestamp: 0.812 seconds. <frame 1> → Timestamp: 1.625 seconds. <frame 2> → Timestamp: 2.438 seconds. <frame 3> →  ...
+Sample TG prompt (Text):
+  Question: When in the video did Team USA player No. 7 score her first basket?
+
+=== Mini OmniCompass-VL (39 videos, 117 instances, Text/Text+Image) ===
+Model                      Fr        TG R@0.5        TG mtIoU  CS^TG       SG AP@0.5        SG msIoU  CS^SG          QA Acc  CS^QA         Average  CSAvg
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+MockProprietary-Flash      64       43.6/38.5       35.6/31.7   28.4       41.0/51.3       37.4/39.9   24.9       76.9/71.8   71.8       50.0/47.8   41.7
+MockOpen-MoE               64       30.8/28.2       24.7/23.8   18.0       41.0/41.0       31.3/33.6   19.0       59.0/66.7   56.4       38.3/41.4   31.1
+MockOpen-7B                32        7.7/10.3         9.2/8.3    3.5         0.0/2.6       13.4/14.1    3.7       53.8/56.4   38.5       25.5/26.3   15.2
+MockAudioBlind-8B          32       17.9/12.8       14.7/11.4    3.5       23.1/25.6       27.4/23.9   11.3       64.1/53.8   51.3       35.4/29.7   22.0
+MockFragile-8B             32       15.4/15.4       12.7/12.1    2.6       35.9/43.6       32.8/37.5   18.7       30.8/46.2   25.6       25.4/31.9   15.7
+oracle-perfect             64     100.0/100.0     100.0/100.0  100.0     100.0/100.0     100.0/100.0  100.0     100.0/100.0  100.0     100.0/100.0  100.0
+oracle-confidently-wrong   64         0.0/0.0         1.1/1.1    1.1         0.0/0.0         0.0/0.0    0.0         0.0/0.0    0.0         0.4/0.4    0.4
+
+== CS vs single-setting (paper finding: CS sits 4.3/4.6/6.4 pts below the LOWER single-setting score) ==
+Model                       TG: CS / lower    gap  SG: CS / lower    gap  QA: CS / lower    gap
+MockProprietary-Flash        28.4 /   31.7   -3.4   24.9 /   37.4  -12.5   71.8 /   71.8   +0.0
+MockOpen-MoE                 18.0 /   23.8   -5.8   19.0 /   31.3  -12.3   56.4 /   59.0   -2.6
+MockOpen-7B                   3.5 /    8.3   -4.8    3.7 /   13.4   -9.7   38.5 /   53.8  -15.4
+MockAudioBlind-8B             3.5 /   11.4   -7.9   11.3 /   23.9  -12.7   51.3 /   53.8   -2.6
+MockFragile-8B                2.6 /   12.1   -9.5   18.7 /   32.8  -14.1   25.6 /   30.8   -5.1
+oracle-perfect              100.0 /  100.0   +0.0  100.0 /  100.0   +0.0  100.0 /  100.0   +0.0
+oracle-confidently-wrong      1.1 /    1.1   +0.0    0.0 /    0.0   +0.0    0.0 /    0.0   +0.0
+
+== QA pair decomposition (paper App. B.3, Kimi-K3: 808 pairs = 546 both + 44+43 exactly-one + 175 neither) ==
+Model                         N   both   one  neither  parse0
+MockProprietary-Flash        39     28     2        9       0
+MockOpen-MoE                 39     22     5       12       2
+MockOpen-7B                  39     15    13       11       6
+MockAudioBlind-8B            39     20     6       13       2
+MockFragile-8B               39     10    10       19      14
+oracle-perfect               39     39     0        0       0
+oracle-confidently-wrong     39      0     0       39       0
+
+
+=== Mini OmniCompass-AV (10 videos, 30 instances, Text/Text+Image) ===
+Model                      Fr        TG R@0.5        TG mtIoU  CS^TG       SG AP@0.5        SG msIoU  CS^SG          QA Acc  CS^QA         Average  CSAvg
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+MockProprietary-Flash      64       70.0/70.0       56.9/54.6   47.7       50.0/70.0       45.7/56.7   36.3       80.0/80.0   70.0       60.9/63.8   51.3
+MockOpen-MoE               64        0.0/10.0         0.0/9.9    0.0       70.0/50.0       58.3/44.2   35.0       50.0/50.0   40.0       36.1/34.7   25.0
+MockOpen-7B                32       10.0/10.0         9.9/7.1    0.0        30.0/0.0       27.5/13.2    5.2       60.0/50.0   30.0       32.4/23.4   11.7
+MockAudioBlind-8B          32        0.0/10.0         0.0/5.5    0.0       10.0/40.0       27.1/39.0   18.5       40.0/50.0   30.0       22.4/31.5   16.2
+MockFragile-8B             32        10.0/0.0         7.0/0.0    0.0       30.0/20.0       22.4/13.2    5.7       50.0/50.0   40.0       26.5/21.1   15.2
+oracle-perfect             64     100.0/100.0     100.0/100.0  100.0     100.0/100.0     100.0/100.0  100.0     100.0/100.0  100.0     100.0/100.0  100.0
+oracle-confidently-wrong   64         0.0/0.0         2.5/2.5    2.5         0.0/0.0         0.0/0.0    0.0         0.0/0.0    0.0         0.8/0.8    0.8
+
+== CS vs single-setting (paper finding: CS sits 4.3/4.6/6.4 pts below the LOWER single-setting score) ==
+Model                       TG: CS / lower    gap  SG: CS / lower    gap  QA: CS / lower    gap
+MockProprietary-Flash        47.7 /   54.6   -6.9   36.3 /   45.7   -9.4   70.0 /   80.0  -10.0
+MockOpen-MoE                  0.0 /    0.0   +0.0   35.0 /   44.2   -9.2   40.0 /   50.0  -10.0
+MockOpen-7B                   0.0 /    7.1   -7.1    5.2 /   13.2   -8.1   30.0 /   50.0  -20.0
+MockAudioBlind-8B             0.0 /    0.0   +0.0   18.5 /   27.1   -8.5   30.0 /   40.0  -10.0
+MockFragile-8B                0.0 /    0.0   +0.0    5.7 /   13.2   -7.6   40.0 /   50.0  -10.0
+oracle-perfect              100.0 /  100.0   +0.0  100.0 /  100.0   +0.0  100.0 /  100.0   +0.0
+oracle-confidently-wrong      2.5 /    2.5   +0.0    0.0 /    0.0   +0.0    0.0 /    0.0   +0.0
+
+== QA pair decomposition (paper App. B.3, Kimi-K3: 808 pairs = 546 both + 44+43 exactly-one + 175 neither) ==
+Model                         N   both   one  neither  parse0
+MockProprietary-Flash        10      7     2        1       1
+MockOpen-MoE                 10      4     2        4       0
+MockOpen-7B                  10      3     5        2       0
+MockAudioBlind-8B            10      3     3        4       2
+MockFragile-8B               10      4     2        4       3
+oracle-perfect               10     10     0        0       0
+oracle-confidently-wrong     10      0     0       10       0
+
+
+== Harness sanity checks (oracles) ==
+oracle-perfect: all metrics == 1.0 (incl. CS) ......... PASS
+oracle-confidently-wrong: identical-but-wrong -> CS~0 .. PASS
+
+== Timestamps ablation (paper Fig. 6: CSAvg +6.5 VL / +4.9 AV, largest gains in TG) ==
+Model                      track  CSAvg w/ ts   w/o ts   delta
+MockProprietary-Flash         VL        41.7     39.5    -2.2
+MockProprietary-Flash         AV        51.3     46.0    -5.4
+MockOpen-MoE                  VL        31.1     29.2    -1.9
+MockOpen-MoE                  AV        25.0     25.0    +0.0
+MockOpen-7B                   VL        15.2     14.4    -0.8
+MockAudioBlind-8B             VL        22.0     21.6    -0.4
+MockAudioBlind-8B             AV        16.2     16.2    +0.0
+MockFragile-8B                VL        15.7     15.0    -0.7
+MockFragile-8B                AV        15.2     15.2    +0.0
+
+== Modality ablation on AV (paper Fig. 7: audio lifts CS^QA by +18.6..28.1; CS^SG -0.4..+1.8; text-only CS^QA 18.8..30.1) ==
+Model                         cond   CS^TG   CS^SG   CS^QA
+MockProprietary-Flash         none     0.0     0.0    10.0
+MockProprietary-Flash       vision    33.7    36.3    50.0
+MockProprietary-Flash         full    47.7    36.3    70.0
+MockOpen-MoE                  none     0.0     0.0    10.0
+MockOpen-MoE                vision     0.0    35.0    30.0
+MockOpen-MoE                  full     0.0    35.0    40.0
+MockAudioBlind-8B             none     0.0     0.0    10.0
+MockAudioBlind-8B           vision     0.0    18.5    30.0
+MockAudioBlind-8B             full     0.0    18.5    30.0
+MockFragile-8B                none     0.0     0.0     0.0
+MockFragile-8B              vision     0.0     5.7    40.0
+MockFragile-8B                full     0.0     5.7    40.0
