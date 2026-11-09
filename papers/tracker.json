@@ -841,7 +841,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.01591",
       "rank": 1,
-      "status": "reading",
+      "status": "breaking_down",
       "folder": "papers/2026-studentsim-training-llm-based-student-simulators"
     },
     {
@@ -880,7 +880,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.02749",
       "rank": 1,
-      "status": "reading",
+      "status": "broken-down",
       "started_at": "2026-11-09",
       "folder": "papers/2026-repo-to-skill-distilling-github-repositories"
     },
@@ -1215,7 +1215,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.11638",
       "rank": 1,
-      "status": "reading",
+      "status": "breaking_down",
       "folder": "papers/2026-vidu-s2-real-time-interactive-editable"
     },
     {
