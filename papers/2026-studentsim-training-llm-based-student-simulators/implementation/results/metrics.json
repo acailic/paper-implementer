@@ -1,0 +1,287 @@
+{
+  "seed": 11,
+  "population": {
+    "pool_students": 200,
+    "roster_students": 15,
+    "modes": [
+      "error_remediation",
+      "conceptual",
+      "socratic"
+    ]
+  },
+  "stage1_fit": {
+    "mode_intercepts": {
+      "error_remediation": 2.734000315578597,
+      "conceptual": 2.2031538881996906,
+      "socratic": 1.4906792542088925
+    },
+    "mode_slopes": {
+      "error_remediation": -0.14960440045381046,
+      "conceptual": 0.6812108125475091,
+      "socratic": 1.1690013221464266
+    }
+  },
+  "E1_main": [
+    {
+      "family": "state_tracking",
+      "label": "state-tracking (KT/Maia2 analogue)",
+      "F": 0.6050505050505051,
+      "R": 0.7274074074074074,
+      "F_on_correct": 0.9152245217567798,
+      "F_on_wrong": 0.10463985417332274,
+      "R_by_mode": {
+        "error_remediation": 0.6977777777777778,
+        "conceptual": 0.76,
+        "socratic": 0.7244444444444444
+      }
+    },
+    {
+      "family": "role_play",
+      "label": "prompted role-play (LLM analogue)",
+      "F": 0.603030303030303,
+      "R": 0.8860867324881214,
+      "F_on_correct": 0.9090305359122564,
+      "F_on_wrong": 0.09790864983562753,
+      "R_by_mode": {
+        "error_remediation": 0.9390033622217955,
+        "conceptual": 0.9005323737741623,
+        "socratic": 0.8161802030306113
+      }
+    },
+    {
+      "family": "studentsim",
+      "label": "StudentSim-mini (pooled -> specialized)",
+      "F": 0.6363636363636364,
+      "R": 0.8506393269664361,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9391778308009517,
+        "conceptual": 0.8715920605677001,
+        "socratic": 0.7411931793715509
+      }
+    }
+  ],
+  "E2_stage_ablation": [
+    {
+      "family": "studentsim",
+      "label": "Stage1 pooled + Stage2 specialize (reference)",
+      "F": 0.6363636363636364,
+      "R": 0.8506393269664361,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9391778308009517,
+        "conceptual": 0.8715920605677001,
+        "socratic": 0.7411931793715509
+      }
+    },
+    {
+      "family": "pooled_only",
+      "label": "Stage1 pooled only (no specialization)",
+      "F": 0.6050505050505051,
+      "R": 0.8519470919675879,
+      "F_on_correct": 0.9152245217567798,
+      "F_on_wrong": 0.10463985417332274,
+      "R_by_mode": {
+        "error_remediation": 0.9395356589569167,
+        "conceptual": 0.8752334579147362,
+        "socratic": 0.7411335138427771
+      }
+    },
+    {
+      "family": "self_pool",
+      "label": "Stage1 = one student's records (D.1 ablation)",
+      "F": 0.603030303030303,
+      "R": 0.8250358026035213,
+      "F_on_correct": 0.8283748582404497,
+      "F_on_wrong": 0.14478629686743277,
+      "R_by_mode": {
+        "error_remediation": 0.9024127023002438,
+        "conceptual": 0.889486029430319,
+        "socratic": 0.6841653753237087
+      }
+    }
+  ],
+  "E3_rho_sweep": [
+    {
+      "family": "studentsim",
+      "label": "rho=0.000",
+      "F": 0.6363636363636364,
+      "R": 0.6851072124756336,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.6711111111111111,
+        "conceptual": 0.7111111111111111,
+        "socratic": 0.6716666666666666
+      },
+      "rho": 0.0
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=0.025",
+      "F": 0.6363636363636364,
+      "R": 0.8526718887461778,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.956161428413287,
+        "conceptual": 0.8449145053253319,
+        "socratic": 0.7567242295286655
+      },
+      "rho": 0.025
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=0.050",
+      "F": 0.6363636363636364,
+      "R": 0.8521697164446697,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9436489327365929,
+        "conceptual": 0.8759559233561145,
+        "socratic": 0.7370535858988226
+      },
+      "rho": 0.05
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=0.100",
+      "F": 0.6363636363636364,
+      "R": 0.8457200521099699,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.933079925378237,
+        "conceptual": 0.8607841041410055,
+        "socratic": 0.7436878373751131
+      },
+      "rho": 0.1
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=0.200",
+      "F": 0.6363636363636364,
+      "R": 0.8515126310758587,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9299871744034258,
+        "conceptual": 0.8785400482911744,
+        "socratic": 0.746371124204078
+      },
+      "rho": 0.2
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=0.400",
+      "F": 0.6363636363636364,
+      "R": 0.8506117725195461,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9393765026365166,
+        "conceptual": 0.8637126828425021,
+        "socratic": 0.7490002146951751
+      },
+      "rho": 0.4
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=0.800",
+      "F": 0.6363636363636364,
+      "R": 0.8504359823032078,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9400638769495948,
+        "conceptual": 0.8722013423910966,
+        "socratic": 0.7389443795612831
+      },
+      "rho": 0.8
+    },
+    {
+      "family": "studentsim",
+      "label": "rho=1.000",
+      "F": 0.6363636363636364,
+      "R": 0.8506393269664361,
+      "F_on_correct": 0.9116213501549744,
+      "F_on_wrong": 0.16265211822209794,
+      "R_by_mode": {
+        "error_remediation": 0.9391778308009517,
+        "conceptual": 0.8715920605677001,
+        "socratic": 0.7411931793715509
+      },
+      "rho": 1.0
+    }
+  ],
+  "E4_leave_socratic_out": {
+    "full_mix": {
+      "R_by_mode": {
+        "error_remediation": 0.9391778308009517,
+        "conceptual": 0.8715920605677001,
+        "socratic": 0.7411931793715509
+      },
+      "R": 0.8506393269664361
+    },
+    "no_socratic": {
+      "R_by_mode": {
+        "error_remediation": 0.91505787753967,
+        "conceptual": 0.8169156806327694,
+        "socratic": 0.8754111136663499
+      },
+      "R": 0.8690228052790158
+    }
+  },
+  "E5_reward_loop": {
+    "n_records": 668,
+    "true_revision_rate": {
+      "random": 0.8467606425908034,
+      "role_play": 0.9351611996229632,
+      "studentsim": 0.9412615408276299,
+      "oracle": 0.9500532559422967
+    },
+    "mode_shares": {
+      "random": {
+        "error_remediation": 0.3562874251497006,
+        "conceptual": 0.3068862275449102,
+        "socratic": 0.33682634730538924
+      },
+      "role_play": {
+        "error_remediation": 1.0,
+        "conceptual": 0.0,
+        "socratic": 0.0
+      },
+      "studentsim": {
+        "error_remediation": 0.7514970059880239,
+        "conceptual": 0.18413173652694612,
+        "socratic": 0.06437125748502993
+      },
+      "oracle": {
+        "error_remediation": 0.6901197604790419,
+        "conceptual": 0.0,
+        "socratic": 0.30988023952095806
+      }
+    },
+    "reward_model_correlation_with_true_uptake": {
+      "role_play": 0.4164256121556879,
+      "studentsim": 0.8276726294799518
+    },
+    "reward_model_uptake_MAE": {
+      "role_play": 0.11271970532495035,
+      "studentsim": 0.0702316365063403
+    }
+  },
+  "E1_fig4_demo": {
+    "problem": 852,
+    "collapse": {
+      "state_tracking": 2,
+      "role_play": 2,
+      "studentsim": 3
+    },
+    "n_students_shown": 3
+  },
+  "E5_transcript": "=== simulated episode: student stu000 (StudentSim-mini brain, family=studentsim) ===\n[1] problem 700 (skill=equations): simulated student marks option C  <- correct\n[2] problem 493 (skill=percents): simulated student marks option D  <- correct\n[3] problem 878 (skill=geometry): simulated student marks option B  <- correct\n[4] problem 421 (skill=percents): simulated student marks option B\n    tutor (mode=error_remediation): TUTOR: The option you marked is not correct. The right answer is A. Work through the percents step again and you will see why A is the consistent choice.\n    brain predicts uptake p_rev=0.95; true uptake for this student = 0.94\n    simulated student revises to canonical m*: no\n[5] problem 819 (skill=exponents): simulated student marks option C  <- correct\n[6] problem 76 (skill=equations): simulated student marks option D  <- correct"
+}
