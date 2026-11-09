@@ -880,7 +880,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.02749",
       "rank": 1,
-      "status": "broken-down",
+      "status": "coding",
       "started_at": "2026-11-09",
       "folder": "papers/2026-repo-to-skill-distilling-github-repositories"
     },

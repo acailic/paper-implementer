@@ -1,0 +1,134 @@
+{
+  "recall_threshold": 0.6,
+  "note": "Test questions about karpathy/minGPT, written by the examiner (me) after reading the repo. Used by verify.py's QA carry test: closed-book (skill files only) vs open-book (whole repo). This is the miniature of the paper's A.2.2 recovery experiment: does the distilled skill carry the operational knowledge, or merely point back at the source?",
+  "questions": [
+    {
+      "id": "q1-library-files",
+      "question": "What are the three library files of minGPT and what does each contain?",
+      "gold_answer": "mingpt/model.py contains the actual Transformer model definition, mingpt/bpe.py contains a Byte Pair Encoder translating between text and sequences of integers, mingpt/trainer.py is GPT-independent PyTorch boilerplate that trains the model",
+      "evidence_file": "README.md",
+      "gold_keywords": [
+        "model.py",
+        "transformer",
+        "model",
+        "definition",
+        "bpe.py",
+        "byte",
+        "pair",
+        "encoder",
+        "trainer.py",
+        "trains",
+        "boilerplate"
+      ]
+    },
+    {
+      "id": "q2-install",
+      "question": "How do you install minGPT if you want to import mingpt into your project?",
+      "gold_answer": "git clone https://github.com/karpathy/minGPT.git, cd minGPT, pip install -e .",
+      "evidence_file": "README.md",
+      "gold_keywords": [
+        "git",
+        "clone",
+        "pip",
+        "install"
+      ]
+    },
+    {
+      "id": "q3-gpt-class",
+      "question": "Which class defines the GPT model and in which module?",
+      "gold_answer": "The GPT class (an nn.Module) in mingpt/model.py, with GPT.get_default_config for its configuration",
+      "evidence_file": "mingpt/model.py",
+      "gold_keywords": [
+        "GPT",
+        "model.py",
+        "get_default_config"
+      ]
+    },
+    {
+      "id": "q4-pretrained",
+      "question": "How do you load pretrained GPT-2 weights into minGPT?",
+      "gold_answer": "Call the classmethod GPT.from_pretrained(model_type) with model_type gpt2, gpt2-medium, gpt2-large or gpt2-xl; it downloads and loads the OpenAI GPT-2 checkpoint weights",
+      "evidence_file": "mingpt/model.py",
+      "gold_keywords": [
+        "from_pretrained",
+        "gpt2",
+        "checkpoint",
+        "weights"
+      ]
+    },
+    {
+      "id": "q5-trainer-constructor",
+      "question": "What does the Trainer class require at construction?",
+      "gold_answer": "Trainer(config, model, train_dataset): a TrainerConfig from Trainer.get_default_config, the model, and a training dataset",
+      "evidence_file": "mingpt/trainer.py",
+      "gold_keywords": [
+        "Trainer",
+        "config",
+        "model",
+        "train_dataset"
+      ]
+    },
+    {
+      "id": "q6-projects",
+      "question": "What demo projects ship in the minGPT repository?",
+      "gold_answer": "projects/adder trains a GPT from scratch to add numbers, projects/chargpt trains a character-level language model on an input text file, demo.ipynb is a minimal GPT and Trainer usage on a sorting example, generate.ipynb loads a pretrained GPT2 and generates text",
+      "evidence_file": "README.md",
+      "gold_keywords": [
+        "adder",
+        "numbers",
+        "chargpt",
+        "character",
+        "level",
+        "demo.ipynb",
+        "sorting",
+        "generate.ipynb"
+      ]
+    },
+    {
+      "id": "q7-seed",
+      "question": "Which utility function sets the random seed?",
+      "gold_answer": "set_seed(seed) in mingpt/utils.py, alongside setup_logging(config) and the CfgNode configuration class",
+      "evidence_file": "mingpt/utils.py",
+      "gold_keywords": [
+        "set_seed",
+        "utils.py"
+      ]
+    },
+    {
+      "id": "q8-generate",
+      "question": "What is the signature of the generation method?",
+      "gold_answer": "GPT.generate(idx, max_new_tokens, temperature=1.0, do_sample=False, top_k=None) generates new tokens conditioned on the index sequence idx",
+      "evidence_file": "mingpt/model.py",
+      "gold_keywords": [
+        "generate",
+        "max_new_tokens",
+        "temperature",
+        "do_sample",
+        "top_k"
+      ]
+    },
+    {
+      "id": "q9-config",
+      "question": "How is configuration handled in minGPT?",
+      "gold_answer": "CfgNode, a lightweight configuration class inspired by yacs in mingpt/utils.py, with merge_from_dict and merge_from_args to override defaults from command line arguments",
+      "evidence_file": "mingpt/utils.py",
+      "gold_keywords": [
+        "CfgNode",
+        "yacs",
+        "merge_from_args",
+        "merge_from_dict"
+      ]
+    },
+    {
+      "id": "q10-status",
+      "question": "What is the maintenance status of the repository?",
+      "gold_answer": "Semi-archived state as of January 2023; for more recent developments use the rewrite nanoGPT",
+      "evidence_file": "README.md",
+      "gold_keywords": [
+        "semi-archived",
+        "2023",
+        "nanoGPT"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,422 @@
+{
+  "pipeline": [
+    "anchor",
+    "scope",
+    "ground",
+    "construct",
+    "verify"
+  ],
+  "anchor": {
+    "url": "https://github.com/karpathy/minGPT",
+    "commit": "37baab7"
+  },
+  "evidence_boundary": {
+    "files": 14,
+    "units": 88,
+    "by_kind": {
+      "meta": 7,
+      "readme_section": 13,
+      "install_cmd": 2,
+      "readme_snippet": 3,
+      "module_docstring": 6,
+      "function": 8,
+      "class": 11,
+      "method": 37,
+      "dependency": 1
+    }
+  },
+  "capabilities": {
+    "install": 3,
+    "model-config": 21,
+    "training": 22,
+    "data-prep": 25,
+    "inference": 5,
+    "pretrained": 4,
+    "cli": 4,
+    "repo-layout": 30
+  },
+  "skill_dir": "skills/mingpt",
+  "gates": [
+    {
+      "gate": "required-sections",
+      "pass": true,
+      "detail": "all present"
+    },
+    {
+      "gate": "link-integrity",
+      "pass": true,
+      "detail": "4 targets resolve"
+    },
+    {
+      "gate": "provenance",
+      "pass": true,
+      "detail": "commit=37baab7 url-recorded=True"
+    },
+    {
+      "gate": "no-local-path-leakage",
+      "pass": true,
+      "detail": "clean"
+    },
+    {
+      "gate": "capabilities-grounded",
+      "pass": true,
+      "detail": "8/8 capabilities have evidence"
+    },
+    {
+      "gate": "runtime-separation",
+      "pass": true,
+      "detail": "runtime graph clean"
+    },
+    {
+      "gate": "scripts-parseable",
+      "pass": true,
+      "detail": "1 script(s), syntax ok=True"
+    }
+  ],
+  "gates_all_pass": true,
+  "qa": {
+    "n_questions": 10,
+    "closed_book_pass": 6,
+    "open_book_pass": 5,
+    "closed_present": 10,
+    "open_present": 10,
+    "closed_frac": 0.6,
+    "open_frac": 0.5,
+    "carry_ratio": 1.2,
+    "present_carry_ratio": 1.0,
+    "smoke_check": {
+      "exit": 0,
+      "probes": 42,
+      "tail": [
+        "ok    symbol BPETokenizer in tests/test_huggingface_import.py",
+        "ok    symbol GPT in tests/test_huggingface_import.py",
+        "ok    symbol TestHuggingFaceImport in tests/test_huggingface_import.py"
+      ]
+    }
+  },
+  "qa_per_question": [
+    {
+      "id": "q1-library-files",
+      "question": "What are the three library files of minGPT and what does each contain?",
+      "gold_keywords": [
+        "model.py",
+        "transformer",
+        "model",
+        "definition",
+        "bpe.py",
+        "byte",
+        "pair",
+        "encoder",
+        "trainer.py",
+        "trains",
+        "boilerplate"
+      ],
+      "evidence_file": "README.md",
+      "closed_book": {
+        "passages": [
+          "references/quickstart.md",
+          "references/api.md",
+          "references/quickstart.md"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      },
+      "open_book": {
+        "passages": [
+          "README.md",
+          "projects/readme.md",
+          "README.md"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      }
+    },
+    {
+      "id": "q2-install",
+      "question": "How do you install minGPT if you want to import mingpt into your project?",
+      "gold_keywords": [
+        "git",
+        "clone",
+        "pip",
+        "install"
+      ],
+      "evidence_file": "README.md",
+      "closed_book": {
+        "passages": [
+          "references/quickstart.md",
+          "references/api.md",
+          "references/quickstart.md"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      },
+      "open_book": {
+        "passages": [
+          "README.md",
+          "mingpt/model.py",
+          "projects/chargpt/chargpt.py"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      }
+    },
+    {
+      "id": "q3-gpt-class",
+      "question": "Which class defines the GPT model and in which module?",
+      "gold_keywords": [
+        "GPT",
+        "model.py",
+        "get_default_config"
+      ],
+      "evidence_file": "mingpt/model.py",
+      "closed_book": {
+        "passages": [
+          "references/api.md",
+          "references/api.md",
+          "references/api.md"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      },
+      "open_book": {
+        "passages": [
+          "mingpt/model.py",
+          "mingpt/model.py",
+          "projects/adder/readme.md"
+        ],
+        "present": true,
+        "gold_recall": 0.5,
+        "pass": false
+      }
+    },
+    {
+      "id": "q4-pretrained",
+      "question": "How do you load pretrained GPT-2 weights into minGPT?",
+      "gold_keywords": [
+        "from_pretrained",
+        "gpt2",
+        "checkpoint",
+        "weights"
+      ],
+      "evidence_file": "mingpt/model.py",
+      "closed_book": {
+        "passages": [
+          "SKILL.md",
+          "references/api.md",
+          "SKILL.md"
+        ],
+        "present": true,
+        "gold_recall": 0.75,
+        "pass": true
+      },
+      "open_book": {
+        "passages": [
+          "README.md",
+          "tests/test_huggingface_import.py",
+          "mingpt/model.py"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      }
+    },
+    {
+      "id": "q5-trainer-constructor",
+      "question": "What does the Trainer class require at construction?",
+      "gold_keywords": [
+        "Trainer",
+        "config",
+        "model",
+        "train_dataset"
+      ],
+      "evidence_file": "mingpt/trainer.py",
+      "closed_book": {
+        "passages": [
+          "references/api.md",
+          "references/api.md",
+          "references/api.md"
+        ],
+        "present": true,
+        "gold_recall": 0.25,
+        "pass": false
+      },
+      "open_book": {
+        "passages": [
+          "projects/chargpt/chargpt.py",
+          "projects/adder/adder.py",
+          "projects/adder/adder.py"
+        ],
+        "present": true,
+        "gold_recall": 0.5,
+        "pass": false
+      }
+    },
+    {
+      "id": "q6-projects",
+      "question": "What demo projects ship in the minGPT repository?",
+      "gold_keywords": [
+        "adder",
+        "numbers",
+        "chargpt",
+        "character",
+        "level",
+        "demo.ipynb",
+        "sorting",
+        "generate.ipynb"
+      ],
+      "evidence_file": "README.md",
+      "closed_book": {
+        "passages": [
+          "SKILL.md",
+          "references/quickstart.md",
+          "SKILL.md"
+        ],
+        "present": true,
+        "gold_recall": 0.444,
+        "pass": false
+      },
+      "open_book": {
+        "passages": [
+          "README.md",
+          "projects/readme.md",
+          "README.md"
+        ],
+        "present": true,
+        "gold_recall": 0.889,
+        "pass": true
+      }
+    },
+    {
+      "id": "q7-seed",
+      "question": "Which utility function sets the random seed?",
+      "gold_keywords": [
+        "set_seed",
+        "utils.py"
+      ],
+      "evidence_file": "mingpt/utils.py",
+      "closed_book": {
+        "passages": [
+          "references/api.md",
+          "references/quickstart.md",
+          "references/quickstart.md"
+        ],
+        "present": true,
+        "gold_recall": 1.0,
+        "pass": true
+      },
+      "open_book": {
+        "passages": [
+          "mingpt/utils.py",
+          "mingpt/utils.py",
+          "projects/chargpt/chargpt.py"
+        ],
+        "present": true,
+        "gold_recall": 0.667,
+        "pass": true
+      }
+    },
+    {
+      "id": "q8-generate",
+      "question": "What is the signature of the generation method?",
+      "gold_keywords": [
+        "generate",
+        "max_new_tokens",
+        "temperature",
+        "do_sample",
+        "top_k"
+      ],
+      "evidence_file": "mingpt/model.py",
+      "closed_book": {
+        "passages": [
+          "references/quickstart.md",
+          "references/quickstart.md",
+          "references/quickstart.md"
+        ],
+        "present": true,
+        "gold_recall": 0.0,
+        "pass": false
+      },
+      "open_book": {
+        "passages": [
+          "projects/readme.md",
+          "projects/adder/readme.md",
+          "projects/chargpt/chargpt.py"
+        ],
+        "present": true,
+        "gold_recall": 0.0,
+        "pass": false
+      }
+    },
+    {
+      "id": "q9-config",
+      "question": "How is configuration handled in minGPT?",
+      "gold_keywords": [
+        "CfgNode",
+        "yacs",
+        "merge_from_args",
+        "merge_from_dict"
+      ],
+      "evidence_file": "mingpt/utils.py",
+      "closed_book": {
+        "passages": [
+          "references/api.md",
+          "references/api.md",
+          "SKILL.md"
+        ],
+        "present": true,
+        "gold_recall": 0.75,
+        "pass": true
+      },
+      "open_book": {
+        "passages": [
+          "projects/readme.md",
+          "projects/chargpt/chargpt.py",
+          "projects/adder/adder.py"
+        ],
+        "present": true,
+        "gold_recall": 0.25,
+        "pass": false
+      }
+    },
+    {
+      "id": "q10-status",
+      "question": "What is the maintenance status of the repository?",
+      "gold_keywords": [
+        "semi-archived",
+        "2023",
+        "nanoGPT"
+      ],
+      "evidence_file": "README.md",
+      "closed_book": {
+        "passages": [
+          "references/quickstart.md",
+          "references/quickstart.md",
+          "references/quickstart.md"
+        ],
+        "present": true,
+        "gold_recall": 0.0,
+        "pass": false
+      },
+      "open_book": {
+        "passages": [
+          "projects/readme.md",
+          "projects/adder/readme.md",
+          "projects/chargpt/chargpt.py"
+        ],
+        "present": true,
+        "gold_recall": 0.0,
+        "pass": false
+      }
+    }
+  ],
+  "unresolved_gaps": [
+    "QA closed-book misses: ['q5-trainer-constructor', 'q6-projects', 'q8-generate', 'q10-status']"
+  ],
+  "seconds": 0.29,
+  "distiller": "deterministic rule-based (no LLM) \u2014 arXiv:2609.02749 re-implementation"
+}

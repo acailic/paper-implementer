@@ -1,0 +1,166 @@
+{
+  "repo": "minGPT",
+  "commit": "37baab7",
+  "nodes": [
+    {
+      "id": "entry",
+      "kind": "entry-skill",
+      "path": "SKILL.md"
+    },
+    {
+      "id": "install",
+      "kind": "component-capability",
+      "title": "Install / environment setup",
+      "evidence_units": 3
+    },
+    {
+      "id": "model-config",
+      "kind": "component-capability",
+      "title": "Instantiate and configure the core model",
+      "evidence_units": 21
+    },
+    {
+      "id": "training",
+      "kind": "component-capability",
+      "title": "Run / customize training",
+      "evidence_units": 22
+    },
+    {
+      "id": "data-prep",
+      "kind": "component-capability",
+      "title": "Prepare / preprocess data",
+      "evidence_units": 25
+    },
+    {
+      "id": "inference",
+      "kind": "component-capability",
+      "title": "Run inference / sampling / evaluation",
+      "evidence_units": 5
+    },
+    {
+      "id": "pretrained",
+      "kind": "component-capability",
+      "title": "Load pretrained / provided checkpoints",
+      "evidence_units": 4
+    },
+    {
+      "id": "cli",
+      "kind": "component-capability",
+      "title": "Use the command-line entry points",
+      "evidence_units": 4
+    },
+    {
+      "id": "repo-layout",
+      "kind": "component-capability",
+      "title": "Understand the repository layout",
+      "evidence_units": 30
+    },
+    {
+      "id": "ref-api",
+      "kind": "reference",
+      "path": "references/api.md"
+    },
+    {
+      "id": "ref-quickstart",
+      "kind": "reference",
+      "path": "references/quickstart.md"
+    },
+    {
+      "id": "script-smoke",
+      "kind": "script",
+      "path": "scripts/smoke_check.py"
+    }
+  ],
+  "links": [
+    {
+      "src": "entry",
+      "dst": "install",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "model-config",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "training",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "data-prep",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "inference",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "pretrained",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "cli",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "repo-layout",
+      "rel": "routing"
+    },
+    {
+      "src": "install",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "model-config",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "training",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "data-prep",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "inference",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "pretrained",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "cli",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "repo-layout",
+      "dst": "ref-api",
+      "rel": "dependency"
+    },
+    {
+      "src": "entry",
+      "dst": "ref-quickstart",
+      "rel": "routing"
+    },
+    {
+      "src": "entry",
+      "dst": "script-smoke",
+      "rel": "routing"
+    }
+  ]
+}

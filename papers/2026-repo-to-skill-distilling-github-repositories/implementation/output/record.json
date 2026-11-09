@@ -1,0 +1,62 @@
+{
+  "gates": [
+    {
+      "gate": "required-sections",
+      "pass": true,
+      "detail": "all present"
+    },
+    {
+      "gate": "link-integrity",
+      "pass": true,
+      "detail": "4 targets resolve"
+    },
+    {
+      "gate": "provenance",
+      "pass": true,
+      "detail": "commit=37baab7 url-recorded=True"
+    },
+    {
+      "gate": "no-local-path-leakage",
+      "pass": true,
+      "detail": "clean"
+    },
+    {
+      "gate": "capabilities-grounded",
+      "pass": true,
+      "detail": "8/8 capabilities have evidence"
+    },
+    {
+      "gate": "runtime-separation",
+      "pass": true,
+      "detail": "runtime graph clean"
+    },
+    {
+      "gate": "scripts-parseable",
+      "pass": true,
+      "detail": "1 script(s), syntax ok=True"
+    }
+  ],
+  "qa": {
+    "n_questions": 10,
+    "closed_book_pass": 6,
+    "open_book_pass": 5,
+    "closed_present": 10,
+    "open_present": 10,
+    "closed_frac": 0.6,
+    "open_frac": 0.5,
+    "carry_ratio": 1.2,
+    "present_carry_ratio": 1.0,
+    "smoke_check": {
+      "exit": 0,
+      "probes": 42,
+      "tail": [
+        "ok    symbol BPETokenizer in tests/test_huggingface_import.py",
+        "ok    symbol GPT in tests/test_huggingface_import.py",
+        "ok    symbol TestHuggingFaceImport in tests/test_huggingface_import.py"
+      ]
+    }
+  },
+  "unresolved_gaps": [
+    "QA closed-book misses: ['q5-trainer-constructor', 'q6-projects', 'q8-generate', 'q10-status']"
+  ]
+}

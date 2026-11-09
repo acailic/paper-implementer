@@ -1,0 +1,2 @@
+# Stdlib only — no third-party dependencies (deterministic distiller).
+# Cite: Chen et al., "Repo-To-Skill: Distilling GitHub Repositories Into AI4AI Skills", arXiv:2609.02749 (2026).
