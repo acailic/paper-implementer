@@ -841,7 +841,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.01591",
       "rank": 1,
-      "status": "breaking_down",
+      "status": "coding",
       "folder": "papers/2026-studentsim-training-llm-based-student-simulators"
     },
     {
@@ -1215,7 +1215,7 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.11638",
       "rank": 1,
-      "status": "breaking_down",
+      "status": "coding",
       "folder": "papers/2026-vidu-s2-real-time-interactive-editable"
     },
     {

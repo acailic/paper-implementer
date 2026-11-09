@@ -1,0 +1,6594 @@
+VISUAL COMPUTING LAB
+VISUAL COMPUTING LAB
+
+POLYU VCLAB • PREPRINT 2026
+POLYU VCLAB • PREPRINT 2026
+
+OmniCompass:
+for
+OmniCompass: A
+A Holistic
+Holistic Benchmark
+Benchmark for
+Omni-Modal
+Understanding
+Omni-Modal Video
+Video Grounding
+Grounding and
+and Understanding
+Xuyang Liu1,2
+Shihao Wang1 Xinyu Wei1,2 Minghan Li3
+Xuyang Liu1,2 Shihao Wang1 Xinyu Wei1,2 Minghan Li3
+4
+5
+1,2
+Zuhao
+Zuhao Yang
+Yang4 Zichen
+Zichen Wen
+Wen5 Lei
+Lei Zhang
+Zhang1,2
+
+1,2
+Zeqing Wang1,2
+Zeqing Wang
+
+1 The Hong Kong Polytechnic University 2 OPPO Research Institute 3 Colorado School of Mines
+1 The Hong Kong Polytechnic University 2 OPPO Research Institute 3 Colorado School of Mines
+4 Nanyang Technological University 5 Shanghai Jiao Tong University
+4 Nanyang Technological University 5 Shanghai Jiao Tong University
+
+GitHub
+GitHub
+
+Hugging
+Hugging Face
+Face
+
+Abstract.
+models (MLLMs),
+(MLLMs), evaluating
+evaluating
+Abstract. With
+With the
+the rapid
+rapid development
+development of
+of multimodal
+multimodal large
+large language
+language models
+their
+video
+understanding
+capabilities
+has
+become
+increasingly
+important.
+Existing
+video
+understanding
+their video understanding capabilities has become increasingly important. Existing video understanding
+benchmarks
+systematic diagnosis
+diagnosis of
+of omniomnibenchmarks cover
+cover only
+only part
+part of
+of the
+the evaluation
+evaluation dimensions,
+dimensions, limiting
+limiting systematic
+modal
+video
+understanding.
+We
+introduce
+OmniCompass,
+a
+holistic
+benchmark
+for
+omni-modal
+modal video understanding. We introduce OmniCompass, a holistic benchmark for omni-modal
+video
+tracks: OmniCompassOmniCompassvideo grounding
+grounding and
+and understanding.
+understanding. OmniCompass
+OmniCompass defines
+defines two
+two evaluation
+evaluation tracks:
+VL
+while OmniCompass-AV
+OmniCompass-AV
+VL assesses
+assesses vision-language
+vision-language models
+models on
+on tasks
+tasks requiring
+requiring visual
+visual evidence,
+evidence, while
+assesses
+omni-modal
+models
+on
+tasks
+requiring
+joint
+audio-visual
+evidence.
+Each
+track includes
+includes three
+three
+assesses omni-modal models on tasks requiring joint audio-visual evidence. Each track
+complementary
+(SG), and
+and question
+question answering
+answering
+complementary tasks:
+tasks: temporal
+temporal grounding
+grounding (TG),
+(TG), spatial
+spatial grounding
+grounding (SG),
+(QA),
+assessing
+when
+a
+referenced
+target
+appears,
+where
+it
+is,
+and
+what
+happens.
+QA
+covers
+five
+(QA), assessing when a referenced target appears, where it is, and what happens. QA covers five
+perception
+and
+three
+reasoning
+categories
+in
+OmniCompass-VL,
+and
+three
+perception
+and
+two
+reasoning
+perception and three reasoning categories in OmniCompass-VL, and three perception and two reasoning
+categories
+and 2,460
+2,460 instances
+instances across
+across
+categories in
+in OmniCompass-AV.
+OmniCompass-AV. OmniCompass-VL
+OmniCompass-VL contains
+contains 820
+820 videos
+videos and
+domains
+and
+three
+duration
+types:
+short,
+medium,
+and
+long.
+A
+narrativeand
+audio-rich
+subset
+domains and three duration types: short, medium, and long. A narrative- and audio-rich subset
+forms
+instance is
+is evaluated
+evaluated under
+under two
+two
+forms OmniCompass-AV
+OmniCompass-AV with
+with 240
+240 videos
+videos and
+and 720
+720 instances.
+instances. Each
+Each instance
+paired
+through text
+text and
+and visual-language
+visual-language
+paired settings:
+settings: text-only
+text-only and
+and text+image,
+text+image, specifying
+specifying the
+the same
+same target
+target through
+guidance.
+All
+instances
+are
+manually
+annotated
+with
+multi-round
+quality
+verification.
+Evaluations
+guidance. All instances are manually
+Evaluations
+of
+particularly
+of 50
+50 MLLMs
+MLLMs show
+show that
+that open-source
+open-source models still lag behind proprietary counterparts, particularly
+in
+for
+in audio-visual
+audio-visual understanding.
+understanding. Precise
+Precise temporal and spatial grounding remains challenging even for
+leading
+models,
+and
+their
+predictions
+still
+exhibit
+inconsistencies
+across
+the
+paired
+target
+specifications.
+leading models, and their predictions
+specifications.
+
+42.8
+
+42.0
+
+40.9
+
+40.5
+
+40.2
+
+39.6
+
+39.5
+
+38.9
+
+37.5
+
+37.2
+
+36.4
+
+34.9
+
+34.5
+
+34.2
+
+33.8
+
+30.8
+
+29.6
+
+28.6
+
+26.5
+
+25.5
+
+24.1
+
+21.3
+
+20.4
+
+o7B
+
+-2
+-8
+B
+
+aV
+AVi
+de
+LL
+
+LL
+
+aV
+AO
+
+ne
+
+Vi
+sio
+n
+
+.5
+-3
+8
+
+B
+
+BA3
+B
+
+te
+rn
+VL
+3
+In
+
+-V
+2.
+5
+
+eVL
+-2
+.0
+-3
+0
+
+Ke
+y
+
+sh
+kV4
+.1
+-F
+la
+ee
+
+pS
+De
+e
+
+Mi
+Mo
+
+B
+
+B
+
+3.
+627
+Qw
+en
+
+sh
+
+3.
+827
+
+-5
+.3
+-F
+la
+
+Qw
+en
+
+GL
+M
+
+a
+
+GP
+T5.
+6Te
+rra
+
+B
+-A
+22
+
+Qw
+en
+
+GP
+T5.
+6Lu
+n
+
+5B
+
+GP
+T5.
+5
+
+3VL
+-2
+3
+
+sh
+Qw
+en
+
+3.
+8Fla
+
+B
+
+l
+
+-A
+17
+7B
+3.
+539
+
+GP
+T5.
+6So
+
+Qw
+en
+
+Ge
+m
+in
+i-3
+.1
+-P
+ro
+
+GP
+T6As
+tra
+
+x
+
+Ki
+m
+i-K
+3
+
+15
+02
+
+3.
+8Ma
+Qw
+en
+
+28
+
+-2
+.0
+-P
+ro
+-2
+6
+
+Se
+
+ed
+
+-2
+6
+
+06
+
+15
+09
+
+bo
+-2
+.1
+-Tu
+r
+
+Se
+
+ed
+
+-2
+.1
+-P
+ro
+-2
+6
+
+ed
+
+Ge
+m
+in
+i-3
+.8
+-F
+la
+
+sh
+
+15.7
+
+Se
+
+arXiv:2610.18829v1 [cs.CV] 13 Oct 2026
+
+Homepage
+Homepage
+
+Figure 1.
+1. Overall
+Overall model
+model performance
+performance on
+on OmniCompass-VL.
+OmniCompass-VL. Gemini-3.8-Flash and Kimi-K3 achieve the
+Figure
+the highest
+highest
+scores
+among
+proprietary
+and
+open-source
+models,
+respectively,
+at
+42.8%
+and
+39.6%.
+scores among proprietary and open-source models,
+
+Corresponding author (cslzhang@comp.polyu.edu.hk).
+This work is supported by the PolyU-OPPO Joint Innovative Research Center.
+Visual
+VisualComputing
+Computing Lab
+Lab··The
+The Hong
+Hong Kong
+Kong Polytechnic
+Polytechnic University
+University
+
+35
+11//36
+
+Table 1. Comparison of existing video understanding benchmarks. Target Specification indicates whether the target is
+specified using text alone (i.e., Text) or text with an image (i.e., Text+Image); Video Evidence indicates whether correct
+outputs depend on visual or native audio content. TG/SG/QA denote temporal grounding, spatial grounding, and question
+answering. Short/Med./Long denote video length of < 90s, [90, 300)s, and ≥ 300s. #Vid./#Inst. are video/instance
+counts; M/A/H denote manual/automatic/hybrid annotation; Len. is the average video length in seconds.
+Benchmarks
+
+Target Specification Video Evidence Task Coverage
+
+Video Duration
+
+#Vid. #Inst. Anno. Len.(s)
+
+Text
+
+Text+Image
+
+Visual Audio TG SG QA Short Med. Long
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✗
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✓
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+
+✓
+✗
+✓
+✓
+✗
+✓
+✓
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✗
+✓
+
+✗
+✗
+✓
+✓
+✗
+✓
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✗
+✓
+
+✗
+✓
+✓
+✗
+✓
+✗
+✗
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✓
+✓
+✓
+✓
+✓
+✓
+✗
+✗
+✓
+✓
+✗
+✓
+✓
+✗
+✓
+✗
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✓
+✗
+✗
+✓
+✓
+✓
+✗
+✓
+✓
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+1,334 3,720
+2,179 15,253
+403 2,821
+732 10,303
+1,000 8,564
+1,160 1,160
+1,529 1,542
+5,063 5,063
+410 7,540
+3,641 4,000
+1,334 2,593
+900 2,700
+3,763 6,678
+1,219 12,129
+1,000 2,094
+967 2,585
+820 2,460
+
+M
+M
+M
+M
+A
+M
+M
+H
+H
+A
+H
+M
+M
+M
+H
+M
+M
+
+30.0
+11.2
+61.5
+28.0
+44.0
+20.0
+149.6
+180.0
+11.4
+16.0
+720.0
+1017.9
+473.0
+1624.4
+110.2
+537.0
+354.0
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+✗
+✗
+✓
+✓
+✓
+✓
+✓
+
+✗
+✗
+✓
+✓
+✓
+✓
+✓
+
+2,662 11,609
+684 1,197
+628 1,000
+1,662 3,172
+1,046 2,853
+800 3,200
+240
+720
+
+H
+H
+H
+M
+H
+M
+M
+
+67.8
+42.8
+384.2
+141.1
+97.2
+624.0
+427.5
+
+Video Benchmarks
+Charades-STA (Gao et al., 2017)
+TVQA (Lei et al., 2018)
+TVQA+ (Lei et al., 2020)
+VidSTG (Zhang et al., 2020)
+NExT-QA (Xiao et al., 2021)
+HC-STVG (Tang et al., 2021)
+QVHighlights (Lei et al., 2021)
+EgoSchema (Mangalam et al., 2023)
+TempCompass (Liu et al., 2024b)
+MVBench (Li et al., 2024b)
+MLVU (Zhou et al., 2025a)
+Video-MME (Fu et al., 2025a)
+LongVideoBench (Wu et al., 2024)
+CG-Bench (Chen et al., 2025a)
+V-STaR (Cheng et al., 2026)
+IV-Bench (Ma et al., 2026)
+OmniCompass-VL (Ours)
+Audio-Visual Benchmarks
+AVUT (Yang et al., 2025)
+Daily-Omni (Zhou et al., 2025b)
+OmniVideoBench (Li et al., 2026)
+WorldSense (Hong et al., 2026)
+JointAVBench (Chao et al., 2026)
+Video-MME-v2 (Fu et al., 2026)
+OmniCompass-AV (Ours)
+
+1 Introduction
+Human perception uses linguistic or visual cues to identify targets, attend to visual and auditory evidence
+across space and time, and form goal-directed judgments. Multimodal large language models (MLLMs) jointly
+process images, videos, audio, and text, supporting multimodal understanding and reasoning (Bai et al., 2025;
+Xu et al., 2025b; Google, 2025). Recent MLLMs can revisit relevant temporal clips (Yang et al., 2026a; Zeng
+et al., 2026b), inspect task-relevant spatial evidence (Wang et al., 2026c; Meng et al., 2026), and selectively
+acquire audio-visual evidence during reasoning (Xing et al., 2026; Chen et al., 2026). These advances motivate
+evaluating omni-modal video grounding and understanding. This requires identifying targets from textual or
+visual cues, grounding them spatiotemporally, and integrating audio-visual evidence to understand events.
+With the rapid development of MLLMs, how to comprehensively evaluate their performance in complex
+video understanding tasks has become an important problem. Table 1 compares existing benchmarks across
+four dimensions. (i) Target Specification defines how targets are presented: through only textual queries (Fu
+et al., 2025a) or with reference images (Ma et al., 2026). (ii) Video Evidence distinguishes tasks resolved
+from video frames (Chen et al., 2025a) from those requiring synchronized audio-visual content (Hong et al.,
+2026). (iii) Task Coverage specifies the output: temporal grounding (TG) and spatial grounding (SG) predict
+target-specific intervals and regions (Lei et al., 2021; Cheng et al., 2026), while question answering (QA)
+predicts answers (Fu et al., 2026). (iv) Video Duration determines the temporal scope: short-video benchmarks
+emphasize fine-grained motion and local dynamics (Li et al., 2024b), whereas long-video benchmarks test
+long-range dependencies and information integration across temporally distant events (Zhou et al., 2025a).
+Despite this progress, existing benchmarks have three limitations in systematically diagnosing omni-modal
+video grounding and understanding. (i) Limited video-evidence coverage. Benchmarks typically assess
+either visual information (Chen et al., 2025a) or synchronized audio-visual content (Hong et al., 2026). In
+news broadcasts, some queries concern visible scenes; others require aligning spoken reports with people
+or events. Both settings are needed to assess visual perception and audio-visual integration. (ii) Inflexible
+target-specification settings. Most benchmarks use only text (Fu et al., 2026), while IV-Bench combines
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+2 / 35
+
+Ask it two ways. next!
+
+1 Specify the Target
+
+Two Target-Specification Settings
+
+Watch & listen. then…
+
+2 Find the Evidence
+
+When does Team USA player No. 7
+score her first basket?
+
+3 Answer When, Where, What
+
+Two Evaluation Tracks
+
+Text
+
+OmniCompass-VL
+
+Pin it down.
+Three Complementary Tasks
+
+Temporal Grounding When?
+
+820 videos
+2,460 instances
+
+Text + Image
+
+first basket
+
+48.0 s – 50.0 s
+
+When does the player
+score her first basket?
+
+Visual Evidence
+
+either way!
+
+OmniCompass-AV
+
+Spatial Grounding Where?
+
+the same player
+
+1.4 s
+
+240 videos
+720 instances
+Start · 48.72 s
+
+End · 50.12 s
+
+Question Answering What?
+Q: How many points in total?
+Same video
+
+Same target
+
+Same GT
+
+A 0
+
+Audio-visual Evidence
+
+ONE BENCHMARK, FOUR KEY DIMENSIONS
+Target Specification
+
+Video Evidence
+
+Tasks
+
+Text | Text + Image
+
+Visual | Visual + Native Audio
+
+TG | SG | QA
+
+B 2
+
+C 3
+
+D 4
+
+E 1
+
+Video Duration
+Short | Medium | Long
+30 s – 88.4 min
+
+Figure 2. Overview of OmniCompass. The benchmark spans four dimensions: target specification, video evidence, task
+coverage, and video duration. Paired Text/Text+Image specifications are evaluated on the same targets. OmniCompass-VL
+contains 820 videos and 2,460 instances, while the 240-video OmniCompass-AV subset contains 720 instances with native
+audio. Both tracks cover temporal grounding, spatial grounding, and question answering.
+
+reference images with text (Ma et al., 2026). Practical targets may be specified verbally or with an image, yet
+these benchmarks do not evaluate the same target under both settings. (iii) Fragmented task coverage. Most
+benchmarks focus on QA (Li et al., 2024b) or grounding (Gao et al., 2026); audio-visual benchmarks rarely
+cover the latter (Li et al., 2026; Zhou et al., 2025b). In basketball games, users may ask when a referenced
+player scores, where the player is on the court, and what happens. Joint evaluation distinguishes failures in
+temporal retrieval, spatial localization, and semantic understanding.
+To address these gaps, we introduce OmniCompass, a holistic benchmark for omni-modal video grounding
+and understanding. As shown in Figure 2, OmniCompass has four key features: (i) Complementary
+Video Evidence. OmniCompass-VL evaluates understanding from visual content, while OmniCompass-AV
+additionally requires audio. (ii) Flexible Target Specification. Each instance pairs Text and Text+Image
+settings, specifying the same target through language alone or with a reference image. The video, task semantics,
+and ground truth are the same. We introduce Cross-Specification Consistency Scores (CS) to jointly measure
+task accuracy and prediction consistency across these settings. (iii) Unified Task Coverage. Both tracks
+provide TG, SG, and QA tasks per video. The VL track covers five perception and three reasoning categories,
+whereas the AV track covers three perception and two reasoning categories. (iv) Diverse Durations and
+Content. OmniCompass-VL contains 820 videos and 2,460 instances across short, medium, and long durations.
+It combines public sports, traffic, surveillance, and documentary videos with 240 self-collected movie, TV,
+variety, and news videos. This subset forms OmniCompass-AV with 720 instances.
+We evaluate 50 MLLMs, including proprietary and open-source models. The best proprietary model
+exceeds the best open-source model by 3.2% in CSAvg on VL track and 32.8% on AV track. Strong QA
+performance coexists with weak grounding and cross-reference inconsistency, even when aggregate accuracies
+are similar across settings. Visual target specifications do not consistently help: Text+Image improves the
+single-setting average for only 11 of 36 models. Further analyses show that timestamps substantially improve
+model performance across tasks and tracks, while audio consistently improves QA and TG performance on AV
+track. Future MLLMs therefore need stronger cross-modal alignment and more reliable audio-aware grounding.
+Our contributions are as follows:
+1. A Holistic Evaluation Framework. OmniCompass unifies target-guided omni-modal video grounding
+and understanding across four dimensions: paired Text and Text+Image specifications, VL/AV evidence
+tracks, TG/SG/QA tasks, and short-to-long videos. We introduce CS to jointly assess task correctness and
+consistency across paired target specifications.
+2. A Diverse, Rigorously Verified Benchmark. OmniCompass spans 820 videos, 80.6 hours, seven domains,
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+3 / 35
+
+and 52 subcategories, with 240 videos shared between VL and AV tracks. Construction required about 1,800
+human-hours for annotator training, calibration, annotation, expert adjudication, and revision. All instances
+undergo multi-round quality verification.
+3. A Diagnostic Evaluation of MLLMs. We evaluate 50 different MLLMs, revealing an overall advantage for
+proprietary models, especially in audio-visual understanding. Strong QA performance coexists with weak
+grounding and cross-specification inconsistency. Further analyses examine the effects of target specifications,
+video duration, timestamps, and input modalities.
+
+2 Related Work
+2.1 Multimodal Large Language Models for Video Understanding
+MLLMs connect language models with multimodal encoders for perception and reasoning (Liu et al., 2024a;
+Chen et al., 2024; Xu et al., 2025a; Google, 2025; Lin et al., 2025a,b; An et al., 2026; Wang et al., 2026b).
+LLaVA-OneVision (Li et al., 2024a) and LLaVA-Video (Zhang et al., 2024) unify image-video modeling. The
+latter uses synthetic captions and question-answering data for video instruction tuning. LLaVA-OneVision-2 (An
+et al., 2026) further adopts OneVision-Encoder (Tang et al., 2026) for native-resolution visual encoding and
+efficient long-video processing through codec-aware token compression. VideoLLaMA3 (Zhang et al., 2025)
+and InternVL3.5 (Wang et al., 2025b) strengthen video training and reasoning. Qwen3-VL (Bai et al., 2025)
+improves long-context video understanding through temporal alignment, while Qwen3-Omni (Xu et al., 2025b)
+jointly processes vision, audio, and language. Keye-VL-2.0 (Team et al., 2026) adapts DSA for efficient longcontext processing and consolidates task-specific capabilities through cross-modal MOPD. TimeLens (Zhang
+et al., 2026) improves temporal grounding with interleaved timestamps and thinking-free reinforcement learning,
+and TimeLens2 (Zhu et al., 2026) further broadens task coverage through verified multi-interval supervision
+and temporal Wasserstein rewards. Agentic extensions also explore tool-assisted video reasoning to selectively
+acquire task-relevant visual and audio evidence (Wang et al., 2026a; Yang et al., 2026a,b; Meng et al., 2026;
+Xing et al., 2026). In brief, modern omni-modal video understanding identifies referenced targets and grounds
+evidence in time and space by integrating visual and audio information.
+
+2.2 Video Understanding Benchmarks
+Table 1 compares existing benchmarks across four design dimensions. (i) Target Specification defines how the
+target is presented. Most benchmarks use textual questions or instructions (Fu et al., 2025a; Cheng et al., 2026),
+while IV-Bench (Ma et al., 2026) pairs text with a reference image for visual specification. (ii) Video Evidence
+distinguishes visual and audio-visual requirements. Vision-language benchmarks assess appearance, motion, and
+temporal relations. TempCompass (Liu et al., 2024b) evaluates temporal perception, while MotionBench (Hong
+et al., 2025) targets fine-grained motion. WorldSense (Hong et al., 2026) and JointAVBench (Chao et al.,
+2026) require synchronized visual and native-audio evidence. (iii) Task Coverage defines the expected output.
+Question-answering benchmarks (Fu et al., 2025a; Li et al., 2026) produce semantic responses, while grounding
+benchmarks require explicit evidence localization. OmniGround evaluates temporal intervals and spatial
+regions (Gao et al., 2026), and V-STaR (Cheng et al., 2026) jointly assesses TG, SG, and QA. (iv) Video
+Duration sets the temporal scope for evidence integration. MVBench emphasizes local actions and temporal
+dynamics (Li et al., 2024b), whereas LongVideoBench (Wu et al., 2024), MLVU (Zhou et al., 2025a), and
+LVBench (Wang et al., 2025a) stress long-context management across distant moments. LongVideoBench also
+evaluates referring reasoning over interleaved video frames and subtitles. Existing benchmarks cover selected
+dimensions or fixed combinations, limiting diagnosis of target identification, grounding, and omni-modal
+reasoning across different target and evidence settings.
+OmniCompass unifies these dimensions through paired target-specification settings, complementary
+evidence tracks, and TG, SG, and QA across video durations. It supports diagnosis of target identification,
+spatio-temporal grounding, and event understanding under paired reference settings.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+4 / 35
+
+3 The OmniCompass Benchmark
+OmniCompass evaluates omni-modal video grounding and understanding along the dimensions in Table 1.
+Figure 2 summarizes the evaluation workflow. Each instance uses paired Text and Text+Image specifications
+of the same target. OmniCompass-VL evaluates vision-language models on visually resolvable tasks, while
+OmniCompass-AV evaluates omni-modal models using joint visual and native-audio evidence. Both tracks
+cover TG, SG, and QA across short (30s ≤ 𝑡 < 90s), medium (90s ≤ 𝑡 < 300s), and long (𝑡 ≥ 300s) videos.
+
+3.1 Evaluation Formulation and Metrics
+Two Target-Specification Settings. OmniCompass uses paired Text and Text+Image settings to test whether
+models consistently localize and understand targets across reference modalities. Targets include entities, actions,
+attributes, and scenes. In Text, a textual description rtext alone specifies the target, such as “When does the USA
+′
+player wearing No. 33 complete the dunk?”. In Text+Image, a textual expression rtext and a reference image
+rimage jointly specify the target. For example, “When does the player complete the dunk?” requires the image
+′
+to resolve which player is referenced. Thus, r = rtext or r = (rtext , rimage ). Each pair shares the same video,
+target, task semantics, and ground truth, allowing direct comparison across target specifications.
+Two Evaluation Tracks. The two tracks share the same target-specification and task contracts but differ in
+the video evidence available to the model. Let F𝐾 (V) denote 𝐾 uniformly sampled video frames paired
+with their timestamps, and let A (V) denote the synchronized audio track. Given a target specification
+′
+r ∈ {rtext , (rtext , rimage )}, OmniCompass-VL receives xVL = (F𝐾 (V), r), whereas OmniCompass-AV
+receives xAV = (F𝐾 (V), A (V), r). VL queries are answerable from visual evidence, while AV queries require
+information from the synchronized audio.
+Cross-Specification Consistency Scores (CS). Paired Text and Text+Image settings allow us to assess
+whether a model correctly identifies the same target across referential modalities. We introduce CS to
+jointly measure task correctness and consistency between paired predictions, so agreement alone does not
+guarantee a high score. For each task 𝑞 ∈ {TG, SG, QA}, let 𝑁𝑞 denote the number of evaluated pairs, with
+superscripts T and TI denoting the Text and Text+Image settings. For TG, let 𝑔𝑖T and 𝑔𝑖TI be the tIoUs of the
+predicted intervals with the ground-truth interval, and 𝑎 𝑖 the tIoU between the two predictions. We define
+Í 𝑁TG
+T and 𝑔 TI be the IoUs between predicted and ground-truth
+min{𝑔𝑖T , 𝑔𝑖TI , 𝑎 𝑖 }. For SG, let 𝑔𝑖,𝑘
+CSTG = 𝑁1TG 𝑖=1
+𝑖,𝑘
+boxes at the start and end boundaries 𝑘 ∈ {𝑠, 𝑒}. Let 𝑎 𝑖,𝑘 denote the IoU between the paired predictions at
+Í 𝑁SG Í
+T
+T
+TI
+boundary 𝑘. We define CSSG = 2𝑁1SG 𝑖=1
+𝑘 ∈ {𝑠,𝑒} min{𝑔𝑖,𝑘 , 𝑔𝑖,𝑘 , 𝑎 𝑖,𝑘 }. For QA, with predicted answers 𝑦ˆ 𝑖
+1 Í 𝑁QA
+T
+TI
+and 𝑦ˆ TI
+𝑖 and ground-truth answer 𝑦 𝑖 , we define CSQA = 𝑁QA
+𝑖=1 1{ 𝑦ˆ 𝑖 = 𝑦ˆ 𝑖 = 𝑦 𝑖 }.
+
+3.2 Benchmark Construction
+Constructing OmniCompass requires approximately 1,800 human-hours for paired annotation, targeted revision,
+and multi-round quality verification, following the pipeline in Figure 3.
+Stage 1: Video Collection and Curation. We construct a pool of 8,489 candidate videos from nine public
+datasets and supplement it with 240 self-collected videos from films, TV series, variety shows, and news
+programs. The resulting pool covers seven high-level domains. Appendix Table C1 details the selection scope,
+characteristics, usage terms, and contributions of the public datasets to the final benchmark.
+We use Qwen3-VL-8B-Instruct to profile each public candidate with structured entity, action,
+attribute, and scene cues. Excluding videos shorter than 30 seconds or missing any of the four referential
+cue types leaves 6,946 eligible videos. We rank them by four predefined criteria: reference necessity, grounding
+suitability, temporal-spatial utility, and evidence diversity (Appendix Table C2). Shortlisting follows domain,
+duration, source, and subcategory constraints. Manual review retains 580 high-quality videos; with 240
+self-collected videos, OmniCompass-VL contains 820 videos. The same 240 videos form OmniCompass-AV,
+with additional audio-visual task annotations. Appendix C details profiling, filtering, and scoring.
+Stage 2: Task Annotation and Construction. A lead expert provides two days of task-specific training to four
+professional annotators before full-scale annotation. The team follows four principles to ensure consistent target
+specification and evidence across TG, SG, and QA under paired Text and Text+Image settings.
+(i) Same-Target Pairing. Each Text and Text+Image pair shares the same video, target, task semantics,
+and ground truth. In Text+Image, the textual expression requires the reference image to identify the target.
+(ii) Diverse Reference Types and Sources. References cover entity, action, attribute, and scene cues
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+5 / 35
+
+1
+
+2
+
+Video Collection & Curation
+
+9 Public Datasets + Self-collected Videos
+
+Task Annotation & Construction
+Task Annotation Format
+
+TG
+MultiSports LiveSports-3K UCF-Crime
+
+CG-Bench
+
+MovieChat-1K
+
+StreetScene ComplexVAD QVHighlights ActivityNetQA Self-collected
+
+MLLM-assisted Data Curation
+
+SG
+
+[230, 801,
+730, 110]
+
+Detailed Captions &
+Video Scores
+
+580 HighQuality Videos
+
+Temporal
+Grounding (TG)
+
+Spatial
+Grounding (SG)
+
+7 High-level Domains & 52 Subcategories
+
+align
+Expert-Led
+Annotator Training
+
+Case-level Quality Verification
+
+A. John B. Mary
+C. Tom D. Lisa
+E. Kate
+
+Question
+Answering (QA)
+
+Annotator Training
+
+sort
+
+4 ref types
+
+8,489 Public
+Raw Videos
+
+Quality Verification & Finalization
+
+QA
+
+[12.5s, 18.3s]
+
+Qwen3-VL
+
+3
+
+(i) Same Target Pairing
+(ii) Diverse Ref Types/Sources
+(iii) Precise TG/SG Labels
+(iv) Evidence-Grounded QA
+
+Unified Guidelines for
+Paired Annotation
+
+Independent Paired Annotation
+
+Annotated
+Data
+
+CrossVerification
+
+Cross-verified
+Annotations
+
+Lead Expert Review & Final Approval
+
+Cross-verified
+Annotations
+
+Final Review &
+Approval
+
+Release-ready
+Data Assets
+
+OmniCompass Benchmark
+2 paired settings: Text / Text+Image
+
+Sports Traffic Safety
+
+Life
+
+Film
+
+Variety
+
+News
+
+Text: When does USA’s No. 33 player complete the dunk?
+Text+Image: When does the player
+
+580 Public Videos + 240 Collected Videos
+
+Ground Truth:
+complete the dunk? [18.0, 19.0]
+
+2 settings (Text / Text+Image) × TG / SG / QA
+
+2 eval tracks: OmniCompass-VL & -AV
+3 complementary tasks: TG, SG, and QA
+3 duration types: short, medium, and long
+
+Figure 3. Data construction pipeline. OmniCompass requires about 1,800 human-hours for rigorous annotation,
+verification, and revision. Stage 1: We screen 8,489 videos from nine public datasets, retain 6,946 after duration and
+referential-cue filtering, and select 580 to complement 240 self-collected videos. Stage 2: Four trained annotators
+independently construct paired Text and Text+Image TG, SG, and QA instances. AV cases include native audio. Stage 3:
+Annotators cross-verify and revise cases before final acceptance and correction by the lead expert, yielding 820 videos
+across seven domains, paired settings, two tracks, three tasks, and three duration groups.
+
+using video crops or semantically matched external images. Each image identifies the target without revealing
+the annotated event or answer evidence. For video-internal references, annotators favor a separate view outside
+the target interval or QA clue interval whenever available. (iii) Precise TG/SG Labels. TG intervals tightly
+cover complete target-related events, while SG boxes localize the same target at both interval boundaries. (iv)
+Evidence-Grounded QA Design. Following CG-Bench (Chen et al., 2025a), annotators pair a clue interval
+with five mutually exclusive options: one correct answer and four plausible distractors.
+The annotators first conduct a pilot annotation on 30 VL and 30 AV videos spanning all seven domains
+and three duration types. Each video receives one TG, one SG, and one QA instance under paired Text and
+Text+Image settings, yielding 180 task instances. The pilot exposes inconsistencies in target pairing, temporal
+boundaries, spatial target consistency, and QA evidence. The lead expert reviews these cases with the team,
+resolves ambiguities, and refines the guidelines. The annotators then independently construct the remaining
+instances under the calibrated protocol. Guideline training, pilot calibration, and initial task construction across
+both tracks and all three tasks account for approximately 960 annotator-hours.
+Stage 3: Quality Verification and Finalization. All annotated cases undergo case-level quality verification
+before release. Four annotators independently cross-check annotations from their peers against the Stage 2
+principles: same-target pairing, reference diversity and non-leakage, precise TG/SG labels, and evidencegrounded QA design. They inspect temporal-event completeness, boundary-frame box alignment, and the
+uniqueness and evidential support of QA answers. For AV cases, they also verify native-audio dependence
+and audio-visual alignment. They correct clear annotation errors, recheck the revised cases, and submit
+the confirmed cases to the lead expert. The expert resolves remaining inconsistencies, makes necessary
+corrections, performs final acceptance, and audits the release-ready data. These steps require approximately
+320 annotator-hours and 500 lead-expert-hours. Appendix D details the process. Tables D1 and D2 report
+video-level verification results and typical issues; Table D3 details human effort by stage and role.
+
+3.3 Benchmark Statistics
+Video Diversity and Temporal Scale. OmniCompass contains 820 videos across 7 domains and 52
+subcategories, with 10–43 videos per subcategory and a mean of 15.8. The videos total 80.6 hours, ranging
+from 30 seconds to 88.4 minutes, with a mean duration of 354.0 seconds. Figure 4(a,b) shows 162 short, 309
+medium, and 349 long videos across 15 duration bins, including 580 VL-only videos and 240 videos shared by
+both tracks for matched-video evaluation.
+Evaluation Breadth and Annotation Granularity. Unified TG, SG, and QA annotations yield 2,460 VL and
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+6 / 35
+
+128
+
+Videos
+
+92
+
+23
+
+79
+
+40
+
+rts
+
+po
+
+ilm
+
+13
+
+17
+
+18
+
+10
+
+50
+
+11
+
+OmniCompass-VL
+
+142
+
+Attribute Perception
+
+132
+
+Visual Counting
+63
+
+148
+
+Temporal Reasoning
+Causal Reasoning
+
+59
+
+Comparative Judgment
+
+55
+
+Perception 68.0% | Reasoning 32.0%
+
+(a) Video Domains: 7 Domains & 52 Subcategories
+
++
+
+-3
+0m
+
+Speech Understanding
+
+56
+
+Event Understanding
+
+54
+
+Emotion Recognition
+
+40
+55
+
+Temporal Reasoning
+Causal Reasoning
+
+10%
+
+100%
+
+100
+
+86
+
+Action Recognition
+
+Spatial Perception
+
+OmniCompass-AV
+135
+
+1%
+
+(d) TG Selectivity
+
+(b) Video Duration Distribution
+
+Fact Recognition
+
+dots = mean | smaller = finer
+
+0.1%
+
+TG span / video duration
+
+30
+m
+
+-2
+0m
+
+20
+
+-1
+5m
+
+15
+
+10
+
+7m
+
+10
+m
+7-
+
+5m
+4-
+
+3m
+
+4m
+3-
+
+5m
+
+52.
+
+2m
+
+0
+1.
+
+bat
+Com
+lm
+Crime Fi
+Urban Comedy
+
+yF
+
+24
+
+23
+
+2.
+
+ts
+Spor
+
+Family Film
+Period
+Comed
+y
+Com
+edy
+Film
+Act
+Cri ion Fil
+m
+me
+W
+&L
+Bi ar
+aw
+&
+og
+S
+ra
+ph ci-F
+i
+
+20
+
+0
+5-
+
+e
+Voll
+
+ll
+yba
+
+34
+
+38
+
+2-
+
+ll S
+
+Ba
+
+30
+-4
+5s
+45
+-6
+0s
+11.
+25
+m
+1.
+25
+-1
+.5
+m
+
+er
+
+40
+
+VL 4.6%
+
+AV 1.7%
+
+83
+
+99
+53
+
+5-
+
+ing
+Rid
+
+ics
+at
+
+102
+
+qu
+/A
+
+et
+
+ics
+
+ng
+&
+
+16
+
+100
+
+Long (300s+) | 349
+135
+
+Cumulative (%)
+
+& Din
+
+ing
+
+Campus
+& Youth
+Travel & Outdoor
+
+usio
+
+n
+
+Life
+125
+
+Food
+
+ta
+
+Re
+
+Ou
+
+tdo
+
+il
+
+M
+
+on
+
+ito
+or
+Mo
+r
+Fir
+nit ing
+e&
+o
+Ex
+plo ring
+The
+sio
+ft &
+n
+Intr
+
+Sa
+12 fet
+0 y
+
+s
+
+Ba
+
+ty
+cie
+r
+So
+oo
+&
+td
+ily
+Ou
+&
+m
+ld
+Fa sure & Chi
+i
+Le
+re
+ent
+u
+Par l Cult
+a
+l
+Loc
+Socia
+ily &
+Fam
+s
+Animal
+Pets &
+Urban Daily Life
+
+ce
+eillan
+Surv
+aly
+nom ing
+/A
+or
+ent
+nit
+id
+o
+c
+ns
+M
+Ac
+po
+ce
+la
+ea lice
+rkp
+W
+o
+/
+Po
+W
+/
+ce
+n
+y
+ole
+nc
+Vi
+ge
+er
+Em
+
+Road
+
+820 videos
+
+l
+al
+eb
+
+h
+Ot
+
+OmniCompass
+VL Track 820 | AV Track 240
+
+80
+
+Film
+150
+
+s
+Intersection
+
+Sp
+17 orts
+5
+
+Ne
+80 ws
+Traffic
+95
+
+affic
+
+hl
+
+ty
+Varie5
+7
+
+Mixed Tr
+
+Pedestrian Flow
+
+At
+
+ic
+
+Po
+Af
+liti
+fa
+cs
+irs
+&
+Cult
+Co
+ure
+nfl
+ict
+&S
+o
+cie
+Driv
+ty
+ing &
+Park
+ing
+
+Medium (90-300s) | 309
+
+VL-only (580)
+VL+AV (240)
+
+120
+Football
+Gymn
+astics
+Bas
+ketb
+Ra
+all
+ci
+
+Talent Shows
+
+Comedy
+Music &
+re
+ventu
+& Ad
+ty
+Auto
+arie
+
+V
+es
+tery
+am
+Mys
+& G sks
+a
+Talk y T
+t
+e
+ali
+lif
+ild gy
+W
+o
+ol
+Ec
+
+Re
+
+Pu
+bl
+
+Short (30-90s) | 162
+
+Cumulative (%)
+
+160
+
+VL 13.2%
+AV 30.7%
+50
+
+35
+
+0
+
+Perception 62.5% | Reasoning 37.5%
+
+(c) QA Types: Perception and Reasoning Tasks
+
+dots = mean | smaller = finer
+
+0.1%
+
+1%
+
+10%
+
+100%
+
+SG box area / frame area
+
+(e) SG Granularity
+
+Figure 4. Dataset statistics of OmniCompass. (a) 820 videos span 7 domains and 52 subcategories, each with at least
+ten videos. (b) Fifteen duration bins span short (30–90 s), medium (90–300 s), and long (≥ 300 s) ranges. Stacked colors
+distinguish 580 VL-only and 240 shared VL–AV videos. (c) Bars report counts for eight OmniCompass-VL and five
+OmniCompass-AV QA types. Lighter and darker shades distinguish Perception and Reasoning. (d) Cumulative TG-span
+ratios show temporal selectivity. (e) Cumulative SG-area ratios show spatial granularity. Dots mark track means.
+
+720 AV task instances. Each video contributes one instance to each task, giving 820 instances per task in
+VL and 240 in AV. Figure 4(c) shows eight VL and five AV QA types. Perception accounts for 68.0% and
+62.5%, while reasoning accounts for 32.0% and 37.5%, respectively. The 820 videos span seven domains and
+52 subcategories, with 10–43 videos per subcategory. QA counts range from 55 to 148 across VL types and
+from 35 to 56 across AV types, providing broad coverage without concentrating on a single question category.
+Figure 4(d,e) summarizes grounding granularity: TG intervals average 4.6% of VL and 1.7% of AV video
+duration, while SG boxes average 13.2% and 30.7% of frame area, respectively. Paired Text and Text+Image
+settings test target identification, while the shared AV subset supports matched-video comparisons. Appendix
+Figure C4 reports reference types and image sources across domains.
+
+4 Experiments
+4.1 Experimental Setting
+Evaluated Models. We evaluate 50 models across tracks. OmniCompass-VL evaluates vision-language
+models including proprietary models Gemini series (Google, 2025), GPT series (OpenAI, 2026a,b,c), Seed
+series (Seed, 2026), and the Qwen close-source series (Qwen Team, 2026a). The open-source models cover
+Kimi-K3 (Kimi Team et al., 2026), GLM-5.3-Flash (Zeng et al., 2026a), DeepSeek-V4.1-Flash (DeepSeek-AI,
+2026), MiMo-V2.5 (MiMo-V2.5), the Qwen open-source series (Qwen Team, 2026b; Team, 2026a; Bai
+et al., 2025), InternVL3.5-38B (Wang et al., 2025b), Keye-VL-2.0-30B-A3B (Team et al., 2026), TimeLens
+series (Zhang et al., 2026; Zhu et al., 2026), and the LLaVA series (An et al., 2026; Zhang et al., 2024).
+OmniCompass-AV evaluates omni-modal models with native audio support, including the Gemini series,
+Qwen-Omni series (Team, 2026b; Qwen Team, Alibaba, 2025), and Seed-2.0-Lite/Mini (Seed, 2026), as well
+as MiMo-V2.5 (MiMo-V2.5), video-SALMONN 2+ (Tang et al., 2025), MiniCPM-o-4.5-8B (Cui et al., 2026),
+Ola-7B (Liu et al., 2025), VideoLLaMA2-7B (Cheng et al., 2024), and VITA-1.5-7B (Fu et al., 2025b).
+Implementation Details. (i) Frame sampling: We uniformly sample 64 frames for proprietary models and
+open-source models with over 100B total parameters, and 32 for smaller models. GPT-series models use 49
+frames to accommodate the Text+Image reference within the 50-image limit. VITA-1.5-7B follows its official
+16-frame limit. Following TimeLens (Zhang et al., 2026), each frame is immediately preceded by its timestamp
+in seconds. (ii) Input modalities: OmniCompass-VL excludes audio, while OmniCompass-AV adds the
+native audio following WorldSense (Hong et al., 2026) and Video-MME-v2 (Fu et al., 2026). In Text+Image,
+the reference image follows these inputs and immediately precedes the task prompt. Appendix E details the
+experimental setup, input serialization, and task-specific prompts and response formats.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+7 / 35
+
+Table 2. Results on OmniCompass-VL. We evaluate TG, SG, and QA without audio using uniformly sampled,
+timestamped frames. Performance is reported as Text/Text+Image, while CS requires paired predictions to be correct and
+consistent. Average is the mean of TG mtIoU , SG msIoU , and QA Accuracy per specification, while CSAvg averages the
+three CS scores. Within each group, the best and second-best results are bold and underlined, respectively.
+Models
+
+Frames
+
+Temporal Grounding
+
+Spatial Grounding
+
+CSTG AP@0.5
+
+R.@0.5
+
+mtIoU
+
+64
+64
+64
+64
+64
+64
+64
+49
+49
+49
+49
+49
+
+33.8/32.7
+24.9/24.9
+27.9/29.8
+29.9/29.4
+30.7/31.0
+29.3/30.3
+28.5/30.1
+30.0/30.3
+25.2/28.7
+20.1/23.7
+21.0/21.3
+23.3/24.5
+
+32.6/33.5
+25.6/26.6
+29.3/29.9
+30.5/30.2
+30.6/30.9
+30.7/32.2
+29.5/30.6
+30.9/31.7
+27.2/30.5
+24.1/26.3
+24.7/24.8
+26.0/27.5
+
+27.1
+19.3
+23.7
+25.0
+24.9
+26.7
+24.1
+26.3
+22.2
+19.3
+19.2
+21.3
+
+37.5/41.6
+34.9/35.2
+40.9/38.9
+35.4/35.4
+30.6/31.7
+30.1/32.1
+22.6/24.4
+34.6/35.9
+31.7/29.8
+19.4/20.9
+27.3/28.9
+20.6/20.5
+
+64
+64
+64
+64
+64
+64
+64
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+32
+
+23.5/24.6
+28.9/28.5
+27.2/27.2
+27.0/25.4
+24.4/23.0
+15.7/17.4
+17.8/18.6
+17.5/19.1
+18.7/18.8
+20.5/18.8
+17.3/16.4
+19.4/18.0
+17.4/14.4
+16.6/12.4
+16.8/12.4
+13.2/11.1
+13.8/10.5
+13.0/10.5
+13.4/11.5
+20.7/18.2
+22.4/18.5
+15.4/10.7
+1.6/2.1
+2.6/1.7
+
+27.1/27.7
+28.6/28.7
+29.7/29.1
+28.5/26.0
+25.5/24.4
+19.1/19.4
+21.6/20.8
+20.3/22.2
+19.8/19.7
+21.5/20.4
+19.5/18.7
+22.0/21.1
+20.2/16.6
+19.5/15.3
+19.5/14.9
+16.3/13.9
+16.8/13.0
+16.3/13.6
+15.8/13.7
+20.8/18.5
+21.4/18.1
+15.8/11.2
+4.3/3.1
+4.6/2.4
+
+22.6
+23.1
+24.3
+21.6
+18.3
+12.4
+13.8
+16.0
+14.4
+15.7
+13.7
+17.4
+13.3
+12.6
+11.7
+11.3
+10.3
+10.1
+11.2
+15.3
+15.5
+8.4
+1.5
+1.4
+
+30.0/31.6
+28.2/29.6
+20.0/19.4
+18.6/18.8
+15.7/14.6
+11.5/11.6
+14.2/15.3
+16.2/19.0
+20.9/19.1
+14.4/15.8
+13.3/13.4
+11.3/11.5
+16.8/16.8
+13.0/11.6
+15.2/12.9
+13.8/12.4
+6.6/5.6
+0.2/0.1
+2.7/3.3
+2.4/2.6
+2.4/2.8
+0.9/1.1
+0.0/0.0
+0.0/0.0
+
+Question Answering
+
+Overall
+
+CSSG Accuracy
+
+CSQA
+
+Average CSAvg
+
+37.7/41.8
+36.5/37.3
+40.6/39.6
+36.3/36.3
+34.9/35.3
+33.9/34.0
+28.8/29.3
+37.8/38.3
+34.8/33.8
+26.3/26.6
+32.2/33.1
+26.4/26.3
+
+32.3
+31.8
+34.9
+30.0
+29.4
+26.7
+22.6
+32.7
+28.0
+20.1
+26.8
+20.7
+
+73.3/76.6
+71.4/73.6
+73.4/74.3
+74.1/74.1
+74.5/73.0
+72.4/72.5
+69.2/71.0
+69.4/65.6
+69.5/69.1
+68.4/69.5
+65.5/64.6
+67.9/70.2
+
+69.1
+65.7
+67.4
+67.7
+67.3
+67.2
+62.4
+59.4
+62.4
+62.0
+56.7
+62.7
+
+47.9/50.6
+44.5/45.9
+47.8/47.9
+47.0/46.9
+46.6/46.4
+45.7/46.2
+42.5/43.6
+46.0/45.2
+43.8/44.5
+39.6/40.8
+40.8/40.8
+40.1/41.3
+
+42.8
+38.9
+42.0
+40.9
+40.5
+40.2
+36.4
+39.5
+37.5
+33.8
+34.2
+34.9
+
+33.3/35.2
+33.4/33.7
+25.2/25.2
+26.0/25.0
+22.9/23.5
+18.1/17.9
+21.9/22.3
+23.9/25.4
+26.8/26.4
+20.7/22.2
+21.2/21.9
+18.6/19.1
+22.3/22.3
+18.9/17.1
+22.1/19.6
+20.4/19.3
+13.4/12.2
+2.5/2.5
+11.5/12.2
+9.1/8.0
+8.2/8.7
+7.1/6.7
+0.5/0.5
+2.0/1.6
+
+28.4
+28.0
+20.8
+20.9
+14.6
+10.5
+13.6
+17.2
+20.9
+15.3
+15.8
+15.3
+17.7
+13.8
+15.6
+15.9
+9.3
+1.4
+8.2
+6.3
+5.9
+4.6
+0.1
+0.8
+
+73.0/72.9
+67.7/69.6
+62.6/62.5
+68.4/65.3
+68.3/68.7
+66.2/64.6
+62.0/60.8
+64.8/62.6
+59.5/59.9
+62.5/61.2
+61.3/60.9
+61.5/58.4
+58.5/55.2
+55.7/54.0
+54.1/49.6
+59.9/56.7
+57.3/56.0
+61.3/58.4
+60.2/61.8
+59.5/57.0
+57.7/55.5
+57.9/52.4
+55.0/50.7
+50.7/47.9
+
+67.6
+60.6
+55.4
+61.0
+59.4
+56.6
+49.0
+55.7
+50.2
+54.8
+51.9
+53.9
+50.1
+46.6
+43.4
+51.2
+50.2
+52.4
+53.0
+51.0
+49.5
+48.0
+45.6
+42.3
+
+44.5/45.3
+43.3/44.0
+39.2/38.9
+41.0/38.8
+38.9/38.9
+34.5/34.0
+35.2/34.7
+36.3/36.7
+35.4/35.3
+34.9/34.6
+34.0/33.8
+34.0/32.9
+33.7/31.4
+31.4/28.8
+31.9/28.0
+32.2/29.9
+29.2/27.1
+26.7/24.8
+29.2/29.2
+29.8/27.8
+29.1/27.4
+27.0/23.4
+19.9/18.1
+19.1/17.3
+
+39.6
+37.2
+33.5
+34.5
+30.8
+26.5
+25.5
+29.6
+28.5
+28.6
+27.1
+28.9
+27.0
+24.3
+23.6
+26.1
+23.3
+21.3
+24.1
+24.2
+23.6
+20.4
+15.7
+14.8
+
+msIoU
+
+Proprietary MLLMs
+Gemini-3.8-Flash
+Gemini-3.1-Pro
+Seed-2.1-Pro-260915
+Seed-2.1-Turbo-260628
+Seed-2.0-Pro-260215
+Qwen3.8-Max
+Qwen3.8-Flash
+GPT-6-Astra
+GPT-5.6-Sol
+GPT-5.6-Terra
+GPT-5.6-Luna
+GPT-5.5
+Open-Source MLLMs
+Kimi-K3
+Qwen3.5-397B-A17B
+Qwen3.5-122B-A10B
+Qwen3-VL-235B-A22B-Instruct
+GLM-5.3-Flash
+DeepSeek-V4.1-Flash
+MiMo-V2.5
+Qwen3.8-27B
+Qwen3.6-35B-A3B
+Qwen3.6-27B
+Qwen3.5-35B-A3B
+Qwen3.5-27B
+Qwen3.5-9B
+Qwen3.5-4B
+Qwen3-VL-30B-A3B-Instruct
+Qwen3-VL-8B-Instruct
+Qwen3-VL-4B-Instruct
+InternVL3.5-38B
+Keye-VL-2.0-30B-A3B
+TimeLens2-8B
+TimeLens-8B
+LLaVA-OneVision-2-8B
+LLaVA-Video-7B
+LLaVA-OneVision-7B
+
+4.2 Main Results
+Tables 2 and 3 report TG, SG, and QA evaluations under Text and Text+Image. Figure 5 provides category-wise
+QA comparisons across selected models in both tracks. Appendix A provides additional results across video
+duration, domain, and target granularity.
+OmniCompass-VL. Table 2 presents that Gemini-3.8-Flash achieves the highest CSAvg score of 42.8%, while
+Kimi-K3 leads the open-source models with a score of 39.6%. Experimental results reveal the following
+insights. (i) Grounding and Fine-Grained Perception Lag Behind Reasoning. 29 of 36 models exceed 50%
+in CSQA , peaking at 69.1%. The best CSTG and CSSG are only 27.1% and 34.9%. Figure 5(a) shows that Visual
+Counting ranks last in CSQA for all eight plotted models, at 26.4%–48.1%. Spatial Perception averages 61.0%,
+below 69.8% for Causal Reasoning. (ii) Visual References Benefit Proprietary Models and Grounding.
+Text+Image improves average performance for 11 of the 36 models: 8 of 12 proprietary models and 3 of 24
+open-source models. Among the open-source models with fewer than 100B parameters, only Qwen3.8-27B
+improves. It gains 1.9% and 1.5% in TG mtIoU and SG msIoU but loses 2.2% in QA accuracy. Visual cues
+may aid target matching while omitting useful textual detail. (iii) Larger Models Do Not Lead Every Task.
+Within Qwen3.5, 397B exceeds 122B in CSAvg , 37.2% versus 33.5%, but trails in CSTG , 23.1% versus 24.3%.
+Likewise, 27B trails 9B in CSSG , 15.3% versus 17.7%. (iv) Cross-Reference Consistency Remains Limited.
+Across 36 models, CSTG , CSSG , and CSQA average 4.3%, 4.6%, and 6.4% below the lower corresponding
+single-setting score. Strong single-setting results do not ensure correctness across settings.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+8 / 35
+
+Table 3. Results on the OmniCompass-AV. Models are evaluated on TG, SG, and QA using uniformly sampled,
+timestamped frames with synchronized audio.
+Models
+
+Frames
+
+Temporal Grounding
+
+Spatial Grounding
+msIoU
+
+Overall
+
+R.@0.5
+
+mtIoU
+
+46.9/48.1
+15.1/17.6
+26.3/28.5
+18.0/14.9
+6.7/7.9
+13.3/8.3
+4.2/3.3
+
+46.4/45.9
+16.6/17.7
+29.2/30.9
+21.0/21.1
+10.6/10.1
+16.9/13.2
+6.4/3.8
+
+40.6
+9.0
+21.8
+14.0
+5.7
+10.6
+2.1
+
+62.8/63.2
+54.8/56.1
+60.1/59.5
+61.8/60.8
+49.2/51.3
+56.3/52.9
+27.1/25.4
+
+59.8/59.3
+52.0/52.1
+56.8/56.0
+55.5/55.6
+44.2/47.0
+53.3/51.8
+28.6/28.8
+
+53.5
+45.8
+50.9
+50.5
+34.7
+45.5
+16.5
+
+80.3/80.8
+72.4/71.1
+75.9/78.9
+71.1/73.2
+63.6/64.0
+71.3/69.2
+63.8/60.0
+
+78.2
+64.9
+73.2
+68.4
+58.0
+63.8
+53.3
+
+62.2/62.0
+47.0/47.0
+54.0/55.3
+49.2/50.0
+39.5/40.4
+47.1/44.7
+32.9/30.8
+
+57.4
+39.9
+48.6
+44.3
+32.8
+39.9
+24.0
+
+6.3/8.6
+3.8/3.3
+1.7/0.0
+1.3/2.1
+0.0/0.0
+3.8/1.3
+2.9/2.1
+1.7/0.8
+1.3/0.0
+0.0/0.8
+
+9.4/8.7
+5.5/5.0
+1.3/0.6
+1.4/2.5
+1.9/1.4
+5.4/2.3
+3.1/1.8
+2.2/1.3
+1.9/0.7
+0.5/1.2
+
+3.1
+3.5
+0.2
+0.8
+0.4
+1.6
+1.0
+0.0
+0.4
+0.2
+
+29.2/33.2
+24.2/24.6
+2.1/12.1
+0.4/2.5
+1.3/1.7
+0.0/0.0
+0.0/0.0
+1.7/3.3
+3.3/4.6
+0.0/0.0
+
+34.9/36.0
+27.4/29.8
+11.7/22.4
+1.9/7.6
+10.4/9.0
+1.9/2.3
+0.9/0.1
+6.4/10.3
+15.1/16.1
+1.1/1.3
+
+23.4
+17.3
+7.0
+0.7
+5.0
+1.0
+0.1
+2.7
+8.6
+0.5
+
+59.2/58.7
+53.3/55.0
+47.5/50.0
+48.8/50.0
+52.1/52.9
+56.3/54.2
+47.1/51.3
+42.1/42.5
+27.1/29.2
+34.2/34.6
+
+47.3
+47.9
+43.8
+45.0
+47.1
+50.8
+42.9
+37.5
+23.3
+27.5
+
+34.5/34.5
+28.7/30.0
+20.1/24.3
+17.4/20.0
+21.5/21.1
+21.2/19.6
+17.0/17.7
+16.9/18.0
+14.7/15.3
+11.9/12.4
+
+24.6
+22.9
+17.0
+15.5
+17.5
+17.8
+14.7
+13.4
+10.8
+9.4
+
+AP@0.5
+
+CSSG
+
+Question Answering
+
+CSTG
+
+Accuracy
+
+CSQA
+
+Average CSAvg
+
+Proprietary Omni-modal MLLMs
+Gemini-3.8-Flash
+Gemini-3.1-Pro
+Qwen3.8-Omni-Flash
+Qwen3.5-Omni-Plus
+Qwen3.5-Omni-Flash
+Seed-2.0-Lite-260428
+Seed-2.0-Mini-260428
+
+64
+64
+64
+64
+64
+64
+64
+
+Open-Source Omni-modal MLLMs
+MiMo-V2.5
+Qwen3-Omni-30B-A3B
+Qwen2.5-Omni-7B
+Qwen2.5-Omni-3B
+MiniCPM-o-4.5-8B
+video-SALMONN 2+ 72B
+video-SALMONN 2+ 7B
+Ola-7B
+VideoLLaMA2.1-7B-AV
+VITA-1.5-7B
+
+64
+32
+32
+32
+32
+32
+32
+32
+32
+16
+
+OmniCompass-AV. Table 3 presents
+Speech
+Fact
+Recognition
+Understanding
+that Gemini-3.8-Flash leads in CSAvg at
+Comparative
+Action
+57.4%, versus 24.6% for open-source
+Recognition
+Judgment
+Event
+Causal
+leader MiMo-V2.5. The results reReasoning
+Understanding
+Attribute
+Causal
+flect the following insights. (i) TemReasoning
+Perception
+poral Grounding and Reasoning Remain Challenging. Qwen3.8-OmniTemporal
+Visual
+Temporal
+Emotion
+Reasoning
+Counting
+Flash reaches 73.2% in CSQA but only
+Reasoning
+Recognition
+Spatial
+21.8% in CSTG ; all ten open-source
+Perception
+Gemini3.8- Seed2.1GPT-6Gemini3.8Qwen3.8Seed2.0- Seed2.0 Lite
+models score at most 3.5% in CSTG .
+Gemini-3.8-Flash
+Seed2.1 ProQwen3.8Qwen3.8-Max
+DeepSeek-v4.1-Flash
+Qwen3.8-Omni-Flash
+Flash
+Pro
+Max
+Astra
+Flash
+Omni-Flash
+Lite
+MiMo-V2.5
+Kimi-K3
+GPT-6-Astra
+GLM-5.3-Flash
+video-SALMONN 2+ 72B
+Qwen3-Omni
+In Figure 5(b), Temporal Reasoning
+KimiGLM-5.3- DeepSeek- MiMoMiMoQwen3video-SALMONN
+K3
+Flash
+v4.1-Flash V2.5
+V2.5
+Omni
+2+ 72B
+(a)
+Performance
+on
+OmniCompass-VL
+(b)
+Performance
+on
+OmniCompass-AV
+ranks lowest for five of six models,
+(a) QA Performance on OmniCompass-VL
+(b) QA Performance on OmniCompass-AV
+whereas Causal Reasoning leads all Figure 5. Fine-grained QA performance across tracks. We report
+six at 74.3%–94.3%. Qwen3-Omni- category-wise CSQA scores in percent.
+30B-A3B scores lowest on Event Understanding at 31.5%. (ii) Open-Source Models Lag Most in Audio-Visual Event Binding. In Figure 5(b),
+the best proprietary and open-source CSQA scores differ by 12.5% on Speech Understanding. The gap reaches
+38.9% on Event Understanding, which requires linking audio cues to visible entities, actions, or scene context.
+(iii) Reference Effects and Consistency Gaps Persist with Audio. Text+Image improves SG msIoU and
+QA accuracy for 12 of 17 models each, but TG mtIoU for only five. MiMo-V2.5 achieves 59.2% and 58.7%
+QA accuracy under Text and Text+Image, respectively, but only 47.3% in CSQA . Similar aggregate accuracy
+therefore does not ensure correct answers on the same eligible pairs across settings.
+Across both tracks, open-source models trail proprietary models, especially in audio-visual understanding.
+Cross-reference consistency, fine-grained perception, and audio-visual event binding remain challenging. Future
+models therefore need stronger multimodal alignment and audio-aware grounding.
+90
+
+80.0
+
+100
+
+80
+
+72.6
+
+73.2
+
+90
+
+74.7
+
+60
+
+94.3
+
+70
+
+40
+
+79.6
+
+50
+
+20
+
+78.0
+
+30
+
+80.7
+
+48.1
+
+69.1
+
+74.3
+
+82.1
+
+72.5
+
+4.3 Analysis Experiments
+Impact of Frame-Level Timestamps. Figure 6 shows that timestamps improve CSAvg in all five modeltrack configurations, with gains in 14 of 15 task-level comparisons. On the VL track, Gemini-3.8-Flash,
+Qwen3.5-397B-A17B, and Qwen3.8-27B gain 7.0%, 10.4%, and 2.3%, averaging 6.5%. On the AV track,
+Gemini-3.8-Flash and Qwen3.8-Omni-Flash gain 3.6% and 6.2%, averaging 4.9%. VL gains concentrate in
+TG: Gemini-3.8-Flash and Qwen3.5-397B-A17B gain 18.3% and 18.2%. In AV, Qwen3.8-Omni-Flash gains
+16.0% in SG, while TG changes by -0.2% to +0.8% across both models. QA improves in every comparison by
+0.7%–5.9%. These results suggest that timestamps help align sampled frames with temporal positions.
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+9 / 35
+
+Temporal Grounding
+Qwen3.5-397B-A17B
+
+27.1
+
+8.8
+
+Gemini-3.8-Flash
+
+Spatial Grounding
+
+Qwen3.8-27B
+0
+
+14.1
+
+16.0
+
+10
+
+20
+
+30
+
+Gemini-3.8-Flash
+
+15
+
+17.2
+
+10
+
+20
+
+25
+
+35
+
+40
+
+45
+
+30
+
+50
+
+40
+
+50
+
+60
+
+65
+
+70
+
+73.2
+
+70.6
+60
+
+75
+
+78.2
+
+72.4
+
+50.9
+
+OmniCompass-VL With Timestamps
+
+55
+
+53.5
+
+34.9
+
+Without Timestamps
+
+55.7
+
+54.5
+
+49.4
+
+60.6
+
+59.9
+
+30
+
+40.6
+
+21.8
+
+22.0
+
+Qwen3.8-Omni-Flash
+
+13.6
+
+69.1
+
+68.3
+
+28.0
+
+15.8
+
+39.8
+
+32.3
+
+30.5
+
+23.1
+
+4.9
+
+Question Answering
+
+68
+
+72
+
+76
+
+80
+
+OmniCompass-AV With Timestamps
+
+Figure 6. Impact of frame-level timestamps. Columns report CSTG , CSSG , and CSQA in percent. Dashed links connect
+scores without and with timestamps. Axis ranges vary by panel.
+Temporal Grounding
+
+Spatial Grounding
+
+40
+
+52.8 53.5
+
+51.1 50.9
+
+CSSG (%)
+
+CSTG (%)
+
+21.8
+
+20
+11.3
+
+10.7
+
+10
+0
+
+10.2 10.6
+
+0.8
+
+0.6
+
+Gemini- Qwen3.8Seed3.8-Flash Omni-Flash 2.0-Lite
+
+28.5
+
+30.6
+
+16.7
+
+15.8
+
+0.1
+
+73.2
+63.8
+
+20.922.8
+
+15
+4.9
+
+0.4
+
+30
+
+78.2
+
+80
+
+45.9 45.5
+
+45
+30
+
+Question Answering
+
+CSQA (%)
+
+60
+
+40.6
+
+60
+
+55.6
+45.2
+
+40
+20
+
+30.1
+
+41.3
+
+47.5
+27.3 29.0
+
+27.2
+18.8
+
+3.3
+
+MiMoV2.5
+
+0
+
+0
+
+Gemini- Qwen3.8Seed3.8-Flash Omni-Flash 2.0-Lite
+
+Text-only
+
+Vision
+
+MiMoV2.5
+
+Gemini- Qwen3.8Seed3.8-Flash Omni-Flash 2.0-Lite
+
+MiMoV2.5
+
+Vision + Audio
+
+Figure 7. Impact of input modalities on OmniCompass-AV. Bars report CS in percent for Text-only, Vision, and
+Vision+Audio on matched eligible pairs within each model and task.
+
+Impact of Input Modalities. Figure 7 compares task-level CS across Text-only, Vision, and Vision+Audio
+for four OmniCompass-AV models. All comparisons use matched eligible pairs within each model and task.
+Text-only retains both question wordings but removes all media, including reference images. Its CSTG is only
+0.1–0.8%, versus 18.8%–30.1% in CSQA . Vision improves all 12 model-task comparisons. Adding audio
+raises CSQA by 18.6%–28.1%, averaging 22.9%. Gemini-3.8-Flash and Qwen3.8-Omni-Flash gain 29.4%
+and 11.1% in CSTG , respectively, whereas MiMo-V2.5 loses 1.5%. CSSG changes range from -0.4% to +1.8%.
+Thus, adding audio consistently improves CSQA across all four tested models, whereas TG gains vary by model
+and SG gains remain limited. Additional analyses are provided in Appendix B.
+
+5 Conclusion
+In this paper, we introduce OmniCompass, a holistic benchmark for omni-modal video grounding and
+understanding. It unifies TG, SG, and QA across VL and AV tracks with paired Text and Text+Image
+specifications for the same video, target, task semantics, and ground truth. The benchmark covers 820 manually
+annotated videos across seven domains, including a 240-video AV subset with native audio. The paired settings
+and CS metric assess both prediction correctness and consistency under changes in target specification. Leading
+proprietary models outperform open-source models, especially in audio-visual understanding, while precise
+grounding, fine-grained perception, and audio-visual event binding remain challenging. Reference images yield
+task-dependent effects, while timestamps improve model performance in both tracks. These findings motivate
+stronger multimodal alignment and audio-aware grounding to connect target specifications with the relevant
+events and evidence. OmniCompass supports joint evaluation of QA, precise grounding, and cross-reference
+consistency across tasks and modalities, providing a basis for diagnosing model limitations and measuring
+progress toward reliable omni-modal video understanding.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+10 / 35
+
+References
+Xiang An, Yin Xie, Feilong Tang, Yunyao Yan, Huajie Tan, Didi Zhu, Changrui Chen, Xiuwei Zhao, Bin Qin,
+Kaicheng Yang, et al. Llava-onevision-2: Towards next-generation perceptual intelligence. arXiv preprint
+arXiv:2605.25979, 2026.
+Shuai Bai, Yuxuan Cai, Ruizhe Chen, Keqin Chen, Xionghui Chen, Zesen Cheng, Lianghao Deng, Wei Ding,
+Chang Gao, Chunjiang Ge, et al. Qwen3-vl technical report. arXiv preprint arXiv:2511.21631, 2025.
+Jianghan Chao, Jianzhang Gao, Wenhui Tan, Yuchong Sun, Ruihua Song, and Liyun Ru. Jointavbench: A
+benchmark for joint audio-visual reasoning evaluation. In Proceedings of the International Conference on
+Learning Representations, 2026.
+Guo Chen, Yicheng Liu, Yifei Huang, Baoqi Pei, Jilan Xu, Yuping He, Tong Lu, Yali Wang, and Limin Wang.
+Cg-bench: Clue-grounded question answering benchmark for long video understanding. In Proceedings of
+the International Conference on Learning Representations, 2025a.
+Joya Chen, Ziyun Zeng, Yiqi Lin, Wei Li, Zejun Ma, and Mike Zheng Shou. Livecc: Learning video llm with
+streaming speech transcription at scale. In Proceedings of the Computer Vision and Pattern Recognition
+Conference, pp. 29083–29095, 2025b.
+Yu Chen, Caorui Li, Ziyu Xiong, Yidong Wang, Mingqi Gao, Shuman Liu, Biao Liu, Chunfeng Yang, Anxiang
+Zeng, Haibo Zhang, et al. Omnireasoner: Thinking with long audio-video via native tool use. arXiv preprint
+arXiv:2607.19339, 2026.
+Zhe Chen, Weiyun Wang, Hao Tian, Shenglong Ye, Zhangwei Gao, Erfei Cui, Wenwen Tong, Kongzhi Hu,
+Jiapeng Luo, Zheng Ma, Ji Ma, Jiaqi Wang, Xiaoyi Dong, Hang Yan, Hewei Guo, Conghui He, Botian
+Shi, Zhenjiang Jin, Chao Xu, Bin Wang, Xingjian Wei, Wei Li, Wenjian Zhang, Bo Zhang, Pinlong Cai,
+Licheng Wen, Xiangchao Yan, Min Dou, Lewei Lu, Xizhou Zhu, Tong Lu, Dahua Lin, Yu Qiao, Jifeng
+Dai, and Wenhai Wang. How far are we to gpt-4v? closing the gap to commercial multimodal models with
+open-source suites. arXiv preprint arXiv:2404.16821, 2024.
+Zesen Cheng, Sicong Leng, Hang Zhang, Yifei Xin, Xin Li, Guanzheng Chen, Yongxin Zhu, Wenqi Zhang,
+Ziyang Luo, Deli Zhao, et al. Videollama 2: Advancing spatial-temporal modeling and audio understanding
+in video-llms. arXiv preprint arXiv:2406.07476, 2024.
+Zixu Cheng, Jian Hu, Ziquan Liu, Chenyang Si, Wei Li, and Shaogang Gong. V-star: Benchmarking video-llms
+on video spatio-temporal reasoning. In Proceedings of the IEEE/CVF Conference on Computer Vision and
+Pattern Recognition, pp. 9155–9164, 2026.
+Junbo Cui, Bokai Xu, Chongyi Wang, Tianyu Yu, Weiyue Sun, Yingjing Xu, Tianran Wang, Zhihui He,
+Wenshuo Ma, Tianchi Cai, et al. Minicpm-o 4.5: Towards real-time full-duplex omni-modal interaction.
+arXiv preprint arXiv:2604.27393, 2026.
+DeepSeek-AI. Deepseek-v4.1-flash: Pushing the limits of kv cache compression, 2026.
+Chaoyou Fu, Yuhan Dai, Yongdong Luo, Lei Li, Shuhuai Ren, Renrui Zhang, Zihan Wang, Chenyu Zhou,
+Yunhang Shen, Mengdan Zhang, et al. Video-mme: The first-ever comprehensive evaluation benchmark of
+multi-modal llms in video analysis. In Proceedings of the IEEE/CVF Conference on Computer Vision and
+Pattern Recognition, pp. 24108–24118, 2025a.
+Chaoyou Fu, Haojia Lin, Xiong Wang, Yunhang Shen, Xiaoyu Liu, Haoyu Cao, Zuwei Long, Heting Gao, Ke Li,
+Long MA, et al. Vita-1.5: Towards gpt-4o level real-time vision and speech interaction. In Proceedings of
+the Advances in Neural Information Processing Systems, volume 38, pp. 75300–75320, 2025b.
+Chaoyou Fu, Haozhi Yuan, Yuhao Dong, Yi-Fan Zhang, Yunhang Shen, Xiaoxing Hu, Xueying Li, Jinsen Su,
+Chengwu Long, Xiaoyao Xie, et al. Video-mme-v2: Towards the next stage in benchmarks for comprehensive
+video understanding. arXiv preprint arXiv:2604.05015, 2026.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+11 / 35
+
+Hong Gao, Jingyu Wu, Xiangkai Xu, Kangni Xie, Yunchen Zhang, Bin Zhong, Xurui Gao, and Min-Ling Zhang.
+Omniground: A comprehensive spatio-temporal grounding benchmark for real-world complex scenarios. In
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 17588–17597,
+2026.
+Jiyang Gao, Chen Sun, Zhenheng Yang, and Ram Nevatia. Tall: Temporal activity localization via language
+query. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pp. 5267–5275, 2017.
+Google. A new era of intelligence with Gemini 3, 2025. URL https://blog.google/products/gemini/gemini-3/.
+Jack Hong, Shilin Yan, Jiayin Cai, Xiaolong Jiang, Yao Hu, and Weidi Xie. Worldsense: Evaluating real-world
+omnimodal understanding for multimodal llms. In Proceedings of the International Conference on Learning
+Representations, 2026.
+Wenyi Hong, Yean Cheng, Zhuoyi Yang, Weihan Wang, Lefan Wang, Xiaotao Gu, Shiyu Huang, Yuxiao Dong,
+and Jie Tang. Motionbench: Benchmarking and improving fine-grained video motion understanding for
+vision language models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, pp. 8450–8460, 2025.
+Kimi Team, Tongtong Bai, Yifan Bai, Yiping Bao, M. C., Jianfeng Cai, Xinyuan Cai, Peizhou Cao, Yuxuan
+Cao, Ziwei Chai, et al. Kimi K3: Open frontier intelligence. arXiv preprint arXiv:2607.24653, 2026.
+Jie Lei, Licheng Yu, Mohit Bansal, and Tamara Berg. Tvqa: Localized, compositional video question answering.
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing, pp. 1369–1379,
+2018.
+Jie Lei, Licheng Yu, Tamara Berg, and Mohit Bansal. Tvqa+: Spatio-temporal grounding for video question
+answering. In Proceedings of the Annual Meeting of the Association for Computational Linguistics, pp.
+8211–8225, 2020.
+Jie Lei, Tamara L Berg, and Mohit Bansal. Detecting moments and highlights in videos via natural language
+queries. In Proceedings of the Advances in Neural Information Processing Systems, volume 34, pp.
+11846–11858, 2021.
+Bo Li, Yuanhan Zhang, Dong Guo, Renrui Zhang, Feng Li, Hao Zhang, Kaichen Zhang, Yanwei Li, Ziwei Liu,
+and Chunyuan Li. Llava-onevision: Easy visual task transfer. arXiv preprint arXiv:2408.03326, 2024a.
+Caorui Li, Yu Chen, Yiyan Ji, Jin Xu, Zhenyu Cui, Shihao Li, Yuanxing Zhang, Jiafu Tang, Zhenghao Song,
+Dingling Zhang, et al. Omnivideobench: Towards audio-visual understanding evaluation for omni mllms. In
+Proceedings of the International Conference on Learning Representations, 2026.
+Kunchang Li, Yali Wang, Yinan He, Yizhuo Li, Yi Wang, Yi Liu, Zun Wang, Jilan Xu, Guo Chen, Ping Luo,
+et al. Mvbench: A comprehensive multi-modal video understanding benchmark. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 22195–22206, 2024b.
+Yixuan Li, Lei Chen, Runyu He, Zhenzhi Wang, Gangshan Wu, and Limin Wang. Multisports: A multi-person
+video dataset of spatio-temporally localized sports actions. In Proceedings of the IEEE/CVF International
+Conference on Computer Vision, pp. 13536–13545, 2021.
+Weifeng Lin, Xinyu Wei, Ruichuan An, Gao Peng, Bocheng Zou, Yulin Luo, Siyuan Huang, Shanghang Zhang,
+and Hongsheng Li. Draw-and-understand: Leveraging visual prompts to enable mllms to comprehend what
+you want. In Proceedings of the International Conference on Learning Representations, 2025a.
+Weifeng Lin, Xinyu Wei, Ruichuan An, Tianhe Ren, Tingwei Chen, Renrui Zhang, Ziyu Guo, Wentao Zhang,
+Lei Zhang, and Hongsheng Li. Perceive anything: Recognize, explain, caption, and segment anything in
+images and videos. In Proceedings of the Advances in Neural Information Processing Systems, volume 38,
+2025b.
+Haotian Liu, Chunyuan Li, Yuheng Li, and Yong Jae Lee. Improved baselines with visual instruction tuning. In
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 26286–26296,
+2024a.
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+12 / 35
+
+Yuanxin Liu, Shicheng Li, Yi Liu, Yuxiang Wang, Shuhuai Ren, Lei Li, Sishuo Chen, Xu Sun, and Lu Hou.
+Tempcompass: Do video llms really understand videos? In Findings of the Association for Computational
+Linguistics: ACL 2024, pp. 8731–8772, 2024b.
+Zuyan Liu, Yuhao Dong, Jiahui Wang, Ziwei Liu, Winston Hu, Jiwen Lu, and Yongming Rao. Ola:
+Pushing the frontiers of omni-modal language model with progressive modality alignment. arXiv preprint
+arXiv:2502.04328, 2025.
+David Ma, Yuanxing Zhang, Jincheng Ren, Jarvis Guo, Yifan Yao, Zhenlin Wei, Zhenzhu Yang, Zhongyuan
+Peng, Boyu Feng, Jun Ma, Xiao Gu, Zhoufutu Wen, King Zhu, Yancheng He, Meng Cao, Shiwen Ni,
+Jiaheng Liu, Wenhao Huang, Ge Zhang, and Xiaojie Jin. Iv-bench: A benchmark for image-grounded video
+perception and reasoning in multimodal llms. In Proceedings of the International Conference on Learning
+Representations, 2026.
+Karttikeya Mangalam, Raiymbek Akshulakov, and Jitendra Malik. Egoschema: A diagnostic benchmark
+for very long-form video language understanding. In Proceedings of the Advances in Neural Information
+Processing Systems, volume 36, pp. 46212–46244, 2023.
+Jiahao Meng, Xiangtai Li, Haochen Wang, Yue Tan, Tao Zhang, Lingdong Kong, Yunhai Tong, Anran Wang,
+Zhiyang Teng, Yujing Wang, et al. Open-o3-video: Grounded video reasoning with explicit spatio-temporal
+evidence. In Proceedings of the International Conference on Machine Learning, 2026.
+MiMo-V2.5. Mimo-v2.5. https://huggingface.co/collections/XiaomiMiMo/mimo-v25, 2026.
+Furkan Mumcu, Michael Jones, Yasin Yilmaz, and Anoop Cherian. Complexvad: Detecting interaction
+anomalies in video. In Proceedings of the Winter Conference on Applications of Computer Vision, pp.
+1093–1102, 2025.
+OpenAI. GPT-5.5 System Card, 2026a. URL https://openai.com/index/gpt-5-5-system-card/.
+OpenAI. GPT-5.6: Frontier Intelligence that Scales with Your Ambition, 2026b. URL https://openai.com/
+index/gpt-5-6/.
+OpenAI. GPT-6 Astra: A New Generation of Intelligence, 2026c. URL https://openai.com/index/gpt-6-astra/.
+Qwen Team. Qwen3.8-max: A new bar for coding and cowork, August 2026a. URL https://qwen.ai/blog?id=
+qwen3.8.
+Qwen Team. Qwen3.6-35B-A3B: Agentic coding power, now open to all, April 2026b. URL https://qwen.ai/
+blog?id=qwen3.6-35b-a3b.
+Qwen Team, Alibaba. Qwen3-Omni-Flash-2025-12-01: Hear You. See You. Follow Smarter!, 2025. URL
+https://qwen.ai/blog?id=qwen3-omni-20251201.
+Bharathkumar Ramachandra and Michael Jones. Street scene: A new dataset and evaluation protocol for video
+anomaly detection. In Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision,
+pp. 2569–2578, 2020.
+Bytedance Seed. Seed2. 0 model card: Towards intelligence frontier for real-world complexity. arXiv preprint
+arXiv:2607.00248, 2026.
+Enxin Song, Wenhao Chai, Guanhong Wang, Yucheng Zhang, Haoyang Zhou, Feiyang Wu, Haozhe Chi,
+Xun Guo, Tian Ye, Yanting Zhang, et al. Moviechat: From dense token to sparse memory for long video
+understanding. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+pp. 18221–18232, 2024.
+Waqas Sultani, Chen Chen, and Mubarak Shah. Real-world anomaly detection in surveillance videos. In
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 6479–6488,
+2018.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+13 / 35
+
+Changli Tang, Yixuan Li, Yudong Yang, Jimin Zhuang, Guangzhi Sun, Wei Li, Zejun Ma, and Chao
+Zhang. video-SALMONN 2: Captioning-Enhanced Audio-Visual Large Language Models. arXiv preprint
+arXiv:2506.15220, 2025.
+Feilong Tang, Xiang An, Yunyao Yan, Yin Xie, Bin Qin, Kaicheng Yang, Yifei Shen, Yuanhan Zhang, Chunyuan
+Li, Shikun Feng, et al. Onevision-encoder: Codec-aligned sparsity as a foundational principle for multimodal
+intelligence. arXiv preprint arXiv:2602.08683, 2026.
+Zongheng Tang, Yue Liao, Si Liu, Guanbin Li, Xiaojie Jin, Hongxu Jiang, Qian Yu, and Dong Xu. Humancentric spatio-temporal video grounding with visual transformers. IEEE Transactions on Circuits and Systems
+for Video Technology, 32(12):8238–8249, 2021.
+Kwai Keye Team, Bin Wen, Changyi Liu, Chengru Song, Chongling Rao, Guowang Zhang, Han Li, Haonan
+Fan, Hengrui Ju, Jiankang Chen, et al. Kwai keye-vl-2.0 technical report. arXiv preprint arXiv:2606.10651,
+2026.
+Qwen Team. Qwen3.5: Towards native multimodal agents, February 2026a. URL https://qwen.ai/blog?id=
+qwen3.5.
+Qwen Team. Qwen3. 5-omni technical report. arXiv preprint arXiv:2604.15804, 2026b.
+Shihao Wang, Guo Chen, De-an Huang, Zhiqi Li, Minghan Li, Guilin Liu, Jan Kautz, Jose M Alvarez, Lei
+Zhang, and Zhiding Yu. Videoitg: Multimodal video understanding with instructed temporal grounding. In
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 24640–24650,
+2026a.
+Shihao Wang, Shilong Liu, Yuanguo Kuang, Xinyu Wei, Yangzhou Liu, Zhiqi Li, Yunze Man, Guo Chen,
+Andrew Tao, Guilin Liu, et al. Locateanything: Fast and high-quality vision-language grounding with parallel
+box decoding. In European Conference on Computer Vision, pp. 336–357. Springer, 2026b.
+Weihan Wang, Zehai He, Wenyi Hong, Yean Cheng, Xiaohan Zhang, Ji Qi, Ming Ding, Xiaotao Gu, Shiyu
+Huang, Bin Xu, et al. Lvbench: An extreme long video understanding benchmark. In Proceedings of the
+IEEE/CVF International Conference on Computer Vision, pp. 22958–22967, 2025a.
+Weiyun Wang, Zhangwei Gao, Lixin Gu, Hengjun Pu, Long Cui, Xingguang Wei, Zhaoyang Liu, Linglin
+Jing, Shenglong Ye, Jie Shao, et al. Internvl3. 5: Advancing open-source multimodal models in versatility,
+reasoning, and efficiency. arXiv preprint arXiv:2508.18265, 2025b.
+Weizhi Wang, Zili Wang, Yuqi Huo, Yuanting Chen, Xuezheng Xu, Jinguo Zhu, Wangbo Zhao, Wei Li, and
+Weijie Su. Vtool-r1: Vlms learn to think with images via reinforcement learning. In ICLR, 2026c.
+Haoning Wu, Dongxu Li, Bei Chen, and Junnan Li. Longvideobench: A benchmark for long-context interleaved
+video-language understanding. In Proceedings of the Advances in Neural Information Processing Systems,
+volume 37, pp. 28828–28857, 2024.
+Junbin Xiao, Xindi Shang, Angela Yao, and Tat-Seng Chua. Next-qa: Next phase of question-answering to
+explaining temporal actions. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, pp. 9777–9786, 2021.
+Zhenghao Xing, Ruiyang Xu, Yuxuan Wang, Jinzheng He, Ziyang Ma, Qize Yang, Yunfei Chu, Jin Xu,
+Junyang Lin, Chi-Wing Fu, and Pheng-Ann Heng. Native active perception as reasoning for omni-modal
+understanding. In ICML, 2026.
+Jin Xu, Zhifang Guo, Jinzheng He, Hangrui Hu, Ting He, Shuai Bai, Keqin Chen, Jialin Wang, Yang Fan, Kai
+Dang, et al. Qwen2. 5-omni technical report. arXiv preprint arXiv:2503.20215, 2025a.
+Jin Xu, Zhifang Guo, Hangrui Hu, Yunfei Chu, Xiong Wang, Jinzheng He, Yuxuan Wang, Xian Shi, Ting He,
+Xinfa Zhu, Yuanjun Lv, Yongqi Wang, Dake Guo, He Wang, Linhan Ma, Pei Zhang, Xinyu Zhang, Hongkun
+Hao, Zishan Guo, Baosong Yang, Bin Zhang, Ziyang Ma, Xipin Wei, Shuai Bai, Keqin Chen, Xuejing
+Liu, Peng Wang, Mingkun Yang, Dayiheng Liu, Xingzhang Ren, Bo Zheng, Rui Men, Fan Zhou, Bowen
+Yu, Jianxin Yang, Le Yu, Jingren Zhou, and Junyang Lin. Qwen3-omni technical report. arXiv preprint
+arXiv:2509.17765, 2025b.
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+14 / 35
+
+Yudong Yang, Jimin Zhuang, Changli Tang, Guangzhi Sun, Yixuan Li, Peihan Li, Yifan Jiang, Wei Li, Zejun
+Ma, and Chao Zhang. Audio-centric video understanding benchmark without text shortcut. In Proceedings
+of the Conference on Empirical Methods in Natural Language Processing, 2025.
+Zuhao Yang, Sudong Wang, Kaichen Zhang, Keming Wu, Sicong Leng, Yifan Zhang, Chengwei Qin, Shijian
+Lu, Xingxuan Li, and Lidong Bing. Longvt: Incentivizing thinking with long videos via native tool calling.
+In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2026a.
+Zuhao Yang, Kaichen Zhang, Sudong Wang, Keming Wu, Zhongyu Yang, Bo Li, Xiaojuan Qi, Shijian Lu,
+Xingxuan Li, and Lidong Bing. Paravt: Taming the tool prior paradox for parallel tool use in agentic video
+reinforcement learning. arXiv preprint arXiv:2605.20342, 2026b.
+Zhou Yu, Dejing Xu, Jun Yu, Ting Yu, Zhou Zhao, Yueting Zhuang, and Dacheng Tao. Activitynet-qa: A dataset
+for understanding complex web videos via question answering. In Proceedings of the AAAI Conference on
+Artificial Intelligence, volume 33, pp. 9127–9134, 2019.
+Aohan Zeng, Xin Lv, Zhenyu Hou, Zhengxiao Du, Qinkai Zheng, Bin Chen, Da Yin, Chendi Ge, Chenghua
+Huang, Chengxing Xie, et al. Glm-5: from vibe coding to agentic engineering. arXiv preprint
+arXiv:2602.15763, 2026a.
+Xiangyu Zeng, Zhiqiu Zhang, Yuhan Zhu, Xinhao Li, Zikang Wang, Changlian Ma, Qingyu Zhang, Zizheng
+Huang, Kun Ouyang, Tianxiang Jiang, Ziang Yan, Yi Wang, Hongjie Zhang, Yali Wang, and Limin Wang.
+Video-o3: Native interleaved clue seeking for long video multi-hop reasoning. In Proceedings of the
+International Conference on Machine Learning, 2026b.
+Boqiang Zhang, Kehan Li, Zesen Cheng, Zhiqiang Hu, Yuqian Yuan, Guanzheng Chen, Sicong Leng, Yuming
+Jiang, Hang Zhang, Xin Li, et al. Videollama 3: Frontier multimodal foundation models for image and video
+understanding. arXiv preprint arXiv:2501.13106, 2025.
+Jun Zhang, Teng Wang, Yuying Ge, Yixiao Ge, Xinhao Li, and Limin Wang. Timelens: Rethinking video
+temporal grounding with multimodal llms. In Proceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition, pp. 10419–10429, 2026.
+Yuanhan Zhang, Jinming Wu, Wei Li, Bo Li, Zejun Ma, Ziwei Liu, and Chunyuan Li. Video instruction tuning
+with synthetic data. arXiv preprint arXiv:2410.02713, 2024.
+Zhu Zhang, Zhou Zhao, Yang Zhao, Qi Wang, Huasheng Liu, and Lianli Gao. Where does it exist: Spatiotemporal video grounding for multi-form sentences. In Proceedings of the IEEE/CVF Conference on
+Computer Vision and Pattern Recognition, pp. 10668–10677, 2020.
+Junjie Zhou, Yan Shu, Bo Zhao, Boya Wu, Zhengyang Liang, Shitao Xiao, Minghao Qin, Xi Yang, Yongping
+Xiong, Bo Zhang, et al. Mlvu: Benchmarking multi-task long video understanding. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 13691–13701, 2025a.
+Ziwei Zhou, Rui Wang, and Zuxuan Wu. Daily-omni: Towards audio-visual reasoning with temporal alignment
+across modalities. arXiv preprint arXiv:2505.17862, 2025b.
+Yuhan Zhu, Changlian Ma, Xiangyu Zeng, Xinhao Li, Zhiqiu Zhang, Songze Li, Jun Zhang, Tianxiang Jiang,
+Yuandong Yang, Ziang Yan, et al. Timelens2: Generalist video temporal grounding with multimodal llms.
+arXiv preprint arXiv:2607.17423, 2026.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+15 / 35
+
+Appendix
+A Additional Results
+A.1 Performance across Video Durations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+A.2 Grounding across Target Granularity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+A.3 Performance across Video Domains . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+16
+16
+17
+17
+
+B Additional Analyses
+B.1 Impact of Frame Scaling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+B.2 Impact of Reference Specification . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+B.3 Cross-Specification Consistency . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+B.4 Qualitative Analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+17
+17
+17
+18
+19
+
+C Benchmark Construction
+C.1 Video Sources and Selection . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+C.2 Task-Oriented Candidate Scoring . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+C.3 Question-Answering Taxonomy . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+C.4 Reference Design and Provenance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+21
+22
+22
+23
+
+D Annotation Quality and Verification
+23
+D.1 Review Criteria and Repair Records . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+D.2 Human Effort . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+E Evaluation Protocols and Prompts
+29
+E.1 Inputs and Paired Settings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+E.2 Prompt Examples . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+
+A Additional Results
+A.1 Performance across Video Durations
+Figure A1 compares ten models across short, medium, and long videos in OmniCompass-VL. All ten score
+lower on long than short videos in TG. Seed-2.1-Pro-260915 shows the largest decline, from 33.4% to 15.1%,
+while Gemini-3.8-Flash falls from 33.8% to 21.0%. Only five models decline in SG and six in QA. Thus, the
+direction of the duration association is more consistent for temporal localization than for the other tasks. These
+groups also differ in content and target granularity, so the comparison does not isolate video duration as the
+cause of lower scores.
+Temporal Grounding
+
+Spatial Grounding
+
+CSSG (%)
+
+CSTG (%)
+
+30
+20
+10
+0
+
+Question Answering
+
+45
+
+Short
+
+Medium
+
+80
+70
+
+30
+
+CSQA (%)
+
+40
+
+15
+
+Long
+
+0
+
+60
+50
+
+Short
+
+Medium
+
+Long
+
+40
+
+Short
+
+Medium
+
+Long
+
+Gemini3.8-Flash
+
+Seed2.1 Pro
+
+Qwen3.8-Max
+
+GPT-6-Astra
+
+Kimi-K3
+
+GLM-5.3-Flash
+
+DeepSeek-v4.1-Flash
+
+MiMo-V2.5
+
+Keye-VL-2.0
+
+LLaVA-OV-2
+
+Figure A1. Performance across video durations in OmniCompass-VL. Bars show task-specific CS in percent for short
+videos below 90 seconds, medium videos from 90 to below 300 seconds, and long videos of at least 300 seconds. Each
+model uses its own eligible pairs.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+16 / 35
+
+A.2 Grounding across Target Granularity
+Figure A2 compares ten VL models and six AV models across relative target-duration and box-area groups. All
+ten VL models improve monotonically in TG as the relative target duration increases. All six AV models also
+peak in the highest duration-ratio quartile. Gemini-3.8-Flash rises from 7.9% to 43.1% on VL and from 27.1%
+to 56.2% on AV between the extreme groups. Spatial trends differ: every VL model peaks in the largest-box
+group, whereas every AV model peaks in the third quartile. Gemini-3.8-Flash scores 65.5% in the third AV
+quartile and 53.6% in the fourth.
+Quartile boundaries are computed from all videos separately for each track; scores use the common eligible
+pairs within each task. The resulting groups are not equal in size, and their boundaries differ between VL and
+AV. IoU also depends on target extent, so these curves describe associations rather than an isolated granularity
+effect. This contrast does not isolate audio effects: tasks, target distributions, and model rosters differ.
+Temporal Grounding
+
+Spatial Grounding
+
+20
+10
+0
+
+0 to
+0.64%
+
+0.64 to
+1.78%
+
+1.78 to
+4.84%
+
+>4.84%
+
+Spatial Grounding
+
+60
+
+70
+
+50
+
+50
+
+60
+
+40
+
+40
+
+30
+
+30
+
+20
+
+20
+
+10
+
+10
+
+0
+
+0
+
+0 to
+1.63%
+
+Target interval / video duration
+
+1.63 to
+5.30%
+
+5.30 to
+19.64%
+
+>19.64%
+
+Target box / frame area
+
+50
+
+CSSG (%)
+
+30
+
+CSSG (%)
+
+CSTG (%)
+
+40
+
+Temporal Grounding
+
+60
+
+CSTG (%)
+
+50
+
+40
+30
+20
+10
+
+0 to
+0.42%
+
+0.42 to
+0.89%
+
+0.89 to
+2.36%
+
+>2.36%
+
+0
+
+0 to
+16.92%
+
+Target interval / video duration
+
+16.92 to
+30.59%
+
+30.59 to
+43.80%
+
+>43.80%
+
+Target box / frame area
+
+Gemini3.8-Flash
+
+Seed2.1 Pro
+
+Qwen3.8-Max
+
+GPT-6-Astra
+
+Kimi-K3
+
+Gemini3.8-Flash
+
+Qwen3.8-Omni-Flash
+
+Seed2.0 Lite
+
+GLM-5.3-Flash
+
+DeepSeek-v4.1-Flash
+
+MiMo-V2.5
+
+Keye-VL-2.0
+
+LLaVA-OV-2
+
+MiMo-V2.5
+
+Qwen3-Omni-30B-A3B
+
+video-SALMONN 2+ 72B
+
+(a) Grounding Performance on OmniCompass-VL
+
+(b) Grounding Performance on OmniCompass-AV
+
+Figure A2. Grounding across target granularity. Curves report CSTG and CSSG in percent across quartiles of
+target-to-video duration and mean endpoint box-to-frame area. Quartiles are track-specific; models share eligible pairs
+within each track and task.
+
+A.3 Performance across Video Domains
+Figure A3 compares the ten VL models across seven domains. All ten obtain their lowest SG and QA scores in
+Traffic, with equal-weight model means of 7.8% and 37.3%. Variety has the lowest mean TG score at 8.1%,
+but the highest mean SG score at 26.6%. Strong spatial grounding can therefore coexist with weak temporal
+localization within the same domain. These rankings apply to the shared eligible subsets, not necessarily every
+video in each domain. Domain comparisons also reflect differences in duration, target size, and QA content.
+
+B Additional Analyses
+B.1 Impact of Frame Scaling
+Increasing the frame budget improves performance in most settings, but the effect depends on the track and task.
+On OmniCompass-VL, all three tasks improve significantly for both models from 8 to 128 frames. TG CS
+increases by 22.2% and 19.6% for Gemini-3.8-Flash and Qwen3.5-397B-A17B, respectively; SG increases by
+22.8% and 16.9%, while QA increases by 20.0% and 18.6%. The gains are smaller and more task-dependent
+on OmniCompass-AV. SG improves by 18.3% for Gemini-3.8-Flash and 22.3% for Qwen3.8-Omni-Flash,
+while QA improves by 9.9% and 13.4% from 8 to 128 frames. In contrast, TG remains nearly unchanged.
+We suppose that audio already provides useful temporal cues for AV TG (see Figure 7), leaving denser visual
+sampling with limited additional temporal evidence, whereas SG and QA can benefit from finer spatial details
+and richer visual context. Besides, more frames also increase visual input and inference cost, so the preferred
+budget depends on the task and track rather than always favoring the largest setting.
+
+B.2 Impact of Reference Specification
+Figure B2 compares Text and Text+Image across reference types. For action-conditioned questions, Text+Image
+improves TG for seven of ten models and SG for nine, but lowers QA accuracy for eight. Gemini-3.8-Flash
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+17 / 35
+
+Temporal Grounding
+50
+
+CSTG (%)
+
+40
+30
+20
+10
+0
+
+Sports
+
+Traffic
+
+Safety
+
+Life
+
+Film
+
+Variety
+
+News
+
+Traffic
+
+Safety
+
+Life
+
+Film
+
+Variety
+
+News
+
+Traffic
+
+Safety
+
+Life
+
+Film
+
+Variety
+
+News
+
+Spatial Grounding
+50
+
+CSSG (%)
+
+40
+30
+20
+10
+0
+
+Sports
+
+Question Answering
+
+CSQA (%)
+
+80
+60
+40
+20
+0
+
+Sports
+
+Gemini3.8-Flash
+
+Seed2.1 Pro
+
+Qwen3.8-Max
+
+GPT-6-Astra
+
+Kimi-K3
+
+GLM-5.3-Flash
+
+DeepSeek-v4.1-Flash
+
+MiMo-V2.5
+
+Keye-VL-2.0
+
+LLaVA-OV-2
+
+Figure A3. Performance across video domains in OmniCompass-VL. Bars report task-specific CS in percent for ten
+models. The shared eligible subsets contain 592 TG, 673 SG, and 689 QA pairs across the seven domains; comparisons
+use the same instances within each task.
+
+gains 10.4% in action-conditioned SG, whereas Qwen3.8-Max loses 7.6%. The paired settings change the
+target description as well as image availability, so these differences are not a pure image-addition effect. They
+measure whether performance changes when a visual cue replaces part of the textual target description under
+matched evidence and semantics.
+Each task uses the same eligible subset across all ten models. Action-conditioned TG, SG, and QA contain
+50, 54, and 31 pairs, respectively. Scene-conditioned TG contains only eight pairs, so its cell values provide
+limited evidence for a general trend. The heatmap reports mean differences, not significance; subgroup sizes
+matter when interpreting their direction.
+
+B.3 Cross-Specification Consistency
+Figure B3 compares paired CS with setting-specific performance. Across the ten models, TG and SG CS
+average 5.0% and 5.7% below the lower single-setting mean. This gap includes both the cost of requiring
+overlap with ground truth under both settings and the additional prediction-to-prediction overlap constraint.
+The latter contributes only 0.3%–1.8% across the model–task combinations. The full gap does not measure
+prediction disagreement alone.
+For QA, 10.5–25.1% of eligible pairs are answered correctly under exactly one setting. Kimi-K3 reaches
+nearly identical accuracies of 73.0% and 72.9%, yet answers only 67.6% correctly under both. Its 808 pairs
+comprise 546 correct under both settings, 44 only under Text, 43 only under Text+Image, and 175 under neither.
+Similar aggregate accuracy can therefore mask different instance-level outcomes. Neither-correct pairs may
+still contain two different wrong answers.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+18 / 35
+
+Gemini-3.8-Flash
+
+Qwen3.5-397B-A17B
+
+Qwen3.8-Omni-Flash
+
+(a) OmniCompass-VL
+Temporal Grounding
+
+18.5
+
+26.9
+23.2
+
+12.8
+16.7
+
+10
+
+CSSG (%)
+
+CSTG (%)
+
+21.8
+
+26.3
+
+30
+
+27.7
+32.2
+
+20.7
+
+28.0
+
+20
+10
+
+73.5
+68.9
+
+70
+
+32.0
+
+19.2
+
+11.1
+
+Question Answering
+80
+
+43.6
+
+40
+
+27.7
+
+30
+20
+
+Spatial Grounding
+50
+
+35.0
+
+22.9
+
+CSQA (%)
+
+40
+
+15.2
+
+60
+
+63.4
+59.1
+53.5
+
+62.8
+
+60.8
+56.9
+
+50
+49.4
+
+40
+
+44.2
+
+7.3
+
+0
+
+8
+
+16
+
+32
+
+64
+
+0
+
+128
+
+8
+
+Number of Frames
+
+16
+
+32
+
+64
+
+30
+
+128
+
+8
+
+16
+
+32
+
+64
+
+128
+
+Number of Frames
+
+Number of Frames
+
+Spatial Grounding
+
+Question Answering
+
+(b) OmniCompass-AV
+41.9
+
+39.2
+
+41.6
+
+70
+40.6
+
+39.9
+
+60
+50
+
+30
+20
+
+24.7
+20.2
+
+20.3
+
+21.8
+
+23.3
+
+CSSG (%)
+
+CSTG (%)
+
+40
+
+43.7
+
+50.9
+
+40
+30
+
+53.5
+
+58.6
+
+42.4
+32.9
+
+36.1
+
+70
+
+16
+
+32
+
+64
+
+128
+
+0
+
+Number of Frames
+
+74.0
+68.5
+
+16
+
+32
+
+64
+
+128
+
+73.2
+
+72.5
+
+64
+
+128
+
+66.0
+61.4
+
+59.1
+
+8
+
+67.9
+
+64.2
+
+60
+
+10
+8
+
+78.2
+
+80
+
+55.2
+
+20
+
+10
+0
+
+40.3
+
+48.5
+
+CSQA (%)
+
+Temporal Grounding
+50
+
+50
+
+8
+
+16
+
+Number of Frames
+
+32
+
+Number of Frames
+
+Figure B1. Impact of frame scaling. Each panel reports task-level paired CS (%) under 8, 16, 32, 64, and 128 uniformly
+sampled frames. Rows correspond to the VL and AV tracks, columns correspond to TG, SG, and QA, and curves
+distinguish the evaluated models.
+Temporal Grounding
+
+Spatial Grounding
+
+Question Answering
+
+Entity
+
+Action
+
+Attribute
+
+Scene
+
+Entity
+
+Action
+
+Attribute
+
+Scene
+
+Entity
+
+Action
+
+Attribute
+
+Scene
+
++0.8
+
++4.1
+
++0.1
+
+-4.1
+
++4.0
+
++10.4
+
++3.7
+
+-4.0
+
++3.7
+
++3.2
+
++3.7
+
++0.0
+
++0.5
+
++7.9
+
++2.8
+
+-6.4
+
+-1.7
+
++0.2
+
++0.7
+
+-5.4
+
+-0.7
+
+-3.2
+
++7.4
+
+-2.6
+
++1.2
+
++7.6
+
++0.8
+
+-15.3
+
++0.1
+
+-7.6
+
++4.5
+
+-4.5
+
++0.7
+
+-9.7
+
++7.4
+
++2.6
+
++0.3
+
++4.8
+
++1.9
+
+-1.3
+
++0.2
+
++2.2
+
++0.6
+
++4.6
+
+-4.1
+
+-3.2
+
+-3.7
+
++7.9
+
++0.6
+
++2.4
+
+-0.4
+
+-10.5
+
++1.9
+
++0.6
+
++0.8
+
+-0.5
+
++1.1
+
+-6.5
+
++0.0
+
++7.9
+
+-1.2
+
++0.9
+
+-2.2
+
+-8.5
+
++1.1
+
++2.7
+
++1.5
+
+-1.4
+
++1.2
+
+-6.5
+
++1.9
+
++2.6
+
++0.9
+
+-1.3
+
++0.2
+
+-14.4
+
+-0.7
+
++1.7
+
++2.9
+
+-8.9
+
+-0.7
+
+-12.9
+
+-1.9
+
+-2.6
+
+-0.6
+
++3.9
+
+-0.7
+
++9.6
+
++0.4
+
++0.5
+
++1.0
+
+-3.7
+
+-1.9
+
+-9.7
+
++1.9
+
++2.6
+
+-2.2
+
+-4.7
+
++2.6
+
+-13.1
+
++0.5
+
++3.2
+
+-0.2
+
++4.1
+
++3.0
+
++0.0
+
+-1.9
+
++2.6
+
+-5.2
+
+-8.8
+
++1.9
+
++1.0
+
+-0.6
+
++1.0
+
+-0.2
+
++0.6
+
+-4.8
+
+-19.4
+
+-3.7
+
++0.0
+
+Gemini3.8-Flash
+
+Seed2.1 Pro
+
+Qwen3.8-Max
+
+GPT-6-Astra
+
+Kimi-K3
+
+GLM-5.3-Flash
+
+DeepSeek-v4.1-Flash
+
+MiMo-V2.5
+
+Keye-VL-2.0
+
+LLaVA-OV-2
+
+Figure B2. Effects of reference specification in OmniCompass-VL. Cells show Text+Image minus Text in percent for
+TG mtIoU , SG msIoU , and QA accuracy on shared per-task subsets. Green denotes increases and blue denotes decreases;
+color does not encode significance.
+
+B.4 Qualitative Analysis
+Figure B4 shows qualitative examples of OmniCompass-VL and OmniCompass-AV across QA, SG, and TG. In
+the first OmniCompass-VL case, the older man drinks twice, corresponding to option C. Seed-2.1-Pro predicts
+C under both Text and Text+Image. Switching from Text to Text+Image changes Kimi-K3’s prediction from
+A to C and GPT-6-Astra’s from A to B. In the second OmniCompass-VL case, the gymnastics team ends
+with three members kneeling on one knee and three standing, corresponding to option C. Seed-2.1-Pro and
+Gemini-3.8-Flash select C, whereas GPT-6-Astra selects A.
+For OmniCompass-AV, the upper-right QA example asks why the man is sent to prison. He is mistaken for
+the leader of a communist demonstration, corresponding to option B. Qwen3-Omni-30B-A3B changes from C
+under Text to B under Text+Image, while Gemini-3.8-Flash and video-SALMONN-2+-72B select B in both
+settings. The lower-right SG example illustrates the difficulty of SG: Gemini-3.8-Flash obtains the highest
+score among the three models at only 0.181. Qwen3-Omni-30B-A3B and video-SALMONN-2+-72B score
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+19 / 35
+
+Temporal Grounding
+
+Spatial Grounding
+
+Question Answering
+
+Only one
+correct (%)
+
+69.1
+
+Gemini3.8-Flash
+
+4.2 7.4
+
+19.3
+
+11.6
+
+Seed2.1 Pro
+
+67.4
+
+6.0 6.8
+
+19.8
+
+12.8
+
+Qwen3.8-Max
+
+67.2
+
+5.2 5.3
+
+22.3
+
+10.5
+
+6.2
+
+24.7
+
+15.9
+
+5.4 5.3
+
+21.7
+
+10.8
+
+59.4
+
+GPT-6-Astra
+
+9.7
+
+67.6
+
+Kimi-K3
+GLM-5.3-Flash
+
+59.4
+
+DeepSeek-v4.1-Flash
+
+56.6
+
+8.9
+
+8.0
+
+MiMo-V2.5
+
+49.0
+
+13.2
+
+11.8
+
+Keye-VL-2.0
+
+53.0
+
+7.3
+
+9.1
+
+48.0
+
+LLaVA-OV-2
+0
+
+10
+
+20
+
+30
+
+40
+
+0
+
+Overlap score (%)
+Task-level CS
+
+10
+
+20
+
+30
+
+40
+
+0
+
+25
+
+Lower setting mean
+
+18.2
+17.7
+
+26.0
+
+25.1
+16.4
+
+30.6
+37.7
+
+9.9 4.4
+
+50
+
+Overlap score (%)
+
+22.4
+25.7
+
+9.3
+
+9.6
+
+14.3
+
+75
+
+100
+
+Paired QA instances (%)
+
+Both correct
+
+Text only correct
+
+Text+Image only correct
+
+Both incorrect
+
+Figure B3. Consistency under paired reference specifications. Grounding compares CS with the lower setting-specific
+mean on identical eligible pairs. QA bars partition pairs by correctness in the two settings; blue denotes CSQA . The right
+column reports correctness under exactly one setting. Bold indicates category maxima, not uniformly better performance.
+OmniCompass-VL / QA
+
+OmniCompass-AV / QA
+
+Count the drinks
+
+Explain the arrest
+…
+
+Text
+
+224.5 s
+
+225.5 s
+
+227.0 s
+
+…
+273.5 s
+
+275.0 s
+
+276.0 s
+
+In the video, how many times in total does the older man in a black suit with short hair drink?
+
+Text
+
+212.0 s
+
+216.0 s
+
+219.0 s
+
+224.0 s
+
+387.0 s
+
+393.0 s
+
+Why is the mustached man in black work clothes sent to prison?
+
+Text + Image
+
+Text + Image
+
+In the video, how many times in total does the person in the reference image drink?
+
+Why is the person in the reference image sent to prison?
+
+GT: C — 2 times
+
+GT: B — He is mistaken for the leader of a communist demonstration
+
+MODEL
+
+TEXT
+
+TEXT + IMAGE
+
+MODEL
+
+TEXT
+
+TEXT + IMAGE
+
+Seed-2.1-Pro
+
+C 2 times [1]
+
+C 2 times [1]
+
+Gemini-3.8-Flash
+
+GPT-6-Astra
+
+A 3 times [0]
+
+B 4 times [0]
+
+B He is mistaken for the leader of a
+communist demonstration [1]
+
+B He is mistaken for the leader of a
+communist demonstration [1]
+
+Qwen3-Omni-30B-A3B
+
+Gemini-3.8-Flash
+
+E 1 time [0]
+
+E 1 time [0]
+
+C He is mistaken for a smuggler carrying
+contraband [0]
+
+B He is mistaken for the leader of a
+communist demonstration [1]
+
+video-SALMONN-2+-72B
+
+B He is mistaken for the leader of a
+communist demonstration [1]
+
+B He is mistaken for the leader of a
+communist demonstration [1]
+
+Kimi-K3
+
+A 3 times [0]
+
+C 2 times [1]
+
+OmniCompass-VL / QA
+
+OmniCompass-AV / SG
+
+Identify the final formation
+
+38.8 s
+
+Text
+
+Locate the greeter
+
+39.5 s
+
+40.2 s
+
+40.8 s
+
+In the video, what formation does the team wearing white-and-red gymnastics uniforms use to end its routine?
+Text + Image
+
+244.7 s
+
+Text
+
+245.8 s
+
+248.2 s
+
+Text + Image
+
+In the video, what formation does the team in the reference image use to end its gymnastics routine?
+
+Where in the frame is the person in the reference image when he greets the other person?
+
+MODEL · TEXT + IMAGE
+
+GT: C — three kneeling on one knee and three standing
+
+GT
+
+MODEL
+
+TEXT + IMAGE
+
+Seed-2.1-Pro
+
+C three kneeling on one knee and three standing [1]
+
+GPT-6-Astra
+
+A three seated and three standing [0]
+
+Gemini-3.8-Flash
+
+C three kneeling on one knee and three standing [1]
+
+Prediction
+
+Gemini-3.8-Flash
+
+Qwen3-Omni-30B-A3B
+
+video-SALMONN-2+-72B
+
+244.7 s
+
+244.7 s
+
+244.7 s
+
+248.2 s
+
+248.2 s
+
+SG 0.181
+
+OmniCompass-VL / TG
+
+9.0 s
+
+10.0 s
+
+248.2 s
+
+SG 0.019
+
+SG 0.000
+
+OmniCompass-VL / TG
+
+Swing at the first pitch
+
+Text
+
+247.0 s
+
+Where in the frame is the white-haired person when he greets the other person?
+
+Enter the alley
+
+10.5 s
+
+11.0 s
+
+12.0 s
+
+When in the video does the player wearing green-and-white striped socks swing at the first pitch?
+Text + Image
+
+Text
+
+86.0 s
+
+90.0 s
+
+93.5 s
+
+97.0 s
+
+101.0 s
+
+When does the man in a white top enter the alley?
+Text + Image
+
+When in the video does the player in the reference image swing at the first pitch?
+
+GT: 10.0–11.0 s
+
+When does the person in the reference image enter the alley?
+
+GT: 90.0–97.0 s
+
+MODEL
+
+TEXT
+
+TEXT + IMAGE
+
+MODEL
+
+TEXT
+
+TEXT + IMAGE
+
+Seed-2.1-Pro
+
+[10.0, 11.0] s [1.00]
+
+[11.0, 12.0] s [0.00]
+
+GLM-5.3-Flash
+
+[89.0, 97.0] s [0.88]
+
+[93.0, 97.0] s [0.57]
+
+Gemini-3.8-Flash
+
+[57.0, 61.0] s [0.00]
+
+[34.0, 37.0] s [0.00]
+
+Gemini-3.8-Flash
+
+[43.0, 51.0] s [0.00]
+
+[58.0, 68.0] s [0.00]
+
+GPT-6-Astra
+
+[20.0, 22.0] s [0.00]
+
+[9.0, 11.0] s [0.50]
+
+GPT-6-Astra
+
+[85.0, 101.0] s [0.44]
+
+[84.9, 100.9] s [0.44]
+
+Kimi-K3
+
+[47.9, 49.5] s [0.00]
+
+[47.9, 49.5] s [0.00]
+
+Kimi-K3
+
+[48.5, 52.6] s [0.00]
+
+[89.0, 93.0] s [0.38]
+
+Figure B4. Qualitative Analysis on our OmniCompass-VL and OmniCompass-AV. Different models predictions on
+six cases in our two evaluation tracks.
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+20 / 35
+
+0.019 and 0.000, respectively.
+
+C Benchmark Construction
+C.1 Video Sources and Selection
+
+Reference image + video + question
+
+Sports
+
+Film
+
+QA / Text
+
+QA / Text
+
+...
+70.0 s
+
+Reference
+
+71.5 s
+
+74.0 s
+
+77.0 s
+
+224.5 s
+
+Q: What is the name of the coach of the team
+wearing white jerseys, green pants, and green caps?
+
+Reference
+
+225.5 s
+
+49.0 s
+
+Reference
+
+52.0 s
+
+GT: C 2 times
+
+Safety
+
+QA / Text
+
+56.0 s
+
+61.0 s
+
+36.0 s
+
+Q: In the video, how do the children primarily create
+rhythm in the children's music activity scene?
+
+Reference
+
+37.0 s
+
+14.0 s
+
+Reference
+
+15.0 s
+
+News
+
+17.0 s
+
+231.0 s
+
+Q: What type of vehicle is the first to pass through
+the intersection with the red-brick crosswalk?
+
+Reference
+
+232.3 s
+
+40.0 s
+
+SG / Text
+
+233.5 s
+
+234.8 s
+
+Q: Where in the frame is the wine glass when the
+older man in the pink shirt is seated in a chair?
+
+GT: C A sedan
+
+GT boxes at the two annotated times
+
+Variety
+27.7 s
+
+Reference
+
+38.5 s
+
+GT: 36.0–40.0 s
+
+QA / Text
+
+16.0 s
+
+TG / Text
+
+Q: When does the man in a black T-shirt and
+light-colored shorts take an item and walk away?
+
+GT: A Tapping nearby objects
+
+Traffic
+
+275.0 s
+
+Q: In the video, how many times in total does the
+older man in a black suit with short hair drink?
+
+GT: B Melissa Lombardi
+
+Life
+
+274.0 s
+
+28.1 s
+
+SG / Text
+
+28.5 s
+
+28.9 s
+
+Q: Where in the frame is the bald man in a dark jacket and
+necklace when he stands up for the first time?
+GT boxes at the two annotated times
+
+Realhigh-level
+scenes.domains
+Diverseofquestions.
+Figure C1. Seven
+videos in OmniCompass.
+
+OmniCompass-VL contains 580 selected public-source videos and 240 self-collected clips. The public
+component draws from nine dataset families; Table C1 reports the contribution of each source to the 820-video
+set. The self-collected component comprises 70 movie clips, 70 TV-series clips, 50 variety-show clips, and 50
+news clips. These same 240 videos also support OmniCompass-AV, with separate audio-visual task annotations.
+The two tracks share videos, but their TG, SG, and QA annotations may select different events and targets from
+that shared video content. Figure C1 summarizes the seven high-level video categories in OmniCompass.
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+21 / 35
+
+Table C1. Nine public source datasets contributing to OmniCompass. Counts refer to selected videos, not complete
+source releases. Domains follow the final OmniCompass taxonomy; News includes documentary, nature, and knowledge
+content. Links point to downloads.
+Source
+MultiSports
+(Li et al., 2021)
+LiveSports-3K
+(Chen et al., 2025b)
+UCF-Crime
+(Sultani et al., 2018)
+CG-Bench
+(Chen et al., 2025a)
+MovieChat-1K-test
+(Song et al., 2024)
+ActivityNetQA
+(Yu et al., 2019)
+QVHighlights
+(Lei et al., 2021)
+StreetScene
+(Ramachandra & Jones, 2020)
+ComplexVAD
+(Mumcu et al., 2025)
+
+Videos Selected
+domains
+
+License / Terms
+
+Link
+
+83 Sports
+
+CC BY-NC 4.0
+
+https://huggingface.co/datasets/MCG-NJU/
+SportsAction
+
+92 Sports
+
+Not specified
+
+https://huggingface.co/datasets/stdKonjac/
+LiveSports-3K
+
+111 Safety
+
+CC0-1.0 on mirror
+
+https:
+//huggingface.co/datasets/AllenXeon/ucf_crime
+
+58 Film, Variety,
+News, Life,
+Safety, Traffic
+20 News
+
+MIT; videos for
+academic research
+only
+Not specified
+
+https:
+//huggingface.co/datasets/CG-Bench/CG-Bench
+
+37 Life
+
+https://huggingface.co/datasets/lmms-lab/
+ActivityNetQA
+
+32 Traffic
+
+MIT; non-commercial
+use
+CC BY-NC-SA 4.0 for
+annotations
+CC BY-SA 4.0
+
+59 Traffic
+
+CC BY-SA 4.0
+
+https://zenodo.org/records/15707073
+
+88 Life, News
+
+https://huggingface.co/datasets/Enxin/
+MovieChat-1K-test
+
+https://huggingface.co/datasets/yeliudev/
+VideoMind-Dataset/tree/main/qvhighlights
+https://zenodo.org/records/10870472
+
+Table C1 documents provenance rather than a blanket license for the underlying media. Our annotations
+and the source videos are distinct assets; reuse of a dataset repository does not itself establish permission to
+redistribute its videos. The self-collected clips are used for academic evaluation, with rights to the original
+programs retained by their owners. Access and redistribution must respect the applicable source terms, including
+any restrictions on the videos and reference images.
+We use Qwen3-VL-8B-Instruct (Bai et al., 2025) to profile 8,489 domain-aligned public candidates. The
+outputs describe entities, actions, attributes, and scenes, together with a video description and corresponding
+counts. The archived records use identity for entity information. Figure C2 presents the profiling template
+with this field displayed as entity for consistency with the paper’s terminology. These automatic descriptions
+guide candidate selection; annotators construct questions, localize the required evidence, and verify answers.
+Deterministic filtering removes 1,454 candidates shorter than 30 seconds, leaving 7,035 videos. A further
+89 lack at least one of the four cue types, yielding 6,946 eligible public candidates. The filtering criteria require
+positive entity, action, attribute, and scene counts alongside the metadata used by the selection pipeline. These
+counts describe the candidate pool before manual task construction, not validated benchmark questions.
+
+C.2 Task-Oriented Candidate Scoring
+Candidate ranking combines reference necessity 𝑅, grounding suitability 𝐺, temporal-spatial utility 𝑇, and
+evidence diversity 𝐸 as 𝑆 = 0.35𝑅 + 0.25𝐺 + 0.25𝑇 + 0.15𝐸. These heuristic components use structured
+profiling statistics, not model evaluation scores. Table C2 defines the recorded component calculations on a
+zero-to-ten scale. Scores inform shortlisting together with domain, duration, source, and subcategory coverage;
+human curation determines the retained public set.
+
+C.3 Question-Answering Taxonomy
+QA types are grouped by the dominant operation needed to answer each question. Perception covers direct
+recognition and judgments from the available evidence, while reasoning covers temporal, causal, or comparative
+relations. Both tracks use five answer options, but their type sets differ because AV questions are designed to
+draw on speech, sound, or joint audio-visual evidence. The shared format standardizes scoring without equating
+difficulty across tracks.
+OmniCompass-VL contains eight QA types, listed in Table C3 and shown in Figure C3. Fact Recognition,
+Action Recognition, Attribute Perception, Visual Counting, and Spatial Perception form the perception group.
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+22 / 35
+
+Structured Video Profiling Prompt
+You are a factual video captioning and structured extraction assistant.
+Only describe what is clearly visible or audible. Do NOT guess.
+Output ONE valid JSON object only.
+Do NOT place JSON inside any field. Write:
+1. detailed_description: 3–6 sentences, time order.
+2. entity: list categories with instance_count and short notes.
+3. action: up to 12 distinct temporally localizable action variants.
+4. attribute: up to 12 distinct visible cues.
+5. scene: up to 6 distinct phases, shots, or contexts.
+6. counts: entity = sum of entity.instance_count; others = list lengths.
+Required JSON Output
+Return JSON with EXACT keys:
+{
+"detailed_description":"...",
+"entity":[{"category":"...","instance_count":0,"notes":"..."}],
+"action":["..."],
+"attribute":["..."],
+"scene":["..."],
+"counts":{"entity":0,"action":0,"attribute":0,"scene":0}
+}
+
+Figure C2. Structured video profiling prompt used with Qwen3-VL-8B-Instruct.
+
+Temporal Reasoning, Causal Reasoning, and Comparative Judgment form the reasoning group. Labels follow
+the answering operation, not individual words in the question.
+OmniCompass-AV contains five QA types, listed in Table C4 and shown in Figure C3. Speech Understanding,
+Event Understanding, and Emotion Recognition form the perception group; Temporal Reasoning and Causal
+Reasoning form the reasoning group. Event Understanding links audible cues to visible participants, actions,
+states, or context. These labels describe intended evidence requirements, rather than a measured guarantee that
+every item fails when audio is removed.
+
+C.4 Reference Design and Provenance
+Reference images identify a target through entity, action, attribute, or scene information, as defined in Table C5.
+The unit of analysis is a task-specific reference, not a unique image file or video. Each of the 820 VL videos
+contributes one reference for TG, SG, and QA, yielding 2,460 task instances. Tasks can select different targets;
+their cue types and sources are counted separately.
+Entity cues account for 1,960 of the 2,460 references, or 79.7%. The remaining references comprise 171
+action cues, 200 attribute cues, and 129 scene cues. The examples include recognizable actions in Sports and
+appearance-based vehicle distinctions in Traffic. Figure C4 reports domain-wise frequencies; the cue types are
+not equally represented in this set.
+The reference set contains 1,933 video-internal images and 527 Internet images. Video-internal crops
+preserve the identity of targets specific to a recording, while external exemplars can specify recognizable people,
+objects, or actions. Source selection follows the identification needs of each annotation rather than a fixed
+per-domain quota. This variation is part of the benchmark’s reference conditions and is not an independently
+controlled source-modality experiment.
+For video-internal references, annotation guidelines favor a separate view outside the target interval or QA
+clue interval whenever one is available. Reviewers also inspect whether the image reveals the answer event,
+since temporal separation alone does not rule out semantic leakage. Crops retain target-identifying content
+while limiting irrelevant context and direct answer evidence. These checks aim to separate target specification
+from the evidence needed to solve the task.
+
+D Annotation Quality and Verification
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+23 / 35
+
+Table C2. Mapping from structured video profiling outputs to task-oriented scoring signals. We summarize how the
+structured video profiling outputs produced by Qwen3-VL-8B-Instruct are converted into intermediate statistics and
+then used to compute the four score components.
+Component
+
+Derived profiling fields Computation
+
+Intuition
+
+We first compute ambiguity and richness. Measures whether external refAmbiguity increases with multiple candi- erential cues are needed to
+date entities, repeated actions, scene vari- uniquely specify the target.
+ation, and potential attribute confusion.
+Richness increases with broader coverage over entity, action, attribute, and
+scene signals. We then combine them
+as 𝑅 = 10 · (0.60𝐴 + 0.20𝐵 + 0.20𝐴𝐵) ,
+where 𝐴 and 𝐵 are the normalized ambiguity and richness scores.
+Grounding
+We estimate temporal grounding poten- Measures whether the video can
+entity_count,
+Suitability (𝐺) action_count,
+tial from action and scene counts, spa- support constructing TG, SG,
+attribute_count,
+tial grounding potential from entity and and VideoQA instances.
+scene_count
+attribute counts, and question answering potential from action and scenerelated complexity. The final score is
+𝐺 = 10 · avg(𝑃TG , 𝑃SG , 𝑃QA ).
+Temporalvideo
+duration, We combine a duration term and a vari- Measures whether the video proSpatial Utility entity_count,
+ation term: 𝑇 = 10 · (0.60𝐷 + 0.40𝑉) , vides sufficient temporal span
+(𝑇)
+action_count,
+where 𝐷 is a log-normalized duration and visual variation for evidence
+scene_count
+score and 𝑉 is the average of normalized localization.
+action, scene, and entity variation.
+Evidence Diver- entity_count,
+We compute normalized entropy over Measures whether referential evsity (𝐸)
+action_count,
+the four evidence counts: 𝐸 = 10 · idence is distributed across mulattribute_count,
+𝐻norm (𝑐 ent , 𝑐 act , 𝑐 att , 𝑐 scn ).
+tiple cue types rather than conscene_count
+centrated in a single source.
+Reference Ne- entity_count,
+cessity (𝑅)
+action_count,
+attribute_count,
+scene_count, repeated
+actions
+
+Final Score (𝑆) 𝑅, 𝐺, 𝑇, 𝐸
+
+𝑆 = 0.35𝑅 + 0.25𝐺 + 0.25𝑇 + 0.15𝐸
+
+Encourages videos that require
+diverse referential cues, support
+TG/SG/VideoQA construction,
+and provide diverse evidence for
+annotation.
+
+D.1 Review Criteria and Repair Records
+Quality control combines semantic review with structural validation. Reviewers check paired-setting target
+identity, temporal-event completeness, endpoint box alignment, QA answer uniqueness, and evidence sufficiency.
+AV review additionally examines speech or sound dependence and audio-visual correspondence. Returned
+corrections undergo task-level re-verification and lead-expert acceptance. Tables D1 and D2 summarize
+verification stages and representative issues.
+
+D.2 Human Effort
+The construction and verification records yield a retrospective estimate of 1,784 human-hours, or 223 eight-hour
+person-days. This comprises 1,280 annotator-hours and 504 lead-expert-hours, as detailed in Table D3. The
+estimate covers training, task construction, cross-verification, correction, adjudication, and final auditing. It is
+reconstructed from project records rather than continuous time logs and excludes automated processing, model
+inference, and waiting periods.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+24 / 35
+
+OmniCompass-VL
+Fact Recognition
+
+70.0 s
+
+71.5 s
+
+74.0 s
+
+OmniCompass-AV
+
+Action Recognition
+
+77.0 s
+
+374.0 s
+
+Text
+
+Text
+
+Text + Image
+
+Text + Image
+
+What is the name of the coach of the team wearing
+white jerseys, green pants, and green caps?
+
+380.0 s
+
+390.0 s
+
+Speech Understanding
+
+420.0 s
+
+357.0 s
+
+Text + Image
+
+GT: B — Melissa Lombardi
+
+In the video, what are the animals shown
+in the reference image doing?
+
+Visual Counting
+
+0.5 s
+
+1.5 s
+
+3.0 s
+
+4.5 s
+
+224.5 s
+
+Text
+
+Text + Image
+
+Text + Image
+
+What color clothing is worn by the partner of the man
+in a black long-sleeved top with white lettering on the
+sleeves?
+
+28.0 s
+
+275.0 s
+
+303.4 s
+
+303.7 s
+
+304.0 s
+
+Text + Image
+
+How many times does the person in the reference
+image mention being shocked?
+
+Emotion Recognition
+
+74.0 s
+
+180.0 s
+
+76.0 s
+
+183.0 s
+
+187.0 s
+
+Text + Image
+
+191.0 s
+
+321.0 s
+
+325.0 s
+
+Which tone best describes how the person in the
+reference image announces the number of times
+Jimmy has been bumped?
+
+Temporal Reasoning
+…
+
+What does the team in the reference
+image do after scoring the final point?
+GT: A — Gather together to celebrate
+
+In the video, which condition at the scene directly
+prompts the man wearing a purple vest to suggest
+adjusting the air-supply equipment?
+Text + Image
+
+116.0 s
+
+118.0 s
+
+120.0 s
+
+24.0 s
+
+28.0 s
+
+29.0 s
+
+Text
+
+How does the other person respond when the brown-haired man
+seated behind the host's desk in a black suit and white shirt asks
+her what she would like to say to Jimmy?
+How does the other person respond when the person
+in the reference image asks her what she would like
+to say to Jimmy?
+
+GT: A — No, I'm good.
+
+Causal Reasoning
+
+120.7 s
+
+Text
+
+…
+
+Which numbered horse crosses the finish line first?
+219.0 s
+
+224.0 s
+
+387.0 s
+
+393.0 s
+
+Text
+
+Why is the mustached man in black work clothes sent to prison?
+
+Text + Image
+
+In the video, which condition at the scene
+directly prompts the person in the
+reference image to suggest adjusting
+the air-supply equipment?
+GT: C — The operator is visibly struggling to hand-crank the
+air-supply equipment
+
+22.0 s
+
+Text + Image
+
+Comparative Judgment
+
+331.0 s
+
+82.0 s
+
+GT: C — Feigning seriousness while joking
+
+What does the team in black jerseys do after scoring
+the final point?
+
+Causal Reasoning
+
+79.0 s
+
+Which tone best describes how the short-haired male host in a
+black suit and white shirt announces the number of times Jimmy
+has been bumped?
+
+Text + Image
+
+Text
+
+32.5 s
+
+Text
+
+Text
+
+When the person in the reference image
+stands in a line with the other performers,
+which performer is immediately to her left?
+GT: B — The man with a red snake-shaped prop draped over his
+shoulders
+
+31.0 s
+
+Text + Image
+
+In the video, how many times in total does
+the person in the reference image drink?
+
+Temporal Reasoning
+
+When the woman with a high bun stands in a line with
+the other performers, which performer is immediately
+to her left?
+
+320.0 s
+
+274.0 s
+
+GT: C — 2 times
+
+Text
+
+29.5 s
+
+How many times does the elderly white-bearded man mention
+being shocked?
+
+GT: B — 3
+
+Spatial Perception
+
+303.1 s
+
+Event Understanding
+
+In the video, how many times in total does the older
+man in a black suit with short hair drink?
+
+What color clothing is worn by the partner
+of the person shown in the reference
+image?
+GT: A — Red
+
+225.5 s
+
+What is the name of the group that the person in the
+reference image says performed onstage two years
+earlier?
+
+Text
+
+…
+Text
+
+358.5 s
+
+GT: A — Fighting Gravity
+
+GT: E — The elephant herd migrates in a line across the dry land
+
+Attribute Perception
+
+358.0 s
+
+What is the name of the group that the bald man with glasses
+and both hands on his head says performed onstage two
+years earlier?
+
+In the video, what are the elephants doing?
+
+What is the name of the coach of the
+team shown in the reference image?
+
+357.5 s
+
+Text
+
+Which competitor in the reference image
+crosses the finish line first?
+GT: B — No. 1
+
+Text + Image
+
+Why is the person in the reference image sent to
+prison?
+GT: B — He is mistaken for the leader of a communist demonstration
+
+Figure C3. QA taxonomy in our OmniCompass-VL and OmniCompass-AV.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+25 / 35
+
+Table C3. QA taxonomy and examples in OmniCompass-VL. We group the eight QA types into Perception and
+Reasoning. Examples show only the question text from the Text target-specification setting; answer options are omitted.
+Category
+
+QA Task
+
+Task Definition
+
+Perception
+
+Fact Recognition
+
+Identify entities or explicit facts
+In the video, when the man in a black suit
+associated with the referenced target. sitting on the left side of the table is talking
+to two other people, what is the drink in
+front of the woman?
+Identify an action performed by the In the video, what farewell gesture did the
+referenced target.
+young man in the pink hoodie make to each
+of the two women inside the house before
+leaving?
+Identify the target’s appearance,
+In the video, when a lady wearing a
+attributes, or observable state.
+red-brimmed straw hat dances with a group
+of people in yellow clothes, what is the color
+of the oil-paper umbrella held by the lady
+behind her?
+Count referenced entities, actions, or In the video, how many rotations did the
+event occurrences.
+athlete complete while raising one hand and
+high-fiving a partner?
+Determine scene context, locations, In the video, where is the kettle relative to
+or spatial relations involving the
+the man in a gray hat and light blue
+referenced target.
+short-sleeved shirt, based on the direction he
+is facing while making tea?
+
+Action Recognition
+
+Attribute Perception
+
+Visual Counting
+
+Spatial Perception
+
+Reasoning
+
+Temporal Reasoning
+
+Causal Reasoning
+
+Comparative Judgment
+
+Identify events or states before,
+during, or after a specific referenced
+event.
+Infer causes, effects, or motives that
+connect observed events.
+
+Compare targets, events, states, or
+outcomes to determine differences,
+rankings, or changes.
+
+Example
+
+Before the man in a blue shirt enters the first
+elevator, what type of passenger is among the
+previous group entering the same elevator?
+In the video, why does the boy with short
+blond hair repeatedly throw away the eggs in
+secret rather than return or refuse them
+directly?
+In the video, when several people on stage
+take turns answering the question asked by
+the female host wearing a colorful patterned
+sleeveless top, what is the relationship
+among their answering durations?
+
+Table C4. QA taxonomy and examples in OmniCompass-AV. We group the five QA types into Perception and
+Reasoning. Examples show only the question text from the Text target-specification setting; answer options are omitted.
+Category
+
+QA Task
+
+Task Definition
+
+Perception
+
+Speech Understanding
+
+Understand explicit speech content,
+including facts, quantities,
+descriptions, and opinions.
+
+Event Understanding
+
+Emotion Recognition
+
+Reasoning
+
+Temporal Reasoning
+
+Causal Reasoning
+
+Example
+
+How does the gray-haired man in a black
+leather jacket and white top summarize what
+the Nike swoosh represented to young
+people at the time?
+Identify participants, objects, actions, When the woman with tied-up hair, a blue
+states, or counts in audio-visual
+off-the-shoulder top, and brown overalls
+events.
+introduces Sean’s recently deceased father,
+which pair of objects appears beside the
+relevant framed photograph?
+Recognize emotion, tone, attitude, or In the video, after repeated corrections from
+affective reactions from audio-visual the man in red, how does the woman with
+evidence.
+shoulder-length auburn hair sound when
+asking whether he wants to tell the story?
+Determine the order or temporal
+relations of utterances, events, and
+states.
+Infer causes, motives, or
+consequences from audio-visual
+context.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+In the video, before the blonde woman calls
+the grey bearded man arrogant, what is he
+doing?
+Why could the lie told by the woman in a red
+choker and black top to avoid awkwardness
+with Joey end up costing her job?
+
+26 / 35
+
+Table C5. Functional taxonomy of reference information in OmniCompass-VL. Each type states what the reference
+image contributes to target identification and gives representative examples.
+Reference Type
+
+Role in Target Identification and Typical Examples
+
+Entity
+
+Shows a particular person or object that the model must match across views, such as an athlete,
+actor, vehicle, or bag.
+Shows a recognizable motion or event pattern that defines the target behavior, such as a dunk,
+basketball shot, header, or tackle.
+Distinguishes the target through a visible property, appearance, or state, such as clothing color,
+vehicle type, shape, or pose.
+Shows a place or surrounding visual context to match with a video segment, such as a street,
+room, stage, or stadium.
+
+Action
+Attribute
+Scene
+
+67%
+
+Sports
+
+28%
+
+74%
+
+26%
+
+5.2%
+8.1%
+
+29%
+
+Traffic
+
+7.0%
+
+OmniCompass-VL
+
+61%
+
+28%
+
+72%
+
+Safety
+
+86%
+
+13%
+
+99%
+
+Life
+
+85%
+
+15%
+
+97%
+
+2,460 task references
+820 videos | TG / SG / QA
+79.7%
+
+Film
+
+98%
+
+85%
+
+15%
+
+Variety
+
+99%
+
+82%
+
+18%
+
+News
+
+98%
+
+0
+
+Entity 1,960 (79.7%)
+
+25
+
+Action 171 (7.0%)
+
+(a) Overall Reference Types
+
+50
+
+Attribute 200 (8.1%)
+
+76%
+
+75
+
+100%
+
+Scene 129 (5.2%)
+
+(b) Reference Types by Domain
+
+0
+
+25
+
+24%
+
+50
+
+Video-internal 1,933 (78.6%)
+
+75
+
+100%
+
+Internet 527 (21.4%)
+
+(c) Image Sources by Domain
+
+Figure C4. Reference composition across 2,460 VL task instances. Panel (a) shows overall cue-type frequencies, (b)
+shows their proportions by domain, and (c) compares video-internal and Internet sources. Counts are reported per task
+instance, so an image reused across tasks is counted more than once.
+Table D1. Multi-stage quality verification for OmniCompass-VL. All counts use the final 820-video release set. A
+video passes only when its paired Text and Text+Image specifications and its TG, SG, and QA annotations satisfy the
+verification criteria. Representative findings are non-exclusive.
+Verification stage
+Annotator
+verification
+
+Videos
+
+Stage outcome
+
+Representative findings
+
+Cumulative pass
+
+cross- 820
+
+466 require no revision; Cross-setting target mismatch; a 466/820 (56.8%)
+354 are returned for revi- Text+Image pointer identifiable
+sion.
+without its image; imprecise TG
+boundaries; incorrect or incomplete SG targets; insufficient QA
+evidence, non-unique answers, or
+weak distractors.
+
+Annotator revision and 354
+lead-expert acceptance
+
+All revised cases pass after Typical repairs address overly 820/820 (100%)
+annotator recheck and lead- small or partial SG targets, TG inexpert acceptance.
+tervals that omit part of the event,
+and inconsistencies among QA
+questions, answers, types, and evidence.
+
+Final release audit
+
+All VL cases are included Same target and ground truth 820/820 (100%)
+only after lead-expert ac- across settings; complete TG
+ceptance.
+events; valid boundary-frame
+boxes; one evidence-supported
+QA answer with plausible distractors.
+
+820
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+27 / 35
+
+Table D2. Multi-stage quality verification for OmniCompass-AV. All counts use the 240-video AV subset of the final
+release. In addition to the shared VL criteria, annotators check native-audio dependence and audio-visual alignment, and
+the lead expert includes these criteria in final acceptance and audit. Representative findings are non-exclusive.
+Verification stage
+
+Videos
+
+Stage outcome
+
+Representative findings
+
+Cumulative pass
+
+Annotator
+cross- 240
+verification (AV-specific
+checks)
+
+151 required no targeted re- Insufficient audio dependence; 151/240 (62.9%)
+pair; 89 entered repair for clue intervals omitting required
+105 task-level issues.
+speech or sound; audio-visual target mismatch; SG boxes following
+the wrong person; unsupported
+QA answers.
+
+Annotator revision and 89
+lead-expert acceptance
+
+24 TG, 70 SG, and 11 QA TG intervals starting too early; SG 240/240 (100%)
+annotations corrected; all references, questions, and boxes
+89 videos accepted.
+identifying different targets; QA
+type or evidence mismatch; imbalanced distractors.
+
+Final release audit
+
+All AV cases are included Required native-audio evidence; 240/240 (100%)
+only after lead-expert ac- aligned audio-visual clues; the
+ceptance and audit.
+same target and answer across settings; valid TG, SG, and QA annotations.
+
+240
+
+Table D3. Estimated human effort for OmniCompass construction and quality assurance. Hours are reconstructed
+from dated project records using an eight-hour workday. Automated processing, inference, and waiting time are excluded.
+Stage
+
+Personnel
+
+Scope
+
+Person-days
+
+Hours
+
+Guideline training
+Initial task construction
+Mutual
+crossverification
+and
+targeted revision
+Final acceptance and
+correction
+
+4 annotators
+4 annotators
+
+8
+112
+
+64
+896
+
+40
+
+320
+
+31
+
+248
+
+Repair adjudication
+
+Lead expert
+
+Two-day guideline training and pilot-protocol calibration.
+Paired Text and Text+Image TG, SG, and QA instances for
+820 VL videos, including the 240-video AV subset.
+Mutual cross-verification and corrections within the 354
+flagged VL cases and track-specific AV repairs identified
+during verification.
+Final acceptance of annotator-confirmed cases, with remaining corrections for target pairing, reference necessity,
+TG/SG validity, QA evidence, and AV dependence.
+Repair-package review, disputed-case resolution, and reverification of corrected annotations.
+Paired-setting consistency, dashboard readback, residualerror checks, and final release validation.
+
+16
+
+128
+
+16
+
+128
+
+4 annotators
+
+Lead expert
+
+Lead-expert final re- Lead expert
+lease audit
+Total
+
+4 annotators + 1 End-to-end human construction and quality assurance. 223
+lead expert
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+1,784
+
+28 / 35
+
+E Evaluation Protocols and Prompts
+E.1 Inputs and Paired Settings
+Frames are sampled uniformly across full videos. The standard budget is 64 for proprietary models and
+open-source models above 100B total parameters, and 32 otherwise. GPT-series runs use 49 frames to reserve a
+reference slot within the evaluated 50-image input limit; VITA-1.5-7B uses 16. Budgets remain fixed within a
+model across tasks and reference settings. Cross-model results therefore reflect the stated input budgets, not a
+strictly equal-compute comparison.
+For the 52-second VL clip in Figure E1, the 64-frame inputs are:
+Text:
+
+Text+Image:
+
+Timestamp:
+Timestamp:
+...
+Timestamp:
+[Prompt]
+
+0 seconds. <frame 0> →
+0.84 seconds. <frame 1> →
+51.96 seconds.
+
+<frame 63> →
+
+Timestamp: 0 seconds. <frame 0> →
+Timestamp: 0.84 seconds. <frame 1> →
+...
+Timestamp: 51.96 seconds. <frame 63> →
+<ref image> → [Prompt]
+
+For the 270-second AV clip in Figure E4, audio follows the sampled frames:
+Text:
+
+Timestamp: 0 seconds. <frame 0> →
+Timestamp: 4.3 seconds. <frame 1> →
+...
+Timestamp: 269.967 seconds. <frame 63> →
+<audio> → [Prompt]
+
+Text+Image:
+
+Timestamp: 0 seconds. <frame 0> →
+Timestamp: 4.3 seconds. <frame 1> →
+...
+Timestamp: 269.967 seconds. <frame 63> →
+<audio> → <ref image> → [Prompt]
+
+Each timestamp is literal text in seconds from the start of the video, placed immediately before its
+corresponding frame, following the design of TimeLens (Zhang et al., 2026). The frame numbers index
+sampled frames from zero: <frame 0> is the first, and <frame 63> is the last in these 64-frame examples.
+Angle-bracketed items denote media content, not literal text tokens. <audio> is the video’s audio track, and
+<ref image> is the task-specific reference image. The arrows indicate input order, and ... omits intermediate
+timestamp–frame pairs; neither is sent to the model. [Prompt] stands for the task prompt, which includes
+the full video duration. The timestamps shown are specific to these clips, not fixed for other videos or frame
+budgets. Within each pair, the video evidence, task semantics, and ground truth are shared; only the target
+specification changes.
+TG returns temporal boundaries, and QA selects one of five answer options. Following V-STaR (Cheng
+et al., 2026), SG receives the relevant interval and returns one bounding box at each endpoint. It therefore
+evaluates target localization at supplied times, not temporal search or dense tracking throughout the interval.
+Figures E1–E6 illustrate response formats with annotated ground truth. The output panels are never supplied to
+the models in either setting.
+
+E.2 Prompt Examples
+Figures E1–E3 and E4–E6 show OmniCompass-VL and OmniCompass-AV prompts, respectively.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+29 / 35
+
+Text
+
+Text+Image
+
+Input
+
+Input
+
++
+Video frames
+
+Video frames
+
+Reference image
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 52-second video. Each video frame is preceded by
+its timestamp in seconds. Complete the task based on the
+visual content of these video frames.
+Question: When in the video did Team USA player No. 7
+score her first basket?
+Output format: Answer with only this JSON object, where
+start_time and end_time are measured in seconds from
+the beginning of the video:
+{"start_time": <number>,
+"end_time": <number>}
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 52-second video, followed by a reference image.
+Each video frame is preceded by its timestamp in seconds.
+Complete the task based on the visual content of the video
+frames and the reference image.
+Question: When in the video did the player in the reference
+image score her first basket?
+Output format: Answer with only this JSON object, where
+start_time and end_time are measured in seconds from
+the beginning of the video:
+{"start_time": <number>,
+"end_time": <number>}
+
+Output
+Ground Truth: {"start_time":
+"end_time":
+
+48.0,
+
+50.0}
+
+Output
+Ground Truth: {"start_time":
+"end_time":
+
+48.0,
+
+50.0}
+
+Figure E1. Temporal Grounding prompts for OmniCompass-VL. Both settings receive the same uniformly sampled,
+timestamped video frames without audio and predict the same event interval. Only the target specification changes from a
+textual description to a reference image.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+30 / 35
+
+Text
+
+Text+Image
+
+Input
+
+Input
+
++
+Video frames
+
+Video frames
+
+Reference image
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 52-second video. Each video frame is preceded by
+its timestamp in seconds. Complete the task based on the
+visual content of these video frames.
+Question: Where in the frame is Team USA player No. 7
+from when she begins her shooting motion until the ball
+goes in?
+The relevant interval starts at 48.72 seconds and ends at
+50.12 seconds. Locate the target described in the question
+at each of these two timestamps and report one bounding
+box for each frame.
+Write each box in [x1, y1, x2, y2] order, corresponding to [left, top, right, bottom]. Normalize all
+coordinates from 0 to 1000, with the top-left of the frame
+as the origin.
+Output format: Return only this JSON object:
+{"start_time": 48.72,
+"start_bbox": [<x1>, <y1>, <x2>, <y2>],
+"end_time": 50.12,
+"end_bbox": [<x1>, <y1>, <x2>, <y2>]}
+
+Output
+Ground Truth: {"start_time":
+
+48.72,
+"start_bbox": [587.61, 473.21, 628.53, 666.34],
+"end_time": 50.12,
+"end_bbox": [644.16, 536.71, 694.75, 833.00]}
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 52-second video, followed by a reference image.
+Each video frame is preceded by its timestamp in seconds.
+Complete the task based on the visual content of the video
+frames and the reference image.
+Question: Where in the frame is the player in the reference
+image from when she begins her shooting motion until the
+ball goes in?
+The relevant interval starts at 48.72 seconds and ends at
+50.12 seconds. Locate the target described in the question
+at each of these two timestamps and report one bounding
+box for each frame.
+Write each box in [x1, y1, x2, y2] order, corresponding to [left, top, right, bottom]. Normalize all
+coordinates from 0 to 1000, with the top-left of the frame
+as the origin.
+Output format: Return only this JSON object:
+{"start_time": 48.72,
+"start_bbox": [<x1>, <y1>, <x2>, <y2>],
+"end_time": 50.12,
+"end_bbox": [<x1>, <y1>, <x2>, <y2>]}
+
+Output
+Ground Truth: {"start_time":
+
+48.72,
+"start_bbox": [587.61, 473.21, 628.53, 666.34],
+"end_time": 50.12,
+"end_bbox": [644.16, 536.71, 694.75, 833.00]}
+
+Figure E2. Spatial Grounding prompts for OmniCompass-VL. Both settings receive the same uniformly sampled,
+timestamped video frames and the same temporal interval. They localize the same target at the two interval endpoints;
+only the target specification changes.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+31 / 35
+
+Text
+
+Text+Image
+
+Input
+
+Input
+
++
+Video frames
+
+Video frames
+
+Reference image
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 52-second video. Each video frame is preceded by
+its timestamp in seconds. Complete the task based on the
+visual content of these video frames.
+Question: How many points does Team USA player No. 7
+score in total in the video?
+A. 0 points
+B. 2 points
+C. 3 points
+D. 4 points
+E. 1 point
+You must choose the most appropriate answer from the five
+options (A, B, C, D, or E). If uncertain, make your best
+choice based on the provided inputs. Output only the option
+letter.
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 52-second video, followed by a reference image.
+Each video frame is preceded by its timestamp in seconds.
+Complete the task based on the visual content of the video
+frames and the reference image.
+Question: How many points does the player in the reference
+image score in total in the video?
+A. 0 points
+B. 2 points
+C. 3 points
+D. 4 points
+E. 1 point
+You must choose the most appropriate answer from the five
+options (A, B, C, D, or E). If uncertain, make your best
+choice based on the provided inputs. Output only the option
+letter.
+
+Output
+Ground Truth: B
+
+Output
+Ground Truth: B
+
+Figure E3. Question Answering prompts for OmniCompass-VL. Both settings receive the same uniformly sampled,
+timestamped video frames and retain the same answer choices and ground truth. Only the target specification changes.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+32 / 35
+
+Text
+
+Text+Image
+
+Input
+
+Input
+
++
+Video frames with audio
+
+Video frames with audio
+
+Reference image
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 270-second video and the corresponding audio.
+Each frame is preceded by its timestamp in seconds. Complete the task using the video frames and audio.
+Question: When in the video does the female news anchor
+with long brown curly hair, a black-and-white houndstooth
+jacket, and a black turtleneck report that France is seeking
+to redefine its role in Africa?
+Output format: Answer with only this JSON object, where
+start_time and end_time are measured in seconds from
+the beginning of the video:
+{"start_time": <number>,
+"end_time": <number>}
+
+Output
+Ground Truth: {"start_time":
+"end_time":
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 270-second video and the corresponding audio,
+followed by a reference image. Each frame is preceded by
+its timestamp in seconds. Complete the task using the video
+frames, audio, and reference image.
+Question: When in the video does the news anchor in the
+reference image report that France is seeking to redefine its
+role in Africa?
+Output format: Answer with only this JSON object, where
+start_time and end_time are measured in seconds from
+the beginning of the video:
+{"start_time": <number>,
+"end_time": <number>}
+
+89.0,
+
+92.0}
+
+Output
+Ground Truth: {"start_time":
+"end_time":
+
+89.0,
+
+92.0}
+
+Figure E4. Temporal Grounding prompts for OmniCompass-AV. Both settings receive the same timestamped video
+frames and corresponding audio, and predict the same audio-visual event interval. Only the target specification changes.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+33 / 35
+
+Text
+
+Text+Image
+
+Input
+
+Input
+
++
+Video frames with audio
+
+Video frames with audio
+
+Reference image
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 270-second video and the corresponding audio.
+Each frame is preceded by its timestamp in seconds. Complete the task using the video frames and audio.
+Question: Where in the frame is the female news anchor
+with long brown curly hair, a black-and-white houndstooth
+jacket, and a black turtleneck when she reports that French
+President Emmanuel Macron has arrived in Nairobi, Kenya?
+The relevant interval starts at 85.03 seconds and ends at
+87.87 seconds. Locate the target described in the question
+at each of these two timestamps and report one bounding
+box for each frame.
+Write each box in [x1, y1, x2, y2] order, corresponding to [left, top, right, bottom]. Normalize all
+coordinates from 0 to 1000, with the top-left of the frame
+as the origin.
+Output format: Return only this JSON object:
+{"start_time": 85.03,
+"start_bbox": [<x1>, <y1>, <x2>, <y2>],
+"end_time": 87.87,
+"end_bbox": [<x1>, <y1>, <x2>, <y2>]}
+
+Output
+Ground Truth: {"start_time":
+
+85.03,
+"start_bbox": [278.96, 63.39, 749.11, 755.36],
+"end_time": 87.87,
+"end_bbox": [276.17, 68.35, 735.16, 760.32]}
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 270-second video and the corresponding audio,
+followed by a reference image. Each frame is preceded by
+its timestamp in seconds. Complete the task using the video
+frames, audio, and reference image.
+Question: Where in the frame is the news anchor in the
+reference image when she reports that French President
+Emmanuel Macron has arrived in Nairobi, Kenya?
+The relevant interval starts at 85.03 seconds and ends at
+87.87 seconds. Locate the target described in the question
+at each of these two timestamps and report one bounding
+box for each frame.
+Write each box in [x1, y1, x2, y2] order, corresponding to [left, top, right, bottom]. Normalize all
+coordinates from 0 to 1000, with the top-left of the frame
+as the origin.
+Output format: Return only this JSON object:
+{"start_time": 85.03,
+"start_bbox": [<x1>, <y1>, <x2>, <y2>],
+"end_time": 87.87,
+"end_bbox": [<x1>, <y1>, <x2>, <y2>]}
+
+Output
+Ground Truth: {"start_time":
+
+85.03,
+"start_bbox": [278.96, 63.39, 749.11, 755.36],
+"end_time": 87.87,
+"end_bbox": [276.17, 68.35, 735.16, 760.32]}
+
+Figure E5. Spatial Grounding prompts for OmniCompass-AV. Both settings receive the same timestamped video
+frames, corresponding audio, and temporal interval. They localize the same target at the two interval endpoints; only the
+target specification changes.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+34 / 35
+
+Text
+
+Text+Image
+
+Input
+
+Input
+
++
+Video frames with audio
+
+Video frames with audio
+
+Reference image
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 270-second video and the corresponding audio.
+Each frame is preceded by its timestamp in seconds. Complete the task using the video frames and audio.
+Question: What happens at the end of the preceding report,
+just before the female news anchor with curly brown hair and
+a black-and-white patterned jacket reports that thousands
+of fans have gathered in Vienna?
+A. Passengers disembark at a quay
+B. A white-haired woman is embraced at an awards
+ceremony
+C. Flag-waving fans crowd Vienna’s streets
+D. Two studio presenters discuss a political crisis
+E. An evacuation plane waits on the apron
+You must choose the most appropriate answer from the five
+options (A, B, C, D, or E). If uncertain, make your best
+choice based on the provided inputs. Output only the option
+letter.
+
+Prompt
+You are given a sequence of frames uniformly sampled
+across a 270-second video and the corresponding audio,
+followed by a reference image. Each frame is preceded by
+its timestamp in seconds. Complete the task using the video
+frames, audio, and reference image.
+Question: What happens at the end of the preceding report,
+just before the news anchor in the reference image reports
+that thousands of fans have gathered in Vienna?
+A. Passengers disembark at a quay
+B. A white-haired woman is embraced at an awards
+ceremony
+C. Flag-waving fans crowd Vienna’s streets
+D. Two studio presenters discuss a political crisis
+E. An evacuation plane waits on the apron
+You must choose the most appropriate answer from the five
+options (A, B, C, D, or E). If uncertain, make your best
+choice based on the provided inputs. Output only the option
+letter.
+
+Output
+Ground Truth: B
+
+Output
+Ground Truth: B
+
+Figure E6. Question Answering prompts for OmniCompass-AV. Both settings receive the same timestamped video
+frames, corresponding audio, and answer candidates. The correct answer is unchanged across target specifications.
+
+Visual Computing Lab · The Hong Kong Polytechnic University
+
+35 / 35
+
+
