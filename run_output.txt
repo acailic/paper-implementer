@@ -1,0 +1,259 @@
+=== Mechanism demo 1: blocked action (Contract filter_action) ===
+  pos before=(0, 0)  step('JE') -> blocked='J* forbidden'  pos after=(0, 0) (env untouched, state re-observed + reason)
+=== Mechanism demo 2: non-commutative composition (Eq. 5) ===
+  Rules(Stage(env)): replay runs RAW  -> start pos (0, 4) (replay unfiltered), agent actions filtered
+  Stage(Rules(env)): replay FILTERED -> start pos (0, 0) (2/2 script actions blocked) - different initial state => non-commutative
+=== Mechanism demo 3: Chain (Link), R' = R_A AND R_B ===
+  both sub-tasks solved -> evaluate()=True; B sabotaged (A still solved) -> evaluate()=False (A's verdict alone is not enough: composite verifier)
+=== Mechanism demo 4: modify_transition + filter_observation ===
+  raw obs keys=['budget_left', 'goal', 'keys_left', 'n_keys_left', 'pos', 'terminated', 'walls8']  filtered obs keys=['budget_left', 'goal', 'n_keys_left', 'pos', 'terminated', 'walls8'] (hint field dropped); step info note='rewritten'
+=== Mechanism demo 5: step_reward exceptions are recorded, not fatal ===
+  episode completed: success=False steps=20 dense_errors=20 (every step recorded, none fatal)
+=== Mechanism demo 6: save/restore round-trip (persistence group) ===
+  live pos=(1, 3) restored pos=(1, 3) keys_left match=True
+seed 0: pool=32 eval=20 (build 0.0s)
+  original    eval SR open=0.69 hard=0.00 all=0.35 | avg-steps=22.2 blocked=2136 | greedy jump-share on open=0.89 (1.9s)
+  --- EnvRigger trace, batch 0 (random policy) ---
+  open0    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.20 to=0.8  ACCEPT
+  hard0    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open1    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.20 to=0.8  ACCEPT
+  hard1    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.30 to=0.7  ACCEPT
+  open2    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard2    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open3    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      rung stage[scaffold keys:0,1]                       sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard3    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.30 to=0.7  ACCEPT
+  open4    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.20 to=0.8  ACCEPT
+  hard4    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.30 to=0.7  ACCEPT
+  open5    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard5    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open6    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.10 to=0.9
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard6    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.40 to=0.6  ACCEPT
+  open7    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:1]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:1,0]                       sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard7    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.20 to=0.8  ACCEPT
+  open8    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard8    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open9    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:1]                         sr=0.20 to=0.8  ACCEPT
+  hard9    sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open10   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.30 to=0.7  ACCEPT
+  hard10   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open11   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.10 to=0.9
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard11   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open12   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard12   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.50 to=0.5  ACCEPT
+  open13   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.10 to=0.9
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard13   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  open14   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      rung stage[scaffold keys:0,1]                       sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard14   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.30 to=0.7  ACCEPT
+  open15   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.00 to=1.0
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.10 to=0.9
+      rung stage[scaffold keys:0,1]                       sr=0.10 to=0.9
+      no rung landed in band (0.15, 0.85) -> drop task this round
+  hard15   sr=0.00 hopeless(timeout-heavy) ladder:
+      rung stage[approach 0.50]                           sr=0.10 to=0.9
+      rung stage[approach 0.30]                           sr=0.00 to=1.0
+      rung stage[scaffold keys:0]                         sr=0.00 to=1.0
+      no rung landed in band (0.15, 0.85) -> drop task this round
+    batch @0     accepted 12/32 (orig 0, contract 0, stage 12, combo 0; hard 7/16; dropped 20)
+    batch @1000  accepted 24/32 (orig 8, contract 0, stage 16, combo 0; hard 9/16; dropped 8)
+    batch @2000  accepted 27/32 (orig 16, contract 0, stage 11, combo 0; hard 11/16; dropped 5)
+    batch @3000  accepted 20/32 (orig 16, contract 0, stage 4, combo 0; hard 4/16; dropped 12)
+    batch @4000  accepted 19/32 (orig 9, contract 0, stage 10, combo 0; hard 6/16; dropped 13)
+    batch @5000  accepted 2/32 (orig 0, contract 0, stage 2, combo 0; hard 2/16; dropped 30)
+    batch @6000  accepted 25/32 (orig 17, contract 0, stage 8, combo 0; hard 9/16; dropped 7)
+    batch @7000  accepted 21/32 (orig 16, contract 0, stage 5, combo 0; hard 5/16; dropped 11)
+    batch @8000  accepted 22/32 (orig 15, contract 0, stage 7, combo 0; hard 6/16; dropped 10)
+    batch @9000  accepted 17/32 (orig 16, contract 0, stage 1, combo 0; hard 2/16; dropped 15)
+    batch @10000 accepted 17/32 (orig 11, contract 0, stage 6, combo 0; hard 2/16; dropped 15)
+    batch @11000 accepted 21/32 (orig 13, contract 0, stage 8, combo 0; hard 5/16; dropped 11)
+    batch @12000 accepted 19/32 (orig 8, contract 0, stage 11, combo 0; hard 4/16; dropped 13)
+    batch @13000 accepted 16/32 (orig 10, contract 0, stage 6, combo 0; hard 1/16; dropped 16)
+    batch @14000 accepted 17/32 (orig 10, contract 0, stage 7, combo 0; hard 1/16; dropped 15)
+  envharness  eval SR open=0.71 hard=0.01 all=0.36 | avg-steps=15.3 blocked=1685 | greedy jump-share on open=0.08 (3.7s)
+  randomwrap  eval SR open=0.87 hard=0.00 all=0.43 | avg-steps=15.5 blocked=231 | greedy jump-share on open=0.00 (3.0s)
+seed 1: pool=32 eval=20 (build 0.0s)
+  original    eval SR open=0.94 hard=0.09 all=0.52 | avg-steps=14.7 blocked=3290 | greedy jump-share on open=0.17 (1.9s)
+    batch @0     accepted 11/32 (orig 0, contract 0, stage 11, combo 0; hard 7/16; dropped 21)
+    batch @1000  accepted 19/32 (orig 7, contract 0, stage 12, combo 0; hard 4/16; dropped 13)
+    batch @2000  accepted 23/32 (orig 5, contract 0, stage 18, combo 0; hard 7/16; dropped 9)
+    batch @3000  accepted 19/32 (orig 14, contract 0, stage 5, combo 0; hard 3/16; dropped 13)
+    batch @4000  accepted 23/32 (orig 16, contract 0, stage 7, combo 0; hard 7/16; dropped 9)
+    batch @5000  accepted 17/32 (orig 2, contract 0, stage 15, combo 0; hard 4/16; dropped 15)
+    batch @6000  accepted 20/32 (orig 16, contract 0, stage 4, combo 0; hard 4/16; dropped 12)
+    batch @7000  accepted 17/32 (orig 15, contract 0, stage 2, combo 0; hard 1/16; dropped 15)
+    batch @8000  accepted 21/32 (orig 15, contract 0, stage 6, combo 0; hard 5/16; dropped 11)
+    batch @9000  accepted 20/32 (orig 16, contract 0, stage 4, combo 0; hard 4/16; dropped 12)
+    batch @10000 accepted 18/32 (orig 15, contract 0, stage 3, combo 0; hard 2/16; dropped 14)
+    batch @11000 accepted 19/32 (orig 14, contract 0, stage 5, combo 0; hard 3/16; dropped 13)
+    batch @12000 accepted 17/32 (orig 12, contract 0, stage 5, combo 0; hard 3/16; dropped 15)
+    batch @13000 accepted 19/32 (orig 9, contract 0, stage 10, combo 0; hard 3/16; dropped 13)
+    batch @14000 accepted 16/32 (orig 8, contract 0, stage 8, combo 0; hard 1/16; dropped 16)
+  envharness  eval SR open=0.94 hard=0.00 all=0.47 | avg-steps=13.7 blocked=3951 | greedy jump-share on open=0.00 (3.7s)
+  randomwrap  eval SR open=0.97 hard=0.06 all=0.51 | avg-steps=14.3 blocked=334 | greedy jump-share on open=0.00 (3.0s)
+seed 2: pool=32 eval=20 (build 0.0s)
+  original    eval SR open=0.48 hard=0.00 all=0.24 | avg-steps=13.4 blocked=1862 | greedy jump-share on open=1.00 (1.9s)
+    batch @0     accepted 10/32 (orig 1, contract 0, stage 9, combo 0; hard 7/16; dropped 22)
+    batch @1000  accepted 25/32 (orig 14, contract 0, stage 11, combo 0; hard 9/16; dropped 7)
+    batch @2000  accepted 23/32 (orig 12, contract 0, stage 11, combo 0; hard 7/16; dropped 9)
+    batch @3000  accepted 26/32 (orig 15, contract 0, stage 11, combo 0; hard 10/16; dropped 6)
+    batch @4000  accepted 25/32 (orig 18, contract 0, stage 7, combo 0; hard 9/16; dropped 7)
+    batch @5000  accepted 21/32 (orig 15, contract 0, stage 6, combo 0; hard 5/16; dropped 11)
+    batch @6000  accepted 23/32 (orig 11, contract 0, stage 12, combo 0; hard 8/16; dropped 9)
+    batch @7000  accepted 20/32 (orig 18, contract 0, stage 2, combo 0; hard 4/16; dropped 12)
+    batch @8000  accepted 25/32 (orig 16, contract 0, stage 9, combo 0; hard 9/16; dropped 7)
+    batch @9000  accepted 27/32 (orig 9, contract 0, stage 18, combo 0; hard 11/16; dropped 5)
+    batch @10000 accepted 19/32 (orig 13, contract 0, stage 6, combo 0; hard 4/16; dropped 13)
+    batch @11000 accepted 20/32 (orig 13, contract 0, stage 7, combo 0; hard 5/16; dropped 12)
+    batch @12000 accepted 22/32 (orig 14, contract 0, stage 8, combo 0; hard 6/16; dropped 10)
+    batch @13000 accepted 22/32 (orig 14, contract 0, stage 8, combo 0; hard 7/16; dropped 10)
+    batch @14000 accepted 18/32 (orig 10, contract 0, stage 8, combo 0; hard 3/16; dropped 14)
+  envharness  eval SR open=0.75 hard=0.00 all=0.38 | avg-steps=14.7 blocked=6181 | greedy jump-share on open=0.14 (3.8s)
+  randomwrap  eval SR open=0.75 hard=0.00 all=0.38 | avg-steps=14.9 blocked=105 | greedy jump-share on open=0.00 (3.0s)
+seed 3: pool=32 eval=20 (build 0.0s)
+  original    eval SR open=0.90 hard=0.00 all=0.45 | avg-steps=15.2 blocked=1242 | greedy jump-share on open=0.08 (1.9s)
+    batch @0     accepted 10/32 (orig 0, contract 0, stage 10, combo 0; hard 6/16; dropped 22)
+    batch @1000  accepted 23/32 (orig 10, contract 0, stage 13, combo 0; hard 7/16; dropped 9)
+    batch @2000  accepted 20/32 (orig 12, contract 0, stage 8, combo 0; hard 4/16; dropped 12)
+    batch @3000  accepted 20/32 (orig 9, contract 0, stage 11, combo 0; hard 7/16; dropped 12)
+    batch @4000  accepted 22/32 (orig 17, contract 0, stage 5, combo 0; hard 6/16; dropped 10)
+    batch @5000  accepted 21/32 (orig 16, contract 0, stage 5, combo 0; hard 5/16; dropped 11)
+    batch @6000  accepted 19/32 (orig 16, contract 0, stage 3, combo 0; hard 3/16; dropped 13)
+    batch @7000  accepted 19/32 (orig 15, contract 0, stage 4, combo 0; hard 3/16; dropped 13)
+    batch @8000  accepted 22/32 (orig 14, contract 0, stage 8, combo 0; hard 6/16; dropped 10)
+    batch @9000  accepted 18/32 (orig 15, contract 0, stage 3, combo 0; hard 2/16; dropped 14)
+    batch @10000 accepted 24/32 (orig 9, contract 0, stage 15, combo 0; hard 8/16; dropped 8)
+    batch @11000 accepted 18/32 (orig 14, contract 0, stage 4, combo 0; hard 2/16; dropped 14)
+    batch @12000 accepted 19/32 (orig 13, contract 0, stage 6, combo 0; hard 3/16; dropped 13)
+    batch @13000 accepted 20/32 (orig 11, contract 0, stage 9, combo 0; hard 4/16; dropped 12)
+    batch @14000 accepted 15/32 (orig 8, contract 0, stage 7, combo 0; hard 2/16; dropped 17)
+  envharness  eval SR open=0.68 hard=0.00 all=0.34 | avg-steps=16.0 blocked=2974 | greedy jump-share on open=0.08 (3.7s)
+  randomwrap  eval SR open=0.80 hard=0.00 all=0.40 | avg-steps=14.8 blocked=760 | greedy jump-share on open=0.00 (4.0s)
+
+=== Summary over 4 seeds, 15000 episodes/arm, band=(0.15, 0.85) ===
+arm                  SR open         SR hard          SR all   avg steps
+original    0.75 [0.48-0.94]0.02 [0.00-0.09]0.39 [0.24-0.52]        16.4
+envharness  0.77 [0.68-0.94]0.00 [0.00-0.01]0.39 [0.34-0.47]        14.9
+randomwrap  0.85 [0.75-0.97]0.01 [0.00-0.06]0.43 [0.38-0.51]        14.9
