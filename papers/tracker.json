@@ -628,9 +628,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.19880",
       "rank": 1,
-      "status": "writing",
+      "status": "done",
       "folder": "papers/2026-envharness-awakening-static-worlds-for-agent",
-      "started_at": "2026-10-17"
+      "started_at": "2026-10-17",
+      "finished_at": "2026-11-15"
     },
     {
       "title": "Apodex 1.1: Scaling Agentic Intelligence for Complex Work",
@@ -3079,7 +3080,7 @@
         "scaling",
         "reasoning"
       ],
-      "popularity": 82,
+      "popularity": 136,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.15777",
       "rank": 1,
@@ -5731,7 +5732,7 @@
       "project_page": "https://research.nvidia.com/labs/sil/projects/birddreams/",
       "abstract": "Driving world models aim to simulate how a scene unfolds under different ego actions. This requires plausible motion of surrounding vehicles as well as precise ego-trajectory control. Learning vehicle motion from perspective video alone is challenging because motion is entangled with appearance and vehicles can be occluded. Prior work therefore conditions video generation on layouts that specify vehicle motion, providing control over surrounding vehicles but requiring their future trajectories as inputs. We introduce BirdDreams, an autoregressive driving world model that jointly generates perspective video and a schematic bird's-eye-view (BEV) video, making scene layout part of the predicted future. The BEV, rendered from scene annotations for training, depicts roads and vehicles as simple shapes at a fixed metric scale, providing a top-down view of their positions and motion with reduced occlusion between vehicles. Perspective video, by contrast, retains scene details that the BEV omits, such as traffic signals and object appearance. Joint attention between two video diffusion transformers, one per stream, lets each stream inform the other during generation. The predicted BEV also provides a geometric interface for ego control: we translate and rotate its latest frame along an input ego trajectory and use the resulting frames as a soft condition that shows how the scene would appear to move if only the ego vehicle moved. At inference, BirdDreams generates both videos from a single camera image without requiring an HD map or vehicle-state inputs. On PhysicalAI-AV and nuScenes, BirdDreams follows input ego trajectories more faithfully than prior driving world models and generates more plausible ego motion without ego-action conditioning. Human evaluation shows that BirdDreams outperforms a perspective-only baseline in generating realistic surrounding-vehicle behavior.",
       "ai_keywords": [],
-      "popularity": 48,
+      "popularity": 50,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.14815",
       "rank": 2,
@@ -7887,7 +7888,7 @@
         "PhysLoop-Gen",
         "PhysLoop-Repair"
       ],
-      "popularity": 43,
+      "popularity": 46,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.16748",
       "rank": 3,
@@ -10001,7 +10002,7 @@
       "project_page": "https://dagroup-pku.github.io/G-STAR/",
       "abstract": "Discrete autoregressive models offer a scalable framework for image generation. However, they face a fundamental trade-off: long token sequences preserve representation quality but slow generation, while aggressive spatial compression reduces representation capacity. Based on product quantization, we show that, under a fixed nominal information budget, group size should scale quadratically with the per-axis spatial compression factor. Building on this principle, we propose GSTAR, a spatial--group co-scaling framework that enables \\(32\\times\\) and even effective \\(64\\times\\) compression while preserving strong reconstruction, understanding, and generation performance. Since larger groups introduce intra-group dependencies that must be modeled efficiently, we analyze their impact on inference latency and generation quality and introduce a semi-autoregressive decoder that combines parallel feature computation with lightweight causal modeling. With these designs, our highly compressed models perform competitively with leading models across five representative text-to-image benchmarks (GenEval, DPG-Bench, PRISM, LongText-Bench, and Qwen-Image-Bench). At \\(1024\\times1024\\) resolution, our model delivers a \\(20\\times\\) speedup over prior discrete autoregressive models, generating each image in 2.5 seconds on a single NVIDIA H200. Together, these results show that highly compressed discrete representations can enable high-quality autoregressive generation at low latency.",
       "ai_keywords": [],
-      "popularity": 41,
+      "popularity": 45,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.13004",
       "rank": 4,
@@ -12731,7 +12732,7 @@
         "synthesized audiovisual histories",
         "full-duplex interaction"
       ],
-      "popularity": 38,
+      "popularity": 40,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.15131",
       "rank": 5,
@@ -14829,7 +14830,7 @@
       "project_page": "https://openvisionbanana.github.io/",
       "abstract": "Recent work suggests that pretrained image generators encode real-world understanding beyond image synthesis. Vision Banana exploits this by framing vision tasks as conditional image editing. However, its data, weights, code, and implementation details are not public. We present Open Vision Banana (OVB), a fully open and reproducible recipe for converting pretrained generators into unified multi-task perception systems. Our analyses identify the design choices that matter most for generalization, including color encoding, prompt design, parameter adaptation, and task balancing. These choices interact, so individually helpful choices can hurt when combined with others. Starting from 4B and 9B parameter open-weight base models and using 2.1M-3.8M training pairs from public datasets, OVB surpasses Vision Banana's reported Cityscapes zero-shot performance (73.9 vs. 69.9 mIoU) and rivals state-of-the-art affine-invariant depth estimators. Its non-zero-shot variants come within five points of Vision Banana on referring and reasoning segmentation but remain further behind on instance segmentation. All models largely retain the base model's image-editing abilities. With legend ensembling, we introduce a test-time scaling method for generator-based perception. It segments an image under several class-color legends and fuses the results by majority vote, correcting unstable color-class bindings and improving mIoU by up to 8.7 points on Cityscapes and 15.0 points on COCO-Object without retraining. We release the dataset construction and processing pipeline, the training and evaluation code, as well as the final, intermediate, and ablation checkpoints. Project website: https://openvisionbanana.github.io",
       "ai_keywords": [],
-      "popularity": 32,
+      "popularity": 35,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.15844",
       "rank": 6,
@@ -16981,7 +16982,7 @@
         "Qwen2.5-1.5B",
         "GRPO"
       ],
-      "popularity": 29,
+      "popularity": 34,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.17167",
       "rank": 7,
@@ -19018,46 +19019,6 @@
       "folder": "papers/2026-dexforesight-grounding-dexterous-policies-with-implicit"
     },
     {
-      "title": "Ropedia Xperience 2: A Gold Standard for Scaling Physical AI Environments and Behaviors",
-      "authors": [
-        "Hao Li",
-        "Fangzhou Hong",
-        "Zhaoxi Chen",
-        "Hui En Pang",
-        "Kairui Hu",
-        "Mingze Sun",
-        "Runmao Yao",
-        "Xinhao Ji",
-        "Xiyuan Zheng",
-        "Xuanli Chen",
-        "Yalun Dai",
-        "Yap Kim Hui",
-        "Dingwen Zhang",
-        "Yuanyuan Gao",
-        "Ziang Cao",
-        "Cheng Huang Yean",
-        "Jackson Peng",
-        "Rui Duan",
-        "Yaobo Liu",
-        "Zetong Wang",
-        "Ziwei Liu"
-      ],
-      "year": "2026",
-      "arxiv_id": "2611.17060",
-      "arxiv_url": "https://arxiv.org/abs/2611.17060",
-      "pdf_url": "https://arxiv.org/pdf/2611.17060.pdf",
-      "code_url": "https://github.com/Ropedia/Ropedia-Xperience-2",
-      "project_page": "https://ropedia.com/xperience/2-research/",
-      "abstract": "Large foundation models such as GPT-6 Astra and Claude Fable 5.1 have recently been shown to control robots directly from visual observations. They nevertheless remain brittle on long-horizon, contact-rich tasks in real-world environments. Further progress depends on two complementary resources: demonstrations of human behavior that supervise how tasks are performed, and interactive environments in which policies can be rolled out, evaluated, and improved in closed loop. Language models have advanced along well-characterized scaling laws; the corresponding question for physical AI is how capability scales with environments and behaviors, which first requires identifying which data to scale and how to produce and reuse such data continuously. To address this question, we introduce Ropedia Xperience 2, comprising 1,589 released metric-scale 3D scans and a collection of 4,230 egocentric recordings of 74 tasks (131 hours). We further show that each capture can be repurposed for robot learning: scenes are converted into physically interactive simulation environments, human motion is retargeted to whole-body robot trajectories, and additional robot behaviors are obtained through virtual teleoperation and automated long-horizon trajectory generation. We propose this joint capture of environments and behaviors as a gold standard for physical AI data collection, laying a data foundation for establishing scaling laws over environments and behaviors.",
-      "ai_keywords": [],
-      "popularity": 26,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2611.17060",
-      "rank": 8,
-      "status": "pending",
-      "folder": "papers/2026-ropedia-xperience-2-a-gold-standard"
-    },
-    {
       "title": "On the Design of Hyper-Connections: Simplification, Stability, and Scalability",
       "authors": [
         "Xiangdong Zhang",
@@ -19104,12 +19065,52 @@
         "gradient dynamics",
         "foundation model design"
       ],
-      "popularity": 26,
+      "popularity": 29,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.05984",
-      "rank": 9,
+      "rank": 8,
       "status": "pending",
       "folder": "papers/2026-on-the-design-of-hyper-connections"
+    },
+    {
+      "title": "Ropedia Xperience 2: A Gold Standard for Scaling Physical AI Environments and Behaviors",
+      "authors": [
+        "Hao Li",
+        "Fangzhou Hong",
+        "Zhaoxi Chen",
+        "Hui En Pang",
+        "Kairui Hu",
+        "Mingze Sun",
+        "Runmao Yao",
+        "Xinhao Ji",
+        "Xiyuan Zheng",
+        "Xuanli Chen",
+        "Yalun Dai",
+        "Yap Kim Hui",
+        "Dingwen Zhang",
+        "Yuanyuan Gao",
+        "Ziang Cao",
+        "Cheng Huang Yean",
+        "Jackson Peng",
+        "Rui Duan",
+        "Yaobo Liu",
+        "Zetong Wang",
+        "Ziwei Liu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.17060",
+      "arxiv_url": "https://arxiv.org/abs/2611.17060",
+      "pdf_url": "https://arxiv.org/pdf/2611.17060.pdf",
+      "code_url": "https://github.com/Ropedia/Ropedia-Xperience-2",
+      "project_page": "https://ropedia.com/xperience/2-research/",
+      "abstract": "Large foundation models such as GPT-6 Astra and Claude Fable 5.1 have recently been shown to control robots directly from visual observations. They nevertheless remain brittle on long-horizon, contact-rich tasks in real-world environments. Further progress depends on two complementary resources: demonstrations of human behavior that supervise how tasks are performed, and interactive environments in which policies can be rolled out, evaluated, and improved in closed loop. Language models have advanced along well-characterized scaling laws; the corresponding question for physical AI is how capability scales with environments and behaviors, which first requires identifying which data to scale and how to produce and reuse such data continuously. To address this question, we introduce Ropedia Xperience 2, comprising 1,589 released metric-scale 3D scans and a collection of 4,230 egocentric recordings of 74 tasks (131 hours). We further show that each capture can be repurposed for robot learning: scenes are converted into physically interactive simulation environments, human motion is retargeted to whole-body robot trajectories, and additional robot behaviors are obtained through virtual teleoperation and automated long-horizon trajectory generation. We propose this joint capture of environments and behaviors as a gold standard for physical AI data collection, laying a data foundation for establishing scaling laws over environments and behaviors.",
+      "ai_keywords": [],
+      "popularity": 26,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.17060",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-ropedia-xperience-2-a-gold-standard"
     },
     {
       "title": "What Generation Knows: Unlocking Fine-Grained Understanding in Unified Multimodal Models",
@@ -23628,7 +23629,7 @@
         "Context tokens",
         "Context ground-truth tokens"
       ],
-      "popularity": 21,
+      "popularity": 23,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.17331",
       "rank": 10,
@@ -26631,5 +26632,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-11-14T06:00:36.410076+00:00"
+  "updated_at": "2026-11-15T06:00:59.234769+00:00"
 }
