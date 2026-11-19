@@ -1,0 +1,428 @@
+{
+  "full": {
+    "arm": "full",
+    "final_sr": 100.0,
+    "best_sr": 100.0,
+    "eps_to_90": 1920,
+    "final": {
+      "sr": 100.0,
+      "mean_steps_success": 9.0,
+      "poisoned_pct": 0.0,
+      "stall_pct": 0.0
+    },
+    "history": [
+      {
+        "round": 10,
+        "eval_sr": 0.0,
+        "eps": 160
+      },
+      {
+        "round": 20,
+        "eval_sr": 0.0,
+        "eps": 320
+      },
+      {
+        "round": 30,
+        "eval_sr": 0.0,
+        "eps": 480
+      },
+      {
+        "round": 40,
+        "eval_sr": 0.0,
+        "eps": 640
+      },
+      {
+        "round": 50,
+        "eval_sr": 0.0,
+        "eps": 800
+      },
+      {
+        "round": 60,
+        "eval_sr": 0.0,
+        "eps": 960
+      },
+      {
+        "round": 70,
+        "eval_sr": 0.0,
+        "eps": 1120
+      },
+      {
+        "round": 80,
+        "eval_sr": 0.0,
+        "eps": 1280
+      },
+      {
+        "round": 90,
+        "eval_sr": 0.0,
+        "eps": 1440
+      },
+      {
+        "round": 100,
+        "eval_sr": 0.0,
+        "eps": 1600
+      },
+      {
+        "round": 110,
+        "eval_sr": 0.0,
+        "eps": 1760
+      },
+      {
+        "round": 120,
+        "eval_sr": 100.0,
+        "eps": 1920
+      },
+      {
+        "round": 130,
+        "eval_sr": 100.0,
+        "eps": 2080
+      },
+      {
+        "round": 140,
+        "eval_sr": 100.0,
+        "eps": 2240
+      },
+      {
+        "round": 150,
+        "eval_sr": 100.0,
+        "eps": 2400
+      },
+      {
+        "round": 160,
+        "eval_sr": 100.0,
+        "eps": 2560
+      },
+      {
+        "round": 170,
+        "eval_sr": 100.0,
+        "eps": 2720
+      },
+      {
+        "round": 180,
+        "eval_sr": 100.0,
+        "eps": 2880
+      },
+      {
+        "round": 190,
+        "eval_sr": 100.0,
+        "eps": 3040
+      },
+      {
+        "round": 200,
+        "eval_sr": 100.0,
+        "eps": 3200
+      },
+      {
+        "round": 210,
+        "eval_sr": 100.0,
+        "eps": 3360
+      },
+      {
+        "round": 220,
+        "eval_sr": 100.0,
+        "eps": 3520
+      },
+      {
+        "round": 230,
+        "eval_sr": 100.0,
+        "eps": 3680
+      },
+      {
+        "round": 240,
+        "eval_sr": 100.0,
+        "eps": 3840
+      },
+      {
+        "round": 250,
+        "eval_sr": 100.0,
+        "eps": 4000
+      }
+    ],
+    "eps_trained": 4000
+  },
+  "pivot": {
+    "arm": "pivot",
+    "final_sr": 100.0,
+    "best_sr": 100.0,
+    "eps_to_90": 3249,
+    "final": {
+      "sr": 100.0,
+      "mean_steps_success": 9.0,
+      "poisoned_pct": 0.0,
+      "stall_pct": 0.0
+    },
+    "history": [
+      {
+        "round": 10,
+        "eval_sr": 0.0,
+        "eps": 239
+      },
+      {
+        "round": 20,
+        "eval_sr": 0.0,
+        "eps": 399
+      },
+      {
+        "round": 30,
+        "eval_sr": 0.0,
+        "eps": 559
+      },
+      {
+        "round": 40,
+        "eval_sr": 0.0,
+        "eps": 719
+      },
+      {
+        "round": 50,
+        "eval_sr": 0.0,
+        "eps": 879
+      },
+      {
+        "round": 60,
+        "eval_sr": 0.0,
+        "eps": 1039
+      },
+      {
+        "round": 70,
+        "eval_sr": 0.0,
+        "eps": 1199
+      },
+      {
+        "round": 80,
+        "eval_sr": 0.0,
+        "eps": 1359
+      },
+      {
+        "round": 90,
+        "eval_sr": 0.0,
+        "eps": 1649
+      },
+      {
+        "round": 100,
+        "eval_sr": 0.0,
+        "eps": 1969
+      },
+      {
+        "round": 110,
+        "eval_sr": 0.0,
+        "eps": 2289
+      },
+      {
+        "round": 120,
+        "eval_sr": 0.0,
+        "eps": 2609
+      },
+      {
+        "round": 130,
+        "eval_sr": 0.0,
+        "eps": 2929
+      },
+      {
+        "round": 140,
+        "eval_sr": 100.0,
+        "eps": 3249
+      },
+      {
+        "round": 150,
+        "eval_sr": 100.0,
+        "eps": 3569
+      },
+      {
+        "round": 160,
+        "eval_sr": 100.0,
+        "eps": 3888
+      },
+      {
+        "round": 170,
+        "eval_sr": 100.0,
+        "eps": 4202
+      },
+      {
+        "round": 180,
+        "eval_sr": 100.0,
+        "eps": 4506
+      },
+      {
+        "round": 190,
+        "eval_sr": 100.0,
+        "eps": 4808
+      },
+      {
+        "round": 200,
+        "eval_sr": 100.0,
+        "eps": 5096
+      },
+      {
+        "round": 210,
+        "eval_sr": 100.0,
+        "eps": 5373
+      },
+      {
+        "round": 220,
+        "eval_sr": 100.0,
+        "eps": 5644
+      },
+      {
+        "round": 230,
+        "eval_sr": 100.0,
+        "eps": 5883
+      },
+      {
+        "round": 240,
+        "eval_sr": 100.0,
+        "eps": 6144
+      },
+      {
+        "round": 250,
+        "eval_sr": 100.0,
+        "eps": 6388
+      }
+    ],
+    "eps_trained": 6388
+  },
+  "randcut": {
+    "arm": "randcut",
+    "final_sr": 100.0,
+    "best_sr": 100.0,
+    "eps_to_90": 4160,
+    "final": {
+      "sr": 100.0,
+      "mean_steps_success": 9.0,
+      "poisoned_pct": 0.0,
+      "stall_pct": 0.0
+    },
+    "history": [
+      {
+        "round": 10,
+        "eval_sr": 0.0,
+        "eps": 320
+      },
+      {
+        "round": 20,
+        "eval_sr": 0.0,
+        "eps": 640
+      },
+      {
+        "round": 30,
+        "eval_sr": 0.0,
+        "eps": 960
+      },
+      {
+        "round": 40,
+        "eval_sr": 0.0,
+        "eps": 1280
+      },
+      {
+        "round": 50,
+        "eval_sr": 0.0,
+        "eps": 1600
+      },
+      {
+        "round": 60,
+        "eval_sr": 0.0,
+        "eps": 1920
+      },
+      {
+        "round": 70,
+        "eval_sr": 0.0,
+        "eps": 2240
+      },
+      {
+        "round": 80,
+        "eval_sr": 0.0,
+        "eps": 2560
+      },
+      {
+        "round": 90,
+        "eval_sr": 0.0,
+        "eps": 2880
+      },
+      {
+        "round": 100,
+        "eval_sr": 0.0,
+        "eps": 3200
+      },
+      {
+        "round": 110,
+        "eval_sr": 0.0,
+        "eps": 3520
+      },
+      {
+        "round": 120,
+        "eval_sr": 0.0,
+        "eps": 3840
+      },
+      {
+        "round": 130,
+        "eval_sr": 100.0,
+        "eps": 4160
+      },
+      {
+        "round": 140,
+        "eval_sr": 100.0,
+        "eps": 4480
+      },
+      {
+        "round": 150,
+        "eval_sr": 100.0,
+        "eps": 4800
+      },
+      {
+        "round": 160,
+        "eval_sr": 100.0,
+        "eps": 5120
+      },
+      {
+        "round": 170,
+        "eval_sr": 100.0,
+        "eps": 5440
+      },
+      {
+        "round": 180,
+        "eval_sr": 100.0,
+        "eps": 5760
+      },
+      {
+        "round": 190,
+        "eval_sr": 100.0,
+        "eps": 6080
+      },
+      {
+        "round": 200,
+        "eval_sr": 100.0,
+        "eps": 6400
+      },
+      {
+        "round": 210,
+        "eval_sr": 100.0,
+        "eps": 6720
+      },
+      {
+        "round": 220,
+        "eval_sr": 100.0,
+        "eps": 7040
+      },
+      {
+        "round": 230,
+        "eval_sr": 100.0,
+        "eps": 7360
+      },
+      {
+        "round": 240,
+        "eval_sr": 100.0,
+        "eps": 7680
+      },
+      {
+        "round": 250,
+        "eval_sr": 100.0,
+        "eps": 8000
+      }
+    ],
+    "eps_trained": 8000
+  },
+  "agent_team_script": {
+    "sr": 100.0,
+    "mean_steps": 18.0,
+    "budget_used": 32,
+    "note": "reads ALL N files (organized parallel search) \u2014 needs N+L(+1 verify)+1 tool calls; ReAct arms get B=14"
+  }
+}
