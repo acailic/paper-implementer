@@ -810,9 +810,10 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2608.26105",
       "rank": 1,
-      "status": "writing",
+      "status": "done",
       "folder": "papers/2026-vbvr-pro-a-scalable-and-verifiable",
-      "started_at": "2026-11-21"
+      "started_at": "2026-11-21",
+      "finished_at": "2026-11-25"
     },
     {
       "title": "StudentSim: Training LLM-based Student Simulators",
@@ -3579,7 +3580,7 @@
       "project_page": "https://aigeeksgroup.github.io/MotionMamba2.0/",
       "abstract": "Long-horizon, real-time controllable motion generation is essential for interactive animation and humanoid robotics, where an agent must respond to changing instructions and spatial goals while moving. Existing autoregressive diffusion methods generate motion incrementally, but bounded attention caches limit access to distant history, while repeated denoising introduces substantial inference overhead. We present Motion Mamba 2.0, a Mamba-based root-body diffusion architecture that integrates local attention, resumable recurrent states, and persistent content memory (PCM) for long-horizon controllable motion generation. PCM transforms compressed motion history from Mamba recurrent states, together with state changes and text-conditioned features, into dynamically updated content slots accessible to local attention. To enable efficient inference, we further develop an execution scheme tailored to this architecture, combining CUDA Graph replay, fused kernels, and execution-flow simplification while preserving the canonical history update. Evaluations on retargeted HiPHI demonstrate accurate terminal control over rollouts of up to 39.52 s, while short-horizon comparisons on BONES Seed and retargeted HumanML3D show that the model also retains strong spatial control and text-motion matching. On an RTX 4090, the optimized execution reduces median complete-window latency from 1685.35 to 276.14 ms, achieving a median paired speedup of 6.138times while preserving identical outputs and committed states in the tested rollouts. Moreover, we conduct extensive real-world evaluation on the Unitree G1, demonstrating sequential text-guided action composition, expressive motion, and interactive locomotion through keyboard and mouse control.",
       "ai_keywords": [],
-      "popularity": 170,
+      "popularity": 182,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.29897",
       "rank": 1,
@@ -6469,6 +6470,35 @@
       "folder": "papers/2026-ascendgym-a-cost-aware-kernel-optimization"
     },
     {
+      "title": "WorldLeague: Benchmarking Physical Agency",
+      "authors": [
+        "Xinyang Zhou",
+        "Qi Li",
+        "Xinchao Wang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.30989",
+      "arxiv_url": "https://arxiv.org/abs/2611.30989",
+      "pdf_url": "https://arxiv.org/pdf/2611.30989.pdf",
+      "code_url": "https://github.com/xyangzhou/WorldLeague",
+      "project_page": "https://xyangzhou.github.io/WorldLeague/",
+      "abstract": "AI systems can now operate Blender, follow instructions in complex video games, and manipulate objects with robot arms. What range of physical goals can today's AI systems achieve autonomously? Answering this question requires testing systems on tasks that demand different combinations of perception, memory, planning, and action. We introduce WorldLeague, a benchmark that compares AI systems on a common set of 60 simulated robot tasks by measuring progress toward each task's physical goal from the robot's trajectory. Robots explore scenes to gather evidence in WorldSeek, rearrange objects in WorldShape, and adapt to changes in WorldShift. Tying these goals to a single control interface limits which AI systems can be compared. In WorldLeague, vision-language models (VLMs) choose targets and motions, while vision-language-action models (VLAs) and world-action models (WAMs) use their native controls. For each of six capability dimensions, we measure how much progress a system makes toward its goals (Interactive Score) and how often it achieves them (physical success rate). Together, these measures form the system's Physical Agency Profile. Among 13 representative AI systems, Claude Fable 5.2 achieves 13 of the 60 goals and earns the highest mean Interactive Score (28.58/100). Fable leads in four dimensions, while GPT-6.1-Sol and GPT-6-Astra tie for first on rule-following tasks. Even when VLMs answer every final question correctly, they receive an Interactive Score of zero in 71.8\\% of those episodes. WorldLeague gives Embodied AI, Physical AI, and Agentic AI a shared basis for comparing what AI systems achieve autonomously, from partial progress toward a physical goal to full goal completion. Project Webpage: https://xyangzhou.github.io/WorldLeague",
+      "ai_keywords": [
+        "vision-language models",
+        "vision-language-action models",
+        "world-action models",
+        "embodied AI",
+        "physical AI",
+        "agentic AI"
+      ],
+      "popularity": 127,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.30989",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-worldleague-benchmarking-physical-agency"
+    },
+    {
       "title": "Embo-Harness: Towards Understanding Frontier-Model-as-Policy Harness",
       "authors": [
         "Xiao-Ming Wu",
@@ -6515,10 +6545,10 @@
         "low-level joint generation",
         "trajectory generation"
       ],
-      "popularity": 89,
+      "popularity": 90,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.31201",
-      "rank": 2,
+      "rank": 3,
       "status": "pending",
       "folder": "papers/2026-embo-harness-towards-understanding-frontier-model"
     },
@@ -8796,35 +8826,6 @@
       "rank": 3,
       "status": "pending",
       "folder": "papers/2026-wemm-video-pushing-the-frontiers-of"
-    },
-    {
-      "title": "WorldLeague: Benchmarking Physical Agency",
-      "authors": [
-        "Xinyang Zhou",
-        "Qi Li",
-        "Xinchao Wang"
-      ],
-      "year": "2026",
-      "arxiv_id": "2611.30989",
-      "arxiv_url": "https://arxiv.org/abs/2611.30989",
-      "pdf_url": "https://arxiv.org/pdf/2611.30989.pdf",
-      "code_url": "https://github.com/xyangzhou/WorldLeague",
-      "project_page": "https://xyangzhou.github.io/WorldLeague/",
-      "abstract": "AI systems can now operate Blender, follow instructions in complex video games, and manipulate objects with robot arms. What range of physical goals can today's AI systems achieve autonomously? Answering this question requires testing systems on tasks that demand different combinations of perception, memory, planning, and action. We introduce WorldLeague, a benchmark that compares AI systems on a common set of 60 simulated robot tasks by measuring progress toward each task's physical goal from the robot's trajectory. Robots explore scenes to gather evidence in WorldSeek, rearrange objects in WorldShape, and adapt to changes in WorldShift. Tying these goals to a single control interface limits which AI systems can be compared. In WorldLeague, vision-language models (VLMs) choose targets and motions, while vision-language-action models (VLAs) and world-action models (WAMs) use their native controls. For each of six capability dimensions, we measure how much progress a system makes toward its goals (Interactive Score) and how often it achieves them (physical success rate). Together, these measures form the system's Physical Agency Profile. Among 13 representative AI systems, Claude Fable 5.2 achieves 13 of the 60 goals and earns the highest mean Interactive Score (28.58/100). Fable leads in four dimensions, while GPT-6.1-Sol and GPT-6-Astra tie for first on rule-following tasks. Even when VLMs answer every final question correctly, they receive an Interactive Score of zero in 71.8\\% of those episodes. WorldLeague gives Embodied AI, Physical AI, and Agentic AI a shared basis for comparing what AI systems achieve autonomously, from partial progress toward a physical goal to full goal completion. Project Webpage: https://xyangzhou.github.io/WorldLeague",
-      "ai_keywords": [
-        "vision-language models",
-        "vision-language-action models",
-        "world-action models",
-        "embodied AI",
-        "physical AI",
-        "agentic AI"
-      ],
-      "popularity": 68,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2611.30989",
-      "rank": 3,
-      "status": "pending",
-      "folder": "papers/2026-worldleague-benchmarking-physical-agency"
     },
     {
       "title": "Probing the \"Conscious\" Mind: Selective Access and Global Workspace in Vision-Language Models",
@@ -11222,7 +11223,7 @@
         "trajectory constraints",
         "3D motion generation"
       ],
-      "popularity": 56,
+      "popularity": 57,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.30013",
       "rank": 4,
@@ -14138,6 +14139,60 @@
       "folder": "papers/2026-posterior-matching-distillation"
     },
     {
+      "title": "A Glimpse of Training VLMs as Foundation Models for Robotic Manipulation",
+      "authors": [
+        "Meng-Hao Guo",
+        "Yi Zhang",
+        "Zhe-Han Mo",
+        "Han-Zheng Wang",
+        "Jia-Jun Wang",
+        "Xin-Sheng Chen",
+        "Jiaxi Song",
+        "Yi-Xuan Deng",
+        "Jia-Ning Li",
+        "Xuanyu Chu",
+        "Hengrui Zhang",
+        "Huan-ang Gao",
+        "Yongming Rao",
+        "Shi-Min Hu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.29338",
+      "arxiv_url": "https://arxiv.org/abs/2611.29338",
+      "pdf_url": "https://arxiv.org/pdf/2611.29338.pdf",
+      "code_url": "https://github.com/Hugo-AGI/nanoAstra",
+      "project_page": "https://nanoastra.github.io",
+      "abstract": "Recently, GPT-6 Astra demonstrates strong generalization in robot control, yet limited disclosure of its training leaves open how such capabilities can be reproduced. We introduce nanoAstra, an approach to training vision-language models (VLMs) for generalizable manipulation that combines semantic action modeling with capability-preserving supervised fine-tuning (CP-SFT). nanoAstra represents robot behavior as semantic steps composed of reusable, parameterized action primitives, guided by explicit progress descriptions. Meanwhile, CP-SFT uses an explicit robot-specific system prompt to constrain manipulation outputs to a structured action space, aiming to focus adaptation on robot-specific contexts and promote specialization while minimizing interference with broader pretrained capabilities. With this formulation, we train nanoAstra on more than 5,000 hours of robot data together with general VQA data. On RoboTwin 2.0's randomized benchmark, nanoAstra-9B achieves a 17.8% zero-shot success rate, substantially outperforming advanced VLA and WAM baselines as well as similarly sized VLMs. With inference faster than the corresponding motion execution on a single H20 GPU, our model supports action-chunk-like streaming execution that overlaps inference with motion, reducing the robot's idle time from 35.0% to 6.9%.",
+      "ai_keywords": [
+        "vision-language models",
+        "VLMs",
+        "generalizable manipulation",
+        "semantic action modeling",
+        "capability-preserving supervised fine-tuning",
+        "CP-SFT",
+        "semantic steps",
+        "parameterized action primitives",
+        "progress descriptions",
+        "robot-specific system prompt",
+        "structured action space",
+        "pretrained capabilities",
+        "VQA data",
+        "RoboTwin 2.0",
+        "zero-shot success rate",
+        "VLA baselines",
+        "WAM baselines",
+        "action-chunk-like streaming execution",
+        "inference",
+        "motion execution"
+      ],
+      "popularity": 54,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.29338",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-a-glimpse-of-training-vlms-as"
+    },
+    {
       "title": "WeMM-Ecom: Advancing Multimodal Content Understanding for WeChat E-Commerce",
       "authors": [
         "Binhui Xie",
@@ -14170,10 +14225,10 @@
         "thinking mode",
         "domain-specialized multimodal models"
       ],
-      "popularity": 52,
+      "popularity": 53,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.30662",
-      "rank": 5,
+      "rank": 6,
       "status": "pending",
       "folder": "papers/2026-wemm-ecom-advancing-multimodal-content-understanding"
     },
@@ -16441,10 +16496,10 @@
         "base model",
         "adapters"
       ],
-      "popularity": 48,
+      "popularity": 51,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.12164",
-      "rank": 6,
+      "rank": 7,
       "status": "pending",
       "folder": "papers/2026-let-the-fixer-decide-training-a"
     },
@@ -18704,60 +18759,6 @@
       "folder": "papers/2026-depth-pro-2-sharp-and-temporally"
     },
     {
-      "title": "A Glimpse of Training VLMs as Foundation Models for Robotic Manipulation",
-      "authors": [
-        "Meng-Hao Guo",
-        "Yi Zhang",
-        "Zhe-Han Mo",
-        "Han-Zheng Wang",
-        "Jia-Jun Wang",
-        "Xin-Sheng Chen",
-        "Jiaxi Song",
-        "Yi-Xuan Deng",
-        "Jia-Ning Li",
-        "Xuanyu Chu",
-        "Hengrui Zhang",
-        "Huan-ang Gao",
-        "Yongming Rao",
-        "Shi-Min Hu"
-      ],
-      "year": "2026",
-      "arxiv_id": "2611.29338",
-      "arxiv_url": "https://arxiv.org/abs/2611.29338",
-      "pdf_url": "https://arxiv.org/pdf/2611.29338.pdf",
-      "code_url": "",
-      "project_page": "",
-      "abstract": "Recently, GPT-6 Astra demonstrates strong generalization in robot control, yet limited disclosure of its training leaves open how such capabilities can be reproduced. We introduce nanoAstra, an approach to training vision-language models (VLMs) for generalizable manipulation that combines semantic action modeling with capability-preserving supervised fine-tuning (CP-SFT). nanoAstra represents robot behavior as semantic steps composed of reusable, parameterized action primitives, guided by explicit progress descriptions. Meanwhile, CP-SFT uses an explicit robot-specific system prompt to constrain manipulation outputs to a structured action space, aiming to focus adaptation on robot-specific contexts and promote specialization while minimizing interference with broader pretrained capabilities. With this formulation, we train nanoAstra on more than 5,000 hours of robot data together with general VQA data. On RoboTwin 2.0's randomized benchmark, nanoAstra-9B achieves a 17.8% zero-shot success rate, substantially outperforming advanced VLA and WAM baselines as well as similarly sized VLMs. With inference faster than the corresponding motion execution on a single H20 GPU, our model supports action-chunk-like streaming execution that overlaps inference with motion, reducing the robot's idle time from 35.0% to 6.9%.",
-      "ai_keywords": [
-        "vision-language models",
-        "VLMs",
-        "generalizable manipulation",
-        "semantic action modeling",
-        "capability-preserving supervised fine-tuning",
-        "CP-SFT",
-        "semantic steps",
-        "parameterized action primitives",
-        "progress descriptions",
-        "robot-specific system prompt",
-        "structured action space",
-        "pretrained capabilities",
-        "VQA data",
-        "RoboTwin 2.0",
-        "zero-shot success rate",
-        "VLA baselines",
-        "WAM baselines",
-        "action-chunk-like streaming execution",
-        "inference",
-        "motion execution"
-      ],
-      "popularity": 43,
-      "citation_count": null,
-      "pwc_url": "https://huggingface.co/papers/2611.29338",
-      "rank": 7,
-      "status": "pending",
-      "folder": "papers/2026-a-glimpse-of-training-vlms-as"
-    },
-    {
       "title": "The Mask Is Not the Object: Volumetric Supervision for 3D Gaussian Segmentation",
       "authors": [
         "Jeonghwan Cho",
@@ -20980,6 +20981,37 @@
       "folder": "papers/2026-fastframes-video-generation-at-interactive-latency"
     },
     {
+      "title": "Nemotron-Labs-VisualCreation: Pixel as Code for Agentic Visual Creation",
+      "authors": [
+        "Guo Chen",
+        "Fuxiao Liu",
+        "Haoqin Tu",
+        "Yiyang Zhou",
+        "Andrew Tao",
+        "Bryan Catanzaro",
+        "Cihang Xie",
+        "Yuyin Zhou",
+        "Huaxiu Yao",
+        "Didong Lu",
+        "Zongxia Li",
+        "Guilin Liu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.31358",
+      "arxiv_url": "https://arxiv.org/abs/2611.31358",
+      "pdf_url": "https://arxiv.org/pdf/2611.31358.pdf",
+      "code_url": "",
+      "project_page": "https://huggingface.co/nvidia/Nemotron-Labs-Image-30B-A3B",
+      "abstract": "Visual creation demands expressive imagery together with precise control over text, layout, and structure. We introduce Nemotron-Labs-VisualCreation, an agentic framework that connects these capabilities through Pixel as Code. Raster images are represented by learned discrete visual tokens, while structured artifacts use explicit programs. A shared generation-and-rendering interface connects these representations to visual feedback across images, vector graphics, webpages, and documents. A Nemotron-native harness coordinates planning and raster candidate selection, with targeted repair for editable structured and hybrid artifacts. To support this interface, we develop Nemotron-Labs-Image-Tokenizer, the autoregressive raster generator Nemotron-Labs-Image-30B-A3B, and the structured-code model family Nemotron-Labs-VisionCode. On approximately 178K images spanning six visual domains, our tokenizer improves reconstruction PSNR from 26.08 to 29.57 dB over Emu3.5 IBQ. It also provides 7.13x faster encoding and 10.93x faster decoding at batch size one on A100. In standalone evaluation, one Nemotron-Labs-VisionCode variant surpasses Kimi K3.1 Pro on the aggregate across Chart2Code, MMSVG, Design2Code, and Image2Struct. At the system level, the Nemotron-native configuration raises GenEval2 Soft-TIFA GM from 31.71 to 52.56 using the same raster generator. With our best setting, Nemotron-Labs-VisualCreation achieves performance competitive with GPT Image 2 and Nano Banana Pro across most benchmarks with available comparisons.",
+      "ai_keywords": [],
+      "popularity": 38,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.31358",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-nemotron-labs-visualcreation-pixel-as-code"
+    },
+    {
       "title": "ViDecide: Teaching Video Diffusion Models to Reason and Plan Step by Step",
       "authors": [
         "Kaiwen Zhang",
@@ -21009,10 +21041,10 @@
         "multi-step reasoning",
         "planning"
       ],
-      "popularity": 36,
+      "popularity": 37,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.26389",
-      "rank": 8,
+      "rank": 9,
       "status": "pending",
       "folder": "papers/2026-videcide-teaching-video-diffusion-models-to"
     },
@@ -23374,10 +23406,10 @@
         "GPT-6.1 Sol",
         "API cost"
       ],
-      "popularity": 32,
+      "popularity": 33,
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2611.28202",
-      "rank": 9,
+      "rank": 10,
       "status": "pending",
       "folder": "papers/2026-autopilot-a-visual-agent-harness-for"
     },
@@ -29033,5 +29065,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-11-24T17:29:28.604803+00:00"
+  "updated_at": "2026-11-25T06:00:24.590963+00:00"
 }
