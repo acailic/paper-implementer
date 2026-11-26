@@ -1,0 +1,654 @@
+                                                           Compile by Training: Turning Natural-Language
+                                                             Specifications into Local Neural Functions
+
+                                                 Yuntian Deng                           Pengyu Nie                     Stuart Shieber
+                                             University of Waterloo                 University of Waterloo           Harvard University
+                                            yuntian@uwaterloo.ca                    pynie@uwaterloo.ca           shieber@seas.harvard.edu
+
+
+
+                                                              Abstract                           to specialize a compact interpreter. Compilation
+                                                                                                 takes roughly a minute, but the resulting function
+                                            Many recurring text functions are easy to de-
+                                                                                                 can then process new inputs without calling the
+arXiv:2609.04199v1 [cs.CL] 3 Sep 2026
+
+
+
+
+                                            scribe but difficult to implement with rules,
+                                            while calling a large remote model for every         teachers. In this view, adaptation becomes a soft-
+                                            input introduces repeated cost, latency, and de-     ware build step, and large language models act as
+                                            pendency on a provider. We present compile by        tool builders rather than run-time dependencies.
+                                            training, which turns a natural-language spec-          Our system builds on Program-as-Weights
+                                            ification into a reusable neural function. At        (PAW) (Zhang et al., 2026), in which a neural pro-
+                                            compile time, teacher models generate task-
+                                                                                                 gram specializes a shared local interpreter. PAW in-
+                                            specific examples that are used to train a small
+                                            adapter for a compact interpreter. The result-       troduced an amortized compiler that predicts such
+                                            ing function runs without the teachers and can       a program in a single forward pass. This makes
+                                            be stored, versioned, and composed like ordi-        compilation fast, but spends the same fixed amount
+                                            nary software. On FuzzyBench-Hard, a subset          of computation on every function. Compile by
+                                            on which the Program-as-Weights fast compiler        training retains the same program format and run-
+                                            produced no exact matches, compile by training       time interface, uses the amortized prediction as a
+                                            reaches 83.6% semantic accuracy. This higher
+                                                                                                 starting point, and then invests additional computa-
+                                            accuracy comes with a higher compile-time
+                                            cost: roughly a minute rather than seconds for
+                                                                                                 tion in teacher synthesis and specification-specific
+                                            the fast compiler. We deploy the compiler in a       optimization. The resulting programs can still be
+                                            public interactive service and demonstrate com-      versioned, cached, and composed with ordinary
+                                            piled functions in a multi-site website helper,      software.
+                                            a language-controlled 3D avatar, and a bidirec-         This approach raises three practical questions.
+                                            tional English–Claudish translator.                  First, does the additional compile-time investment
+                                        1   Introduction                                         produce better functions than one-shot weight pre-
+                                                                                                 diction? Second, can a minute-scale build remain
+                                        Consider an email-triage function that maps “Sig-        usable in an interactive service? Third, can in-
+                                        nature needed by EOD” to immediate, but maps a           dependently compiled neural functions serve as
+                                        newsletter to wait. The intended behavior is easy        components in larger applications? We evaluate
+                                        to describe and useful across thousands of mes-          correctness on FuzzyBench-Hard, a subset of ex-
+                                        sages, yet tedious to encode as rules. A general-        amples for which the PAW fast compiler produced
+                                        purpose remote LLM can perform the task, but             no exact matches. We also measure latency and re-
+                                        calling it for every message repeatedly incurs net-      sponsiveness in our deployed compiler and demon-
+                                        work latency, provider cost, and dependence on an        strate composition in a multi-site website helper,
+                                        external service. Many recurring text functions fall     a language-controlled 3D avatar, and a bidirec-
+                                        between these two options: they are too fuzzy for        tional English–Claudish translator. An online demo
+                                        conventional code, but too narrow and frequent to        is available at https://programasweights.com/
+                                        justify a large-model call at every invocation.          playground?compiler=paw-ft-bs48.
+                                           We propose compile by training: use large mod-
+                                        els once to build a smaller, reusable neural function.   2   System Overview
+                                        A developer writes a natural-language specification,
+                                        teacher models generate examples of the desired          The system separates building a neural function
+                                        behavior, and gradient descent uses those examples       from using it. A developer first describes the de-
+      (1) Specify and compile                        (2) Continue working                   (3) Run locally, repeatedly
+
+
+          Program Specification                           Documentation
+                                                                                             import programasweights as paw
+
+          Return IMMEDIATE for deadlines                                                     fn = paw.function(
+          or action items. Return WAIT for                                                       "4ef336f9506380706185"
+          newsletters and FYI messages.                                                      )
+                                                                                             fn("Signature needed by EOD")
+                                                                                             # -> immediate attention
+
+                                                           Training             73%
+                                                           Email Triage
+
+
+              Compile · Finetuned Standard
+                                                      compile time: hosted teachers + GPU    run time: local interpreter
+
+
+
+
+Figure 1: One specification, one compile job, one local function. The running email-triage example is entered in
+the public playground, compiled asynchronously while the user continues browsing, and then invoked through the
+local SDK. The teacher and GPU are compile-time dependencies; repeated function calls use the packaged program.
+
+
+sired behavior in natural language and compiles                       3     Compile by Training
+that specification into a reusable program. The
+completed program can then be invoked repeatedly                      Compile by training turns a natural-language spec-
+on new inputs without calling the teacher models                      ification into a reusable neural program in two
+again.                                                                stages. First, teacher models synthesize examples
+                                                                      of the desired function. Second, those examples
+   Formally, the system exposes the interface
+                                                                      specialize a lightweight adapter for a shared inter-
+                                                                      preter, which is then packaged for future execution.
+     ps = Compile(s),                 ŷ = Run(ps , x),
+                                                                      3.1    From Specification to Supervision
+where s is a natural-language function specifica-
+                                                                      A specification describes the desired behavior but
+tion, ps is the compiled program, x is a new input,
+                                                                      does not provide enough labeled examples to train
+and ŷ is the program’s output. A shared frozen lan-
+                                                                      it directly. We therefore use one or more teacher
+guage model serves as the interpreter, while each
+                                                                      models to synthesize a task-specific dataset
+compiled program supplies the adapter and prompt
+that specialize it for one function.
+                                                                                   Ds = {(xi , yi )}ni=1 ∼ T (s),
+   Figure 1 shows the corresponding user work-
+flow:                                                                 where s is the specification and each pair illustrates
+1. Specify. Describe a text-to-text function in nat-                  how the function should map an input xi to an
+    ural language.                                                    output yi .
+2. Compile. Submit a build job and monitor its                           Teacher requests use a structured JSON format
+    queue and training progress.                                      so that generated examples can enter the train-
+3. Run. Open or download the completed program                        ing pipeline automatically. The compiler validates
+    and invoke it on new inputs through the SDK.                      each response and rejects malformed or incomplete
+   The downloaded .paw artifact packages the spec-                    batches before making accepted examples avail-
+ification and the components needed to specialize                     able to the trainer. Our public service combines
+the shared interpreter. It can be stored, versioned,                  a lower-cost teacher, which supplies most of the
+cached, and reused like an ordinary software arti-                    examples, with a larger teacher that contributes
+fact. During execution, the SDK combines each                         complementary supervision.
+new input with the program’s run-time prompt and                         For example, for a specification that extracts
+adapter, then runs the shared interpreter.                            arXiv identifiers from /pdf/ links while ignoring
+   Compilation is a hosted process: the function                      /abs/ links, a teacher-generated example is:
+specification is sent to the PAW service and teacher
+APIs to generate supervision and train the program.                         Input: Check these papers: https://arxiv.
+                                                                            org/pdf/2607.02512.pdf and https://arxiv.
+By contrast, local SDK execution does not send                              org/abs/2507.08800.
+future inputs to PAW or the teachers.                                       Output: ["2607.02512"]
+3.2    Specialization and Packaging                         Training begins as soon as the examples required
+Training a separate full model for every specifi-        for its first batch are available and blocks only if
+cation would make compilation and storage pro-           it catches up with synthesis. Because teacher re-
+hibitively expensive. Instead, all programs share a      sponses may arrive at different times, the scheduler
+frozen Qwen3-0.6B interpreter (Yang et al., 2025),       assigns incoming examples to open slots needed by
+and each function is represented by a lightweight        earlier batches first, without changing the accepted
+LoRA adapter (Hu et al., 2022) and a run-time scaf-      examples or their prescribed training order. This
+fold. Here, the scaffold is a compiler-generated         overlap shortens the critical path because teacher
+prompt template that encodes the user’s free-form        synthesis is substantially slower and more variable
+specification as structured task instructions and ex-    than an individual training step.
+amples and leaves a placeholder for the run-time
+                                                         4.2    Coordinating Jobs and Reusing Work
+input.
+   The amortized PAW compiler provides the ini-          The service separates job coordination from the
+                           (0)
+tial adapter parameters θs and scaffold rs . This        compilation workers that perform synthesis and
+prediction takes seconds and provides a function-        training. The API maintains a persistent record
+specific starting point, which is then refined using     of each submitted job, while a shared queue dis-
+the synthesized dataset. Training minimizes              patches pending jobs to available GPU workers. Be-
+                  X                                      fore requesting new examples, workers check the
+      L(θs ) =           − log pθs (y | rs (x)) .        cache and reuse matching teacher outputs. Com-
+               (x,y)∈Ds                                  pleted programs are written to a shared artifact
+   After optimization, the compiler packages the         store and linked back to the persistent job record.
+adapter θs , scaffold rs , original specification, and   Figure 3 summarizes this service architecture.
+interpreter metadata into the program ps . Figure 2         This separation allows the API to remain respon-
+summarizes this path from a natural-language de-         sive while workers execute long-running builds,
+scription to a reusable artifact.                        and it keeps available GPUs supplied with compi-
+                                                         lation jobs.
+Public configuration. The public Finetuned
+Standard compiler uses a quantized Qwen3-0.6B            4.3    Interaction Design
+interpreter, mixed teachers, a rank-64 LoRA              The interface treats compilation as a background
+adapter with alpha 16, an amortized-compiler warm        software build rather than a blocking form submis-
+start, and a 100-step cosine schedule. Appendix          sion. After submitting a specification, users can
+Table 2 gives the complete recipe.                       continue browsing while the interface reports the
+                                                         job’s queue position and training progress.
+4     Interactive Minute-Scale Compilation
+                                                            The job and its progress persist across page nav-
+Compile by training takes tens of seconds rather         igation and reloads, as illustrated in Figure 1(2).
+than a single model call. To make this build step us-    When compilation finishes, the same job record
+able interactively, the system must both shorten the     provides access to the completed program.
+critical path and let users continue working while
+compilation proceeds. We address these require-          5     Evaluation and Validation
+ments at three levels: overlapping synthesis with
+                                                         5.1    Metric and benchmark
+training, coordinating work across shared work-
+ers, and presenting each compile as a persistent         For many tasks, multiple outputs can all be valid.
+background job.                                          For example, two JSON outputs may contain the
+                                                         same values while differing only in whitespace or
+4.1    Overlapping Synthesis and Training                key order, yet an exact-match metric would treat
+In a sequential pipeline, the compiler would wait        them as different. We therefore report LLM Exact
+for all teacher-generated examples before loading        Match (LEM): the fraction of predictions that an
+the interpreter and beginning optimization. This         LLM judge considers semantically correct accord-
+leaves the GPU idle while waiting for the slow-          ing to the specification. Each judgment is based
+est teacher responses. Our deployed streaming            on the specification, input, reference output, and
+compile path instead starts teacher requests, model      model prediction. The selected GPT-5.5 judge
+loading, and training concurrently.                      reaches 0.977 accuracy and Cohen’s κ = 0.946
+         COMPILE TIME — hosted service
+                                                            Warm-start adapter
+                                                            + run-time scaffold
+
+
+                                                                                       Package program
+            Function        Teacher APIs      Validate           Train LoRA
+                                                                                       adapter + scaffold
+          specification   synthesize pairs   examples             adapter
+                                                                                          + metadata
+
+
+
+
+                                                                                                 load once
+
+         RUN TIME — repeat locally without teacher calls
+
+
+                                                                                    Interpreter + adapter
+                                                     New input                                               Output
+                                                                                     + run-time scaffold
+
+
+
+
+Figure 2: Compile by training. At compile time, teacher models turn a specification into validated supervision,
+which specializes a LoRA adapter for a compact frozen interpreter. The compiler packages the adapter and run-time
+scaffold into a reusable program, which handles new inputs at run time without teacher calls.
+
+
+against 128 author labels (Appendix Table 3). Ap-                    sweep            setting                         LEM
+pendix E gives the full grader prompt and user                       teacher mix      mini only (3600/0)              0.746
+template.                                                            teacher mix      2:1 mini/GPT-5.5 (2400/1200)    0.851
+                                                                     data scaling     1440 unique pairs               0.821
+   We evaluate on FuzzyBench-Hard, a subset                          data scaling     2400 unique pairs               0.836
+of the FuzzyBench benchmark used to evaluate                         data scaling     3600 unique pairs               0.836
+PAW (Zhang et al., 2026). The subset consists                        data scaling     7200 unique pairs               0.866
+of specifications for which the PAW fast compiler
+                                                                 Table 1: Mean LEM across controlled teacher-mixture
+produced no exact matches. As shown below, how-
+                                                                 and data-scaling sweeps.
+ever, the fast compiler has a nonzero LEM score
+because some predictions are semantically correct                5.4 Is compilation fast enough for interaction?
+even though they do not exactly match the refer-
+                                                                 We measured compile latency at service launch in
+ence outputs.
+                                                                 May 2026. A cold compile (with no cached teacher
+5.2   Does training improve correctness?                         outputs) of the same representative specification
+                                                                 took 50.9 s on a B300, 68.2 s on an H200, and
+Figure 4 compares the two compilers on
+                                                                 99.2 s on an RTX GPU. In a load test in which four
+FuzzyBench-Hard. Compile by training improves
+                                                                 compile jobs were submitted concurrently, all four
+mean LEM by 0.612 absolute, from 0.224 to 0.836.
+                                                                 completed with a mean queue wait of 1.01 s and
+This improvement comes at the cost of longer com-
+                                                                 even utilization across workers. Because teacher
+pilation: 50.9 seconds, compared with 3.5 seconds
+                                                                 synthesis dominates end-to-end latency, overlap-
+for PAW’s fast amortized compiler.
+                                                                 ping synthesis with training directly shortens the
+5.3   How do supervision choices affect                          critical path of our service.
+      correctness?
+                                                                 6        Deployment and Applications
+Table 1 reports existing sweeps on the development
+specifications. With 3600 unique pairs repeated to               6.1       Composing many compiled functions
+form a 6400-example training set, a 2:1 mixture                  FuzzyBench-Hard evaluates compiled functions
+of GPT-5.4-mini and GPT-5.5 supervision raises                   individually. Real applications may need several
+mean LEM from 0.746 to 0.851 relative to GPT-                    compiled functions to work together with ordinary
+5.4-mini alone. In a separate data-scaling sweep,                code. Paw-helper demonstrates this setting in a
+mean LEM rises from 0.821 with 1440 unique pairs                 deployed website assistant.
+to 0.836 with 2400, remains 0.836 with 3600, and                   Paw-helper1 separates a generic pipeline execu-
+reaches 0.866 with 7200. Appendix C provides                         https://github.com/programasweights/
+                                                                      1
+
+details of the sweep.                                            paw-helper
+         FINETUNE SERVICE
+                                                                     assign
+                        submit                enqueue                                                store
+
+
+             Web UI                 API +                 Shared               GPU worker pool                Program store
+             or SDK               job store             job queue              synthesize, train,              .paw artifact
+                                                                                   package
+
+                                                                    progress
+
+
+
+
+                                                               Shared teacher-output                  Teacher APIs
+                                                                       cache                        missing examples
+
+
+          Solid: jobs and artifacts; dashed: progress and external/cache traffic
+
+
+
+
+Figure 3: Deployed finetune service. The API submits a job to a shared queue, which assigns it to an available
+GPU. Workers reuse cached teacher outputs, call teachers for missing examples, execute the compiler in Figure 2,
+and report progress. Completed artifacts are stored centrally and returned through the same job record. Solid arrows
+are requests or artifacts; dashed arrows are status and cache traffic.
+
+
+                        FuzzyBench-Hard
+                                                                               another compiled function answers using the most
+                                                                               relevant post, and a final function decides whether
+       Amortized PAW                   Compile by training                     to return the course answer, the Piazza answer, or
+          0.224                                     0.836
+                                                                               both. Figure 5 shows this process and the resulting
+                               +0.612 LEM                                      answer.
+                                                                                  This illustrates the general division of labor:
+                                                                               compiled functions make fuzzy decisions, while
+ 0.0       0.2           0.4           0.6           0.8            1.0        ordinary code handles exact operations such as re-
+                 Mean LLM Exact Match (LEM)                                    trieval, caching, and branch control.
+
+Figure 4: Compile-time optimization buys a large
+correctness gain. Mean LEM on FuzzyBench-Hard                                  6.2      Generating executable behavior
+for PAW’s fast amortized compiler and our compile-by-
+training compiler.                                                             To demonstrate an output richer than a label or
+                                                                               free-form answer, Avatar Director2 lets a user con-
+                                                                               trol a 3D character with natural-language instruc-
+tor from a site-specific content pack. The deployed                            tions. For example, a user can ask it to “jump
+pack contains 30 compiled programs; 28 partici-                                twice, then dance,” and the avatar performs those
+pate in live routing, while two support evaluation                             actions in order. A finetuned PAW program trans-
+and backward compatibility. One backend serves                                 lates the natural-language instruction into a small
+four websites: the first author’s personal website,                            action DSL. The DSL supports sequences, dura-
+the site for his introductory AI course at the Univer-                         tions, repetition, and compatible parallel motions,
+sity of Waterloo (CS 486), NeuralOS (Rivard et al.,                            and the browser validates and executes it to ani-
+2026), and the PAW website. The router receives                                mate the character. Users can therefore describe the
+the current website and page as context and sends                              motion in their own words rather than writing the
+each question through only a small part of the tree.                           action program themselves. On 44 hand-authored
+                                                                               validation instructions, the program produced the
+   When a student asks, “What changed about As-
+                                                                               expected action structure in 43 cases.
+signment 1?”, paw-helper first decides whether the
+question calls for a link or a written answer. Since                             Figure 6 shows the generated action program
+this one calls for a written answer, one compiled                              and the resulting browser animation.
+function drafts a response using the course page. In
+parallel, ordinary BM25 retrieval searches Piazza,                                 2
+                                                                                       https://programasweights.com/avatar
+       (a) One question through the program tree                                          (b) Live cited answer
+                      30 pinned programs, 28 active neural nodes
+                four page contexts; solid = this route; dashed = off-path
+
+                                Page context + question
+
+
+                                   Route site / topic
+
+
+                                 Classify link / answer
+                                                             parallel
+                   link
+                                                                Search Piazza
+                                                                   (BM25)
+          Open link              Course answerer
+                                   + validator
+                                                                  Selector +
+                       reject                                  Piazza answerer
+                                                                                            A live CS486 request returns a course answer
+                                                                                                    and a clickable Piazza citation.
+                                     Choose main,
+          “I don't know”           combined, or Piazza
+
+
+
+                                   Cited course answer
+
+
+
+
+Figure 5: A website helper as a program tree. (a) A page-aware question is routed through finetuned classifiers,
+answerers, selectors, and validators alongside deterministic links and retrieval. The highlighted CS486 path
+combines the course answer with a Piazza search and merge. (b) The live course helper returns the result.
+
+        (a) Instruction                                   (b) Action DSL                           (c) Browser runtime
+
+
+
+           Natural-language request                          ACTION PROGRAM
+
+
+                                                             excited
+                                                             wave
+                Act excited, wave,
+              dance, then sit proudly.                       dance
+                                                             sit_proud
+
+
+
+
+                                                             parser: allowed verbs + AST bounds
+
+
+
+
+Figure 6: From language to executable behavior. A finetuned PAW program maps a natural-language command to
+an action program; deterministic browser code parses and validates the DSL before rendering the resulting motion.
+In the live web demo, DSL interpretation and 3D rendering run in the browser.
+
+
+6.3     Translating between English and Claudish                                 English-to-Claudish specification asks the program
+                                                                                 to preserve the input’s meaning while adopting
+Claudish has recently emerged as an informal
+                                                                                 the style’s characteristic vocabulary, compounds,
+name for the distinctive prose style associated with
+                                                                                 rhetorical patterns, and sentence structures. For
+Claude Code.3 The style often uses explicit con-
+                                                                                 the reverse Claudish-to-English direction, the spec-
+trasts; metaphors of gates, boundaries, and load-
+                                                                                 ification asks the program to rewrite the input in
+bearing structure; and hyphenated constructions
+                                                                                 direct English, removing redundant contrasts and
+such as X-shaped and X-gated. We built a live bidi-
+                                                                                 structural metaphors while preserving its meaning.
+rectional translation service between Claudish and
+                                                                                 Compile by training synthesized examples from
+plain English.4
+                                                                                 these specifications and finetuned one adapter per
+   To build the translator, we wrote one natural-
+                                                                                 direction for the shared 0.6B interpreter. The re-
+language specification for each direction. The
+                                                                                 sulting two programs power the live service.
+   3
+     Our demo was inspired by the earlier Claudish-to-English                       Figure 7 shows one translation in the web in-
+project; see also Lorenz (2026) for a broader discussion of the
+term.                                                                            terface. Both programs can also be downloaded
+   4
+     https://programasweights.com/claudish                                       and run locally; their specifications and supporting
+Figure 7: English to Claudish. The live interface applies the English-to-Claudish PAW program to a plain-English
+sentence. Switching direction invokes the separately finetuned Claudish-to-English program.
+
+
+code are available in a public repository.5 Between       description. It first uses large language models
+its public launch on August 22 and September 2,           to synthesize examples from the description, then
+2026, the web demo completed 100,747 successful           finetunes a LoRA adapter to specialize a smaller in-
+translation requests.                                     terpreter model. This adds another point to PAW’s
+                                                          speed–accuracy tradeoff: the fast compiler gener-
+7       Related Work                                      ates a LoRA adapter in a single forward pass and
+Synthetic supervision and parameter-efficient             takes seconds, while compile by training spends
+adaptation. Large models can generate                     roughly a minute to obtain higher accuracy. On
+instruction-following examples for training smaller       FuzzyBench-Hard, a set of tasks for which the PAW
+models, while knowledge distillation trains a             fast compiler produced no exact matches, compile
+smaller model to imitate a larger teacher (Wang           by training reaches 83.6% semantic accuracy. We
+et al., 2023; Taori et al., 2023; Hinton et al.,          added it to the public PAW demo as another option
+2015; Hsieh et al., 2023). Compile by training            in the same compiler interface and used the result-
+applies both ideas to one user-defined function:          ing programs to build a multi-site website helper, a
+teachers generate input-output pairs from its             language-controlled 3D avatar, and a bidirectional
+specification, and those pairs train a LoRA               English–Claudish translator.
+adapter for the compact interpreter. LoRA (Hu
+et al., 2022), adapters (Houlsby et al., 2019),           9   Limitations
+prefix/prompt tuning (Li and Liang, 2021; Lester
+et al., 2021), QLoRA (Dettmers et al., 2023), and         Synthetic supervision may inherit teacher errors.
+AdaLoRA (Zhang et al., 2023) reduce adaptation            Applications that require guaranteed correctness
+cost by updating only a small set of parameters.          should validate outputs or retain deterministic con-
+Prompt2Model (Viswanathan et al., 2023) turns a           trol paths. Our application evidence focuses on
+task description into a finetune pipeline, and LoRA       composition and structured execution; systematic
+Land (Zhao et al., 2024) serves many task-specific        user studies are future work.
+LoRA adapters on a shared base model. Our
+system produces a versioned program for a shared          Acknowledgments
+frozen interpreter and uses an amortized compiler
+                                                         Yuntian Deng acknowledges support from NSERC
+to initialize specification-specific training.
+                                                         under funding reference RGPIN-2024-05178 and
+8       Conclusion                                       from a Google Research Award for Machine Learn-
+                                                         ing Research and Education with TPUs. Pengyu
+We introduce compile by training, which compiles         Nie acknowledges support from NSERC under
+a neural program from a user-provided function           funding reference RGPIN-2024-04909.
+    5
+        https://github.com/programasweights/claudish
+References                                              Vijay Viswanathan, Chenyang Zhao, Amanda Bertsch,
+                                                          Tongshuang Wu, and Graham Neubig. 2023.
+Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, and          Prompt2Model: Generating deployable models from
+  Luke Zettlemoyer. 2023. QLoRA: Efficient fine-           natural language instructions. In Proceedings of
+  tuning of quantized LLMs. In Advances in Neural          the 2023 Conference on Empirical Methods in Nat-
+  Information Processing Systems, volume 36, pages         ural Language Processing: System Demonstrations,
+  10088–10115. Curran Associates, Inc.                     pages 413–421, Singapore. Association for Compu-
+                                                           tational Linguistics.
+Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. 2015.
+  Distilling the knowledge in a neural network. arXiv   Yizhong Wang, Yeganeh Kordi, Swaroop Mishra, Alisa
+  preprint arXiv:1503.02531.                              Liu, Noah A. Smith, Daniel Khashabi, and Hannaneh
+                                                          Hajishirzi. 2023. Self-instruct: Aligning language
+Neil Houlsby, Andrei Giurgiu, Stanislaw Jastrzebski,      models with self-generated instructions. In Proceed-
+  Bruna Morrone, Quentin De Laroussilhe, Andrea           ings of the 61st Annual Meeting of the Association for
+  Gesmundo, Mona Attariyan, and Sylvain Gelly. 2019.      Computational Linguistics (Volume 1: Long Papers),
+  Parameter-efficient transfer learning for NLP. In       pages 13484–13508, Toronto, Canada. Association
+  Proceedings of the 36th International Conference        for Computational Linguistics.
+  on Machine Learning, volume 97 of Proceedings
+  of Machine Learning Research, pages 2790–2799.        An Yang, Anfeng Li, Baosong Yang, Beichen Zhang,
+  PMLR.                                                   Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao,
+                                                          Chengen Huang, Chenxu Lv, Chujie Zheng, Day-
+Cheng-Yu Hsieh, Chun-Liang Li, Chih-kuan Yeh,             iheng Liu, Fan Zhou, Fei Huang, Feng Hu, Hao
+  Hootan Nakhost, Yasuhisa Fujii, Alex Ratner, Ranjay     Ge, Haoran Wei, Huan Lin, Jialong Tang, and 41
+  Krishna, Chen-Yu Lee, and Tomas Pfister. 2023. Dis-     others. 2025. Qwen3 technical report. Preprint,
+  tilling step-by-step! outperforming larger language     arXiv:2505.09388.
+  models with less training data and smaller model
+  sizes. In Findings of the Association for Compu-      Qingru Zhang, Minshuo Chen, Alexander Bukharin,
+  tational Linguistics: ACL 2023, pages 8003–8017,        Pengcheng He, Yu Cheng, Weizhu Chen, and
+  Toronto, Canada. Association for Computational Lin-     Tuo Zhao. 2023. Adaptive budget allocation for
+  guistics.                                               parameter-efficient fine-tuning. In The Eleventh In-
+                                                          ternational Conference on Learning Representations.
+Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan
+  Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and       Wentao Zhang, Liliana Hotsko, Woojeong Kim, Pengyu
+  Weizhu Chen. 2022. LoRA: Low-rank adaptation of         Nie, Stuart Shieber, and Yuntian Deng. 2026.
+  large language models. In International Conference      Program-as-weights: A programming paradigm for
+  on Learning Representations.                            fuzzy functions. Preprint, arXiv:2607.02512.
+
+Brian Lester, Rami Al-Rfou, and Noah Constant. 2021.    Justin Zhao, Timothy Wang, Wael Abid, Geoffrey
+  The power of scale for parameter-efficient prompt       Angus, Arnav Garg, Jeffery Kinnison, Alex Sher-
+  tuning. In Proceedings of the 2021 Conference on        stinsky, Piero Molino, Travis Addair, and Devvret
+  Empirical Methods in Natural Language Processing,       Rishi. 2024. LoRA land: 310 fine-tuned LLMs
+  pages 3045–3059, Online and Punta Cana, Domini-         that rival GPT-4, a technical report. Preprint,
+  can Republic. Association for Computational Lin-        arXiv:2405.00732.
+  guistics.
+
+Xiang Lisa Li and Percy Liang. 2021. Prefix-tuning:
+  Optimizing continuous prompts for generation. In
+  Proceedings of the 59th Annual Meeting of the Asso-
+  ciation for Computational Linguistics and the 11th
+  International Joint Conference on Natural Language
+  Processing (Volume 1: Long Papers), pages 4582–
+  4597, Online. Association for Computational Lin-
+  guistics.
+
+Luke Rivard, Sun Sun, Hongyu Guo, Wenhu Chen, and
+  Yuntian Deng. 2026. NeuralOS: Towards simulating
+  operating systems via neural generative models. In
+  International Conference on Learning Representa-
+  tions.
+
+Rohan Taori, Ishaan Gulrajani, Tianyi Zhang, Yann
+  Dubois, Xuechen Li, Carlos Guestrin, Percy Liang,
+  and Tatsunori B. Hashimoto. 2023. Stanford alpaca:
+  An instruction-following LLaMA model. https://
+  github.com/tatsu-lab/stanford_alpaca.
+A       Additional Experimental Details                             User template.
+This appendix collects the details most useful for
+                                                                        Generate {n} diverse (input, output) example
+interpreting the main paper.                                            ,→  pairs that follow this specification.
+ item                  value                                            [SPEC]
+ interpreter           Qwen3-0.6B with a quantized local run-           {spec}
+                       time                                             [END_SPEC]
+ teachers              GPT-5.4-mini and GPT-5.5 in a 2:1 mix-
+                       ture
+ data                  2400 unique pairs expanded to 6400 train-    E   LEM Grader Prompt
+                       ing examples
+ optimization          batch 48; 100 steps; cosine learning-rate    System prompt.
+                       decay
+ adapter               LoRA rank 64, alpha 16; hypernetwork
+                       initialization                                   You are an evaluator for a 'fuzzy function'
+ execution             shuffled batches with synthesis and train-       ,→  benchmark. Each item is a
+                       ing overlapped                                   ,→  natural-language SPECIFICATION of a
+                                                                        ,→  function, an INPUT, a REFERENCE OUTPUT
+                                                                        ,→ (one valid answer for that input under
+    Table 2: Public Finetuned Standard configuration.                   ,→  the spec), and a MODEL OUTPUT (the
+                                                                        ,→  candidate to be judged).
+B       LEM Grader Summary
+                                                                        Your job is a strict semantic-equivalence
+LLM Exact Match (LEM) is the mean of binary,                            ,→  judgement: decide whether the MODEL
+specification-grounded semantic-correctness judg-                       ,→  OUTPUT is a CORRECT application of SPEC
+                                                                        ,→  to INPUT. Use these rules:
+ments over (specification, input, reference output,
+model output). The selected GPT-5.5 grader tol-                         1. Treat the SPEC as the source of truth.
+                                                                        ,→ The REFERENCE OUTPUT is one valid
+erates formatting differences but rejects errors in                     ,→  answer; if the spec admits multiple
+values, order, structure, or logic, as well as inappro-                 ,→  equally-valid outputs (e.g. 'list of
+priate refusals.                                                        ,→  items' without pinning bullet style or
+                                                                        ,→ JSON spacing), accept any output that is
+        grader           n      acc    FPR     FNR     kappa            ,→  correct under the spec, even if it
+        GPT-5.5         128    0.977   0.025   0.023   0.946            ,→  differs cosmetically from the reference.
+        GPT-5.4-mini    128    0.938    0.05   0.068   0.858
+                                                                        2. IGNORE these cosmetic differences when
+                                                                        ,→  they are not explicitly required by the
+        Table 3: Compact LEM grader validation.
+                                                                        ,→  spec:
+                                                                           - whitespace (extra/missing spaces,
+C       Supervision Sweep Protocol                                         ,→  newlines, tabs, trailing whitespace)
+                                                                           - JSON-key/value spacing ({"a":1} vs {"a":
+Main Table 1 reports existing sweeps on the de-                            ,→ 1}) and indentation, key order in
+velopment specifications. The teacher-mixture                              ,→ objects when the spec doesn't pin it
+                                                                           - bullet style ('- x' vs '* x' vs '1. x'
+rows compare counts of GPT-5.4-mini and GPT-                               ,→ vs 'x\n')
+5.5 examples while repeating 3600 unique pairs to                          - trailing punctuation that doesn't
+form 6400-example training sets and holding batch                          ,→  change meaning
+                                                                           - whether a string is wrapped in quotes
+64, learning rate 2 × 10−4 , and 100 steps fixed.                          ,→ when the spec admits either form
+The data-scaling rows use batch 48, learning rate                          - case differences in tokens that are not
+2 × 10−4 , and 100 steps.                                                  ,→  case-sensitive per the spec
+
+                                                                        3. Do NOT ignore SUBSTANTIVE differences:
+D       Teacher Synthesis Prompt                                           - different values, missing items, extra
+                                                                           ,→  items
+Both teachers use the following template, with n                           - wrong order when the spec requires a
+and the submitted specification filled in for each                         ,→  specific order
+                                                                           - structurally different (list vs scalar,
+request.                                                                   ,→  object vs array)
+                                                                           - factual or logical errors
+System prompt.                                                             - a model output that says 'I cannot' or
+                                                                           ,→ refuses, while the reference produces
+        You synthesize tiny supervised datasets for
+                                                                           ,→ a valid answer
+        ,→ finetuning small language models from a
+        ,→ natural-language task specification.
+                                                                        4. If the spec EXPLICITLY pins a format
+        ,→ Return strict JSON with a top-level key
+                                                                        ,→ (e.g. 'output must be a JSON array of
+        ,→ 'examples'. Each example must be an
+                                                                        ,→  strings'), enforce that format strictly.
+        ,→ object with string keys 'input' and
+        ,→ 'output'.
+    5. OUTPUT CONTAINER FLEXIBILITY. If the spec
+    ,→ specifies WHAT to output (e.g. "output
+    ,→ normalized identifiers like '#123'") but
+    ,→ does NOT specify HOW to PACKAGE multiple
+    ,→ outputs (no explicit mention of 'JSON
+    ,→ array', 'newline-separated list',
+    ,→ 'comma-separated', etc.), accept any
+    ,→ reasonable container that lists the same
+    ,→ values in the same order -- e.g.
+    ,→ gt='["#5", "#6", "#7"]' and
+    ,→ pred='#5\n#6\n#7' are equally valid when
+    ,→ the spec only asks for 'identifiers'
+    ,→ without pinning the container. Container
+    ,→ flexibility does NOT extend to changing
+    ,→ values, item count, or order.
+
+
+    6. If the model output is empty or
+    ,→ whitespace-only and the spec calls for a
+    ,→ non-empty answer, mark INCORRECT.
+
+
+    Output a single JSON object with two keys:
+      reason   -- 1-3 sentences explaining the
+      ,→ judgement, citing the specific rule
+      ,→ above when relevant.
+      verdict -- exactly the string "CORRECT"
+      ,→  or "INCORRECT".
+    Reason FIRST, then verdict. Do not include
+    ,→ any prose outside the JSON. If unsure,
+    ,→ default to INCORRECT.
+
+
+User template.
+    [SPEC]
+    {spec}
+    [END_SPEC]
+
+    [INPUT]
+    {input}
+    [END_INPUT]
+
+    [REFERENCE_OUTPUT]
+    {gt}
+    [END_REFERENCE_OUTPUT]
+
+    [MODEL_OUTPUT]
+    {pred}
+    [END_MODEL_OUTPUT]
+
+    Return JSON: {{"reason": "...", "verdict":
+    ,→  "CORRECT" | "INCORRECT"}}
+

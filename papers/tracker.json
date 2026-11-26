@@ -917,8 +917,9 @@
       "citation_count": null,
       "pwc_url": "https://huggingface.co/papers/2609.04199",
       "rank": 1,
-      "status": "pending",
-      "folder": "papers/2026-compile-by-training-turning-natural-language"
+      "status": "reading",
+      "folder": "papers/2026-compile-by-training-turning-natural-language",
+      "started_at": "2026-11-26"
     },
     {
       "title": "Bilevel Coordinated Reflection: A Game-Theoretic Approach to Multi-Agent LLM Systems",
@@ -3586,6 +3587,49 @@
       "rank": 1,
       "status": "pending",
       "folder": "papers/2026-motion-mamba-20-autoregressive-diffusion-mamba"
+    },
+    {
+      "title": "Antom 3-in-1 Transformer: A Payment Foundation Model",
+      "authors": [
+        "Weiyu Han",
+        "Haoyu Jiang",
+        "Jie Sheng",
+        "Youxi Pan",
+        "Xianglong Liu",
+        "Zeqi Ren",
+        "Dongquan Yi",
+        "Yinhao Liu",
+        "Ruobing Zuo",
+        "Ze Zhao",
+        "Huilin He",
+        "Nairong Zhang",
+        "Xinyi He",
+        "Xiao Tan",
+        "Jun Wang",
+        "Pan Fang",
+        "Wei Zeng",
+        "Jianan Su",
+        "Kaixin Shen",
+        "Jingtong Wu",
+        "Hao Li",
+        "Shuai Chen",
+        "Jiangming Yang",
+        "Tianyi Zhang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.25403",
+      "arxiv_url": "https://arxiv.org/abs/2611.25403",
+      "pdf_url": "https://arxiv.org/pdf/2611.25403.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "We report the development of Antom 3-in-1 Transformer, a payment foundation model that integrates sequence, tabular, and graph representations for payment risk detection. The model contains approximately 7B parameters, with approximately 1.7B activated per task route. Antom 3-in-1 Transformer is pretrained to learn reusable behavioral and relational representations, primarily on Ant International's internal payment data. In a cross-business transfer experiment, pretraining improves the target business metric by 34.5% over the same architecture trained from scratch. With only 25% of the training labels, the pretrained model outperforms the full-label scratch baseline in Average Precision (AP) and Recall@0.5% on different merchant domains. In a four-month online experiment on Ant International's billion-scale payment platform, the model reduced the overall loss rate by 37.88% relative to XGB-Online.",
+      "ai_keywords": [],
+      "popularity": 104,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.25403",
+      "rank": 1,
+      "status": "pending",
+      "folder": "papers/2026-antom-3-in-1-transformer-a"
     },
     {
       "title": "Mind2Act World: A Diagnostic Benchmark for Embodied Mind, Physical Action, and Mind-Action Composition in Robotic Manipulation",
@@ -6499,6 +6543,45 @@
       "folder": "papers/2026-worldleague-benchmarking-physical-agency"
     },
     {
+      "title": "Lazy Agents Answer Against Their Own Beliefs: Reinforcement Learning with Verifiable Beliefs Teaches Them to Act on What They Believe",
+      "authors": [
+        "Richmond Sin Jing Xuan",
+        "Peilin Feng",
+        "Wenbin Wang",
+        "Soujanya Poria"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.32884",
+      "arxiv_url": "https://arxiv.org/abs/2611.32884",
+      "pdf_url": "https://arxiv.org/pdf/2611.32884.pdf",
+      "code_url": "https://github.com/declare-lab/RLVB",
+      "project_page": "https://declare-lab.github.io/RLVB/?case=tabletop_cups&m=rlvb_grpo&s=0",
+      "abstract": "AI agents working on long tasks often commit to an answer before they have enough evidence, a behavior called laziness. In our evaluations, they frequently commit even while their stated belief still names several possible answers. An outcome reward at the end of the episode scores only the final answer, so it cannot teach the agent when to commit, because a lucky guess receives the same reward as an answer backed by evidence. During training, however, the simulator can compute the exact posterior over the answer at every step and tell whether the evidence is already enough. We propose Reinforcement Learning with Verifiable Beliefs (RLVB), which rewards the agent for taking further steps while this posterior still allows several answers and for committing once the evidence is sufficient. The reward needs no judge, critic or reward model, and it never reads the belief line the agent writes before each action. We also introduce Pro Worlds, a benchmark of visual puzzles where the agent views a large world through a small window. We evaluate three vision-language models on three benchmarks, two of which are never seen in training. RLVB improves the base model in all nine settings, by 17.1% on average. Under the outcome reward, GRPO and PPO fall below the base model on average. RLVB also outperforms PPO with a process reward from an LLM judge by 9.3% on average while using 1.6 times fewer GPU-hours. The trained agent answers with sufficient evidence in 51%, 12% and 74% of the episodes on the three benchmarks, against 8%, 0.4% and 36% for the base model. Its accuracy gain therefore comes from answering more often at high levels of evidence. The belief line shows how the agent reaches this evidence: it acts on its own belief. It commits at only 0.1 to 2.2% of the turns at which the evidence is insufficient and its line still names several answers, against 3 to 68% for the base model.",
+      "ai_keywords": [
+        "Reinforcement Learning with Verifiable Beliefs (RLVB)",
+        "outcome reward",
+        "process reward",
+        "reward model",
+        "critic",
+        "LLM judge",
+        "GRPO",
+        "PPO",
+        "vision-language models",
+        "Pro Worlds",
+        "posterior over the answer",
+        "belief line",
+        "evidence sufficiency",
+        "visual puzzles",
+        "GPU-hours"
+      ],
+      "popularity": 98,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.32884",
+      "rank": 2,
+      "status": "pending",
+      "folder": "papers/2026-lazy-agents-answer-against-their-own"
+    },
+    {
       "title": "Embo-Harness: Towards Understanding Frontier-Model-as-Policy Harness",
       "authors": [
         "Xiao-Ming Wu",
@@ -8826,6 +8909,42 @@
       "rank": 3,
       "status": "pending",
       "folder": "papers/2026-wemm-video-pushing-the-frontiers-of"
+    },
+    {
+      "title": "Don't Sleep, Keep Watch: Proactive Perception for Computer-Use Agents",
+      "authors": [
+        "Jiaqi Su",
+        "Jie-Jing Shao",
+        "Yichen Liu",
+        "Long-Kai Huang",
+        "Haiyan Yin"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.28947",
+      "arxiv_url": "https://arxiv.org/abs/2611.28947",
+      "pdf_url": "https://arxiv.org/pdf/2611.28947.pdf",
+      "code_url": "https://github.com/SuJQ0722/NightWatch",
+      "project_page": "https://sujq0722.github.io/NightWatch/",
+      "abstract": "Computer-use agents (CUAs) built on vision-language models are increasingly entrusted with long-horizon tasks in live desktop, web, and mobile environments, where the screen keeps changing on its own. However, current CUAs lack real-time situational awareness: they perceive the environment through discrete snapshots, and the substantial inference latency of VLMs, compounded by highly dynamic interfaces, opens a perception-action gap in which the observed state frequently becomes stale before the corresponding action is executed. To bridge this gap, we present NightWatch, a plug-and-play framework that endows any CUA with continuous, temporally grounded perception without changing the agent's model, prompt, or action space. NightWatch couples the VLM agent with NightWatch-0.8B, a lightweight System-1 model that performs streaming monitoring of the interface state and keeps the agent synchronized with the evolving environment at low computational cost and latency, thereby grounding each decision in the current state rather than an outdated snapshot and reducing both stale actions and idle waiting while preserving task success. Experiments on desktop and dynamic web environments (OSWorld-Verified and DynaCU-Bench) show that NightWatch, driven by a watcher of only 0.8B parameters, reduces non-reasoning wall-clock time by 33% and wasted time by 53% on OSWorld while keeping task success on par, raises success on DynaCU-Bench from 39.5% to 44.2% with the large VLM agent, and is more efficient than passive-watching baselines such as AOI and PUSV under the same screenshot-only input, as well as a System-1 decision model more than 30times its size. Overall, NightWatch demonstrates that the timing of perception is as critical as its content, marking a step toward agents that maintain continuous awareness of their environment rather than perceiving it turn by turn.",
+      "ai_keywords": [
+        "vision-language models",
+        "computer-use agents",
+        "inference latency",
+        "perception-action gap",
+        "System-1 model",
+        "streaming monitoring",
+        "temporally grounded perception",
+        "NightWatch-0.8B",
+        "large VLM agent",
+        "screenshot-only input",
+        "System-1 decision model"
+      ],
+      "popularity": 97,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.28947",
+      "rank": 3,
+      "status": "pending",
+      "folder": "papers/2026-dont-sleep-keep-watch-proactive-perception"
     },
     {
       "title": "Probing the \"Conscious\" Mind: Selective Access and Global Workspace in Vision-Language Models",
@@ -11229,6 +11348,29 @@
       "rank": 4,
       "status": "pending",
       "folder": "papers/2026-3agamefactory-motion-agentic-rigging-and-reliable"
+    },
+    {
+      "title": "Rewirable Circuits in Transformers with Loom Attention",
+      "authors": [
+        "Da Xiao",
+        "Qingye Meng",
+        "Shengping Li",
+        "Xingyuan Yuan"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.30634",
+      "arxiv_url": "https://arxiv.org/abs/2611.30634",
+      "pdf_url": "https://arxiv.org/pdf/2611.30634.pdf",
+      "code_url": "https://github.com/Caiyun-AI/LoomFormer",
+      "project_page": "",
+      "abstract": "We propose loom attention, which allows a Transformer to dynamically rewire its circuits at every token by interweaving a head's vertical attention over the outputs of earlier heads (to obtain its query, key and value) with its horizontal attention over tokens. We instantiate vertical attention efficiently with normalized and gated linear attention over a per-token matrix memory, which stores the compressed head outputs and serves as a second residual stream. This yields LoomFormer, a dual-stream architecture that splits control and content between the vector and matrix streams. Across model sizes and training token budgets in language modeling and downstream tasks, LoomFormer matches Transformers trained with over 3x compute and recent residual-stream baselines (HC/mHC, MUDDFormer, AttnRes) trained with ~1.7-2.8x. For example, trained on the same 300B tokens with only 2% extra FLOPs, LoomPythia-2.8B achieves ~1.6x the average downstream gain of mHC-Pythia-2.8B over Pythia-2.8B, and matches (0-shot) or surpasses (5-shot) Pythia-12B. Code is available at https://github.com/Caiyun-AI/LoomFormer",
+      "ai_keywords": [],
+      "popularity": 88,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.30634",
+      "rank": 4,
+      "status": "pending",
+      "folder": "papers/2026-rewirable-circuits-in-transformers-with-loom"
     },
     {
       "title": "Random Is Almost Enough? Stable and Low-Cost Benchmark Compression via BestRand",
@@ -14193,6 +14335,31 @@
       "folder": "papers/2026-a-glimpse-of-training-vlms-as"
     },
     {
+      "title": "ACAP: Asynchronous Coding Agents for Efficient Robot Control",
+      "authors": [
+        "Zexin He",
+        "Rui Li",
+        "Yushi Lan",
+        "Chengkai Jin",
+        "Zhi Hou",
+        "Xingang Pan"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.31205",
+      "arxiv_url": "https://arxiv.org/abs/2611.31205",
+      "pdf_url": "https://arxiv.org/pdf/2611.31205.pdf",
+      "code_url": "",
+      "project_page": "https://projects.zxhezexin.com/acap",
+      "abstract": "Coding agents can construct and revise robot behavior during execution, but using one agent for the whole robot can delay otherwise independent work. We introduce Asynchronous Coding Agents as Policy (ACAP), an asynchronous framework that organizes one robot as a team of persistent agents. Each member reasons and acts for a configurable control group, such as an arm with its gripper or the torso and chassis, enabling asynchronous reasoning and execution. However, different robot components often have physical dependencies that require coordination. To address this challenge, ACAP introduces a hyper-agent that assigns tasks, coordinates dependencies, and dynamically allocates control between the lead and member agents. This allows independent work to progress concurrently while supporting tightly coupled manipulation when necessary. Across 72 real-world rollouts covering 25 task/platform settings, ACAP reduces task-balanced time cost by 28.2% compared with a single-agent Direct Policy, with improvements across Fully Parallel, Parallel-Sequential, and Collaborative tasks. Across all eight Collaborative settings, ACAP also achieves lower mean time cost than Fixed Delegation, where only member agents can control their assigned groups. An additional 90-rollout study shows lower mean 30-minute-capped time cost than Direct on all six tasks. We further demonstrate mobile manipulation using the same member interface for chassis and torso control. We present the framework and a real-world rollout dataset containing observations, generated programs, actions, and feedback to support research on how coding agents reason and act in the physical world.",
+      "ai_keywords": [],
+      "popularity": 62,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.31205",
+      "rank": 5,
+      "status": "pending",
+      "folder": "papers/2026-acap-asynchronous-coding-agents-for-efficient"
+    },
+    {
       "title": "WeMM-Ecom: Advancing Multimodal Content Understanding for WeChat E-Commerce",
       "authors": [
         "Binhui Xie",
@@ -16467,6 +16634,48 @@
       "rank": 6,
       "status": "pending",
       "folder": "papers/2026-coda-davinci-reimagining-video-generation-with"
+    },
+    {
+      "title": "Self-Evolving Evaluation Environments for Computer-Use Agents",
+      "authors": [
+        "Wenhao Wang",
+        "Panrong Tong",
+        "Quyu Kong",
+        "Pengxiang Li",
+        "Haowen Yang",
+        "chenglin Cai",
+        "Siheng Chen",
+        "Yue Wang"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.30962",
+      "arxiv_url": "https://arxiv.org/abs/2611.30962",
+      "pdf_url": "https://arxiv.org/pdf/2611.30962.pdf",
+      "code_url": "",
+      "project_page": "",
+      "abstract": "Computer-use agents (CUAs) are rapidly improving, yet their evaluation remains largely static. Existing benchmarks provide a strong foundation, but fixed difficulty ceilings, limited feature coverage, and coarse aggregate scores progressively weaken their discriminative and diagnostic value. We introduce CUA-SEE, a closed-loop evaluation environment that co-evolves tasks and executable verifiers from rollout evidence. It disentangles three objectives: benchmark evolution expands evaluation scope through cohort-calibrated difficulty and coverage growth; diagnostic evolution increases resolution through agent-conditional capability-boundary probes; and verifier evolution improves precision by translating changing requirements into state-grounded checkpoints with adversarial validation. Across multiple agents, applications, and rounds, CUA-SEE generates challenging, measurable tasks while preserving process-level evidence. Our results position adaptive evaluation as a scalable counterpart to self-evolving agents, continuously tracking what agents can do, where their boundaries lie, and how reliably progress is measured.",
+      "ai_keywords": [
+        "computer-use agents",
+        "closed-loop evaluation environment",
+        "executable verifiers",
+        "rollout evidence",
+        "benchmark evolution",
+        "cohort-calibrated difficulty",
+        "coverage growth",
+        "diagnostic evolution",
+        "agent-conditional capability-boundary probes",
+        "verifier evolution",
+        "state-grounded checkpoints",
+        "adversarial validation",
+        "self-evolving agents",
+        "adaptive evaluation"
+      ],
+      "popularity": 48,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.30962",
+      "rank": 6,
+      "status": "pending",
+      "folder": "papers/2026-self-evolving-evaluation-environments-for-computer"
     },
     {
       "title": "Let the Fixer Decide: Training a Code Localizer from the Fixer's Likelihood",
@@ -18759,6 +18968,40 @@
       "folder": "papers/2026-depth-pro-2-sharp-and-temporally"
     },
     {
+      "title": "S-Mind: Internalizing Multi-View Geometry for Spatial Intelligence",
+      "authors": [
+        "Muxin Fu",
+        "Peike Yu",
+        "Guibin Zhang",
+        "Wenrui Zhou",
+        "Runze Liu",
+        "Lang Feng",
+        "Fuchao Yang",
+        "Feng Chen",
+        "Yixuan Li",
+        "Mengao Zhang",
+        "Shiying Zhang",
+        "Wen Shen",
+        "Ling Pan",
+        "Shuicheng Yan",
+        "Bo An"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.28649",
+      "arxiv_url": "https://arxiv.org/abs/2611.28649",
+      "pdf_url": "https://arxiv.org/pdf/2611.28649.pdf",
+      "code_url": "https://github.com/KANABOON1/S-Mind",
+      "project_page": "https://kanaboon1.github.io/S-Mind/",
+      "abstract": "Spatial intelligence, the ability to reason about 3D space from visual observations, becomes essential as multimodal large language models (MLLMs) move into the physical world. Beyond perceiving each view, it rests on two cornerstones of human cognition: fusing multiple views into one coherent 3D scene and mentally transforming that scene to new viewpoints as reasoning unfolds. Yet our spatial probes reveal that MLLMs largely lack both capabilities, even after spatial fine-tuning. We therefore present S-Mind, which internalizes multi-view geometry within the MLLM through a compact set of spatial tokens. It supervises these tokens to hold the fused 3D scene and re-emits them to re-express this scene from every viewpoint the reasoning adopts. Across four spatial benchmarks, S-Mind improves its Qwen3.5 backbones by up to 22.26 points and surpasses frontier general models such as GPT-6-Astra (+0.45), Kimi-K3.1-Pro (+1.97), and GLM-5.3-Flash (+7.80) in average accuracy. Moreover, the same probes confirm that it acquires both capabilities, reaching fusion and transformation accuracies of 65.11% and 82.17%, against at most 16.02% and 37.28% for the baselines. At inference, S-Mind also runs about 100x faster than a tool-based agent on the same backbone. Instilled through these spatial tokens during training, spatial capability becomes intrinsic to the backbone and persists even when the tokens are withheld, offering a promising path toward spatial intelligence in MLLMs.",
+      "ai_keywords": [],
+      "popularity": 41,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.28649",
+      "rank": 7,
+      "status": "pending",
+      "folder": "papers/2026-s-mind-internalizing-multi-view-geometry"
+    },
+    {
       "title": "The Mask Is Not the Object: Volumetric Supervision for 3D Gaussian Segmentation",
       "authors": [
         "Jeonghwan Cho",
@@ -21010,6 +21253,46 @@
       "rank": 8,
       "status": "pending",
       "folder": "papers/2026-nemotron-labs-visualcreation-pixel-as-code"
+    },
+    {
+      "title": "PartAgent: Agentic 3D Part Segmentation via Expert Integration and Closed-Loop Refinement",
+      "authors": [
+        "Yang Cao",
+        "Zhe Zhu",
+        "Yiheng Zhang",
+        "Zhengqiang Zhang",
+        "Haoyuan Li",
+        "Le Wan",
+        "Dan Xu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.32554",
+      "arxiv_url": "https://arxiv.org/abs/2611.32554",
+      "pdf_url": "https://arxiv.org/pdf/2611.32554.pdf",
+      "code_url": "https://github.com/yangcaoai/PartAgent_Agent_for_3D_Part_Seg",
+      "project_page": "https://yangcaoai.github.io/PartAgent_ProjectPage/",
+      "abstract": "Segmenting a 3D object into semantically meaningful parts requires joint reasoning about geometric structure and semantic context. Pretrained 3D experts provide spatially grounded region proposals, while 2D experts provide semantic cues for identifying object parts. The challenge is to integrate these complementary capabilities into a framework that can both produce meaningful part segmentations and progressively refine them. We present PartAgent, a training-free agentic framework for 3D part segmentation built upon two complementary modules: (i) Structural-Semantic Expert Integration combines regions predicted by the 3D expert with multiview semantic evidence from the 2D expert through image-to-surface correspondences, constructing compositional part partitions at multiple granularities. (ii) Observation-Driven Closed-Loop Partition Refinement observes the current partition and its supporting evidence to select targeted inspection, evidence repair, composition, or reselection actions. It verifies proposed changes and uses the updated state and action outcomes to guide subsequent decisions. On PartObjaverse-Tiny-WT, PartAgent achieves 68.41 mIoU, outperforming the strongest competing method by 8.53 points. Across 3DCoMPaT200, PartNeXt, PartNetE, and PartObjaverse-Tiny, PartAgent achieves the highest mIoU on each dataset, averaging 69.36 across the four datasets, 7.28 points above the highest mean among competing methods.",
+      "ai_keywords": [
+        "3D part segmentation",
+        "pretrained 3D experts",
+        "2D experts",
+        "region proposals",
+        "semantic cues",
+        "image-to-surface correspondences",
+        "multiview semantic evidence",
+        "compositional part partitions",
+        "multi-granularity part partitions",
+        "training-free agentic framework",
+        "structural-semantic expert integration",
+        "observation-driven closed-loop partition refinement",
+        "mIoU"
+      ],
+      "popularity": 34,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.32554",
+      "rank": 8,
+      "status": "pending",
+      "folder": "papers/2026-partagent-agentic-3d-part-segmentation-via"
     },
     {
       "title": "ViDecide: Teaching Video Diffusion Models to Reason and Plan Step by Step",
@@ -23367,6 +23650,26 @@
       "rank": 9,
       "status": "pending",
       "folder": "papers/2026-cmhc-balancing-stream-mixing-in-hyper"
+    },
+    {
+      "title": "LingSante MedGuard Technical Report",
+      "authors": [
+        "LingSante MedGuard Team"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.25509",
+      "arxiv_url": "https://arxiv.org/abs/2611.25509",
+      "pdf_url": "https://arxiv.org/pdf/2611.25509.pdf",
+      "code_url": "https://github.com/inclusionAI/LingSante-MedGuard",
+      "project_page": "https://huggingface.co/collections/inclusionAI/lingsante-medguard",
+      "abstract": "As medical AI is increasingly used for patient consultation and clinical decision support, identifying harmful, non-compliant, or ethically problematic responses is essential for responsible deployment. Assessing these risks requires checking clinical claims against relevant evidence, verifying calculations, and applying medical requirements under their intended conditions. We introduce LingSante MedGuard, a capability-enhanced guardrail that integrates supervision from a medical guardrail teacher model and six specialized medical capability experts into a unified model. The guardrail teacher supervises risk decisions and explanations across medical safety, compliance, and ethics, while the capability experts support medical rule understanding, numerical reasoning, multimodal hallucination detection, agentic safety verification, risk localization, and multimodal entity understanding. We consolidate these sources of supervision through offline supervised fine-tuning on teacher-generated demonstrations, followed by multi-teacher on-policy distillation using feedback on student-generated responses. We further introduce LingSante MedGuardBench, a benchmark comprising 11 risk-detection subsets spanning medical safety, compliance, and ethics. At 4B, 9B, and 27B scales, LingSante MedGuard achieves mean benchmark F1 scores of 82.3%, 82.4%, and 87.4%, respectively. The 4B model also achieves 73.9% mean accuracy across MedHallu and MedHALT-NOTA under retrieval-enabled evaluation. Additional evaluations of the verification components show improvements in evidence-supported consistency, source traceability, and rule-guided rationale quality across model scales. These results support the integration of specialized medical capabilities into a unified guardrail for medical risk assessment and evidence-based medical safety verification.",
+      "ai_keywords": [],
+      "popularity": 30,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.25509",
+      "rank": 9,
+      "status": "pending",
+      "folder": "papers/2026-lingsante-medguard-technical-report"
     },
     {
       "title": "AutoPILOT: A Visual Agent Harness for Real-Time Gameplay",
@@ -26068,6 +26371,40 @@
       "rank": 10,
       "status": "pending",
       "folder": "papers/2026-plan4d-generative-plannable-4d-worlds"
+    },
+    {
+      "title": "Embodied AI Fails the Mirror Test: How a Simple Mirror Breaks Robot Policies",
+      "authors": [
+        "Xuanchen Liu",
+        "Hejun Zhang",
+        "Boxuan Dong",
+        "Ying Wu",
+        "Heshuai Li",
+        "Wen Gao",
+        "Yonghong Tian",
+        "Weihao Yu"
+      ],
+      "year": "2026",
+      "arxiv_id": "2611.33010",
+      "arxiv_url": "https://arxiv.org/abs/2611.33010",
+      "pdf_url": "https://arxiv.org/pdf/2611.33010.pdf",
+      "code_url": "https://github.com/iPPLab/robodojo-mirror",
+      "project_page": "https://ipplab.github.io/robodojo-mirror",
+      "abstract": "Can a simple mirror expose the limitations of today's robotic manipulation policies? Inspired by the mirror self-recognition test in animal cognition, we investigate whether robot policies can reliably manipulate physical objects in scenes containing their reflections. We introduce RoboDojo-Mirror, a benchmark built on RoboDojo that preserves task objectives, success criteria, and policy checkpoints while comparing a mirror-free baseline with single-mirror, dual-mirror, and mirrored-tabletop conditions. Across five policies spanning Vision-Language-Action models, World Action Models, and agentic policies, every mirror condition reduces aggregate success rates: averaged over the three conditions, the drop ranges from 10.8 to 56.7 percentage points across policies, and it reaches 62.5 points on the mirrored tabletop. Because a mirror is also a physical obstacle, we compare it against geometrically matched non-reflective panels; 50--88\\% of mirror-specific failures occur without recorded robot--panel contact, so direct collisions alone do not explain the degradation. Trajectory and contact analyses instead reveal recurring behaviors consistent with phantom targeting of reflected objects and spatial mislocalization of real ones. Targeted diagnostics further characterize grasping near reflections, policy-dependent pushing progress, and physical-target interaction under main-camera occlusion. Real-robot experiments with π_{0.5} and FastWAM also show lower overall success rates under the upright-mirror and mirrored-tabletop conditions. These findings reveal a shared vulnerability to reflective environments across diverse robot policies and motivate reflection-aware evaluation of embodied intelligence. Code is available at https://github.com/iPPLab/robodojo-mirror.",
+      "ai_keywords": [
+        "Vision-Language-Action models",
+        "World Action Models",
+        "agentic policies",
+        "policy checkpoints",
+        "π_{0.5}",
+        "FastWAM"
+      ],
+      "popularity": 28,
+      "citation_count": null,
+      "pwc_url": "https://huggingface.co/papers/2611.33010",
+      "rank": 10,
+      "status": "pending",
+      "folder": "papers/2026-embodied-ai-fails-the-mirror-test"
     },
     {
       "title": "Demystifying Reinforcement Learning for Long-Horizon Tool-Using Agents: A Comprehensive Recipe",
@@ -29065,5 +29402,5 @@
       "notes": "ZERO numeric cell typos; 73 verified checks; ALFWorld Overall is weighted success rate not unweighted mean; single-run evaluation for per-layer C values"
     }
   ],
-  "updated_at": "2026-11-25T06:00:24.590963+00:00"
+  "updated_at": "2026-11-26T06:00:24.552827+00:00"
 }
